@@ -1,16 +1,37 @@
 import { useState } from "react";
-import { Pill } from "lucide-react";
+import { Pill, Loader2 } from "lucide-react";
 import PrescriptionInput from "@/components/PrescriptionInput";
 import AnalysisResults from "@/components/AnalysisResults";
 import LegalDisclaimer from "@/components/LegalDisclaimer";
-import { analyzePrescription, type AnalysisResult } from "@/lib/prescriptionAnalyzer";
+import { analyzePrescription, analyzePrescriptionImage, type AnalysisResult } from "@/lib/prescriptionAnalyzer";
+import { toast } from "sonner";
 
 const Index = () => {
   const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleAnalyze = (text: string) => {
-    const analysis = analyzePrescription(text);
-    setResult(analysis);
+  const handleAnalyze = async (text: string) => {
+    setIsLoading(true);
+    try {
+      const analysis = await analyzePrescription(text);
+      setResult(analysis);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erreur lors de l'analyse");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleAnalyzeImage = async (imageBase64: string) => {
+    setIsLoading(true);
+    try {
+      const analysis = await analyzePrescriptionImage(imageBase64);
+      setResult(analysis);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erreur lors de l'analyse OCR");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleReset = () => {
@@ -34,20 +55,26 @@ const Index = () => {
 
       {/* Main */}
       <main className="container max-w-2xl mx-auto px-4 py-6">
-        {!result ? (
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-20 gap-4 animate-fade-in">
+            <Loader2 className="h-10 w-10 text-primary animate-spin" />
+            <p className="text-lg font-medium text-muted-foreground">Analyse en cours par l'IA...</p>
+            <p className="text-sm text-muted-foreground">Gemini 2.5 Pro analyse votre ordonnance</p>
+          </div>
+        ) : !result ? (
           <div className="space-y-6">
             <div className="text-center space-y-2">
               <h2 className="text-2xl font-bold">Analyser une ordonnance</h2>
               <p className="text-muted-foreground">Entrez les médicaments pour obtenir contextes, questions et suggestions.</p>
             </div>
-            <PrescriptionInput onAnalyze={handleAnalyze} />
+            <PrescriptionInput onAnalyze={handleAnalyze} onAnalyzeImage={handleAnalyzeImage} />
             <LegalDisclaimer />
 
             {/* Quick examples */}
             <div className="space-y-2">
               <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Essayer avec :</p>
               <div className="flex flex-wrap gap-2">
-                {["Amoxicilline, Doliprane", "Ibuprofène, Oméprazole", "Metformine"].map((ex) => (
+                {["Amoxicilline, Doliprane", "Ibuprofène, Oméprazole", "Metformine, Ramipril, Atorvastatine"].map((ex) => (
                   <button
                     key={ex}
                     onClick={() => handleAnalyze(ex)}

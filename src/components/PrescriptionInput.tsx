@@ -6,9 +6,10 @@ import { Input } from "@/components/ui/input";
 
 interface PrescriptionInputProps {
   onAnalyze: (text: string) => void;
+  onAnalyzeImage: (imageBase64: string) => void;
 }
 
-const PrescriptionInput = ({ onAnalyze }: PrescriptionInputProps) => {
+const PrescriptionInput = ({ onAnalyze, onAnalyzeImage }: PrescriptionInputProps) => {
   const [mode, setMode] = useState<"quick" | "text" | "image">("quick");
   const [quickInput, setQuickInput] = useState("");
   const [textInput, setTextInput] = useState("");
@@ -18,9 +19,8 @@ const PrescriptionInput = ({ onAnalyze }: PrescriptionInputProps) => {
 
   const handleSubmit = () => {
     if (mode === "image") {
-      // OCR placeholder — will be replaced by AI backend
       if (imagePreview) {
-        onAnalyze("__IMAGE_UPLOAD__");
+        onAnalyzeImage(imagePreview);
       }
       return;
     }
@@ -165,7 +165,7 @@ const PrescriptionInput = ({ onAnalyze }: PrescriptionInputProps) => {
               </button>
               <div className="px-4 py-3 bg-accent/50 text-sm text-accent-foreground flex items-center gap-2">
                 <Camera className="h-4 w-4" />
-                Image chargée — prête pour l'analyse OCR
+                Image chargée — prête pour l'analyse IA
               </div>
             </div>
           )}

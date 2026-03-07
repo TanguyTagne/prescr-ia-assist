@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Pill, MessageCircleQuestion, ShoppingBag, RotateCcw, Stethoscope } from "lucide-react";
+import { Pill, MessageCircleQuestion, ShoppingBag, RotateCcw, Stethoscope, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { AnalysisResult } from "@/lib/prescriptionAnalyzer";
@@ -18,8 +18,6 @@ const AnalysisResults = ({ result, onReset }: AnalysisResultsProps) => {
     setAnsweredQuestions((prev) => ({ ...prev, [idx]: answer }));
   };
 
-  const allQuestionsAnswered = result.questions.length > 0 && Object.keys(answeredQuestions).length >= Math.min(result.questions.length, 3);
-
   if (result.medicaments.length === 0) {
     return (
       <div className="text-center space-y-4 animate-fade-in py-8">
@@ -32,6 +30,15 @@ const AnalysisResults = ({ result, onReset }: AnalysisResultsProps) => {
       </div>
     );
   }
+
+  const niveauColor = (niveau: string) => {
+    switch (niveau) {
+      case "majeure": return "bg-destructive text-destructive-foreground";
+      case "modérée": return "bg-orange-500 text-white";
+      case "mineure": return "bg-yellow-400 text-yellow-900";
+      default: return "bg-muted text-muted-foreground";
+    }
+  };
 
   return (
     <div className="space-y-5 animate-fade-in">
@@ -69,6 +76,27 @@ const AnalysisResults = ({ result, onReset }: AnalysisResultsProps) => {
             </div>
           </div>
 
+          {/* Interactions */}
+          {result.interactions && result.interactions.length > 0 && (
+            <div className="glass-card rounded-xl p-5 border-2 border-destructive/30">
+              <div className="flex items-center gap-2 mb-3">
+                <AlertTriangle className="h-5 w-5 text-destructive" />
+                <h2 className="font-semibold text-lg text-destructive">Interactions détectées</h2>
+              </div>
+              <div className="space-y-3">
+                {result.interactions.map((inter, i) => (
+                  <div key={i} className="py-3 px-4 rounded-lg bg-destructive/5 animate-slide-in" style={{ animationDelay: `${i * 80}ms` }}>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Badge className={niveauColor(inter.niveau)}>{inter.niveau}</Badge>
+                      <span className="font-medium text-sm">{inter.medicaments.join(" + ")}</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground">{inter.description}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Contextes */}
           <div className="glass-card rounded-xl p-5">
             <div className="flex items-center gap-2 mb-3">
@@ -99,7 +127,7 @@ const AnalysisResults = ({ result, onReset }: AnalysisResultsProps) => {
               <h2 className="font-semibold text-lg">Questions à poser au patient</h2>
             </div>
             <div className="space-y-3">
-              {result.questions.slice(0, 5).map((q, i) => (
+              {result.questions.slice(0, 8).map((q, i) => (
                 <div key={i} className="flex items-center justify-between gap-3 py-3 px-4 rounded-lg bg-secondary animate-slide-in" style={{ animationDelay: `${i * 60}ms` }}>
                   <span className="text-sm font-medium flex-1">{q}</span>
                   <div className="flex gap-2 shrink-0">
