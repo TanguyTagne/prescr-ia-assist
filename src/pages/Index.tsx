@@ -1,23 +1,62 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Pill, Loader2, BarChart3, LogOut, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import PrescriptionInput from "@/components/PrescriptionInput";
 import AnalysisResults from "@/components/AnalysisResults";
 import LegalDisclaimer from "@/components/LegalDisclaimer";
 import PWAInstallPrompt from "@/components/PWAInstallPrompt";
-import InstallPage from "@/components/InstallPage";
 import { analyzePrescription, analyzePrescriptionImage, type AnalysisResult } from "@/lib/prescriptionAnalyzer";
 import { trackEvent } from "@/hooks/useAnalytics";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
+}
+
+const PUBLISHED_URL = "https://prescr-ia-assist.lovable.app";
+
 const Index = () => {
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [tab, setTab] = useState<"analyze" | "install">("analyze");
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [isInstalled, setIsInstalled] = useState(false);
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (window.matchMedia("(display-mode: standalone)").matches) {
+      setIsInstalled(true);
+    }
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e as BeforeInstallPromptEvent);
+    };
+    window.addEventListener("beforeinstallprompt", handler);
+    const installed = () => setIsInstalled(true);
+    window.addEventListener("appinstalled", installed);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handler);
+      window.removeEventListener("appinstalled", installed);
+    };
+  }, []);
+
+  const handleInstall = async () => {
+    if (deferredPrompt) {
+      await deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === "accepted") {
+        setIsInstalled(true);
+        setDeferredPrompt(null);
+        toast.success("PrescrIA installée !");
+      }
+    } else {
+      window.open(PUBLISHED_URL, "_blank");
+      toast.info("Ouvrez le lien dans Chrome ou Edge puis cliquez sur « Installer » dans la barre d'adresse.");
+    }
+  };
 
   const handleAnalyze = async (text: string) => {
     setIsLoading(true);
@@ -71,10 +110,12 @@ const Index = () => {
               <BarChart3 className="h-3.5 w-3.5" />
               Dashboard
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => setTab(tab === "install" ? "analyze" : "install")} className={`text-primary-foreground hover:bg-primary-foreground/10 gap-1.5 text-xs ${tab === "install" ? "bg-primary-foreground/15" : ""}`}>
-              <Download className="h-3.5 w-3.5" />
-              Installer
-            </Button>
+            {!isInstalled && (
+              <Button variant="ghost" size="sm" onClick={handleInstall} className="text-primary-foreground hover:bg-primary-foreground/10 gap-1.5 text-xs">
+                <Download className="h-3.5 w-3.5" />
+                Installer
+              </Button>
+            )}
             <Button variant="ghost" size="icon" onClick={signOut} className="text-primary-foreground hover:bg-primary-foreground/10 h-8 w-8">
               <LogOut className="h-3.5 w-3.5" />
             </Button>
@@ -83,9 +124,7 @@ const Index = () => {
       </header>
 
       <main className="container max-w-2xl mx-auto px-4 py-5">
-        {tab === "install" ? (
-          <InstallPage />
-        ) : isLoading ? (
+        {isLoading ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3 animate-fade-in">
             <Loader2 className="h-8 w-8 text-primary animate-spin" />
             <p className="text-sm font-medium text-muted-foreground">Analyse en cours...</p>
