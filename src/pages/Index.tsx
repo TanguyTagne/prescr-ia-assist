@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import PrescriptionInput from "@/components/PrescriptionInput";
 import AnalysisResults from "@/components/AnalysisResults";
 import LegalDisclaimer from "@/components/LegalDisclaimer";
+import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 import { analyzePrescription, analyzePrescriptionImage, type AnalysisResult } from "@/lib/prescriptionAnalyzer";
 import { trackEvent } from "@/hooks/useAnalytics";
 import { useAuth } from "@/hooks/useAuth";
@@ -104,6 +105,7 @@ const Index = () => {
           <AnalysisResults result={result} onReset={handleReset} />
         )}
       </main>
+      <PWAInstallPrompt />
     </div>
   );
 };
