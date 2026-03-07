@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import PrescriptionInput from "@/components/PrescriptionInput";
 import AnalysisResults from "@/components/AnalysisResults";
 import LegalDisclaimer from "@/components/LegalDisclaimer";
-import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 import { analyzePrescription, analyzePrescriptionImage, type AnalysisResult } from "@/lib/prescriptionAnalyzer";
 import { trackEvent } from "@/hooks/useAnalytics";
 import { useAuth } from "@/hooks/useAuth";
@@ -94,65 +93,56 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="pharmacy-gradient px-4 py-3">
-        <div className="container max-w-2xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate("/")}>
-            <div className="h-9 w-9 rounded-xl bg-primary-foreground/20 flex items-center justify-center">
-              <Pill className="h-4 w-4 text-primary-foreground" />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-primary-foreground tracking-tight">PrescrIA</h1>
-              <p className="text-[10px] text-primary-foreground/70">Copilote pharmacie</p>
-            </div>
+      {/* Compact header */}
+      <header className="pharmacy-gradient px-3 py-2">
+        <div className="container max-w-xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/")}>
+            <Pill className="h-4 w-4 text-primary-foreground" />
+            <span className="text-sm font-bold text-primary-foreground tracking-tight">PrescrIA</span>
           </div>
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")} className="text-primary-foreground hover:bg-primary-foreground/10 gap-1.5 text-xs">
+          <div className="flex items-center gap-0.5">
+            <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")} className="text-primary-foreground hover:bg-primary-foreground/10 h-7 w-7">
               <BarChart3 className="h-3.5 w-3.5" />
-              Dashboard
             </Button>
             {!isInstalled && (
-              <Button variant="ghost" size="sm" onClick={handleInstall} className="text-primary-foreground hover:bg-primary-foreground/10 gap-1.5 text-xs">
+              <Button variant="ghost" size="icon" onClick={handleInstall} className="text-primary-foreground hover:bg-primary-foreground/10 h-7 w-7">
                 <Download className="h-3.5 w-3.5" />
-                Installer
               </Button>
             )}
-            <Button variant="ghost" size="icon" onClick={signOut} className="text-primary-foreground hover:bg-primary-foreground/10 h-8 w-8">
+            <Button variant="ghost" size="icon" onClick={signOut} className="text-primary-foreground hover:bg-primary-foreground/10 h-7 w-7">
               <LogOut className="h-3.5 w-3.5" />
             </Button>
           </div>
         </div>
       </header>
 
-      <main className="container max-w-2xl mx-auto px-4 py-5">
+      <main className="container max-w-xl mx-auto px-3 py-3">
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-16 gap-3 animate-fade-in">
-            <Loader2 className="h-8 w-8 text-primary animate-spin" />
-            <p className="text-sm font-medium text-muted-foreground">Analyse en cours...</p>
+          <div className="flex items-center justify-center py-10 gap-2 animate-fade-in">
+            <Loader2 className="h-5 w-5 text-primary animate-spin" />
+            <p className="text-sm text-muted-foreground">Analyse en cours...</p>
           </div>
         ) : !result ? (
-          <div className="space-y-5">
-            <div className="text-center space-y-1">
-              <h2 className="text-xl font-bold">Analyser une ordonnance</h2>
-              <p className="text-sm text-muted-foreground">Entrez les médicaments pour obtenir questions et suggestions.</p>
+          <div className="space-y-3">
+            <div className="text-center space-y-0.5">
+              <h2 className="text-base font-bold">Analyser une ordonnance</h2>
+              <p className="text-xs text-muted-foreground">Entrez les médicaments pour obtenir questions et suggestions.</p>
             </div>
             <PrescriptionInput onAnalyze={handleAnalyze} onAnalyzeImage={handleAnalyzeImage} />
             <LegalDisclaimer />
-            <div className="space-y-2">
-              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Essayer :</p>
-              <div className="flex flex-wrap gap-2">
-                {["Amoxicilline, Doliprane", "Ibuprofène, Oméprazole", "Metformine, Ramipril"].map((ex) => (
-                  <button key={ex} onClick={() => handleAnalyze(ex)} className="text-xs px-3 py-1.5 rounded-lg bg-secondary text-secondary-foreground hover:bg-accent transition-colors">
-                    {ex}
-                  </button>
-                ))}
-              </div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Essayer :</span>
+              {["Amoxicilline, Doliprane", "Ibuprofène, Oméprazole", "Metformine, Ramipril"].map((ex) => (
+                <button key={ex} onClick={() => handleAnalyze(ex)} className="text-[11px] px-2 py-1 rounded-md bg-secondary text-secondary-foreground hover:bg-accent transition-colors">
+                  {ex}
+                </button>
+              ))}
             </div>
           </div>
         ) : (
           <AnalysisResults result={result} onReset={handleReset} />
         )}
       </main>
-      <PWAInstallPrompt />
     </div>
   );
 };
