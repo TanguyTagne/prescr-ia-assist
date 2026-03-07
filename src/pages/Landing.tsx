@@ -94,7 +94,7 @@ const Landing = () => {
               {
                 icon: ShieldCheck,
                 title: "Suggestions au comptoir",
-                desc: "Recevez des suggestions de produits complémentaires avec une phrase conseil prête à dire, sans jamais diagnostiquer.",
+                desc: "Recevez des suggestions de produits complémentaires avec des phrases conseils.",
               },
             ].map((f, i) => (
               <div key={i} className="glass-card rounded-xl p-6 space-y-3">
