@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Pill, Loader2, Mail, Lock, User } from "lucide-react";
+import { Pill, Loader2, Mail, Lock, User, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
