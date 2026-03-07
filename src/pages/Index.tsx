@@ -55,7 +55,7 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       <header className="pharmacy-gradient px-4 py-3">
         <div className="container max-w-2xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate("/")}>
             <div className="h-9 w-9 rounded-xl bg-primary-foreground/20 flex items-center justify-center">
               <Pill className="h-4 w-4 text-primary-foreground" />
             </div>
