@@ -1,16 +1,10 @@
-import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { Pill, Zap, FolderSearch, ShieldCheck, ArrowRight, Download, LogIn, BarChart3, LogOut } from "lucide-react";
+import { Pill, FolderSearch, ShieldCheck, ArrowRight, Download, LogIn, BarChart3, LogOut, Zap, Monitor } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
 
-interface BeforeInstallPromptEvent extends Event {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
-}
-
-const PUBLISHED_URL = "https://prescr-ia-assist.lovable.app";
+// TODO: Replace with your actual GitHub Releases URL after first build
+const DOWNLOAD_URL = "https://github.com/YOUR_USERNAME/prescria-desktop/releases/latest/download/PrescrIA-Setup-1.0.0.exe";
 
 const Landing = () => {
   const { user, signOut } = useAuth();
