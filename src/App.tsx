@@ -12,6 +12,9 @@ import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient();
 
+const isStandalone = window.matchMedia("(display-mode: standalone)").matches
+  || (window.navigator as any).standalone === true;
+
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
   if (loading) return (
@@ -31,11 +34,19 @@ const App = () => {
         <Sonner />
         <BrowserRouter>
           <AuthProvider>
-            <Routes>
-              <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-              <Route path="*" element={<div className="min-h-screen" />} />
-            </Routes>
-            <Widget />
+            {isStandalone ? (
+              <Widget forceOpen />
+            ) : (
+              <>
+                <Routes>
+                  <Route path="/" element={<Landing />} />
+                  <Route path="/auth" element={<Landing />} />
+                  <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+                <Widget />
+              </>
+            )}
           </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>

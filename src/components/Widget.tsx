@@ -143,13 +143,34 @@ const WidgetApp = () => {
   );
 };
 
-const Widget = () => {
-  const [open, setOpen] = useState(false);
+const Widget = ({ forceOpen = false }: { forceOpen?: boolean }) => {
+  const [open, setOpen] = useState(forceOpen);
   const { user, loading } = useAuth();
+
+  if (forceOpen) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <div className="w-[320px] max-h-[520px] overflow-y-auto rounded-xl border border-border bg-background shadow-2xl">
+          <div className="pharmacy-gradient px-3 py-1.5 rounded-t-xl flex items-center gap-1.5">
+            <Pill className="h-3 w-3 text-primary-foreground" />
+            <span className="text-[11px] font-bold text-primary-foreground tracking-tight">PrescrIA</span>
+          </div>
+          {loading ? (
+            <div className="flex items-center justify-center py-6">
+              <Loader2 className="h-4 w-4 animate-spin text-primary" />
+            </div>
+          ) : !user ? (
+            <WidgetAuth />
+          ) : (
+            <WidgetApp />
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
-      {/* Floating bubble */}
       <button
         onClick={() => setOpen(!open)}
         className="fixed bottom-4 right-4 z-[9999] h-12 w-12 rounded-full pharmacy-gradient shadow-lg flex items-center justify-center hover:scale-105 transition-transform"
@@ -157,15 +178,12 @@ const Widget = () => {
         {open ? <X className="h-5 w-5 text-primary-foreground" /> : <Pill className="h-5 w-5 text-primary-foreground" />}
       </button>
 
-      {/* Panel */}
       {open && (
         <div className="fixed bottom-[4.5rem] right-4 z-[9998] w-[320px] max-h-[480px] overflow-y-auto rounded-xl border border-border bg-background shadow-2xl animate-in slide-in-from-bottom-2 fade-in duration-200">
-          {/* Mini header */}
           <div className="pharmacy-gradient px-3 py-1.5 rounded-t-xl flex items-center gap-1.5">
             <Pill className="h-3 w-3 text-primary-foreground" />
             <span className="text-[11px] font-bold text-primary-foreground tracking-tight">PrescrIA</span>
           </div>
-
           {loading ? (
             <div className="flex items-center justify-center py-6">
               <Loader2 className="h-4 w-4 animate-spin text-primary" />
