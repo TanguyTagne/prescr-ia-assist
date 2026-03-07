@@ -1,0 +1,133 @@
+import { useState } from "react";
+import { Pill, Loader2, Mail, Lock, User } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
+
+const Auth = () => {
+  const [isLogin, setIsLogin] = useState(true);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      if (isLogin) {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        navigate("/");
+      } else {
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: { full_name: fullName },
+            emailRedirectTo: window.location.origin,
+          },
+        });
+        if (error) throw error;
+        toast.success("Vérifiez votre email pour confirmer votre compte.");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Erreur d'authentification");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-background flex flex-col">
+      <header className="pharmacy-gradient px-4 py-4">
+        <div className="container max-w-md mx-auto flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-primary-foreground/20 flex items-center justify-center">
+            <Pill className="h-5 w-5 text-primary-foreground" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-primary-foreground tracking-tight">PrescrIA</h1>
+            <p className="text-xs text-primary-foreground/70">Assistant pharmacie intelligent</p>
+          </div>
+        </div>
+      </header>
+
+      <main className="flex-1 flex items-center justify-center px-4 py-8">
+        <div className="w-full max-w-md space-y-6">
+          <div className="text-center space-y-2">
+            <h2 className="text-2xl font-bold">{isLogin ? "Connexion" : "Créer un compte"}</h2>
+            <p className="text-muted-foreground text-sm">
+              {isLogin ? "Accédez à votre espace PrescrIA" : "Rejoignez PrescrIA en quelques secondes"}
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="glass-card rounded-xl p-6 space-y-4">
+            {!isLogin && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Nom complet</label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="Dr. Martin Dupont"
+                    className="pl-10 h-12"
+                    required
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Email</label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="email@pharmacie.fr"
+                  className="pl-10 h-12"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Mot de passe</label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="pl-10 h-12"
+                  minLength={6}
+                  required
+                />
+              </div>
+            </div>
+
+            <Button type="submit" className="w-full h-12 text-base font-semibold pharmacy-gradient border-0" disabled={loading}>
+              {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : isLogin ? "Se connecter" : "Créer mon compte"}
+            </Button>
+          </form>
+
+          <p className="text-center text-sm text-muted-foreground">
+            {isLogin ? "Pas encore de compte ?" : "Déjà un compte ?"}
+            <button onClick={() => setIsLogin(!isLogin)} className="ml-1 text-primary font-medium hover:underline">
+              {isLogin ? "S'inscrire" : "Se connecter"}
+            </button>
+          </p>
+        </div>
+      </main>
+    </div>
+  );
+};
+
+export default Auth;

@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { Pill, MessageCircleQuestion, ShoppingBag, RotateCcw, Stethoscope, AlertTriangle } from "lucide-react";
+import { Pill, MessageCircleQuestion, ShoppingBag, RotateCcw, AlertTriangle, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { AnalysisResult } from "@/lib/prescriptionAnalyzer";
 import LegalDisclaimer from "./LegalDisclaimer";
+import { trackEvent } from "@/hooks/useAnalytics";
 
 interface AnalysisResultsProps {
   result: AnalysisResult;
@@ -11,18 +12,13 @@ interface AnalysisResultsProps {
 }
 
 const AnalysisResults = ({ result, onReset }: AnalysisResultsProps) => {
-  const [answeredQuestions, setAnsweredQuestions] = useState<Record<number, "oui" | "non">>({});
-  const [step, setStep] = useState<"overview" | "questions" | "suggestions">("overview");
-
-  const handleAnswer = (idx: number, answer: "oui" | "non") => {
-    setAnsweredQuestions((prev) => ({ ...prev, [idx]: answer }));
-  };
+  const [showConseil, setShowConseil] = useState(false);
 
   if (result.medicaments.length === 0) {
     return (
       <div className="text-center space-y-4 animate-fade-in py-8">
         <div className="text-5xl">🔍</div>
-        <p className="text-lg text-muted-foreground">Aucun médicament reconnu. Vérifiez l'orthographe ou essayez un autre nom.</p>
+        <p className="text-lg text-muted-foreground">Aucun médicament reconnu.</p>
         <Button onClick={onReset} variant="outline" size="lg" className="gap-2">
           <RotateCcw className="h-4 w-4" />
           Nouvelle analyse
@@ -34,163 +30,120 @@ const AnalysisResults = ({ result, onReset }: AnalysisResultsProps) => {
   const niveauColor = (niveau: string) => {
     switch (niveau) {
       case "majeure": return "bg-destructive text-destructive-foreground";
-      case "modérée": return "bg-orange-500 text-white";
-      case "mineure": return "bg-yellow-400 text-yellow-900";
+      case "modérée": return "bg-pharmacy-warm text-primary-foreground";
+      case "mineure": return "bg-muted text-muted-foreground";
       default: return "bg-muted text-muted-foreground";
     }
   };
 
+  const handleConseilClick = () => {
+    setShowConseil(true);
+    trackEvent("conseil_clicked", { medicaments: result.medicaments.map(m => m.nom) });
+  };
+
+  const handleSuggestionClick = (categorie: string) => {
+    trackEvent("suggestion_used", { categorie });
+  };
+
   return (
-    <div className="space-y-5 animate-fade-in">
-      {/* Step indicator */}
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <button onClick={() => setStep("overview")} className={`px-3 py-1 rounded-full transition-all ${step === "overview" ? "bg-primary text-primary-foreground font-medium" : "hover:bg-secondary"}`}>
-          1. Ordonnance
-        </button>
-        <span>→</span>
-        <button onClick={() => setStep("questions")} className={`px-3 py-1 rounded-full transition-all ${step === "questions" ? "bg-primary text-primary-foreground font-medium" : "hover:bg-secondary"}`}>
-          2. Questions
-        </button>
-        <span>→</span>
-        <button onClick={() => setStep("suggestions")} className={`px-3 py-1 rounded-full transition-all ${step === "suggestions" ? "bg-primary text-primary-foreground font-medium" : "hover:bg-secondary"}`}>
-          3. Suggestions
-        </button>
+    <div className="space-y-4 animate-fade-in">
+      {/* Médicaments détectés - compact */}
+      <div className="glass-card rounded-xl p-4">
+        <div className="flex items-center gap-2 mb-2">
+          <Pill className="h-4 w-4 text-primary" />
+          <h2 className="font-semibold text-sm">Médicaments détectés</h2>
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {result.medicaments.map((med, i) => (
+            <Badge key={i} variant="secondary" className="text-xs py-1 px-2.5">
+              {med.nom} <span className="text-muted-foreground ml-1">({med.classe})</span>
+            </Badge>
+          ))}
+        </div>
       </div>
 
-      {/* STEP 1: Overview */}
-      {step === "overview" && (
-        <div className="space-y-4 animate-fade-in">
-          {/* Medications */}
-          <div className="glass-card rounded-xl p-5">
-            <div className="flex items-center gap-2 mb-3">
-              <Pill className="h-5 w-5 text-primary" />
-              <h2 className="font-semibold text-lg">Médicaments détectés</h2>
-            </div>
-            <div className="space-y-2">
-              {result.medicaments.map((med, i) => (
-                <div key={i} className="flex items-center justify-between py-2 px-3 rounded-lg bg-secondary animate-slide-in" style={{ animationDelay: `${i * 80}ms` }}>
-                  <span className="font-medium">{med.nom}</span>
-                  <Badge variant="secondary" className="bg-accent text-accent-foreground">{med.classe}</Badge>
-                </div>
-              ))}
-            </div>
+      {/* Interactions - only if present */}
+      {result.interactions && result.interactions.length > 0 && (
+        <div className="glass-card rounded-xl p-4 border border-destructive/30">
+          <div className="flex items-center gap-2 mb-2">
+            <AlertTriangle className="h-4 w-4 text-destructive" />
+            <h2 className="font-semibold text-sm text-destructive">Interactions</h2>
           </div>
+          {result.interactions.map((inter, i) => (
+            <div key={i} className="flex items-start gap-2 py-1.5 text-sm">
+              <Badge className={`${niveauColor(inter.niveau)} text-xs shrink-0`}>{inter.niveau}</Badge>
+              <span className="text-muted-foreground">{inter.medicaments.join(" + ")} — {inter.description}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
-          {/* Interactions */}
-          {result.interactions && result.interactions.length > 0 && (
-            <div className="glass-card rounded-xl p-5 border-2 border-destructive/30">
-              <div className="flex items-center gap-2 mb-3">
-                <AlertTriangle className="h-5 w-5 text-destructive" />
-                <h2 className="font-semibold text-lg text-destructive">Interactions détectées</h2>
+      {/* Questions (max 2) */}
+      <div className="glass-card rounded-xl p-4">
+        <div className="flex items-center gap-2 mb-2">
+          <MessageCircleQuestion className="h-4 w-4 text-primary" />
+          <h2 className="font-semibold text-sm">Questions à poser</h2>
+        </div>
+        <ul className="space-y-1.5">
+          {result.questions.slice(0, 2).map((q, i) => (
+            <li key={i} className="text-sm flex items-start gap-2">
+              <span className="text-primary font-bold mt-0.5">•</span>
+              <span>{q}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* Suggestions (max 2) */}
+      <div className="glass-card rounded-xl p-4">
+        <div className="flex items-center gap-2 mb-2">
+          <ShoppingBag className="h-4 w-4 text-primary" />
+          <h2 className="font-semibold text-sm">Suggestions</h2>
+        </div>
+        <div className="space-y-2">
+          {result.suggestions.slice(0, 2).map((sug, i) => (
+            <button
+              key={i}
+              onClick={() => handleSuggestionClick(sug.categorie)}
+              className="w-full flex items-center gap-3 py-2 px-3 rounded-lg bg-secondary hover:bg-accent transition-colors text-left"
+            >
+              <span className="text-lg shrink-0">{sug.icon}</span>
+              <div className="flex-1 min-w-0">
+                <span className="font-medium text-sm block">{sug.categorie}</span>
+                <span className="text-xs text-muted-foreground">{sug.raison}</span>
               </div>
-              <div className="space-y-3">
-                {result.interactions.map((inter, i) => (
-                  <div key={i} className="py-3 px-4 rounded-lg bg-destructive/5 animate-slide-in" style={{ animationDelay: `${i * 80}ms` }}>
-                    <div className="flex items-center gap-2 mb-1">
-                      <Badge className={niveauColor(inter.niveau)}>{inter.niveau}</Badge>
-                      <span className="font-medium text-sm">{inter.medicaments.join(" + ")}</span>
-                    </div>
-                    <p className="text-sm text-muted-foreground">{inter.description}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+            </button>
+          ))}
+        </div>
+      </div>
 
-          {/* Contextes */}
-          <div className="glass-card rounded-xl p-5">
-            <div className="flex items-center gap-2 mb-3">
-              <Stethoscope className="h-5 w-5 text-primary" />
-              <h2 className="font-semibold text-lg">Contextes souvent associés</h2>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {result.contextes.map((ctx, i) => (
-                <Badge key={i} variant="outline" className="text-sm py-1.5 px-3 border-primary/30 text-foreground">
-                  {ctx}
-                </Badge>
-              ))}
-            </div>
+      {/* Bouton Voir conseil */}
+      {!showConseil ? (
+        <Button
+          onClick={handleConseilClick}
+          size="lg"
+          className="w-full h-12 text-base font-semibold pharmacy-gradient border-0 gap-2"
+        >
+          <MessageSquare className="h-5 w-5" />
+          Voir conseil
+        </Button>
+      ) : (
+        <div className="glass-card rounded-xl p-4 border-2 border-primary/20 animate-fade-in">
+          <div className="flex items-center gap-2 mb-2">
+            <MessageSquare className="h-4 w-4 text-primary" />
+            <h2 className="font-semibold text-sm">Phrase conseil</h2>
           </div>
-
-          <Button onClick={() => setStep("questions")} size="lg" className="w-full h-13 text-base font-semibold pharmacy-gradient border-0">
-            Voir les questions à poser →
-          </Button>
+          <p className="text-sm leading-relaxed italic text-foreground">
+            "{result.conseil || "Un accompagnement adapté peut aider à améliorer le confort au quotidien. N'hésitez pas à en parler à votre pharmacien."}"
+          </p>
         </div>
       )}
 
-      {/* STEP 2: Questions */}
-      {step === "questions" && (
-        <div className="space-y-4 animate-fade-in">
-          <div className="glass-card rounded-xl p-5">
-            <div className="flex items-center gap-2 mb-4">
-              <MessageCircleQuestion className="h-5 w-5 text-primary" />
-              <h2 className="font-semibold text-lg">Questions à poser au patient</h2>
-            </div>
-            <div className="space-y-3">
-              {result.questions.slice(0, 8).map((q, i) => (
-                <div key={i} className="flex items-center justify-between gap-3 py-3 px-4 rounded-lg bg-secondary animate-slide-in" style={{ animationDelay: `${i * 60}ms` }}>
-                  <span className="text-sm font-medium flex-1">{q}</span>
-                  <div className="flex gap-2 shrink-0">
-                    <button
-                      onClick={() => handleAnswer(i, "oui")}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                        answeredQuestions[i] === "oui"
-                          ? "bg-primary text-primary-foreground shadow-md"
-                          : "bg-card border border-border hover:border-primary"
-                      }`}
-                    >
-                      Oui
-                    </button>
-                    <button
-                      onClick={() => handleAnswer(i, "non")}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                        answeredQuestions[i] === "non"
-                          ? "bg-muted text-muted-foreground"
-                          : "bg-card border border-border hover:border-border"
-                      }`}
-                    >
-                      Non
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <Button onClick={() => setStep("suggestions")} size="lg" className="w-full h-13 text-base font-semibold pharmacy-gradient border-0">
-            <ShoppingBag className="h-5 w-5 mr-2" />
-            Voir les suggestions produits →
-          </Button>
-        </div>
-      )}
-
-      {/* STEP 3: Suggestions */}
-      {step === "suggestions" && (
-        <div className="space-y-4 animate-fade-in">
-          <div className="glass-card rounded-xl p-5">
-            <div className="flex items-center gap-2 mb-4">
-              <ShoppingBag className="h-5 w-5 text-primary" />
-              <h2 className="font-semibold text-lg">Suggestions produits complémentaires</h2>
-            </div>
-            <div className="space-y-3">
-              {result.suggestions.map((sug, i) => (
-                <div key={i} className="flex items-start gap-4 py-4 px-4 rounded-lg bg-secondary animate-slide-in" style={{ animationDelay: `${i * 80}ms` }}>
-                  <span className="text-2xl shrink-0">{sug.icon}</span>
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-base">{sug.categorie}</h3>
-                    <p className="text-sm text-muted-foreground mt-0.5">{sug.raison}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <Button onClick={onReset} variant="outline" size="lg" className="w-full h-13 gap-2 text-base">
-            <RotateCcw className="h-4 w-4" />
-            Nouvelle ordonnance
-          </Button>
-        </div>
-      )}
+      {/* Reset */}
+      <Button onClick={onReset} variant="outline" size="lg" className="w-full gap-2">
+        <RotateCcw className="h-4 w-4" />
+        Nouvelle ordonnance
+      </Button>
 
       <LegalDisclaimer />
     </div>
