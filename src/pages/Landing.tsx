@@ -183,7 +183,7 @@ const Landing = () => {
         </div>
       </footer>
 
-      <PWAInstallPrompt />
+      
     </div>
   );
 };
