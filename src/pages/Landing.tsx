@@ -9,40 +9,6 @@ const DOWNLOAD_URL = "https://github.com/YOUR_USERNAME/prescria-desktop/releases
 const Landing = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [isInstalled, setIsInstalled] = useState(false);
-
-  useEffect(() => {
-    if (window.matchMedia("(display-mode: standalone)").matches) {
-      setIsInstalled(true);
-    }
-    const handler = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
-    };
-    window.addEventListener("beforeinstallprompt", handler);
-    const installed = () => setIsInstalled(true);
-    window.addEventListener("appinstalled", installed);
-    return () => {
-      window.removeEventListener("beforeinstallprompt", handler);
-      window.removeEventListener("appinstalled", installed);
-    };
-  }, []);
-
-  const handleInstall = async () => {
-    if (deferredPrompt) {
-      await deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === "accepted") {
-        setIsInstalled(true);
-        setDeferredPrompt(null);
-        toast.success("PrescrIA installée !");
-      }
-    } else {
-      window.open(PUBLISHED_URL, "_blank");
-      toast.info("Ouvrez ce lien dans Chrome ou Edge, puis cliquez sur l'icône d'installation dans la barre d'adresse.");
-    }
-  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -92,18 +58,23 @@ const Landing = () => {
             PrescrIA détecte les interactions, génère les bonnes questions à poser au patient et suggère les produits complémentaires — directement au comptoir.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-            {user ? (
-              <Button size="lg" onClick={handleInstall} className="h-12 px-8 text-base font-semibold pharmacy-gradient border-0 gap-2">
+            <Button size="lg" asChild className="h-12 px-8 text-base font-semibold pharmacy-gradient border-0 gap-2">
+              <a href={DOWNLOAD_URL} download>
                 <Download className="h-5 w-5" />
-                Télécharger PrescrIA
-              </Button>
-            ) : (
-              <Button size="lg" onClick={() => navigate("/auth")} className="h-12 px-8 text-base font-semibold pharmacy-gradient border-0 gap-2">
-                Commencer gratuitement
+                Télécharger pour Windows
+              </a>
+            </Button>
+            {!user && (
+              <Button variant="outline" size="lg" onClick={() => navigate("/auth")} className="h-12 px-8 text-base gap-2">
+                Se connecter
                 <ArrowRight className="h-4 w-4" />
               </Button>
             )}
           </div>
+          <p className="text-xs text-muted-foreground flex items-center justify-center gap-1.5">
+            <Monitor className="h-3 w-3" />
+            Compatible Windows 10/11 — Installation en 1 minute
+          </p>
         </div>
       </section>
 
@@ -141,25 +112,38 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* Install section */}
-      {!isInstalled && (
-        <section className="py-16 px-4">
-          <div className="container max-w-2xl mx-auto text-center space-y-6">
-            <div className="h-14 w-14 rounded-2xl bg-accent flex items-center justify-center mx-auto">
-              <Download className="h-7 w-7 text-accent-foreground" />
-            </div>
-            <h2 className="text-2xl font-bold">Installez PrescrIA sur votre poste</h2>
-            <p className="text-muted-foreground leading-relaxed">
-              PrescrIA s'installe comme une application native. Ouvrez-la une fois le matin, elle reste active toute la journée.
-            </p>
-            <Button size="lg" onClick={handleInstall} className="h-14 px-10 text-lg font-bold pharmacy-gradient border-0 gap-3">
-              <Download className="h-6 w-6" />
-              Installer PrescrIA
-            </Button>
-            <p className="text-xs text-muted-foreground">Compatible Chrome et Edge sur PC</p>
+      {/* Download section */}
+      <section className="py-16 px-4">
+        <div className="container max-w-2xl mx-auto text-center space-y-6">
+          <div className="h-14 w-14 rounded-2xl bg-accent flex items-center justify-center mx-auto">
+            <Download className="h-7 w-7 text-accent-foreground" />
           </div>
-        </section>
-      )}
+          <h2 className="text-2xl font-bold">Installez PrescrIA sur votre poste</h2>
+          <p className="text-muted-foreground leading-relaxed">
+            Téléchargez l'installeur, lancez-le, et PrescrIA apparaît sur votre bureau. Prêt à l'emploi en 1 minute.
+          </p>
+          <Button size="lg" asChild className="h-14 px-10 text-lg font-bold pharmacy-gradient border-0 gap-3">
+            <a href={DOWNLOAD_URL} download>
+              <Download className="h-6 w-6" />
+              Télécharger PrescrIA
+            </a>
+          </Button>
+          <div className="grid grid-cols-3 gap-4 pt-4 text-xs text-muted-foreground">
+            <div className="flex flex-col items-center gap-1">
+              <span className="font-semibold text-foreground">1.</span>
+              Téléchargez l'installeur
+            </div>
+            <div className="flex flex-col items-center gap-1">
+              <span className="font-semibold text-foreground">2.</span>
+              Double-cliquez pour installer
+            </div>
+            <div className="flex flex-col items-center gap-1">
+              <span className="font-semibold text-foreground">3.</span>
+              Lancez depuis le bureau
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* Footer */}
       <footer className="border-t border-border py-6 px-4">
@@ -168,8 +152,6 @@ const Landing = () => {
           <span>Outil d'aide — ne remplace pas le jugement professionnel</span>
         </div>
       </footer>
-
-      
     </div>
   );
 };
