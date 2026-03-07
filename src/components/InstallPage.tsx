@@ -1,18 +1,20 @@
 import { useState, useEffect } from "react";
-import { Download, Monitor, Chrome, CheckCircle2, ArrowRight, Smartphone, ExternalLink } from "lucide-react";
+import { Download, Monitor, Chrome, CheckCircle2, Smartphone, ExternalLink, Copy, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 }
 
+const PUBLISHED_URL = "https://prescr-ia-assist.lovable.app";
+
 const InstallPage = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstalled, setIsInstalled] = useState(false);
 
   useEffect(() => {
-    // Check if already installed
     if (window.matchMedia("(display-mode: standalone)").matches) {
       setIsInstalled(true);
     }
@@ -40,6 +42,11 @@ const InstallPage = () => {
       setIsInstalled(true);
       setDeferredPrompt(null);
     }
+  };
+
+  const copyLink = () => {
+    navigator.clipboard.writeText(PUBLISHED_URL);
+    toast.success("Lien copié !");
   };
 
   return (
@@ -72,14 +79,32 @@ const InstallPage = () => {
           </Button>
         </div>
       ) : (
-        <div className="rounded-xl border-2 border-border bg-secondary/50 p-5 flex items-center gap-3">
-          <Chrome className="h-6 w-6 text-muted-foreground shrink-0" />
-          <div>
-            <p className="font-semibold text-sm">Installation manuelle</p>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Suivez le tutoriel ci-dessous pour installer PrescrIA
-            </p>
+        <div className="rounded-xl border-2 border-primary/30 bg-accent/30 p-5 space-y-4">
+          <div className="flex items-center gap-3">
+            <Download className="h-6 w-6 text-primary shrink-0" />
+            <div>
+              <p className="font-semibold text-sm">Installer PrescrIA sur votre poste</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Ouvrez le lien ci-dessous dans <strong>Chrome</strong> ou <strong>Edge</strong> pour installer l'application
+              </p>
+            </div>
           </div>
+          <div className="flex items-center gap-2 bg-secondary rounded-lg p-3">
+            <Link2 className="h-4 w-4 text-primary shrink-0" />
+            <a href={PUBLISHED_URL} target="_blank" rel="noopener noreferrer" className="text-sm font-mono text-primary underline underline-offset-2 truncate flex-1">
+              {PUBLISHED_URL}
+            </a>
+            <Button variant="outline" size="sm" onClick={copyLink} className="shrink-0 gap-1.5 h-8 text-xs">
+              <Copy className="h-3.5 w-3.5" />
+              Copier
+            </Button>
+          </div>
+          <a href={PUBLISHED_URL} target="_blank" rel="noopener noreferrer">
+            <Button className="w-full h-12 text-base font-semibold pharmacy-gradient border-0 gap-2">
+              <ExternalLink className="h-5 w-5" />
+              Ouvrir PrescrIA
+            </Button>
+          </a>
         </div>
       )}
 
@@ -98,11 +123,11 @@ const InstallPage = () => {
               <div className="w-px flex-1 bg-border mt-2" />
             </div>
             <div className="pb-4">
-              <p className="font-semibold text-sm">Ouvrir PrescrIA dans Chrome ou Edge</p>
+              <p className="font-semibold text-sm">Ouvrir le lien dans Chrome ou Edge</p>
               <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                Sur le PC du préparateur, ouvrez <strong>Google Chrome</strong> ou <strong>Microsoft Edge</strong> et connectez-vous à votre compte PrescrIA.
+                Sur le PC du préparateur, ouvrez <strong>Google Chrome</strong> ou <strong>Microsoft Edge</strong>, collez le lien ci-dessus et connectez-vous.
               </p>
-              <div className="mt-2 flex items-center gap-2 text-xs text-primary font-medium">
+              <div className="mt-2 flex items-center gap-2 text-xs text-destructive font-medium">
                 <ExternalLink className="h-3 w-3" />
                 Firefox et Safari ne supportent pas l'installation PWA
               </div>
@@ -118,7 +143,7 @@ const InstallPage = () => {
             <div className="pb-4">
               <p className="font-semibold text-sm">Cliquer sur « Installer »</p>
               <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                Cherchez l'icône d'installation dans la barre d'adresse (à droite) ou utilisez le bouton ci-dessus s'il apparaît.
+                Cherchez l'icône d'installation dans la barre d'adresse (à droite) ou dans le menu du navigateur.
               </p>
               <div className="mt-2 rounded-lg bg-secondary p-3 text-xs text-muted-foreground space-y-1.5">
                 <p className="flex items-center gap-2">
