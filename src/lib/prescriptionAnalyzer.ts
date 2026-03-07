@@ -23,6 +23,7 @@ export interface AnalysisResult {
   contextes: string[];
   questions: string[];
   suggestions: Suggestion[];
+  conseil: string;
 }
 
 export async function analyzePrescription(input: string): Promise<AnalysisResult> {
@@ -35,17 +36,9 @@ export async function analyzePrescription(input: string): Promise<AnalysisResult
     throw new Error(error.message || "Erreur lors de l'analyse");
   }
 
-  if (data?.error) {
-    throw new Error(data.error);
-  }
+  if (data?.error) throw new Error(data.error);
 
-  return {
-    medicaments: data.medicaments || [],
-    interactions: data.interactions || [],
-    contextes: data.contextes || [],
-    questions: data.questions || [],
-    suggestions: data.suggestions || [],
-  };
+  return normalizeResult(data);
 }
 
 export async function analyzePrescriptionImage(imageBase64: string): Promise<AnalysisResult> {
@@ -58,15 +51,18 @@ export async function analyzePrescriptionImage(imageBase64: string): Promise<Ana
     throw new Error(error.message || "Erreur lors de l'analyse OCR");
   }
 
-  if (data?.error) {
-    throw new Error(data.error);
-  }
+  if (data?.error) throw new Error(data.error);
 
+  return normalizeResult(data);
+}
+
+function normalizeResult(data: any): AnalysisResult {
   return {
     medicaments: data.medicaments || [],
     interactions: data.interactions || [],
     contextes: data.contextes || [],
-    questions: data.questions || [],
-    suggestions: data.suggestions || [],
+    questions: (data.questions || []).slice(0, 2),
+    suggestions: (data.suggestions || []).slice(0, 2),
+    conseil: data.conseil || "",
   };
 }
