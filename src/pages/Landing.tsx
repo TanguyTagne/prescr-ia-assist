@@ -84,7 +84,7 @@ const Landing = () => {
               {
                 icon: FolderSearch,
                 title: "Scannez ou tapez",
-                desc: "Connectez votre scanner ou tapez les noms des médicaments. PrescrIA détecte automatiquement les nouveaux fichiers.",
+                desc: "Connectez votre scanner ou l'IA se charge de lire les médicaments prescrits. PrescrIA détecte automatiquement les nouveaux fichiers.",
               },
               {
                 icon: Zap,
