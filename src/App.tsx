@@ -32,10 +32,8 @@ const App = () => {
         <BrowserRouter>
           <AuthProvider>
             <Routes>
-              <Route path="/" element={<Landing />} />
-              <Route path="/auth" element={<Landing />} />
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-              <Route path="*" element={<NotFound />} />
+              <Route path="*" element={<div className="min-h-screen" />} />
             </Routes>
             <Widget />
           </AuthProvider>
