@@ -89,7 +89,7 @@ const Landing = () => {
               {
                 icon: Zap,
                 title: "Analyse IA instantanée",
-                desc: "L'IA identifie les interactions, le contexte thérapeutique et génère 2 questions pertinentes à poser au patient.",
+                desc: "L'IA identifie les interactions, le contexte thérapeutique et génère des questions pertinentes à poser au patient.",
               },
               {
                 icon: ShieldCheck,
