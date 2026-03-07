@@ -8,6 +8,7 @@ app.disableHardwareAcceleration();
 let mainWindow;
 
 const APP_URL = "https://prescr-ia-assist.lovable.app";
+const LOCAL_PATH = path.join(__dirname, "web", "index.html");
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -29,8 +30,13 @@ function createWindow() {
   // Remove the menu bar entirely
   mainWindow.setMenuBarVisibility(false);
 
-  // Load the published app
-  mainWindow.loadURL(APP_URL);
+  // Load local build if available, otherwise remote
+  const fs = require("fs");
+  if (fs.existsSync(LOCAL_PATH)) {
+    mainWindow.loadFile(LOCAL_PATH);
+  } else {
+    mainWindow.loadURL(APP_URL);
+  }
 
   // Show window when ready to avoid white flash
   mainWindow.once("ready-to-show", () => {
