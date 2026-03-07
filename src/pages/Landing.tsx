@@ -1,12 +1,54 @@
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Pill, Zap, FolderSearch, ShieldCheck, ArrowRight, Download, LogIn, BarChart3, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import PWAInstallPrompt from "@/components/PWAInstallPrompt";
+import { toast } from "sonner";
+
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
+}
+
+const PUBLISHED_URL = "https://prescr-ia-assist.lovable.app";
 
 const Landing = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [isInstalled, setIsInstalled] = useState(false);
+
+  useEffect(() => {
+    if (window.matchMedia("(display-mode: standalone)").matches) {
+      setIsInstalled(true);
+    }
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e as BeforeInstallPromptEvent);
+    };
+    window.addEventListener("beforeinstallprompt", handler);
+    const installed = () => setIsInstalled(true);
+    window.addEventListener("appinstalled", installed);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handler);
+      window.removeEventListener("appinstalled", installed);
+    };
+  }, []);
+
+  const handleInstall = async () => {
+    if (deferredPrompt) {
+      await deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === "accepted") {
+        setIsInstalled(true);
+        setDeferredPrompt(null);
+        toast.success("PrescrIA installée !");
+      }
+    } else {
+      window.open(PUBLISHED_URL, "_blank");
+      toast.info("Ouvrez ce lien dans Chrome ou Edge, puis cliquez sur l'icône d'installation dans la barre d'adresse.");
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -71,6 +113,10 @@ const Landing = () => {
                 <ArrowRight className="h-4 w-4" />
               </Button>
             )}
+            <Button size="lg" variant="outline" onClick={handleInstall} className="h-12 px-8 text-base font-semibold gap-2">
+              <Download className="h-5 w-5" />
+              Installer l'application
+            </Button>
           </div>
         </div>
       </section>
@@ -110,33 +156,24 @@ const Landing = () => {
       </section>
 
       {/* Install section */}
-      <section className="py-16 px-4">
-        <div className="container max-w-2xl mx-auto text-center space-y-6">
-          <div className="h-14 w-14 rounded-2xl bg-accent flex items-center justify-center mx-auto">
-            <Download className="h-7 w-7 text-accent-foreground" />
-          </div>
-          <h2 className="text-2xl font-bold">Installez PrescrIA sur votre poste</h2>
-          <p className="text-muted-foreground leading-relaxed">
-            PrescrIA s'installe comme une application native sur le PC du préparateur. Ouvrez-la une fois le matin, elle reste active toute la journée.
-          </p>
-          <div className="glass-card rounded-xl p-6 text-left space-y-4">
-            <h3 className="font-semibold text-sm">Installation en 2 étapes :</h3>
-            <ol className="space-y-3 text-sm">
-              <li className="flex items-start gap-3">
-                <span className="h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold shrink-0">1</span>
-                <span>Ouvrez PrescrIA dans <strong>Chrome</strong> ou <strong>Edge</strong> sur le PC du préparateur</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold shrink-0">2</span>
-                <span>Cliquez sur l'icône <strong>« Installer »</strong> dans la barre d'adresse ou sur le bouton qui apparaît en bas de l'écran</span>
-              </li>
-            </ol>
-            <p className="text-xs text-muted-foreground">
-              Une icône PrescrIA apparaîtra sur le bureau. L'app s'ouvre en fenêtre dédiée, sans barre de navigateur.
+      {!isInstalled && (
+        <section className="py-16 px-4">
+          <div className="container max-w-2xl mx-auto text-center space-y-6">
+            <div className="h-14 w-14 rounded-2xl bg-accent flex items-center justify-center mx-auto">
+              <Download className="h-7 w-7 text-accent-foreground" />
+            </div>
+            <h2 className="text-2xl font-bold">Installez PrescrIA sur votre poste</h2>
+            <p className="text-muted-foreground leading-relaxed">
+              PrescrIA s'installe comme une application native. Ouvrez-la une fois le matin, elle reste active toute la journée.
             </p>
+            <Button size="lg" onClick={handleInstall} className="h-14 px-10 text-lg font-bold pharmacy-gradient border-0 gap-3">
+              <Download className="h-6 w-6" />
+              Installer PrescrIA
+            </Button>
+            <p className="text-xs text-muted-foreground">Compatible Chrome et Edge sur PC</p>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Footer */}
       <footer className="border-t border-border py-6 px-4">
