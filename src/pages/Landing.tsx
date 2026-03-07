@@ -64,10 +64,6 @@ const Landing = () => {
           <div className="flex items-center gap-2">
             {user ? (
               <>
-                <Button variant="ghost" size="sm" onClick={() => navigate("/app")} className="gap-1.5 text-xs">
-                  <Zap className="h-3.5 w-3.5" />
-                  Ouvrir l'app
-                </Button>
                 <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")} className="gap-1.5 text-xs">
                   <BarChart3 className="h-3.5 w-3.5" />
                   Dashboard
@@ -103,9 +99,9 @@ const Landing = () => {
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
             {user ? (
-              <Button size="lg" onClick={() => navigate("/app")} className="h-12 px-8 text-base font-semibold pharmacy-gradient border-0 gap-2">
-                Ouvrir PrescrIA
-                <ArrowRight className="h-4 w-4" />
+              <Button size="lg" onClick={handleInstall} className="h-12 px-8 text-base font-semibold pharmacy-gradient border-0 gap-2">
+                <Download className="h-5 w-5" />
+                Télécharger PrescrIA
               </Button>
             ) : (
               <Button size="lg" onClick={() => navigate("/auth")} className="h-12 px-8 text-base font-semibold pharmacy-gradient border-0 gap-2">
@@ -113,10 +109,6 @@ const Landing = () => {
                 <ArrowRight className="h-4 w-4" />
               </Button>
             )}
-            <Button size="lg" variant="outline" onClick={handleInstall} className="h-12 px-8 text-base font-semibold gap-2">
-              <Download className="h-5 w-5" />
-              Installer l'application
-            </Button>
           </div>
         </div>
       </section>
