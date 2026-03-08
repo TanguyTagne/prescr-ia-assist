@@ -123,7 +123,7 @@ const Landing = () => {
             Téléchargez l'installeur, lancez-le, et PrescrIA apparaît sur votre bureau. Prêt à l'emploi en 1 minute.
           </p>
           <Button size="lg" asChild className="h-14 px-10 text-lg font-bold pharmacy-gradient border-0 gap-3">
-            <a href={DOWNLOAD_URL} download>
+            <a href={DOWNLOAD_URL}>
               <Download className="h-6 w-6" />
               Télécharger PrescrIA
             </a>
