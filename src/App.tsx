@@ -13,7 +13,8 @@ import { Loader2 } from "lucide-react";
 const queryClient = new QueryClient();
 
 const isStandalone = window.matchMedia("(display-mode: standalone)").matches
-  || (window.navigator as any).standalone === true;
+  || (window.navigator as any).standalone === true
+  || !!(window as any).electronAPI?.isDesktop;
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
