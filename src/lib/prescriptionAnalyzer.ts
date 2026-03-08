@@ -9,6 +9,8 @@ export interface Interaction {
 export interface MedicamentInfo {
   nom: string;
   classe: string;
+  molecule?: string;
+  code_atc?: string;
 }
 
 export interface OTCSuggestion {
@@ -31,6 +33,7 @@ export interface AnalysisQuestion {
   question: string;
   contexte: string;
   otcSuggestions?: OTCSuggestion[];
+  source?: string;
 }
 
 export interface AnalysisResult {
@@ -40,6 +43,7 @@ export interface AnalysisResult {
   questions: AnalysisQuestion[];
   conseil: string;
   structuredData?: boolean;
+  sources?: string[];
 }
 
 export interface RefinedResult {
@@ -128,5 +132,6 @@ function normalizeResult(data: any): AnalysisResult {
     questions: (data.questions || []).slice(0, 4),
     conseil: data.conseil || "",
     structuredData: data.structuredData || false,
+    sources: data.sources || [],
   };
 }
