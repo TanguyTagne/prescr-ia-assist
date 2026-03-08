@@ -12,10 +12,13 @@ const LOCAL_PATH = path.join(__dirname, "web", "index.html");
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 1280,
-    height: 800,
-    minWidth: 900,
-    minHeight: 600,
+    width: 380,
+    height: 580,
+    minWidth: 340,
+    minHeight: 480,
+    maxWidth: 450,
+    maxHeight: 700,
+    resizable: true,
     title: "PrescrIA",
     icon: path.join(__dirname, "assets", "icon.ico"),
     autoHideMenuBar: true,
@@ -30,8 +33,8 @@ function createWindow() {
   // Remove the menu bar entirely
   mainWindow.setMenuBarVisibility(false);
 
-  // Always load remote URL for proper SPA routing and asset resolution
-  mainWindow.loadURL(APP_URL);
+  // Always load remote URL with desktop flag
+  mainWindow.loadURL(APP_URL + "?desktop=1");
 
   // Handle load failures — retry after a delay
   mainWindow.webContents.on("did-fail-load", (_event, _code, _desc, url) => {
