@@ -156,8 +156,8 @@ const Widget = ({ forceOpen = false }: { forceOpen?: boolean }) => {
         </div>
         <div className="flex-1 overflow-y-auto">
           {loading ? (
-            <div className="flex items-center justify-center py-6">
-              <Loader2 className="h-4 w-4 animate-spin text-primary" />
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-5 w-5 animate-spin text-primary" />
             </div>
           ) : !user ? (
             <WidgetAuth />
