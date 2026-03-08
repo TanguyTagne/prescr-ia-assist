@@ -63,8 +63,8 @@ const WidgetAuth = () => {
             {showPassword ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
           </button>
         </div>
-        <Button type="submit" className="w-full h-8 text-xs font-semibold pharmacy-gradient border-0" disabled={loading}>
-          {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : isLogin ? "Se connecter" : "Créer mon compte"}
+        <Button type="submit" className="w-full h-10 text-sm font-semibold pharmacy-gradient border-0" disabled={loading}>
+          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : isLogin ? "Se connecter" : "Créer mon compte"}
         </Button>
       </form>
       <p className="text-center text-[10px] text-muted-foreground">
