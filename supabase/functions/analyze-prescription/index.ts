@@ -79,7 +79,7 @@ IMPORTANT :
 - Si 2 questions explorent la même zone corporelle, c'est une ERREUR.
 - NE PAS inclure de suggestions dans cette première étape.`;
 
-const REFINE_PROMPT = \`Tu es PrescrIA, un copilote discret pour préparateurs en pharmacie. Le préparateur a analysé une ordonnance et posé des questions au patient. En fonction des réponses, tu dois IDENTIFIER la situation la plus probable et proposer des recommandations OTC adaptées.
+const REFINE_PROMPT = `Tu es PrescrIA, un copilote discret pour préparateurs en pharmacie. Le préparateur a analysé une ordonnance et posé des questions au patient. En fonction des réponses, tu dois IDENTIFIER la situation la plus probable et proposer des recommandations OTC adaptées.
 
 ## LOGIQUE DE RAISONNEMENT (CRITIQUE)
 1. Analyse les réponses Oui/Non pour DÉDUIRE la situation réelle du patient
