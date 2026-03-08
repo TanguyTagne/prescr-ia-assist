@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import Landing from "./pages/Landing";
 import Dashboard from "./pages/Dashboard";
@@ -32,23 +32,21 @@ const App = () => {
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter>
-          <AuthProvider>
-            {isStandalone ? (
-              <Widget forceOpen />
-            ) : (
-              <>
-                <Routes>
-                  <Route path="/" element={<Landing />} />
-                  <Route path="/auth" element={<Landing />} />
-                  <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-                <Widget />
-              </>
-            )}
-          </AuthProvider>
-        </BrowserRouter>
+        <AuthProvider>
+          {isStandalone ? (
+            <Widget forceOpen />
+          ) : (
+            <>
+              <Routes>
+                <Route path="/" element={<Landing />} />
+                <Route path="/auth" element={<Landing />} />
+                <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+              <Widget />
+            </>
+          )}
+        </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );
