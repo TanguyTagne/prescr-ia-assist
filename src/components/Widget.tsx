@@ -119,9 +119,9 @@ const WidgetApp = () => {
         </div>
       </div>
       {isLoading ? (
-        <div className="flex items-center justify-center py-4 gap-1.5">
-          <Loader2 className="h-3.5 w-3.5 text-primary animate-spin" />
-          <p className="text-[11px] text-muted-foreground">Analyse...</p>
+        <div className="flex items-center justify-center py-6 gap-2">
+          <Loader2 className="h-4 w-4 text-primary animate-spin" />
+          <p className="text-xs text-muted-foreground">Analyse...</p>
         </div>
       ) : !result ? (
         <div className="space-y-2">
