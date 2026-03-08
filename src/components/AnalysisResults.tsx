@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Pill, MessageCircleQuestion, ShoppingBag, RotateCcw, AlertTriangle, MessageSquare, ThumbsUp, ThumbsDown, Loader2, Sparkles } from "lucide-react";
+import { Pill, MessageCircleQuestion, ShoppingBag, RotateCcw, AlertTriangle, MessageSquare, ThumbsUp, ThumbsDown, Loader2, Sparkles, Database } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { AnalysisResult, RefinedResult } from "@/lib/prescriptionAnalyzer";
@@ -70,6 +70,18 @@ const AnalysisResults = ({ result, onReset }: AnalysisResultsProps) => {
 
   return (
     <div className="space-y-2 animate-fade-in">
+      {/* Sources de données */}
+      {result.sources && result.sources.length > 0 && (
+        <div className="flex items-center gap-1 flex-wrap">
+          <Database className="h-2.5 w-2.5 text-muted-foreground shrink-0" />
+          {result.sources.map((src, i) => (
+            <Badge key={i} variant="outline" className="text-[8px] py-0 px-1 text-muted-foreground">
+              {src}
+            </Badge>
+          ))}
+        </div>
+      )}
+
       {/* Médicaments */}
       <div className="rounded-lg border border-border p-2.5">
         <div className="flex items-center gap-1.5 mb-1.5">
@@ -80,6 +92,7 @@ const AnalysisResults = ({ result, onReset }: AnalysisResultsProps) => {
           {result.medicaments.map((med, i) => (
             <Badge key={i} variant="secondary" className="text-[10px] py-0.5 px-1.5">
               {med.nom} <span className="text-muted-foreground ml-0.5">({med.classe})</span>
+              {med.code_atc && <span className="text-muted-foreground/60 ml-0.5 text-[8px]">[{med.code_atc}]</span>}
             </Badge>
           ))}
         </div>
@@ -144,7 +157,6 @@ const AnalysisResults = ({ result, onReset }: AnalysisResultsProps) => {
             ))}
           </div>
 
-          {/* Button to send answers for refinement */}
           {allQuestionsAnswered && !isRefining && (
             <Button
               onClick={handleRefine}

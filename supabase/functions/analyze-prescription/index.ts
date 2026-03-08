@@ -7,34 +7,115 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// System prompt for medication extraction only (step 1 is now hybrid)
+// ====== PUBLIC API INTEGRATIONS ======
+
+// RxNav API (NIH/NLM) - ATC classification, free, no key needed
+async function rxnavGetATC(drugName: string): Promise<{ classId: string; className: string } | null> {
+  try {
+    const url = `https://rxnav.nlm.nih.gov/REST/rxclass/class/byDrugName.json?drugName=${encodeURIComponent(drugName)}&relaSource=ATC`;
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const data = await res.json();
+    const infos = data?.rxclassDrugInfoList?.rxclassDrugInfo;
+    if (!infos || infos.length === 0) return null;
+    // Return the most specific ATC classification
+    const atc = infos.find((i: any) => i.rxclassMinConceptItem?.classType === "ATC1-4");
+    if (atc) return { classId: atc.rxclassMinConceptItem.classId, className: atc.rxclassMinConceptItem.className };
+    return { classId: infos[0].rxclassMinConceptItem.classId, className: infos[0].rxclassMinConceptItem.className };
+  } catch (e) {
+    console.error("RxNav ATC lookup failed:", e);
+    return null;
+  }
+}
+
+// OpenFDA API - Drug label data (indications, warnings, interactions), free, no key needed
+async function openFDAGetDrugInfo(drugName: string): Promise<{
+  indications: string;
+  warnings: string;
+  drugInteractions: string;
+  adverseReactions: string;
+  pharmacoClass: string[];
+} | null> {
+  try {
+    // Try generic_name first, then brand_name
+    let url = `https://api.fda.gov/drug/label.json?search=openfda.generic_name:"${encodeURIComponent(drugName)}"&limit=1`;
+    let res = await fetch(url);
+    let data = await res.json();
+
+    if (!data.results || data.results.length === 0) {
+      url = `https://api.fda.gov/drug/label.json?search=openfda.brand_name:"${encodeURIComponent(drugName)}"&limit=1`;
+      res = await fetch(url);
+      data = await res.json();
+    }
+
+    if (!data.results || data.results.length === 0) {
+      // Try a broader search
+      url = `https://api.fda.gov/drug/label.json?search="${encodeURIComponent(drugName)}"&limit=1`;
+      res = await fetch(url);
+      data = await res.json();
+    }
+
+    if (!data.results || data.results.length === 0) return null;
+
+    const label = data.results[0];
+    return {
+      indications: (label.indications_and_usage || []).join(" ").substring(0, 1000),
+      warnings: (label.warnings_and_cautions || label.warnings || []).join(" ").substring(0, 500),
+      drugInteractions: (label.drug_interactions || []).join(" ").substring(0, 500),
+      adverseReactions: (label.adverse_reactions || []).join(" ").substring(0, 500),
+      pharmacoClass: label.openfda?.pharm_class_epc || [],
+    };
+  } catch (e) {
+    console.error("OpenFDA lookup failed:", e);
+    return null;
+  }
+}
+
+// OpenFDA Adverse Events API - report interactions between drugs
+async function openFDAGetInteractions(drug1: string, drug2: string): Promise<string | null> {
+  try {
+    const url = `https://api.fda.gov/drug/event.json?search=patient.drug.openfda.generic_name:"${encodeURIComponent(drug1)}"+AND+patient.drug.openfda.generic_name:"${encodeURIComponent(drug2)}"&limit=1`;
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data.meta?.results?.total > 10) {
+      return `${data.meta.results.total} effets indésirables rapportés avec cette association`;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+// ====== PROMPTS ======
+
 const EXTRACTION_PROMPT = `Tu es PrescrIA, un copilote pour préparateurs en pharmacie.
 Tu dois UNIQUEMENT extraire les médicaments d'une ordonnance et les retourner en JSON.
 
 ## FORMAT JSON STRICT
 {
-  "medicaments_detectes": ["nom1", "nom2", ...]
+  "medicaments_detectes": [
+    {"nom_commercial": "nom tel qu'écrit", "molecule_probable": "DCI si connue, sinon null"}
+  ]
 }
 
 RÈGLES :
 - Extrais TOUS les noms de médicaments (commerciaux ou DCI)
-- Normalise les noms (majuscule initiale)
+- Si tu reconnais la DCI, indique-la
 - Ne retourne RIEN d'autre que ce JSON`;
 
-// Prompt for AI enrichment when DB data is incomplete
-const ENRICHMENT_PROMPT = `Tu es PrescrIA, un copilote pharmacien. On te donne un médicament non trouvé en base de données structurée.
-Tu dois fournir ses informations pharmacologiques.
+const ENRICHMENT_PROMPT = `Tu es PrescrIA, un copilote pharmacien. On te donne un médicament et ses données issues de bases publiques (RxNav ATC, OpenFDA).
+Utilise ces données OFFICIELLES pour structurer les informations pharmacologiques.
 
-## RÈGLES ABSOLUES
-1. JAMAIS de diagnostic, JAMAIS nommer une pathologie chez le patient
-2. Langage probabiliste : "souvent associé à", "peut accompagner"
+## DONNÉES PUBLIQUES FOURNIES (à utiliser en priorité)
+{PUBLIC_DATA}
 
 ## FORMAT JSON STRICT
 {
   "nom": "nom commercial",
   "molecule_active": "DCI",
-  "code_atc": "code ATC si connu",
-  "classe_therapeutique": "classe",
+  "code_atc": "code ATC",
+  "classe_therapeutique": "classe en français",
   "indications": ["indication 1", "indication 2"],
   "mecanisme_action": "mécanisme",
   "effets_secondaires": ["effet 1", "effet 2"],
@@ -45,18 +126,25 @@ Tu dois fournir ses informations pharmacologiques.
   "symptomes_questions": [
     {
       "symptome": "symptôme",
-      "question": "question oui/non courte et naturelle",
+      "question": "question oui/non courte et naturelle à poser au patient",
       "contexte_explication": "ce que cette question aide à identifier",
       "besoin": "besoin patient si oui",
-      "otc": [{"categorie": "catégorie produit", "description": "description", "icon": "emoji", "priorite": "haute|moyenne"}]
+      "otc": [{"categorie": "catégorie produit OTC", "description": "description", "icon": "emoji", "priorite": "haute|moyenne"}]
     }
   ]
-}`;
+}
+
+RÈGLES :
+- JAMAIS de diagnostic, JAMAIS nommer une pathologie chez le patient
+- Langage probabiliste : "souvent associé à", "peut accompagner"
+- Les questions doivent couvrir des AXES DIFFÉRENTS (pas toutes sur le même thème)
+- Maximum 4 questions
+- Baser les indications et effets secondaires SUR LES DONNÉES PUBLIQUES fournies`;
 
 const REFINE_PROMPT = `Tu es PrescrIA, un copilote pour préparateurs en pharmacie. Le préparateur a analysé une ordonnance et posé des questions au patient.
 
 ## DONNÉES STRUCTURÉES FOURNIES
-On te fournit les données pharmacologiques structurées issues de la base PrescrIA : médicaments, contextes thérapeutiques, symptômes, besoins patients, et suggestions OTC.
+On te fournit les données pharmacologiques structurées issues de bases publiques (ANSM, ATC/WHO, OpenFDA) et de la base PrescrIA.
 
 ## TA MISSION
 En fonction des réponses Oui/Non du patient :
@@ -79,164 +167,96 @@ En fonction des réponses Oui/Non du patient :
   "conseil": "Phrase de conseil personnalisée."
 }`;
 
-// Helper: search medications in DB by name (fuzzy)
+// ====== DB HELPERS ======
+
 async function findMedicationsInDB(supabase: any, names: string[]) {
   const results: any[] = [];
-
   for (const name of names) {
-    const normalizedName = name.trim().toLowerCase();
-
-    // Try exact match on nom_commercial
-    const { data: exactMatch } = await supabase
-      .from("medications")
-      .select(`
-        *,
-        therapeutic_classes(*)
-      `)
-      .ilike("nom_commercial", normalizedName)
-      .limit(1);
-
-    if (exactMatch && exactMatch.length > 0) {
-      results.push({ ...exactMatch[0], matched: true });
-      continue;
-    }
-
-    // Try match on molecule_active
-    const { data: moleculeMatch } = await supabase
-      .from("medications")
-      .select(`
-        *,
-        therapeutic_classes(*)
-      `)
-      .ilike("molecule_active", `%${normalizedName}%`)
-      .limit(1);
-
-    if (moleculeMatch && moleculeMatch.length > 0) {
-      results.push({ ...moleculeMatch[0], matched: true });
-      continue;
-    }
-
-    // Try partial match on nom_commercial
-    const { data: partialMatch } = await supabase
-      .from("medications")
-      .select(`
-        *,
-        therapeutic_classes(*)
-      `)
-      .ilike("nom_commercial", `%${normalizedName}%`)
-      .limit(1);
-
-    if (partialMatch && partialMatch.length > 0) {
-      results.push({ ...partialMatch[0], matched: true });
-      continue;
-    }
-
-    // Not found in DB
+    const n = name.trim().toLowerCase();
+    // Try nom_commercial exact
+    let { data } = await supabase.from("medications").select("*, therapeutic_classes(*)").ilike("nom_commercial", n).limit(1);
+    if (data?.length > 0) { results.push({ ...data[0], matched: true }); continue; }
+    // Try molecule_active
+    ({ data } = await supabase.from("medications").select("*, therapeutic_classes(*)").ilike("molecule_active", `%${n}%`).limit(1));
+    if (data?.length > 0) { results.push({ ...data[0], matched: true }); continue; }
+    // Try partial nom_commercial
+    ({ data } = await supabase.from("medications").select("*, therapeutic_classes(*)").ilike("nom_commercial", `%${n}%`).limit(1));
+    if (data?.length > 0) { results.push({ ...data[0], matched: true }); continue; }
     results.push({ nom_commercial: name, matched: false });
   }
-
   return results;
 }
 
-// Helper: get full therapeutic data for a medication
 async function getTherapeuticData(supabase: any, medication: any) {
   if (!medication.classe_therapeutique_id) return null;
-
-  // Get contexts for this class
   const { data: contexts } = await supabase
-    .from("therapeutic_contexts")
-    .select("*")
+    .from("therapeutic_contexts").select("*")
     .eq("classe_therapeutique_id", medication.classe_therapeutique_id)
     .order("frequence_score", { ascending: false });
+  if (!contexts?.length) return null;
 
-  if (!contexts || contexts.length === 0) return null;
-
-  // Get symptoms, questions, needs, OTC for each context
   const fullContexts = [];
   for (const ctx of contexts) {
     const { data: symptoms } = await supabase
-      .from("symptoms")
-      .select(`
-        *,
-        pharma_questions(*),
-        patient_needs(*, otc_suggestions(*))
-      `)
-      .eq("contexte_id", ctx.id)
-      .order("frequence_score", { ascending: false });
-
+      .from("symptoms").select("*, pharma_questions(*), patient_needs(*, otc_suggestions(*))")
+      .eq("contexte_id", ctx.id).order("frequence_score", { ascending: false });
     fullContexts.push({ ...ctx, symptoms: symptoms || [] });
   }
-
   return fullContexts;
 }
 
-// Helper: use AI to enrich unknown medications
-async function enrichWithAI(apiKey: string, medName: string) {
-  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
-      messages: [
-        { role: "system", content: ENRICHMENT_PROMPT },
-        { role: "user", content: `Médicament : ${medName}` },
-      ],
-      temperature: 0.1,
-    }),
-  });
+// ====== INTERACTION CHECK (DB + OpenFDA) ======
 
-  if (!response.ok) return null;
-
-  const data = await response.json();
-  const content = data.choices?.[0]?.message?.content;
-  if (!content) return null;
-
-  let jsonStr = content;
-  const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (jsonMatch) jsonStr = jsonMatch[1].trim();
-
-  try {
-    return JSON.parse(jsonStr);
-  } catch {
-    return null;
-  }
-}
-
-// Known interactions database
-const INTERACTIONS = [
-  { meds: ["AINS", "Anticoagulants oraux directs"], niveau: "majeure", desc: "Risque hémorragique accru" },
-  { meds: ["Anti-inflammatoires non stéroïdiens", "Anticoagulants oraux directs"], niveau: "majeure", desc: "Risque hémorragique accru" },
-  { meds: ["Anti-inflammatoires non stéroïdiens", "Inhibiteurs de l'enzyme de conversion"], niveau: "modérée", desc: "Risque d'insuffisance rénale, surtout avec diurétiques" },
-  { meds: ["Antibiotiques - Macrolides", "Statines"], niveau: "modérée", desc: "Risque accru de rhabdomyolyse" },
-  { meds: ["ISRS", "Antalgiques opioïdes faibles"], niveau: "modérée", desc: "Risque de syndrome sérotoninergique" },
-  { meds: ["Corticoïdes systémiques", "Anti-inflammatoires non stéroïdiens"], niveau: "modérée", desc: "Risque accru d'ulcère gastroduodénal et d'hémorragie digestive" },
+const KNOWN_INTERACTIONS = [
+  { classes: ["Anti-inflammatoires non stéroïdiens", "Anticoagulants oraux directs"], niveau: "majeure", desc: "Risque hémorragique accru (source: ANSM/HAS)" },
+  { classes: ["Anti-inflammatoires non stéroïdiens", "Inhibiteurs de l'enzyme de conversion"], niveau: "modérée", desc: "Risque d'insuffisance rénale, surtout avec diurétiques (source: ANSM)" },
+  { classes: ["Antibiotiques - Macrolides", "Statines"], niveau: "modérée", desc: "Risque accru de rhabdomyolyse (source: ANSM)" },
+  { classes: ["ISRS", "Antalgiques opioïdes faibles"], niveau: "modérée", desc: "Risque de syndrome sérotoninergique (source: ANSM)" },
+  { classes: ["Corticoïdes systémiques", "Anti-inflammatoires non stéroïdiens"], niveau: "modérée", desc: "Risque accru d'ulcère gastroduodénal (source: HAS)" },
+  { classes: ["Anti-inflammatoires non stéroïdiens", "Biguanides"], niveau: "modérée", desc: "Risque d'insuffisance rénale aiguë (source: ANSM)" },
 ];
 
-function checkInteractions(medications: any[]): any[] {
-  const foundInteractions: any[] = [];
-  const classeNames = medications.map((m: any) => m.therapeutic_classes?.nom || "").filter(Boolean);
-
-  for (const inter of INTERACTIONS) {
-    const match0 = classeNames.some((c: string) => c.includes(inter.meds[0]) || inter.meds[0].includes(c));
-    const match1 = classeNames.some((c: string) => c.includes(inter.meds[1]) || inter.meds[1].includes(c));
-    if (match0 && match1) {
-      const med0 = medications.find((m: any) => {
-        const cn = m.therapeutic_classes?.nom || "";
-        return cn.includes(inter.meds[0]) || inter.meds[0].includes(cn);
-      });
-      const med1 = medications.find((m: any) => {
-        const cn = m.therapeutic_classes?.nom || "";
-        return cn.includes(inter.meds[1]) || inter.meds[1].includes(cn);
-      });
-      foundInteractions.push({
-        medicaments: [med0?.nom_commercial || inter.meds[0], med1?.nom_commercial || inter.meds[1]],
-        niveau: inter.niveau,
-        description: inter.desc,
+function checkLocalInteractions(medications: any[]): any[] {
+  const found: any[] = [];
+  const classes = medications.map((m: any) => m.therapeutic_classes?.nom || "").filter(Boolean);
+  for (const inter of KNOWN_INTERACTIONS) {
+    const m0 = classes.some((c: string) => c.includes(inter.classes[0]) || inter.classes[0].includes(c));
+    const m1 = classes.some((c: string) => c.includes(inter.classes[1]) || inter.classes[1].includes(c));
+    if (m0 && m1) {
+      const med0 = medications.find((m: any) => (m.therapeutic_classes?.nom || "").includes(inter.classes[0]) || inter.classes[0].includes(m.therapeutic_classes?.nom || ""));
+      const med1 = medications.find((m: any) => (m.therapeutic_classes?.nom || "").includes(inter.classes[1]) || inter.classes[1].includes(m.therapeutic_classes?.nom || ""));
+      found.push({
+        medicaments: [med0?.nom_commercial || inter.classes[0], med1?.nom_commercial || inter.classes[1]],
+        niveau: inter.niveau, description: inter.desc,
       });
     }
   }
-  return foundInteractions;
+  return found;
 }
+
+// ====== AI HELPERS ======
+
+async function callAI(apiKey: string, messages: any[], temperature = 0.1) {
+  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ model: "google/gemini-2.5-flash", messages, temperature }),
+  });
+  if (!response.ok) {
+    if (response.status === 429) throw new Error("RATE_LIMIT");
+    if (response.status === 402) throw new Error("CREDITS_EXHAUSTED");
+    throw new Error(`AI error: ${response.status}`);
+  }
+  const data = await response.json();
+  const content = data.choices?.[0]?.message?.content;
+  if (!content) throw new Error("Empty AI response");
+  let jsonStr = content;
+  const match = content.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (match) jsonStr = match[1].trim();
+  return JSON.parse(jsonStr);
+}
+
+// ====== MAIN HANDLER ======
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -256,73 +276,42 @@ serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
+    // ============ REFINE MODE ============
     if (mode === "refine") {
-      // ============ REFINE MODE ============
-      // Build structured context from DB data + answers
       const answersText = analysisContext.questions
         .map((q: any, i: number) => `Q: ${q.question}\nR: ${answers[i] ? "Oui" : "Non"}`)
         .join("\n\n");
 
-      // Collect relevant OTC suggestions based on answers
       const relevantOTC: any[] = [];
       const eliminatedContexts: string[] = [];
 
-      if (analysisContext.structuredData) {
-        for (const q of analysisContext.questions) {
-          const qIndex = analysisContext.questions.indexOf(q);
-          const answered = answers[qIndex];
-
-          if (answered && q.otcSuggestions) {
-            relevantOTC.push(...q.otcSuggestions);
-          }
-          if (!answered && q.contexte) {
-            eliminatedContexts.push(q.contexte);
-          }
+      for (let i = 0; i < analysisContext.questions.length; i++) {
+        const q = analysisContext.questions[i];
+        if (answers[i] && q.otcSuggestions) {
+          relevantOTC.push(...q.otcSuggestions);
+        }
+        if (!answers[i] && q.contexte) {
+          eliminatedContexts.push(q.contexte);
         }
       }
 
-      // Use AI to refine with structured context
-      const messages = [
+      const result = await callAI(LOVABLE_API_KEY, [
         { role: "system", content: REFINE_PROMPT },
-        {
-          role: "user",
-          content: `Ordonnance analysée :
+        { role: "user", content: `Ordonnance analysée :
 Médicaments : ${analysisContext.medicaments.map((m: any) => `${m.nom} (${m.classe})`).join(", ")}
-Contextes thérapeutiques possibles : ${(analysisContext.contextes || []).join(", ")}
+Contextes thérapeutiques : ${(analysisContext.contextes || []).join(", ")}
+Sources : Base PrescrIA (ANSM/ATC), OpenFDA, RxNav
 
 Réponses du patient :
 ${answersText}
 
-${relevantOTC.length > 0 ? `\nSuggestions OTC issues de la base structurée (à prioriser) :\n${relevantOTC.map((o: any) => `- ${o.categorie_produit || o.categorie}: ${o.description || o.desc}`).join("\n")}` : ""}
+${relevantOTC.length > 0 ? `Suggestions OTC de la base structurée (à prioriser) :\n${relevantOTC.map((o: any) => `- ${o.categorie_produit || o.categorie}: ${o.description || o.desc}`).join("\n")}` : ""}
 
-${eliminatedContexts.length > 0 ? `\nContextes ÉLIMINÉS par les réponses "Non" :\n${eliminatedContexts.join("\n")}` : ""}
+${eliminatedContexts.length > 0 ? `Contextes ÉLIMINÉS par les "Non" :\n${eliminatedContexts.join("\n")}` : ""}
 
-Propose des recommandations OTC adaptées en tenant compte des données structurées et des réponses.`,
-        },
-      ];
+Propose des recommandations OTC adaptées.` },
+      ]);
 
-      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ model: "google/gemini-2.5-flash", messages, temperature: 0.1 }),
-      });
-
-      if (!response.ok) {
-        const status = response.status;
-        if (status === 429) return new Response(JSON.stringify({ error: "Trop de requêtes, réessayez." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-        if (status === 402) return new Response(JSON.stringify({ error: "Crédits IA épuisés." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-        throw new Error("AI service error");
-      }
-
-      const aiRes = await response.json();
-      const content = aiRes.choices?.[0]?.message?.content;
-      if (!content) throw new Error("Empty AI response");
-
-      let jsonStr = content;
-      const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
-      if (jsonMatch) jsonStr = jsonMatch[1].trim();
-
-      const result = JSON.parse(jsonStr);
       if (result.suggestions) result.suggestions = result.suggestions.slice(0, 4);
 
       return new Response(JSON.stringify(result), {
@@ -332,112 +321,109 @@ Propose des recommandations OTC adaptées en tenant compte des données structur
 
     // ============ ANALYSIS MODE ============
 
-    // Step 1: Extract medication names using AI (handles OCR + text)
-    let medNames: string[] = [];
+    // Step 1: Extract medication names
+    let medEntries: { nom_commercial: string; molecule_probable?: string }[] = [];
 
     if (imageBase64) {
-      // Use AI for OCR extraction
-      const ocrResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
-          messages: [
-            { role: "system", content: EXTRACTION_PROMPT },
-            { role: "user", content: [
-              { type: "text", text: "Extrais les noms de médicaments de cette ordonnance." },
-              { type: "image_url", image_url: { url: imageBase64 } },
-            ]},
-          ],
-          temperature: 0.1,
-        }),
-      });
-
-      if (!ocrResponse.ok) throw new Error("OCR extraction failed");
-      const ocrData = await ocrResponse.json();
-      const ocrContent = ocrData.choices?.[0]?.message?.content;
-      if (ocrContent) {
-        let ocrJson = ocrContent;
-        const m = ocrContent.match(/```(?:json)?\s*([\s\S]*?)```/);
-        if (m) ocrJson = m[1].trim();
-        try {
-          const parsed = JSON.parse(ocrJson);
-          medNames = parsed.medicaments_detectes || [];
-        } catch { /* fallback below */ }
-      }
+      const parsed = await callAI(LOVABLE_API_KEY, [
+        { role: "system", content: EXTRACTION_PROMPT },
+        { role: "user", content: [
+          { type: "text", text: "Extrais les noms de médicaments de cette ordonnance." },
+          { type: "image_url", image_url: { url: imageBase64 } },
+        ]},
+      ]);
+      medEntries = parsed.medicaments_detectes || [];
     } else if (prescriptionText) {
-      // Simple text parsing + AI fallback
-      const words = prescriptionText.split(/[,\n;]+/).map((w: string) => w.trim()).filter(Boolean);
-      if (words.length > 0) {
-        medNames = words;
-      }
-      // Also use AI to extract in case of complex text
-      const textResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
-          messages: [
-            { role: "system", content: EXTRACTION_PROMPT },
-            { role: "user", content: `Extrais les médicaments :\n\n${prescriptionText}` },
-          ],
-          temperature: 0.1,
-        }),
-      });
-
-      if (textResponse.ok) {
-        const textData = await textResponse.json();
-        const textContent = textData.choices?.[0]?.message?.content;
-        if (textContent) {
-          let tj = textContent;
-          const tm = textContent.match(/```(?:json)?\s*([\s\S]*?)```/);
-          if (tm) tj = tm[1].trim();
-          try {
-            const parsed = JSON.parse(tj);
-            if (parsed.medicaments_detectes?.length > 0) {
-              medNames = parsed.medicaments_detectes;
-            }
-          } catch { /* keep original */ }
-        }
-      }
+      const parsed = await callAI(LOVABLE_API_KEY, [
+        { role: "system", content: EXTRACTION_PROMPT },
+        { role: "user", content: `Extrais les médicaments :\n\n${prescriptionText}` },
+      ]);
+      medEntries = parsed.medicaments_detectes || [];
     } else {
       return new Response(JSON.stringify({ error: "Aucune donnée d'ordonnance fournie" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    if (medNames.length === 0) {
+    if (medEntries.length === 0) {
       return new Response(JSON.stringify({
-        medicaments: [], interactions: [], contextes: [], questions: [], conseil: "",
+        medicaments: [], interactions: [], contextes: [], questions: [], conseil: "", sources: [],
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Step 2: Look up each medication in structured DB
+    const medNames = medEntries.map((m: any) => typeof m === "string" ? m : m.nom_commercial);
+    const medMolecules = medEntries.map((m: any) => typeof m === "string" ? null : m.molecule_probable);
+
+    // Step 2: DB lookup
     const dbMeds = await findMedicationsInDB(supabase, medNames);
 
-    // Step 3: For unmatched meds, enrich with AI
+    // Step 3: For unmatched meds, query PUBLIC APIs then enrich with AI
     const enrichedMeds: any[] = [];
-    for (const med of dbMeds) {
+    const sources: string[] = ["Base PrescrIA (données structurées)"];
+
+    for (let i = 0; i < dbMeds.length; i++) {
+      const med = dbMeds[i];
       if (med.matched) {
         enrichedMeds.push(med);
-      } else {
-        const aiData = await enrichWithAI(LOVABLE_API_KEY, med.nom_commercial);
-        if (aiData) {
-          enrichedMeds.push({
-            ...med,
-            molecule_active: aiData.molecule_active,
-            code_atc: aiData.code_atc,
-            therapeutic_classes: { nom: aiData.classe_therapeutique },
-            indications_principales: aiData.indications,
-            mecanisme_action: aiData.mecanisme_action,
-            effets_secondaires_frequents: aiData.effets_secondaires,
-            ai_enriched: true,
-            ai_contexts: aiData.contextes_therapeutiques,
-            ai_symptom_questions: aiData.symptomes_questions,
-          });
-        } else {
-          enrichedMeds.push(med);
-        }
+        continue;
+      }
+
+      // Query public APIs for this medication
+      const searchName = medMolecules[i] || medNames[i];
+      console.log(`Querying public APIs for: ${searchName}`);
+
+      // Parallel API calls to RxNav and OpenFDA
+      const [atcData, fdaData] = await Promise.all([
+        rxnavGetATC(searchName),
+        openFDAGetDrugInfo(searchName),
+      ]);
+
+      if (atcData) {
+        if (!sources.includes("RxNav/NIH (classification ATC)")) sources.push("RxNav/NIH (classification ATC)");
+      }
+      if (fdaData) {
+        if (!sources.includes("OpenFDA (données médicament)")) sources.push("OpenFDA (données médicament)");
+      }
+
+      // Build public data context for AI enrichment
+      const publicData: any = {};
+      if (atcData) {
+        publicData.atc = { code: atcData.classId, className: atcData.className };
+      }
+      if (fdaData) {
+        publicData.openfda = {
+          indications: fdaData.indications?.substring(0, 500),
+          warnings: fdaData.warnings?.substring(0, 300),
+          drug_interactions: fdaData.drugInteractions?.substring(0, 300),
+          adverse_reactions: fdaData.adverseReactions?.substring(0, 300),
+          pharmacological_class: fdaData.pharmacoClass,
+        };
+      }
+
+      // Use AI to structure the public data into our format
+      const prompt = ENRICHMENT_PROMPT.replace("{PUBLIC_DATA}", JSON.stringify(publicData, null, 2));
+      try {
+        const aiData = await callAI(LOVABLE_API_KEY, [
+          { role: "system", content: prompt },
+          { role: "user", content: `Médicament : ${medNames[i]}${medMolecules[i] ? ` (DCI probable: ${medMolecules[i]})` : ""}` },
+        ]);
+
+        enrichedMeds.push({
+          ...med,
+          molecule_active: aiData.molecule_active,
+          code_atc: aiData.code_atc,
+          therapeutic_classes: { nom: aiData.classe_therapeutique },
+          indications_principales: aiData.indications,
+          mecanisme_action: aiData.mecanisme_action,
+          effets_secondaires_frequents: aiData.effets_secondaires,
+          ai_enriched: true,
+          ai_contexts: aiData.contextes_therapeutiques,
+          ai_symptom_questions: aiData.symptomes_questions,
+          public_data: publicData,
+        });
+      } catch (e) {
+        console.error("AI enrichment failed:", e);
+        enrichedMeds.push(med);
       }
     }
 
@@ -463,17 +449,15 @@ Propose des recommandations OTC adaptées en tenant compte des données structur
                   context_id: ctx.id,
                   score: (ctx.frequence_score || 50) + (symptom.frequence_score || 50),
                   otcSuggestions: otcSuggs,
+                  source: "Base PrescrIA",
                 });
               }
             }
           }
         }
       } else if (med.ai_enriched) {
-        // Use AI-generated data
         if (med.ai_contexts) {
-          for (const ctx of med.ai_contexts) {
-            allContexts.push(ctx.description);
-          }
+          for (const ctx of med.ai_contexts) allContexts.push(ctx.description);
         }
         if (med.ai_symptom_questions) {
           for (const sq of med.ai_symptom_questions) {
@@ -487,38 +471,69 @@ Propose des recommandations OTC adaptées en tenant compte des données structur
                 icon: o.icon,
                 priorite: o.priorite,
               })),
+              source: med.public_data?.openfda ? "OpenFDA + RxNav" : "IA",
             });
           }
         }
       }
     }
 
-    // Step 5: Deduplicate and prioritize questions (max 4)
+    // Step 5: Check interactions (local DB + OpenFDA adverse events)
+    const matchedMeds = enrichedMeds.filter((m) => m.matched || m.ai_enriched);
+    const interactions = checkLocalInteractions(matchedMeds);
+
+    // Also check OpenFDA for unreported interactions between pairs
+    if (matchedMeds.length >= 2) {
+      for (let i = 0; i < matchedMeds.length - 1; i++) {
+        for (let j = i + 1; j < matchedMeds.length; j++) {
+          const mol1 = matchedMeds[i].molecule_active;
+          const mol2 = matchedMeds[j].molecule_active;
+          if (mol1 && mol2) {
+            const alreadyFound = interactions.some((inter: any) =>
+              inter.medicaments.includes(matchedMeds[i].nom_commercial) &&
+              inter.medicaments.includes(matchedMeds[j].nom_commercial)
+            );
+            if (!alreadyFound) {
+              const fdaInteraction = await openFDAGetInteractions(mol1, mol2);
+              if (fdaInteraction) {
+                interactions.push({
+                  medicaments: [matchedMeds[i].nom_commercial, matchedMeds[j].nom_commercial],
+                  niveau: "modérée",
+                  description: `${fdaInteraction} (source: OpenFDA)`,
+                });
+                if (!sources.includes("OpenFDA (effets indésirables)")) sources.push("OpenFDA (effets indésirables)");
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Step 6: Deduplicate and limit questions (max 4)
     const uniqueQuestions = allQuestions
       .filter((q, i, arr) => arr.findIndex((x) => x.question === q.question) === i)
       .sort((a, b) => (b.score || 0) - (a.score || 0))
       .slice(0, 4);
 
-    // Step 6: Check interactions
-    const interactions = checkInteractions(enrichedMeds.filter((m) => m.matched || m.ai_enriched));
-
     // Step 7: Build result
-    const uniqueContexts = [...new Set(allContexts)].slice(0, 5);
-
     const result = {
       medicaments: enrichedMeds.map((m) => ({
         nom: m.nom_commercial,
         classe: m.therapeutic_classes?.nom || "Non classifié",
+        molecule: m.molecule_active || null,
+        code_atc: m.code_atc || null,
       })),
       interactions,
-      contextes: uniqueContexts,
+      contextes: [...new Set(allContexts)].slice(0, 5),
       questions: uniqueQuestions.map((q) => ({
         question: q.question,
         contexte: q.contexte,
         otcSuggestions: q.otcSuggestions,
+        source: q.source,
       })),
       conseil: "N'hésitez pas à me poser des questions sur votre traitement, je suis là pour vous accompagner.",
       structuredData: hasStructuredData,
+      sources,
     };
 
     return new Response(JSON.stringify(result), {
@@ -526,9 +541,9 @@ Propose des recommandations OTC adaptées en tenant compte des données structur
     });
   } catch (e) {
     console.error("analyze-prescription error:", e);
-    return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Erreur inconnue" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    const msg = e instanceof Error ? e.message : "Erreur inconnue";
+    if (msg === "RATE_LIMIT") return new Response(JSON.stringify({ error: "Trop de requêtes, réessayez." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    if (msg === "CREDITS_EXHAUSTED") return new Response(JSON.stringify({ error: "Crédits IA épuisés." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ error: msg }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });
