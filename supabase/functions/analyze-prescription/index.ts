@@ -162,7 +162,13 @@ serve(async (req) => {
     }
 
     // Enforce V1 limits server-side
-    if (result.questions) result.questions = result.questions.slice(0, 2);
+    if (result.questions) {
+      result.questions = result.questions.slice(0, 2);
+      result.questions.forEach((q: any) => {
+        if (q.suggestions_oui) q.suggestions_oui = q.suggestions_oui.slice(0, 2);
+        if (q.suggestions_non) q.suggestions_non = q.suggestions_non.slice(0, 2);
+      });
+    }
     if (result.suggestions) result.suggestions = result.suggestions.slice(0, 2);
 
     return new Response(JSON.stringify(result), {
