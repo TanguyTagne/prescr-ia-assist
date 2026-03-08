@@ -30,8 +30,8 @@ function createWindow() {
   // Remove the menu bar entirely
   mainWindow.setMenuBarVisibility(false);
 
-  // Always load remote URL for proper SPA routing and asset resolution
-  mainWindow.loadURL(APP_URL);
+  // Always load remote URL with desktop flag
+  mainWindow.loadURL(APP_URL + "?desktop=1");
 
   // Handle load failures — retry after a delay
   mainWindow.webContents.on("did-fail-load", (_event, _code, _desc, url) => {
