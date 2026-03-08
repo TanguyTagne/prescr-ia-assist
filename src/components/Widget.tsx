@@ -67,7 +67,7 @@ const WidgetAuth = () => {
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : isLogin ? "Se connecter" : "Créer mon compte"}
         </Button>
       </form>
-      <p className="text-center text-[10px] text-muted-foreground">
+      <p className="text-center text-xs text-muted-foreground">
         {isLogin ? "Pas de compte ?" : "Déjà un compte ?"}
         <button onClick={() => setIsLogin(!isLogin)} className="ml-1 text-primary font-medium hover:underline">
           {isLogin ? "S'inscrire" : "Se connecter"}
