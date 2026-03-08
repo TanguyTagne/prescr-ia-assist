@@ -54,12 +54,23 @@ const SYSTEM_PROMPT = `Tu es PrescrIA, un copilote discret pour préparateurs en
   "medicaments": [{"nom": "...", "classe": "..."}],
   "interactions": [{"medicaments": ["Med1","Med2"], "niveau": "majeure|modérée|mineure", "description": "..."}],
   "contextes": ["contexte 1"],
-  "questions": ["Question 1 ?", "Question 2 ?"],
+  "questions": [
+    {
+      "question": "Question fermée oui/non pertinente ?",
+      "suggestions_oui": [{"categorie": "...", "raison": "...", "icon": "emoji"}],
+      "suggestions_non": [{"categorie": "...", "raison": "...", "icon": "emoji"}]
+    }
+  ],
   "suggestions": [{"categorie": "...", "raison": "...", "icon": "emoji"}],
   "conseil": "Phrase prête à dire au patient, simple et bienveillante."
 }
 
-IMPORTANT : Maximum 2 questions et 2 suggestions. Le conseil doit être une phrase naturelle que le préparateur peut dire directement.`;
+IMPORTANT :
+- Maximum 2 questions et 2 suggestions de base.
+- Les questions DOIVENT être des questions fermées (oui/non) que le préparateur pose au patient.
+- Chaque question a des suggestions conditionnelles : suggestions_oui (si le patient répond oui) et suggestions_non (si non). Maximum 1-2 suggestions par réponse.
+- Les suggestions conditionnelles doivent être pertinentes par rapport à la réponse. Exemple : "Avez-vous des douleurs articulaires ?" → oui → gel apaisant ; "Avez-vous des irritations buccales ?" → oui → bain de bouche.
+- Le conseil doit être une phrase naturelle que le préparateur peut dire directement.`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -151,7 +162,13 @@ serve(async (req) => {
     }
 
     // Enforce V1 limits server-side
-    if (result.questions) result.questions = result.questions.slice(0, 2);
+    if (result.questions) {
+      result.questions = result.questions.slice(0, 2);
+      result.questions.forEach((q: any) => {
+        if (q.suggestions_oui) q.suggestions_oui = q.suggestions_oui.slice(0, 2);
+        if (q.suggestions_non) q.suggestions_non = q.suggestions_non.slice(0, 2);
+      });
+    }
     if (result.suggestions) result.suggestions = result.suggestions.slice(0, 2);
 
     return new Response(JSON.stringify(result), {
