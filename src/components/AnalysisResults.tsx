@@ -1,10 +1,12 @@
 import { useState } from "react";
-import { Pill, MessageCircleQuestion, ShoppingBag, RotateCcw, AlertTriangle, MessageSquare, ThumbsUp, ThumbsDown } from "lucide-react";
+import { Pill, MessageCircleQuestion, ShoppingBag, RotateCcw, AlertTriangle, MessageSquare, ThumbsUp, ThumbsDown, Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import type { AnalysisResult, InteractiveQuestion, Suggestion } from "@/lib/prescriptionAnalyzer";
+import type { AnalysisResult, RefinedResult } from "@/lib/prescriptionAnalyzer";
+import { refinePrescription } from "@/lib/prescriptionAnalyzer";
 import LegalDisclaimer from "./LegalDisclaimer";
 import { trackEvent } from "@/hooks/useAnalytics";
+import { toast } from "sonner";
 
 interface AnalysisResultsProps {
   result: AnalysisResult;
@@ -12,8 +14,10 @@ interface AnalysisResultsProps {
 }
 
 const AnalysisResults = ({ result, onReset }: AnalysisResultsProps) => {
+  const [answers, setAnswers] = useState<Record<number, boolean>>({});
+  const [refined, setRefined] = useState<RefinedResult | null>(null);
+  const [isRefining, setIsRefining] = useState(false);
   const [showConseil, setShowConseil] = useState(false);
-  const [answers, setAnswers] = useState<Record<number, boolean | null>>({});
 
   if (result.medicaments.length === 0) {
     return (
@@ -35,31 +39,34 @@ const AnalysisResults = ({ result, onReset }: AnalysisResultsProps) => {
     }
   };
 
-  const handleConseilClick = () => {
-    setShowConseil(true);
-    trackEvent("conseil_clicked", { medicaments: result.medicaments.map(m => m.nom) });
-  };
-
   const handleAnswer = (qIndex: number, answer: boolean) => {
     setAnswers(prev => ({ ...prev, [qIndex]: answer }));
     trackEvent("question_answered", { question_index: qIndex, answer: answer ? "oui" : "non" });
+  };
+
+  const allQuestionsAnswered = result.questions.length > 0 && result.questions.every((_, i) => answers[i] !== undefined);
+
+  const handleRefine = async () => {
+    setIsRefining(true);
+    try {
+      const refinedData = await refinePrescription(result, answers);
+      setRefined(refinedData);
+      trackEvent("recommendations_refined", { 
+        answers_count: Object.keys(answers).length,
+        suggestions_count: refinedData.suggestions.length 
+      });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erreur lors de l'affinage");
+    } finally {
+      setIsRefining(false);
+    }
   };
 
   const handleSuggestionClick = (categorie: string) => {
     trackEvent("suggestion_used", { categorie });
   };
 
-  // Collect conditional suggestions from answered questions
-  const conditionalSuggestions: Suggestion[] = [];
-  result.questions.forEach((q, i) => {
-    if (answers[i] === true && q.suggestions_oui) {
-      conditionalSuggestions.push(...q.suggestions_oui);
-    } else if (answers[i] === false && q.suggestions_non) {
-      conditionalSuggestions.push(...q.suggestions_non);
-    }
-  });
-
-  const allSuggestions = [...result.suggestions, ...conditionalSuggestions];
+  const conseil = refined?.conseil || result.conseil;
 
   return (
     <div className="space-y-2 animate-fade-in">
@@ -95,51 +102,77 @@ const AnalysisResults = ({ result, onReset }: AnalysisResultsProps) => {
       )}
 
       {/* Questions interactives */}
-      <div className="rounded-lg border border-border p-2.5">
-        <div className="flex items-center gap-1.5 mb-1.5">
-          <MessageCircleQuestion className="h-3 w-3 text-primary" />
-          <span className="font-semibold text-xs">Questions à poser</span>
-        </div>
-        <div className="space-y-2">
-          {result.questions.slice(0, 2).map((q, i) => (
-            <div key={i} className="space-y-1">
-              <p className="text-[11px] leading-tight">{q.question}</p>
-              {answers[i] == null ? (
-                <div className="flex gap-1.5">
-                  <button
-                    onClick={() => handleAnswer(i, true)}
-                    className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-primary/10 hover:bg-primary/20 text-primary text-[10px] font-medium transition-colors"
-                  >
-                    <ThumbsUp className="h-3 w-3" />
-                    Oui
-                  </button>
-                  <button
-                    onClick={() => handleAnswer(i, false)}
-                    className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-muted hover:bg-accent text-muted-foreground text-[10px] font-medium transition-colors"
-                  >
-                    <ThumbsDown className="h-3 w-3" />
-                    Non
-                  </button>
-                </div>
-              ) : (
-                <Badge variant="outline" className="text-[9px] py-0">
-                  {answers[i] ? "✓ Oui" : "✗ Non"}
-                </Badge>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Suggestions (base + conditionnelles) */}
-      {allSuggestions.length > 0 && (
+      {!refined && (
         <div className="rounded-lg border border-border p-2.5">
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <MessageCircleQuestion className="h-3 w-3 text-primary" />
+            <span className="font-semibold text-xs">Questions à poser au patient</span>
+            <Badge variant="outline" className="text-[9px] ml-auto">
+              {Object.keys(answers).length}/{result.questions.length}
+            </Badge>
+          </div>
+          <div className="space-y-2">
+            {result.questions.map((q, i) => (
+              <div key={i} className="space-y-1 animate-fade-in">
+                <p className="text-[11px] leading-tight">{q.question}</p>
+                {q.contexte && (
+                  <p className="text-[9px] text-muted-foreground italic">{q.contexte}</p>
+                )}
+                {answers[i] === undefined ? (
+                  <div className="flex gap-1.5">
+                    <button
+                      onClick={() => handleAnswer(i, true)}
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-primary/10 hover:bg-primary/20 text-primary text-[10px] font-medium transition-colors"
+                    >
+                      <ThumbsUp className="h-3 w-3" />
+                      Oui
+                    </button>
+                    <button
+                      onClick={() => handleAnswer(i, false)}
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-muted hover:bg-accent text-muted-foreground text-[10px] font-medium transition-colors"
+                    >
+                      <ThumbsDown className="h-3 w-3" />
+                      Non
+                    </button>
+                  </div>
+                ) : (
+                  <Badge variant="outline" className="text-[9px] py-0">
+                    {answers[i] ? "✓ Oui" : "✗ Non"}
+                  </Badge>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Button to send answers for refinement */}
+          {allQuestionsAnswered && !isRefining && (
+            <Button
+              onClick={handleRefine}
+              size="sm"
+              className="w-full h-8 text-xs font-semibold pharmacy-gradient border-0 gap-1.5 mt-3"
+            >
+              <Sparkles className="h-3 w-3" />
+              Obtenir les recommandations
+            </Button>
+          )}
+          {isRefining && (
+            <div className="flex items-center justify-center py-3 gap-2">
+              <Loader2 className="h-4 w-4 text-primary animate-spin" />
+              <p className="text-xs text-muted-foreground">Analyse des réponses...</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* AI Refined Suggestions */}
+      {refined && refined.suggestions.length > 0 && (
+        <div className="rounded-lg border border-primary/30 p-2.5 animate-fade-in">
           <div className="flex items-center gap-1.5 mb-1">
             <ShoppingBag className="h-3 w-3 text-primary" />
-            <span className="font-semibold text-xs">Suggestions</span>
+            <span className="font-semibold text-xs">Recommandations personnalisées</span>
           </div>
           <div className="space-y-1">
-            {allSuggestions.map((sug, i) => (
+            {refined.suggestions.map((sug, i) => (
               <button
                 key={i}
                 onClick={() => handleSuggestionClick(sug.categorie)}
@@ -147,7 +180,12 @@ const AnalysisResults = ({ result, onReset }: AnalysisResultsProps) => {
               >
                 <span className="text-sm shrink-0">{sug.icon}</span>
                 <div className="flex-1 min-w-0">
-                  <span className="font-medium text-[11px] block leading-tight">{sug.categorie}</span>
+                  <div className="flex items-center gap-1">
+                    <span className="font-medium text-[11px] leading-tight">{sug.categorie}</span>
+                    {sug.priorite === "haute" && (
+                      <Badge className="bg-primary/20 text-primary text-[8px] px-1 py-0">prioritaire</Badge>
+                    )}
+                  </div>
                   <span className="text-[10px] text-muted-foreground leading-tight">{sug.raison}</span>
                 </div>
               </button>
@@ -157,21 +195,23 @@ const AnalysisResults = ({ result, onReset }: AnalysisResultsProps) => {
       )}
 
       {/* Conseil */}
-      {!showConseil ? (
-        <Button onClick={handleConseilClick} size="sm" className="w-full h-8 text-xs font-semibold pharmacy-gradient border-0 gap-1.5">
-          <MessageSquare className="h-3 w-3" />
-          Voir conseil
-        </Button>
-      ) : (
+      {(refined || showConseil) && (
         <div className="rounded-lg border border-primary/20 p-2.5 animate-fade-in">
           <div className="flex items-center gap-1.5 mb-1">
             <MessageSquare className="h-3 w-3 text-primary" />
             <span className="font-semibold text-xs">Phrase conseil</span>
           </div>
           <p className="text-[11px] leading-relaxed italic text-foreground">
-            "{result.conseil || "Un accompagnement adapté peut aider à améliorer le confort au quotidien."}"
+            "{conseil || "Un accompagnement adapté peut aider à améliorer le confort au quotidien."}"
           </p>
         </div>
+      )}
+
+      {!refined && !showConseil && (
+        <Button onClick={() => { setShowConseil(true); trackEvent("conseil_clicked"); }} size="sm" className="w-full h-8 text-xs font-semibold pharmacy-gradient border-0 gap-1.5">
+          <MessageSquare className="h-3 w-3" />
+          Voir conseil
+        </Button>
       )}
 
       {/* Reset + disclaimer */}
