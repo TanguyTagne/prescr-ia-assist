@@ -45,7 +45,7 @@ const WidgetAuth = () => {
   return (
     <div className="p-4 space-y-3">
       <p className="text-sm font-semibold text-center">{isLogin ? "Connexion" : "Inscription"}</p>
-      <form onSubmit={handleSubmit} className="space-y-2">
+      <form onSubmit={handleSubmit} className="space-y-3">
         {!isLogin && (
           <div className="relative">
             <Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Nom complet" className="h-8 text-xs pl-8" required />
