@@ -59,7 +59,7 @@ const Landing = () => {
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
             <Button size="lg" asChild className="h-12 px-8 text-base font-semibold pharmacy-gradient border-0 gap-2">
-              <a href={DOWNLOAD_URL} download>
+              <a href={DOWNLOAD_URL}>
                 <Download className="h-5 w-5" />
                 Télécharger pour Windows
               </a>
@@ -123,7 +123,7 @@ const Landing = () => {
             Téléchargez l'installeur, lancez-le, et PrescrIA apparaît sur votre bureau. Prêt à l'emploi en 1 minute.
           </p>
           <Button size="lg" asChild className="h-14 px-10 text-lg font-bold pharmacy-gradient border-0 gap-3">
-            <a href={DOWNLOAD_URL} download>
+            <a href={DOWNLOAD_URL}>
               <Download className="h-6 w-6" />
               Télécharger PrescrIA
             </a>
