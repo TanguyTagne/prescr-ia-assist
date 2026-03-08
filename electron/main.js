@@ -30,13 +30,16 @@ function createWindow() {
   // Remove the menu bar entirely
   mainWindow.setMenuBarVisibility(false);
 
-  // Load local build if available, otherwise remote
-  const fs = require("fs");
-  if (fs.existsSync(LOCAL_PATH)) {
-    mainWindow.loadFile(LOCAL_PATH);
-  } else {
-    mainWindow.loadURL(APP_URL);
-  }
+  // Always load remote URL for proper SPA routing and asset resolution
+  mainWindow.loadURL(APP_URL);
+
+  // Handle load failures — retry after a delay
+  mainWindow.webContents.on("did-fail-load", (_event, _code, _desc, url) => {
+    console.error("Failed to load:", url);
+    setTimeout(() => {
+      mainWindow.loadURL(APP_URL);
+    }, 3000);
+  });
 
   // Show window when ready to avoid white flash
   mainWindow.once("ready-to-show", () => {
