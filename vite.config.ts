@@ -20,10 +20,12 @@ export default defineConfig(({ mode }) => ({
     dedupe: [
       "react",
       "react-dom",
+      "react-dom/client",
       "react/jsx-runtime",
       "react/jsx-dev-runtime",
       "react-router-dom",
       "@tanstack/react-query",
+      "@supabase/supabase-js",
     ],
   },
   optimizeDeps: {
