@@ -110,10 +110,10 @@ const WidgetApp = () => {
   };
 
   return (
-    <div className="p-2 space-y-2">
+    <div className="p-4 space-y-3">
       <div className="flex items-center justify-between">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Ordonnance</p>
-        <div className="flex gap-0.5">
+        <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Ordonnance</p>
+        <div className="flex gap-1">
           <button onClick={() => navigate("/dashboard")} className="p-1 rounded hover:bg-accent text-muted-foreground"><BarChart3 className="h-3 w-3" /></button>
           <button onClick={signOut} className="p-1 rounded hover:bg-accent text-muted-foreground"><LogOut className="h-3 w-3" /></button>
         </div>
