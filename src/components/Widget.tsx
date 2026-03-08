@@ -124,13 +124,13 @@ const WidgetApp = () => {
           <p className="text-xs text-muted-foreground">Analyse...</p>
         </div>
       ) : !result ? (
-        <div className="space-y-2">
+        <div className="space-y-3">
           <PrescriptionInput onAnalyze={handleAnalyze} onAnalyzeImage={handleAnalyzeImage} />
           <LegalDisclaimer />
-          <div className="flex flex-wrap items-center gap-1">
-            <span className="text-[9px] text-muted-foreground font-medium uppercase tracking-wider">Essayer :</span>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Essayer :</span>
             {["Amoxicilline, Doliprane", "Ibuprofène, Oméprazole"].map((ex) => (
-              <button key={ex} onClick={() => handleAnalyze(ex)} className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-secondary-foreground hover:bg-accent transition-colors">
+              <button key={ex} onClick={() => handleAnalyze(ex)} className="text-xs px-2 py-1 rounded bg-secondary text-secondary-foreground hover:bg-accent transition-colors">
                 {ex}
               </button>
             ))}
