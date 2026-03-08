@@ -43,8 +43,8 @@ const WidgetAuth = () => {
   };
 
   return (
-    <div className="p-3 space-y-2">
-      <p className="text-xs font-semibold text-center">{isLogin ? "Connexion" : "Inscription"}</p>
+    <div className="p-4 space-y-3">
+      <p className="text-sm font-semibold text-center">{isLogin ? "Connexion" : "Inscription"}</p>
       <form onSubmit={handleSubmit} className="space-y-2">
         {!isLogin && (
           <div className="relative">
