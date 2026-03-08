@@ -149,12 +149,12 @@ const Widget = ({ forceOpen = false }: { forceOpen?: boolean }) => {
 
   if (forceOpen) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <div className="w-[320px] max-h-[520px] overflow-y-auto rounded-xl border border-border bg-background shadow-2xl">
-          <div className="pharmacy-gradient px-3 py-1.5 rounded-t-xl flex items-center gap-1.5">
-            <Pill className="h-3 w-3 text-primary-foreground" />
-            <span className="text-[11px] font-bold text-primary-foreground tracking-tight">PrescrIA</span>
-          </div>
+      <div className="min-h-screen flex flex-col bg-background">
+        <div className="pharmacy-gradient px-4 py-2.5 flex items-center gap-2">
+          <Pill className="h-4 w-4 text-primary-foreground" />
+          <span className="text-sm font-bold text-primary-foreground tracking-tight">PrescrIA</span>
+        </div>
+        <div className="flex-1 overflow-y-auto">
           {loading ? (
             <div className="flex items-center justify-center py-6">
               <Loader2 className="h-4 w-4 animate-spin text-primary" />
