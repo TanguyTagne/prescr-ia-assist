@@ -32,23 +32,21 @@ const App = () => {
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter>
-          <AuthProvider>
-            {isStandalone ? (
-              <Widget forceOpen />
-            ) : (
-              <>
-                <Routes>
-                  <Route path="/" element={<Landing />} />
-                  <Route path="/auth" element={<Landing />} />
-                  <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-                <Widget />
-              </>
-            )}
-          </AuthProvider>
-        </BrowserRouter>
+        <AuthProvider>
+          {isStandalone ? (
+            <Widget forceOpen />
+          ) : (
+            <>
+              <Routes>
+                <Route path="/" element={<Landing />} />
+                <Route path="/auth" element={<Landing />} />
+                <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+              <Widget />
+            </>
+          )}
+        </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );
