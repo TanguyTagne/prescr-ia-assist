@@ -51,8 +51,8 @@
     },
     "publish": {
       "provider": "github",
-      "owner": "YOUR_GITHUB_USERNAME",
-      "repo": "prescria-desktop"
+      "owner": "TanguyTagne",
+      "repo": "prescr-ia-assist"
     }
   }
 }
