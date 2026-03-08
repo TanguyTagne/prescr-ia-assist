@@ -112,7 +112,7 @@ EXEMPLE : Paracétamol + Chlorhexidine
 IMPORTANT :
 - Les suggestions doivent être COHÉRENTES avec les réponses — si le patient dit "Non" à un axe, NE PAS recommander de produits pour cet axe
 - Si toutes les réponses sont "Non", propose des recommandations de confort GÉNÉRAL (hydratation, repos, bien-être)
-- Le conseil doit être naturel, prêt à dire au patient\`;
+- Le conseil doit être naturel, prêt à dire au patient`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
