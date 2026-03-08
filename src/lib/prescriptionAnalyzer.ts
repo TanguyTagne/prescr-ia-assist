@@ -17,11 +17,17 @@ export interface Suggestion {
   icon: string;
 }
 
+export interface InteractiveQuestion {
+  question: string;
+  suggestions_oui: Suggestion[];
+  suggestions_non: Suggestion[];
+}
+
 export interface AnalysisResult {
   medicaments: MedicamentInfo[];
   interactions: Interaction[];
   contextes: string[];
-  questions: string[];
+  questions: InteractiveQuestion[];
   suggestions: Suggestion[];
   conseil: string;
 }
