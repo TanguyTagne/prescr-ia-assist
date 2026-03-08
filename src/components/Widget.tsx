@@ -149,8 +149,8 @@ const Widget = ({ forceOpen = false }: { forceOpen?: boolean }) => {
 
   if (forceOpen) {
     return (
-      <div className="min-h-screen flex flex-col bg-background">
-        <div className="pharmacy-gradient px-4 py-2.5 flex items-center gap-2">
+      <div className="h-screen w-screen flex flex-col bg-background overflow-hidden">
+        <div className="pharmacy-gradient px-4 py-2 flex items-center gap-2 shrink-0">
           <Pill className="h-4 w-4 text-primary-foreground" />
           <span className="text-sm font-bold text-primary-foreground tracking-tight">PrescrIA</span>
         </div>
