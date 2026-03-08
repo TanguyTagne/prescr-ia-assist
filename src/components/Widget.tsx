@@ -53,7 +53,7 @@ const WidgetAuth = () => {
           </div>
         )}
         <div className="relative">
-          <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" className="h-8 text-xs pl-8" required />
+          <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" className="h-10 text-sm pl-8" required />
           <Mail className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
         </div>
         <div className="relative">
