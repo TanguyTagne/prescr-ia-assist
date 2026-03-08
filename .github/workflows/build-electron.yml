@@ -21,7 +21,7 @@ jobs:
 
       # Build the web app
       - name: Install web dependencies
-        run: npm ci
+        run: npm install --legacy-peer-deps
 
       - name: Build web app
         run: npm run build
