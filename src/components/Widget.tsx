@@ -114,8 +114,8 @@ const WidgetApp = () => {
       <div className="flex items-center justify-between">
         <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Ordonnance</p>
         <div className="flex gap-1">
-          <button onClick={() => navigate("/dashboard")} className="p-1 rounded hover:bg-accent text-muted-foreground"><BarChart3 className="h-3 w-3" /></button>
-          <button onClick={signOut} className="p-1 rounded hover:bg-accent text-muted-foreground"><LogOut className="h-3 w-3" /></button>
+          <button onClick={() => navigate("/dashboard")} className="p-1.5 rounded hover:bg-accent text-muted-foreground"><BarChart3 className="h-4 w-4" /></button>
+          <button onClick={signOut} className="p-1.5 rounded hover:bg-accent text-muted-foreground"><LogOut className="h-4 w-4" /></button>
         </div>
       </div>
       {isLoading ? (
