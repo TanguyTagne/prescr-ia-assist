@@ -12,10 +12,13 @@ const LOCAL_PATH = path.join(__dirname, "web", "index.html");
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 1280,
-    height: 800,
-    minWidth: 900,
-    minHeight: 600,
+    width: 380,
+    height: 580,
+    minWidth: 340,
+    minHeight: 480,
+    maxWidth: 450,
+    maxHeight: 700,
+    resizable: true,
     title: "PrescrIA",
     icon: path.join(__dirname, "assets", "icon.ico"),
     autoHideMenuBar: true,

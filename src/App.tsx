@@ -14,7 +14,8 @@ const queryClient = new QueryClient();
 
 const isStandalone = window.matchMedia("(display-mode: standalone)").matches
   || (window.navigator as any).standalone === true
-  || !!(window as any).electronAPI?.isDesktop;
+  || !!(window as any).electronAPI?.isDesktop
+  || new URLSearchParams(window.location.search).get("desktop") === "1";
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
