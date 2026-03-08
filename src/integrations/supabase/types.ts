@@ -49,6 +49,152 @@ export type Database = {
           },
         ]
       }
+      medications: {
+        Row: {
+          classe_therapeutique_id: string | null
+          code_atc: string | null
+          created_at: string
+          effets_secondaires_frequents: string[] | null
+          id: string
+          indications_principales: string[] | null
+          mecanisme_action: string | null
+          molecule_active: string
+          nom_commercial: string
+        }
+        Insert: {
+          classe_therapeutique_id?: string | null
+          code_atc?: string | null
+          created_at?: string
+          effets_secondaires_frequents?: string[] | null
+          id?: string
+          indications_principales?: string[] | null
+          mecanisme_action?: string | null
+          molecule_active: string
+          nom_commercial: string
+        }
+        Update: {
+          classe_therapeutique_id?: string | null
+          code_atc?: string | null
+          created_at?: string
+          effets_secondaires_frequents?: string[] | null
+          id?: string
+          indications_principales?: string[] | null
+          mecanisme_action?: string | null
+          molecule_active?: string
+          nom_commercial?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medications_classe_therapeutique_id_fkey"
+            columns: ["classe_therapeutique_id"]
+            isOneToOne: false
+            referencedRelation: "therapeutic_classes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      otc_suggestions: {
+        Row: {
+          categorie_produit: string
+          created_at: string
+          description: string | null
+          icon: string | null
+          id: string
+          patient_need_id: string
+          priorite: string | null
+        }
+        Insert: {
+          categorie_produit: string
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          patient_need_id: string
+          priorite?: string | null
+        }
+        Update: {
+          categorie_produit?: string
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          patient_need_id?: string
+          priorite?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "otc_suggestions_patient_need_id_fkey"
+            columns: ["patient_need_id"]
+            isOneToOne: false
+            referencedRelation: "patient_needs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      patient_needs: {
+        Row: {
+          besoin: string
+          created_at: string
+          id: string
+          symptom_id: string
+        }
+        Insert: {
+          besoin: string
+          created_at?: string
+          id?: string
+          symptom_id: string
+        }
+        Update: {
+          besoin?: string
+          created_at?: string
+          id?: string
+          symptom_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_needs_symptom_id_fkey"
+            columns: ["symptom_id"]
+            isOneToOne: false
+            referencedRelation: "symptoms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pharma_questions: {
+        Row: {
+          contexte_explication: string | null
+          created_at: string
+          id: string
+          priorite: number | null
+          question: string
+          symptom_id: string
+        }
+        Insert: {
+          contexte_explication?: string | null
+          created_at?: string
+          id?: string
+          priorite?: number | null
+          question: string
+          symptom_id: string
+        }
+        Update: {
+          contexte_explication?: string | null
+          created_at?: string
+          id?: string
+          priorite?: number | null
+          question?: string
+          symptom_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pharma_questions_symptom_id_fkey"
+            columns: ["symptom_id"]
+            isOneToOne: false
+            referencedRelation: "symptoms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pharmacies: {
         Row: {
           address: string | null
@@ -75,6 +221,44 @@ export type Database = {
           postal_code?: string | null
         }
         Relationships: []
+      }
+      pharmacy_preferences: {
+        Row: {
+          categories_prioritaires: string[] | null
+          created_at: string
+          id: string
+          marques_partenaires: string[] | null
+          pharmacy_id: string
+          produits_recommandes: Json | null
+          updated_at: string
+        }
+        Insert: {
+          categories_prioritaires?: string[] | null
+          created_at?: string
+          id?: string
+          marques_partenaires?: string[] | null
+          pharmacy_id: string
+          produits_recommandes?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          categories_prioritaires?: string[] | null
+          created_at?: string
+          id?: string
+          marques_partenaires?: string[] | null
+          pharmacy_id?: string
+          produits_recommandes?: Json | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pharmacy_preferences_pharmacy_id_fkey"
+            columns: ["pharmacy_id"]
+            isOneToOne: true
+            referencedRelation: "pharmacies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -107,6 +291,156 @@ export type Database = {
             columns: ["pharmacy_id"]
             isOneToOne: false
             referencedRelation: "pharmacies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recommendation_usage: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          otc_suggestion_id: string | null
+          pharmacy_id: string | null
+          question_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          otc_suggestion_id?: string | null
+          pharmacy_id?: string | null
+          question_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          otc_suggestion_id?: string | null
+          pharmacy_id?: string | null
+          question_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recommendation_usage_otc_suggestion_id_fkey"
+            columns: ["otc_suggestion_id"]
+            isOneToOne: false
+            referencedRelation: "otc_suggestions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recommendation_usage_pharmacy_id_fkey"
+            columns: ["pharmacy_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recommendation_usage_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "pharma_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      symptoms: {
+        Row: {
+          contexte_id: string
+          created_at: string
+          frequence_score: number | null
+          id: string
+          symptome: string
+        }
+        Insert: {
+          contexte_id: string
+          created_at?: string
+          frequence_score?: number | null
+          id?: string
+          symptome: string
+        }
+        Update: {
+          contexte_id?: string
+          created_at?: string
+          frequence_score?: number | null
+          id?: string
+          symptome?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "symptoms_contexte_id_fkey"
+            columns: ["contexte_id"]
+            isOneToOne: false
+            referencedRelation: "therapeutic_contexts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      therapeutic_classes: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          nom: string
+          systeme_physiologique: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          nom: string
+          systeme_physiologique?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          nom?: string
+          systeme_physiologique?: string | null
+        }
+        Relationships: []
+      }
+      therapeutic_contexts: {
+        Row: {
+          classe_therapeutique_id: string
+          created_at: string
+          description: string
+          frequence_score: number | null
+          id: string
+          medication_id: string | null
+        }
+        Insert: {
+          classe_therapeutique_id: string
+          created_at?: string
+          description: string
+          frequence_score?: number | null
+          id?: string
+          medication_id?: string | null
+        }
+        Update: {
+          classe_therapeutique_id?: string
+          created_at?: string
+          description?: string
+          frequence_score?: number | null
+          id?: string
+          medication_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "therapeutic_contexts_classe_therapeutique_id_fkey"
+            columns: ["classe_therapeutique_id"]
+            isOneToOne: false
+            referencedRelation: "therapeutic_classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "therapeutic_contexts_medication_id_fkey"
+            columns: ["medication_id"]
+            isOneToOne: false
+            referencedRelation: "medications"
             referencedColumns: ["id"]
           },
         ]

@@ -11,6 +11,15 @@ export interface MedicamentInfo {
   classe: string;
 }
 
+export interface OTCSuggestion {
+  categorie_produit?: string;
+  categorie?: string;
+  description?: string;
+  desc?: string;
+  icon: string;
+  priorite: string;
+}
+
 export interface Suggestion {
   categorie: string;
   raison: string;
@@ -21,6 +30,7 @@ export interface Suggestion {
 export interface AnalysisQuestion {
   question: string;
   contexte: string;
+  otcSuggestions?: OTCSuggestion[];
 }
 
 export interface AnalysisResult {
@@ -29,6 +39,7 @@ export interface AnalysisResult {
   contextes: string[];
   questions: AnalysisQuestion[];
   conseil: string;
+  structuredData?: boolean;
 }
 
 export interface RefinedResult {
@@ -86,12 +97,36 @@ export async function refinePrescription(
   };
 }
 
+export async function trackRecommendationUsage(
+  eventType: string,
+  questionId?: string,
+  otcSuggestionId?: string
+): Promise<void> {
+  try {
+    await supabase.from("recommendation_usage").insert({
+      event_type: eventType,
+      question_id: questionId || null,
+      otc_suggestion_id: otcSuggestionId || null,
+      user_id: (await supabase.auth.getUser()).data.user?.id || null,
+    });
+  } catch (e) {
+    console.error("Failed to track usage:", e);
+  }
+}
+
+export async function seedPharmaData(): Promise<any> {
+  const { data, error } = await supabase.functions.invoke("seed-pharma-data");
+  if (error) throw new Error(error.message || "Erreur lors du seed");
+  return data;
+}
+
 function normalizeResult(data: any): AnalysisResult {
   return {
     medicaments: data.medicaments || [],
     interactions: data.interactions || [],
     contextes: data.contextes || [],
-    questions: (data.questions || []).slice(0, 5),
+    questions: (data.questions || []).slice(0, 4),
     conseil: data.conseil || "",
+    structuredData: data.structuredData || false,
   };
 }
