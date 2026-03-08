@@ -4,7 +4,7 @@ import { Pill, FolderSearch, ShieldCheck, ArrowRight, Download, LogIn, BarChart3
 import { Button } from "@/components/ui/button";
 
 // TODO: Replace with your actual GitHub Releases URL after first build
-const DOWNLOAD_URL = "https://github.com/YOUR_USERNAME/prescria-desktop/releases/latest/download/PrescrIA-Setup-1.0.0.exe";
+const DOWNLOAD_URL = "https://github.com/TanguyTagne/prescr-ia-assist/releases/latest/download/PrescrIA-Setup.exe";
 
 const Landing = () => {
   const { user, signOut } = useAuth();
