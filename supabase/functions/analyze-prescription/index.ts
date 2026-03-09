@@ -90,16 +90,18 @@ async function openFDAGetInteractions(drug1: string, drug2: string): Promise<str
 // ====== PROMPTS ======
 
 const EXTRACTION_PROMPT = `Tu es PrescrIA, un copilote pour préparateurs en pharmacie.
-Tu dois UNIQUEMENT extraire les médicaments d'une ordonnance et les retourner en JSON.
+Tu dois extraire les médicaments ET le nom du patient d'une ordonnance et les retourner en JSON.
 
 ## FORMAT JSON STRICT
 {
+  "patient_nom": "Nom et prénom du patient tels qu'écrits sur l'ordonnance, ou null si non trouvé",
   "medicaments_detectes": [
     {"nom_commercial": "nom tel qu'écrit", "molecule_probable": "DCI si connue, sinon null"}
   ]
 }
 
 RÈGLES :
+- Extrais le nom du patient s'il est visible sur l'ordonnance
 - Extrais TOUS les noms de médicaments (commerciaux ou DCI)
 - Si tu reconnais la DCI, indique-la
 - Ne retourne RIEN d'autre que ce JSON`;
@@ -455,24 +457,27 @@ Propose des recommandations OTC adaptées.` },
 
     // ============ ANALYSIS MODE ============
 
-    // Step 1: Extract medication names
+    // Step 1: Extract medication names and patient name
     let medEntries: { nom_commercial: string; molecule_probable?: string }[] = [];
+    let extractedPatientName: string | null = null;
 
     if (imageBase64) {
       const parsed = await callAI(LOVABLE_API_KEY, [
         { role: "system", content: EXTRACTION_PROMPT },
         { role: "user", content: [
-          { type: "text", text: "Extrais les noms de médicaments de cette ordonnance." },
+          { type: "text", text: "Extrais les noms de médicaments et le nom du patient de cette ordonnance." },
           { type: "image_url", image_url: { url: imageBase64 } },
         ]},
       ]);
       medEntries = parsed.medicaments_detectes || [];
+      extractedPatientName = parsed.patient_nom || null;
     } else if (prescriptionText) {
       const parsed = await callAI(LOVABLE_API_KEY, [
         { role: "system", content: EXTRACTION_PROMPT },
-        { role: "user", content: `Extrais les médicaments :\n\n${prescriptionText}` },
+        { role: "user", content: `Extrais les médicaments et le nom du patient :\n\n${prescriptionText}` },
       ]);
       medEntries = parsed.medicaments_detectes || [];
+      extractedPatientName = parsed.patient_nom || null;
     } else {
       return new Response(JSON.stringify({ error: "Aucune donnée d'ordonnance fournie" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -668,6 +673,7 @@ Propose des recommandations OTC adaptées.` },
       conseil: "N'hésitez pas à me poser des questions sur votre traitement, je suis là pour vous accompagner.",
       structuredData: hasStructuredData,
       sources,
+      patient_name: extractedPatientName,
     };
 
     // Step 8: Save to analysis_history (anonymized)
@@ -687,8 +693,9 @@ Propose des recommandations OTC adaptées.` },
         const prescriptionHashBuffer = await crypto.subtle.digest("SHA-256", encoder.encode(inputText));
         const prescriptionHash = Array.from(new Uint8Array(prescriptionHashBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
         
-        // Patient hash from sorted medication names (same meds = likely same patient context)
-        const patientSig = medNames.sort().join("|").toLowerCase();
+        // Patient hash based on patient name from prescription
+        const patientName = result.patient_nom || result.patient_name || null;
+        const patientSig = patientName ? patientName.trim().toLowerCase().replace(/\s+/g, " ") : medNames.sort().join("|").toLowerCase();
         const patientHashBuffer = await crypto.subtle.digest("SHA-256", encoder.encode(patientSig));
         const patientHash = Array.from(new Uint8Array(patientHashBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
 
@@ -698,6 +705,7 @@ Propose des recommandations OTC adaptées.` },
           pharmacy_id: pharmacyId,
           user_id: userId,
           patient_hash: patientHash,
+          patient_name: patientName,
           prescription_hash: prescriptionHash,
           medicaments: result.medicaments,
           interactions_count: interactions.length,
