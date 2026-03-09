@@ -38,6 +38,13 @@ jobs:
         working-directory: electron
         run: npm install
 
+      - name: Install icon conversion tool
+        run: npm install -g png2icons
+
+      - name: Convert PNG to ICO
+        working-directory: electron/assets
+        run: npx png2icons icon.png icon -icow
+
       - name: Build Windows installer
         working-directory: electron
         run: npm run build:win -- --publish never
