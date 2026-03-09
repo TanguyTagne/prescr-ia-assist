@@ -8,8 +8,7 @@ app.disableHardwareAcceleration();
 let mainWindow;
 
 const APP_URL = "https://prescr-ia-assist.lovable.app";
-const DESKTOP_URL = `${APP_URL}?desktop=1`;
-const LOCAL_PATH = path.join(__dirname, "web", "index.html");
+const getDesktopUrl = () => `${APP_URL}?desktop=1&t=${Date.now()}`;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -24,6 +23,7 @@ function createWindow() {
     icon: path.join(__dirname, "assets", "icon.ico"),
     autoHideMenuBar: true,
     show: false,
+    backgroundColor: "#f4f6f5",
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
@@ -34,14 +34,26 @@ function createWindow() {
   // Remove the menu bar entirely
   mainWindow.setMenuBarVisibility(false);
 
-  // Always load remote URL with desktop flag
-  mainWindow.loadURL(DESKTOP_URL);
+  // Clear persistent web cache to avoid stale chunks causing white screens
+  const clearAndLoad = async () => {
+    try {
+      await mainWindow.webContents.session.clearCache();
+      await mainWindow.webContents.session.clearStorageData({
+        storages: ["serviceworkers", "cachestorage"],
+      });
+    } catch (error) {
+      console.error("Cache clear error:", error);
+    }
+    mainWindow.loadURL(getDesktopUrl());
+  };
+
+  clearAndLoad();
 
   // Handle load failures — retry after a delay (keep desktop mode)
   mainWindow.webContents.on("did-fail-load", (_event, _code, _desc, url) => {
     console.error("Failed to load:", url);
     setTimeout(() => {
-      mainWindow?.loadURL(DESKTOP_URL);
+      mainWindow?.loadURL(getDesktopUrl());
     }, 3000);
   });
 
