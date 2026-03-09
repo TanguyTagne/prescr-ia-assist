@@ -139,6 +139,9 @@ RÈGLES :
 - Langage probabiliste : "souvent associé à", "peut accompagner"
 - Les questions doivent couvrir des AXES DIFFÉRENTS (pas toutes sur le même thème)
 - Maximum 4 questions
+- TOUTES les questions DOIVENT être FERMÉES (réponse Oui ou Non UNIQUEMENT)
+- INTERDIT : questions ouvertes (commençant par "Quel", "Comment", "Où", "Quand", "Pourquoi", "Décrivez")
+- OBLIGATOIRE : questions commençant par "Ressentez-vous", "Avez-vous", "Est-ce que", "Prenez-vous", etc.
 - Baser les indications et effets secondaires SUR LES DONNÉES PUBLIQUES fournies`;
 
 const REFINE_PROMPT = `Tu es PrescrIA, un copilote pour préparateurs en pharmacie. Le préparateur a analysé une ordonnance et posé des questions au patient.
