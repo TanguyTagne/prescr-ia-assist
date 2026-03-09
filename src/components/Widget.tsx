@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Pill, X, Loader2, Mail, Lock, Eye, EyeOff, LogOut, BarChart3, Download } from "lucide-react";
+import { Pill, X, Loader2, Mail, Lock, Eye, EyeOff, LogOut, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
