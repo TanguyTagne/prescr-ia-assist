@@ -62,6 +62,7 @@ export type Database = {
           medicaments: Json
           metadata: Json | null
           patient_hash: string
+          patient_name: string | null
           pharmacy_id: string
           prescription_hash: string
           suggestions_count: number
@@ -75,6 +76,7 @@ export type Database = {
           medicaments?: Json
           metadata?: Json | null
           patient_hash: string
+          patient_name?: string | null
           pharmacy_id: string
           prescription_hash: string
           suggestions_count?: number
@@ -88,6 +90,7 @@ export type Database = {
           medicaments?: Json
           metadata?: Json | null
           patient_hash?: string
+          patient_name?: string | null
           pharmacy_id?: string
           prescription_hash?: string
           suggestions_count?: number
