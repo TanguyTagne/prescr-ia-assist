@@ -53,6 +53,56 @@ export type Database = {
         }
         Relationships: []
       }
+      analysis_history: {
+        Row: {
+          created_at: string
+          has_major_interaction: boolean
+          id: string
+          interactions_count: number
+          medicaments: Json
+          metadata: Json | null
+          patient_hash: string
+          pharmacy_id: string
+          prescription_hash: string
+          suggestions_count: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          has_major_interaction?: boolean
+          id?: string
+          interactions_count?: number
+          medicaments?: Json
+          metadata?: Json | null
+          patient_hash: string
+          pharmacy_id: string
+          prescription_hash: string
+          suggestions_count?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          has_major_interaction?: boolean
+          id?: string
+          interactions_count?: number
+          medicaments?: Json
+          metadata?: Json | null
+          patient_hash?: string
+          pharmacy_id?: string
+          prescription_hash?: string
+          suggestions_count?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analysis_history_pharmacy_id_fkey"
+            columns: ["pharmacy_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       analytics_events: {
         Row: {
           created_at: string
