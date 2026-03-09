@@ -190,7 +190,6 @@ const AnalysisResults = ({ result, onReset }: AnalysisResultsProps) => {
                 onClick={() => handleSuggestionClick(sug.categorie)}
                 className="w-full flex items-center gap-2 py-1.5 px-2 rounded-md bg-secondary hover:bg-accent transition-colors text-left animate-fade-in"
               >
-                <span className="text-sm shrink-0">{sug.icon}</span>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1">
                     <span className="font-medium text-[11px] leading-tight">{sug.categorie}</span>
