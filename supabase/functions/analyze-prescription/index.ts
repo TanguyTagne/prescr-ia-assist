@@ -673,6 +673,7 @@ Propose des recommandations OTC adaptées.` },
       conseil: "N'hésitez pas à me poser des questions sur votre traitement, je suis là pour vous accompagner.",
       structuredData: hasStructuredData,
       sources,
+      patient_name: extractedPatientName,
     };
 
     // Step 8: Save to analysis_history (anonymized)
