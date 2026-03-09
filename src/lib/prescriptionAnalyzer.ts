@@ -22,11 +22,20 @@ export interface OTCSuggestion {
   priorite: string;
 }
 
+export interface LGOProduct {
+  nom: string;
+  cip: string;
+  prix: number;
+  stock: number;
+  categorie?: string;
+}
+
 export interface Suggestion {
   categorie: string;
   raison: string;
   icon: string;
   priorite?: "haute" | "moyenne";
+  produits_lgo?: LGOProduct[];
 }
 
 export interface AnalysisQuestion {

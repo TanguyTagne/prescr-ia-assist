@@ -259,6 +259,119 @@ async function callAI(apiKey: string, messages: any[], temperature = 0.1) {
   return JSON.parse(jsonStr);
 }
 
+// ====== LGO STOCK LOOKUP ======
+
+interface LGOProduct {
+  nom: string;
+  cip: string;
+  prix: number;
+  stock: number;
+  categorie?: string;
+}
+
+async function lookupLGOStock(
+  supabase: any,
+  pharmacyId: string,
+  categories: string[]
+): Promise<LGOProduct[]> {
+  if (!pharmacyId || categories.length === 0) return [];
+
+  // Get LGO config for this pharmacy
+  const { data: lgoConfig } = await supabase
+    .from("pharmacy_lgo_config")
+    .select("*")
+    .eq("pharmacy_id", pharmacyId)
+    .eq("enabled", true)
+    .single();
+
+  if (!lgoConfig) {
+    console.log("No LGO config for pharmacy:", pharmacyId);
+    return [];
+  }
+
+  try {
+    const results: LGOProduct[] = [];
+    
+    for (const categorie of categories) {
+      const searchUrl = `${lgoConfig.api_base_url}/stock/search`;
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+
+      // Auth method
+      if (lgoConfig.auth_method === "api_key" && lgoConfig.api_key_encrypted) {
+        headers["X-API-Key"] = lgoConfig.api_key_encrypted;
+      } else if (lgoConfig.auth_method === "bearer" && lgoConfig.api_key_encrypted) {
+        headers["Authorization"] = `Bearer ${lgoConfig.api_key_encrypted}`;
+      }
+
+      const res = await fetch(searchUrl, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          query: categorie,
+          in_stock: true,
+          limit: 3,
+        }),
+      });
+
+      if (!res.ok) {
+        console.error(`LGO API error for "${categorie}":`, res.status);
+        continue;
+      }
+
+      const data = await res.json();
+      const products = (data.products || data.results || data || [])
+        .slice(0, 3)
+        .map((p: any) => ({
+          nom: p.nom || p.name || p.designation,
+          cip: p.cip || p.cip13 || p.code_cip || "",
+          prix: p.prix || p.price || p.prix_ttc || 0,
+          stock: p.stock || p.quantite || p.qty || 0,
+          categorie,
+        }));
+
+      results.push(...products);
+    }
+
+    // Update last_sync_at
+    await supabase
+      .from("pharmacy_lgo_config")
+      .update({ last_sync_at: new Date().toISOString() })
+      .eq("id", lgoConfig.id);
+
+    return results;
+  } catch (e) {
+    console.error("LGO stock lookup failed:", e);
+    return [];
+  }
+}
+
+// Get pharmacy_id from user's auth token
+async function getPharmacyIdFromAuth(supabase: any, authHeader: string | null): Promise<string | null> {
+  if (!authHeader) return null;
+  try {
+    const token = authHeader.replace("Bearer ", "");
+    const adminSupabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: `Bearer ${token}` } } }
+    );
+    const { data } = await adminSupabase.auth.getUser();
+    if (!data?.user?.id) return null;
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("pharmacy_id")
+      .eq("id", data.user.id)
+      .single();
+
+    return profile?.pharmacy_id || null;
+  } catch {
+    return null;
+  }
+}
+
 // ====== MAIN HANDLER ======
 
 serve(async (req) => {
