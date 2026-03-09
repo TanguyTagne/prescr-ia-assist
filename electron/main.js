@@ -8,6 +8,7 @@ app.disableHardwareAcceleration();
 let mainWindow;
 
 const APP_URL = "https://prescr-ia-assist.lovable.app";
+const DESKTOP_URL = `${APP_URL}?desktop=1`;
 const LOCAL_PATH = path.join(__dirname, "web", "index.html");
 
 function createWindow() {
@@ -34,13 +35,13 @@ function createWindow() {
   mainWindow.setMenuBarVisibility(false);
 
   // Always load remote URL with desktop flag
-  mainWindow.loadURL(APP_URL + "?desktop=1");
+  mainWindow.loadURL(DESKTOP_URL);
 
-  // Handle load failures — retry after a delay
+  // Handle load failures — retry after a delay (keep desktop mode)
   mainWindow.webContents.on("did-fail-load", (_event, _code, _desc, url) => {
     console.error("Failed to load:", url);
     setTimeout(() => {
-      mainWindow.loadURL(APP_URL);
+      mainWindow?.loadURL(DESKTOP_URL);
     }, 3000);
   });
 
