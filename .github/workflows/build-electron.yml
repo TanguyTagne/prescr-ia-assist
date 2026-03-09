@@ -33,6 +33,13 @@ jobs:
           New-Item -ItemType Directory -Force -Path electron/web
           Copy-Item -Recurse -Force dist/* electron/web/
 
+      # Convert PNG icon to ICO (256x256+)
+      - name: Generate ICO from PNG
+        shell: pwsh
+        run: |
+          npm install -g png-to-ico
+          npx png-to-ico electron/assets/icon.png > electron/assets/icon.ico
+
       # Build Electron installer
       - name: Install Electron dependencies
         working-directory: electron
