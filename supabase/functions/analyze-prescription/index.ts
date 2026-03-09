@@ -457,24 +457,27 @@ Propose des recommandations OTC adaptées.` },
 
     // ============ ANALYSIS MODE ============
 
-    // Step 1: Extract medication names
+    // Step 1: Extract medication names and patient name
     let medEntries: { nom_commercial: string; molecule_probable?: string }[] = [];
+    let extractedPatientName: string | null = null;
 
     if (imageBase64) {
       const parsed = await callAI(LOVABLE_API_KEY, [
         { role: "system", content: EXTRACTION_PROMPT },
         { role: "user", content: [
-          { type: "text", text: "Extrais les noms de médicaments de cette ordonnance." },
+          { type: "text", text: "Extrais les noms de médicaments et le nom du patient de cette ordonnance." },
           { type: "image_url", image_url: { url: imageBase64 } },
         ]},
       ]);
       medEntries = parsed.medicaments_detectes || [];
+      extractedPatientName = parsed.patient_nom || null;
     } else if (prescriptionText) {
       const parsed = await callAI(LOVABLE_API_KEY, [
         { role: "system", content: EXTRACTION_PROMPT },
-        { role: "user", content: `Extrais les médicaments :\n\n${prescriptionText}` },
+        { role: "user", content: `Extrais les médicaments et le nom du patient :\n\n${prescriptionText}` },
       ]);
       medEntries = parsed.medicaments_detectes || [];
+      extractedPatientName = parsed.patient_nom || null;
     } else {
       return new Response(JSON.stringify({ error: "Aucune donnée d'ordonnance fournie" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
