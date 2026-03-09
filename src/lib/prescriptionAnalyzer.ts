@@ -53,6 +53,14 @@ export interface AnalysisResult {
   conseil: string;
   structuredData?: boolean;
   sources?: string[];
+  duplicate_warning?: {
+    count: number;
+    last_seen: string;
+  };
+  patient_history?: {
+    previous_analyses: number;
+    first_seen: string;
+  };
 }
 
 export interface RefinedResult {
