@@ -150,5 +150,7 @@ function normalizeResult(data: any): AnalysisResult {
     conseil: data.conseil || "",
     structuredData: data.structuredData || false,
     sources: data.sources || [],
+    duplicate_warning: data.duplicate_warning || undefined,
+    patient_history: data.patient_history || undefined,
   };
 }
