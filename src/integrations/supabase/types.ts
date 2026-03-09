@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      access_requests: {
+        Row: {
+          city: string | null
+          contact_name: string
+          created_at: string
+          email: string
+          id: string
+          lgo_type: string | null
+          message: string | null
+          pharmacy_name: string
+          phone: string | null
+          status: string
+        }
+        Insert: {
+          city?: string | null
+          contact_name: string
+          created_at?: string
+          email: string
+          id?: string
+          lgo_type?: string | null
+          message?: string | null
+          pharmacy_name: string
+          phone?: string | null
+          status?: string
+        }
+        Update: {
+          city?: string | null
+          contact_name?: string
+          created_at?: string
+          email?: string
+          id?: string
+          lgo_type?: string | null
+          message?: string | null
+          pharmacy_name?: string
+          phone?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       analytics_events: {
         Row: {
           created_at: string
