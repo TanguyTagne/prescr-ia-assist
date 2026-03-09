@@ -126,10 +126,10 @@ Utilise ces données OFFICIELLES pour structurer les informations pharmacologiqu
   "symptomes_questions": [
     {
       "symptome": "symptôme",
-      "question": "question oui/non courte et naturelle à poser au patient",
+      "question": "question FERMÉE (réponse Oui ou Non uniquement). Ex: 'Ressentez-vous des douleurs ?' JAMAIS de question ouverte comme 'Quelles douleurs ressentez-vous ?'",
       "contexte_explication": "ce que cette question aide à identifier",
       "besoin": "besoin patient si oui",
-      "otc": [{"categorie": "catégorie produit OTC", "description": "description", "icon": "emoji", "priorite": "haute|moyenne"}]
+      "otc": [{"categorie": "catégorie produit OTC", "description": "description", "priorite": "haute|moyenne"}]
     }
   ]
 }
