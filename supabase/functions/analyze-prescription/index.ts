@@ -670,6 +670,79 @@ Propose des recommandations OTC adaptées.` },
       sources,
     };
 
+    // Step 8: Save to analysis_history (anonymized)
+    try {
+      const authHeader = req.headers.get("authorization");
+      const pharmacyId = await getPharmacyIdFromAuth(supabase, authHeader);
+      
+      if (pharmacyId && authHeader) {
+        // Extract user id from JWT
+        const token = authHeader.replace("Bearer ", "");
+        const payload = JSON.parse(atob(token.split(".")[1]));
+        const userId = payload.sub;
+
+        // Create anonymized hashes
+        const inputText = prescriptionText || medNames.join(",");
+        const encoder = new TextEncoder();
+        const prescriptionHashBuffer = await crypto.subtle.digest("SHA-256", encoder.encode(inputText));
+        const prescriptionHash = Array.from(new Uint8Array(prescriptionHashBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
+        
+        // Patient hash from sorted medication names (same meds = likely same patient context)
+        const patientSig = medNames.sort().join("|").toLowerCase();
+        const patientHashBuffer = await crypto.subtle.digest("SHA-256", encoder.encode(patientSig));
+        const patientHash = Array.from(new Uint8Array(patientHashBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
+
+        const hasMajor = interactions.some((i: any) => i.niveau === "majeure");
+
+        await supabase.from("analysis_history").insert({
+          pharmacy_id: pharmacyId,
+          user_id: userId,
+          patient_hash: patientHash,
+          prescription_hash: prescriptionHash,
+          medicaments: result.medicaments,
+          interactions_count: interactions.length,
+          suggestions_count: uniqueQuestions.length,
+          has_major_interaction: hasMajor,
+          metadata: { sources, contextes_count: allContexts.length },
+        });
+
+        // Check for duplicate prescription
+        const { data: duplicates } = await supabase
+          .from("analysis_history")
+          .select("id, created_at")
+          .eq("pharmacy_id", pharmacyId)
+          .eq("prescription_hash", prescriptionHash)
+          .neq("id", "placeholder")
+          .order("created_at", { ascending: false })
+          .limit(5);
+
+        if (duplicates && duplicates.length > 1) {
+          result.duplicate_warning = {
+            count: duplicates.length,
+            last_seen: duplicates[1]?.created_at,
+          };
+        }
+
+        // Check patient history (same med combo seen before)
+        const { data: patientHistory } = await supabase
+          .from("analysis_history")
+          .select("id, created_at, medicaments")
+          .eq("pharmacy_id", pharmacyId)
+          .eq("patient_hash", patientHash)
+          .order("created_at", { ascending: false })
+          .limit(10);
+
+        if (patientHistory && patientHistory.length > 1) {
+          result.patient_history = {
+            previous_analyses: patientHistory.length - 1,
+            first_seen: patientHistory[patientHistory.length - 1]?.created_at,
+          };
+        }
+      }
+    } catch (historyErr) {
+      console.error("Failed to save analysis history:", historyErr);
+    }
+
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
