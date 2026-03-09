@@ -147,6 +147,42 @@ const Dashboard = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Download Section */}
+        <Card className="glass-card border-primary/20">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Download className="h-5 w-5 text-primary" />
+              Installer PrescrIA sur vos postes
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Téléchargez l'application desktop pour analyser les ordonnances directement depuis votre poste de travail, sans navigateur.
+            </p>
+
+            <a
+              href="https://github.com/TanguyTagne/prescr-ia-assist/releases/latest/download/PrescrIA-Setup.exe"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Button className="w-full sm:w-auto h-12 text-base font-semibold pharmacy-gradient border-0 gap-2">
+                <Monitor className="h-5 w-5" />
+                Télécharger PrescrIA pour Windows
+              </Button>
+            </a>
+
+            <div className="rounded-lg bg-secondary p-4 space-y-2">
+              <p className="text-xs font-semibold flex items-center gap-1.5">
+                <Shield className="h-3.5 w-3.5 text-primary" />
+                Note : Windows SmartScreen
+              </p>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                L'installeur n'est pas encore signé. Au lancement, cliquez sur <strong>« Plus d'informations »</strong> puis <strong>« Exécuter quand même »</strong>.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       </main>
     </div>
   );
