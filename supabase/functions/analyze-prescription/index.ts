@@ -126,10 +126,10 @@ Utilise ces données OFFICIELLES pour structurer les informations pharmacologiqu
   "symptomes_questions": [
     {
       "symptome": "symptôme",
-      "question": "question oui/non courte et naturelle à poser au patient",
+      "question": "question FERMÉE (réponse Oui ou Non uniquement). Ex: 'Ressentez-vous des douleurs ?' JAMAIS de question ouverte comme 'Quelles douleurs ressentez-vous ?'",
       "contexte_explication": "ce que cette question aide à identifier",
       "besoin": "besoin patient si oui",
-      "otc": [{"categorie": "catégorie produit OTC", "description": "description", "icon": "emoji", "priorite": "haute|moyenne"}]
+      "otc": [{"categorie": "catégorie produit OTC", "description": "description", "priorite": "haute|moyenne"}]
     }
   ]
 }
@@ -139,6 +139,9 @@ RÈGLES :
 - Langage probabiliste : "souvent associé à", "peut accompagner"
 - Les questions doivent couvrir des AXES DIFFÉRENTS (pas toutes sur le même thème)
 - Maximum 4 questions
+- TOUTES les questions DOIVENT être FERMÉES (réponse Oui ou Non UNIQUEMENT)
+- INTERDIT : questions ouvertes (commençant par "Quel", "Comment", "Où", "Quand", "Pourquoi", "Décrivez")
+- OBLIGATOIRE : questions commençant par "Ressentez-vous", "Avez-vous", "Est-ce que", "Prenez-vous", etc.
 - Baser les indications et effets secondaires SUR LES DONNÉES PUBLIQUES fournies`;
 
 const REFINE_PROMPT = `Tu es PrescrIA, un copilote pour préparateurs en pharmacie. Le préparateur a analysé une ordonnance et posé des questions au patient.
