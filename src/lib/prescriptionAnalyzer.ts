@@ -53,6 +53,14 @@ export interface AnalysisResult {
   conseil: string;
   structuredData?: boolean;
   sources?: string[];
+  duplicate_warning?: {
+    count: number;
+    last_seen: string;
+  };
+  patient_history?: {
+    previous_analyses: number;
+    first_seen: string;
+  };
 }
 
 export interface RefinedResult {
@@ -142,5 +150,7 @@ function normalizeResult(data: any): AnalysisResult {
     conseil: data.conseil || "",
     structuredData: data.structuredData || false,
     sources: data.sources || [],
+    duplicate_warning: data.duplicate_warning || undefined,
+    patient_history: data.patient_history || undefined,
   };
 }
