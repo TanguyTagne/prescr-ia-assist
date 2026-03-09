@@ -222,6 +222,53 @@ export type Database = {
         }
         Relationships: []
       }
+      pharmacy_lgo_config: {
+        Row: {
+          api_base_url: string
+          api_key_encrypted: string | null
+          auth_method: string
+          created_at: string
+          enabled: boolean
+          id: string
+          last_sync_at: string | null
+          lgo_type: string
+          pharmacy_id: string
+          updated_at: string
+        }
+        Insert: {
+          api_base_url: string
+          api_key_encrypted?: string | null
+          auth_method?: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          last_sync_at?: string | null
+          lgo_type?: string
+          pharmacy_id: string
+          updated_at?: string
+        }
+        Update: {
+          api_base_url?: string
+          api_key_encrypted?: string | null
+          auth_method?: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          last_sync_at?: string | null
+          lgo_type?: string
+          pharmacy_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pharmacy_lgo_config_pharmacy_id_fkey"
+            columns: ["pharmacy_id"]
+            isOneToOne: true
+            referencedRelation: "pharmacies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pharmacy_preferences: {
         Row: {
           categories_prioritaires: string[] | null

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Pill, MessageCircleQuestion, ShoppingBag, RotateCcw, AlertTriangle, MessageSquare, ThumbsUp, ThumbsDown, Loader2, Sparkles, Database } from "lucide-react";
+import { Pill, MessageCircleQuestion, ShoppingBag, RotateCcw, AlertTriangle, MessageSquare, ThumbsUp, ThumbsDown, Loader2, Sparkles, Database, Package, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { AnalysisResult, RefinedResult } from "@/lib/prescriptionAnalyzer";
@@ -185,21 +185,50 @@ const AnalysisResults = ({ result, onReset }: AnalysisResultsProps) => {
           </div>
           <div className="space-y-1">
             {refined.suggestions.map((sug, i) => (
-              <button
+              <div
                 key={i}
-                onClick={() => handleSuggestionClick(sug.categorie)}
-                className="w-full flex items-center gap-2 py-1.5 px-2 rounded-md bg-secondary hover:bg-accent transition-colors text-left animate-fade-in"
+                className="w-full space-y-1 py-1.5 px-2 rounded-md bg-secondary animate-fade-in"
               >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1">
-                    <span className="font-medium text-[11px] leading-tight">{sug.categorie}</span>
-                    {sug.priorite === "haute" && (
-                      <Badge className="bg-primary/20 text-primary text-[8px] px-1 py-0">prioritaire</Badge>
-                    )}
+                <button
+                  onClick={() => handleSuggestionClick(sug.categorie)}
+                  className="w-full flex items-center gap-2 hover:bg-accent transition-colors text-left rounded"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1">
+                      <span className="font-medium text-[11px] leading-tight">{sug.categorie}</span>
+                      {sug.priorite === "haute" && (
+                        <Badge className="bg-primary/20 text-primary text-[8px] px-1 py-0">prioritaire</Badge>
+                      )}
+                    </div>
+                    <span className="text-[10px] text-muted-foreground leading-tight">{sug.raison}</span>
                   </div>
-                  <span className="text-[10px] text-muted-foreground leading-tight">{sug.raison}</span>
-                </div>
-              </button>
+                </button>
+                {/* LGO Products */}
+                {sug.produits_lgo && sug.produits_lgo.length > 0 && (
+                  <div className="ml-2 space-y-0.5 border-l-2 border-primary/20 pl-2">
+                    <div className="flex items-center gap-1 text-[9px] text-muted-foreground font-medium uppercase tracking-wider">
+                      <Package className="h-2.5 w-2.5" />
+                      En stock
+                    </div>
+                    {sug.produits_lgo.map((prod, j) => (
+                      <div key={j} className="flex items-center justify-between text-[10px] py-0.5">
+                        <div className="flex items-center gap-1 min-w-0 flex-1">
+                          <Check className="h-2.5 w-2.5 text-green-600 shrink-0" />
+                          <span className="truncate">{prod.nom}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0 ml-1">
+                          {prod.prix > 0 && (
+                            <span className="font-semibold text-foreground">{prod.prix.toFixed(2)}€</span>
+                          )}
+                          <Badge variant="outline" className="text-[8px] py-0 px-1">
+                            {prod.stock} dispo
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             ))}
           </div>
         </div>
