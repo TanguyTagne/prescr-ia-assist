@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import Landing from "./pages/Landing";
+import Admin from "./pages/Admin";
 import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
 import Widget from "./components/Widget";
@@ -42,6 +43,7 @@ const App = () => {
               <Routes>
                 <Route path="/" element={<Landing />} />
                 <Route path="/auth" element={<Landing />} />
+                <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
                 <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                 <Route path="*" element={<NotFound />} />
               </Routes>

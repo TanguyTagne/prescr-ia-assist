@@ -1,10 +1,69 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { Pill, FolderSearch, ShieldCheck, ArrowRight, Download, LogIn, BarChart3, LogOut, Zap, Monitor } from "lucide-react";
+import { Pill, FolderSearch, ShieldCheck, ArrowRight, Download, BarChart3, LogOut, Zap, Monitor, Send, Loader2, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
-// TODO: Replace with your actual GitHub Releases URL after first build
 const DOWNLOAD_URL = "https://github.com/TanguyTagne/prescr-ia-assist/releases/latest/download/PrescrIA-Setup.exe";
+
+const AccessRequestForm = () => {
+  const [loading, setLoading] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [form, setForm] = useState({
+    pharmacy_name: "",
+    contact_name: "",
+    email: "",
+    phone: "",
+    city: "",
+    lgo_type: "",
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const { error } = await supabase.from("access_requests" as any).insert(form as any);
+      if (error) throw error;
+      setSubmitted(true);
+      toast.success("Demande envoyée ! Nous reviendrons vers vous rapidement.");
+    } catch (err: any) {
+      toast.error(err.message || "Erreur lors de l'envoi");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (submitted) {
+    return (
+      <div className="text-center space-y-3 py-4">
+        <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+          <Send className="h-5 w-5 text-primary" />
+        </div>
+        <p className="font-semibold">Demande envoyée !</p>
+        <p className="text-sm text-muted-foreground">Nous vous contacterons pour créer votre accès.</p>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <Input placeholder="Nom de la pharmacie *" required value={form.pharmacy_name} onChange={e => setForm(f => ({ ...f, pharmacy_name: e.target.value }))} />
+        <Input placeholder="Nom du contact *" required value={form.contact_name} onChange={e => setForm(f => ({ ...f, contact_name: e.target.value }))} />
+        <Input type="email" placeholder="Email *" required value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
+        <Input placeholder="Téléphone" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} />
+        <Input placeholder="Ville" value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} />
+        <Input placeholder="LGO utilisé (ex: Winpharma, LGPI...)" value={form.lgo_type} onChange={e => setForm(f => ({ ...f, lgo_type: e.target.value }))} />
+      </div>
+      <Button type="submit" className="w-full h-11 text-sm font-semibold pharmacy-gradient border-0 gap-2" disabled={loading}>
+        {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Send className="h-4 w-4" /> Envoyer ma demande d'accès</>}
+      </Button>
+    </form>
+  );
+};
 
 const Landing = () => {
   const { user, signOut } = useAuth();
@@ -24,6 +83,10 @@ const Landing = () => {
           <div className="flex items-center gap-2">
             {user ? (
               <>
+                <Button variant="ghost" size="sm" onClick={() => navigate("/admin")} className="gap-1.5 text-xs">
+                  <Settings className="h-3.5 w-3.5" />
+                  Admin
+                </Button>
                 <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")} className="gap-1.5 text-xs">
                   <BarChart3 className="h-3.5 w-3.5" />
                   Dashboard
@@ -34,7 +97,7 @@ const Landing = () => {
               </>
             ) : (
               <Button variant="outline" size="sm" onClick={() => navigate("/auth")} className="gap-1.5">
-                <LogIn className="h-3.5 w-3.5" />
+                <Pill className="h-3.5 w-3.5" />
                 Se connecter
               </Button>
             )}
@@ -59,22 +122,12 @@ const Landing = () => {
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
             <Button size="lg" asChild className="h-12 px-8 text-base font-semibold pharmacy-gradient border-0 gap-2">
-              <a href={DOWNLOAD_URL}>
-                <Download className="h-5 w-5" />
-                Télécharger pour Windows
+              <a href="#demande-acces">
+                <Send className="h-5 w-5" />
+                Demander un accès
               </a>
             </Button>
-            {!user && (
-              <Button variant="outline" size="lg" onClick={() => navigate("/auth")} className="h-12 px-8 text-base gap-2">
-                Se connecter
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            )}
           </div>
-          <p className="text-xs text-muted-foreground flex items-center justify-center gap-1.5">
-            <Monitor className="h-3 w-3" />
-            Compatible Windows 10/11 — Installation en 1 minute
-          </p>
         </div>
       </section>
 
@@ -97,7 +150,7 @@ const Landing = () => {
               {
                 icon: ShieldCheck,
                 title: "Suggestions au comptoir",
-                desc: "Recevez des suggestions de produits complémentaires avec des phrases conseils.",
+                desc: "Recevez des suggestions de produits complémentaires disponibles dans votre stock, avec des phrases conseils.",
               },
             ].map((f, i) => (
               <div key={i} className="glass-card rounded-xl p-6 space-y-3">
@@ -112,35 +165,20 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* Download section */}
-      <section className="py-16 px-4">
-        <div className="container max-w-2xl mx-auto text-center space-y-6">
-          <div className="h-14 w-14 rounded-2xl bg-accent flex items-center justify-center mx-auto">
-            <Download className="h-7 w-7 text-accent-foreground" />
+      {/* Access Request */}
+      <section id="demande-acces" className="py-16 px-4">
+        <div className="container max-w-xl mx-auto space-y-6">
+          <div className="text-center space-y-3">
+            <div className="h-14 w-14 rounded-2xl bg-accent flex items-center justify-center mx-auto">
+              <Send className="h-7 w-7 text-accent-foreground" />
+            </div>
+            <h2 className="text-2xl font-bold">Demander un accès</h2>
+            <p className="text-muted-foreground leading-relaxed">
+              Remplissez le formulaire ci-dessous, notre équipe vous créera un accès personnalisé lié à votre pharmacie et votre LGO.
+            </p>
           </div>
-          <h2 className="text-2xl font-bold">Installez PrescrIA sur votre poste</h2>
-          <p className="text-muted-foreground leading-relaxed">
-            Téléchargez l'installeur, lancez-le, et PrescrIA apparaît sur votre bureau. Prêt à l'emploi en 1 minute.
-          </p>
-          <Button size="lg" asChild className="h-14 px-10 text-lg font-bold pharmacy-gradient border-0 gap-3">
-            <a href={DOWNLOAD_URL}>
-              <Download className="h-6 w-6" />
-              Télécharger PrescrIA
-            </a>
-          </Button>
-          <div className="grid grid-cols-3 gap-4 pt-4 text-xs text-muted-foreground">
-            <div className="flex flex-col items-center gap-1">
-              <span className="font-semibold text-foreground">1.</span>
-              Téléchargez l'installeur
-            </div>
-            <div className="flex flex-col items-center gap-1">
-              <span className="font-semibold text-foreground">2.</span>
-              Double-cliquez pour installer
-            </div>
-            <div className="flex flex-col items-center gap-1">
-              <span className="font-semibold text-foreground">3.</span>
-              Lancez depuis le bureau
-            </div>
+          <div className="rounded-xl border border-border p-6 bg-card">
+            <AccessRequestForm />
           </div>
         </div>
       </section>
