@@ -61,6 +61,7 @@ export interface AnalysisResult {
     previous_analyses: number;
     first_seen: string;
   };
+  patient_name?: string;
 }
 
 export interface RefinedResult {
