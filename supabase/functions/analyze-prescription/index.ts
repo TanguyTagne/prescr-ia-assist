@@ -689,8 +689,9 @@ Propose des recommandations OTC adaptées.` },
         const prescriptionHashBuffer = await crypto.subtle.digest("SHA-256", encoder.encode(inputText));
         const prescriptionHash = Array.from(new Uint8Array(prescriptionHashBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
         
-        // Patient hash from sorted medication names (same meds = likely same patient context)
-        const patientSig = medNames.sort().join("|").toLowerCase();
+        // Patient hash based on patient name from prescription
+        const patientName = result.patient_nom || result.patient_name || null;
+        const patientSig = patientName ? patientName.trim().toLowerCase().replace(/\s+/g, " ") : medNames.sort().join("|").toLowerCase();
         const patientHashBuffer = await crypto.subtle.digest("SHA-256", encoder.encode(patientSig));
         const patientHash = Array.from(new Uint8Array(patientHashBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
 
