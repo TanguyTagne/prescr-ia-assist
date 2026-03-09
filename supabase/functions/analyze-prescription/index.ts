@@ -430,6 +430,24 @@ Propose des recommandations OTC adaptées.` },
 
       if (result.suggestions) result.suggestions = result.suggestions.slice(0, 4);
 
+      // Enrich suggestions with LGO stock data
+      const authHeader = req.headers.get("authorization");
+      const pharmacyId = await getPharmacyIdFromAuth(supabase, authHeader);
+      
+      if (pharmacyId && result.suggestions?.length > 0) {
+        const categories = result.suggestions.map((s: any) => s.categorie);
+        const lgoProducts = await lookupLGOStock(supabase, pharmacyId, categories);
+        
+        if (lgoProducts.length > 0) {
+          for (const sug of result.suggestions) {
+            sug.produits_lgo = lgoProducts.filter(
+              (p: any) => p.categorie === sug.categorie
+            );
+          }
+          result.lgo_enriched = true;
+        }
+      }
+
       return new Response(JSON.stringify(result), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

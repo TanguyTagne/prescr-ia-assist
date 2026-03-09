@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Pill, MessageCircleQuestion, ShoppingBag, RotateCcw, AlertTriangle, MessageSquare, ThumbsUp, ThumbsDown, Loader2, Sparkles, Database } from "lucide-react";
+import { Pill, MessageCircleQuestion, ShoppingBag, RotateCcw, AlertTriangle, MessageSquare, ThumbsUp, ThumbsDown, Loader2, Sparkles, Database, Package, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { AnalysisResult, RefinedResult } from "@/lib/prescriptionAnalyzer";
