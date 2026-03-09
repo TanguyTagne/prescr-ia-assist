@@ -70,6 +70,31 @@ const AnalysisResults = ({ result, onReset }: AnalysisResultsProps) => {
 
   return (
     <div className="space-y-2 animate-fade-in">
+      {/* Alertes doublons / historique patient */}
+      {result.duplicate_warning && (
+        <div className="rounded-lg border border-pharmacy-warm/50 bg-pharmacy-warm/10 p-2.5 flex items-start gap-2">
+          <AlertTriangle className="h-3.5 w-3.5 text-pharmacy-warm shrink-0 mt-0.5" />
+          <div>
+            <p className="text-xs font-semibold text-foreground">Ordonnance déjà analysée</p>
+            <p className="text-[10px] text-muted-foreground">
+              Vue {result.duplicate_warning.count} fois — dernière le {new Date(result.duplicate_warning.last_seen).toLocaleDateString("fr-FR", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {result.patient_history && result.patient_history.previous_analyses > 0 && (
+        <div className="rounded-lg border border-primary/30 bg-primary/5 p-2.5 flex items-start gap-2">
+          <Sparkles className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
+          <div>
+            <p className="text-xs font-semibold text-foreground">Patient connu</p>
+            <p className="text-[10px] text-muted-foreground">
+              {result.patient_history.previous_analyses} analyse(s) précédente(s) depuis le {new Date(result.patient_history.first_seen).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Sources de données */}
       {result.sources && result.sources.length > 0 && (
         <div className="flex items-center gap-1 flex-wrap">
