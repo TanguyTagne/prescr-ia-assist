@@ -90,16 +90,18 @@ async function openFDAGetInteractions(drug1: string, drug2: string): Promise<str
 // ====== PROMPTS ======
 
 const EXTRACTION_PROMPT = `Tu es PrescrIA, un copilote pour préparateurs en pharmacie.
-Tu dois UNIQUEMENT extraire les médicaments d'une ordonnance et les retourner en JSON.
+Tu dois extraire les médicaments ET le nom du patient d'une ordonnance et les retourner en JSON.
 
 ## FORMAT JSON STRICT
 {
+  "patient_nom": "Nom et prénom du patient tels qu'écrits sur l'ordonnance, ou null si non trouvé",
   "medicaments_detectes": [
     {"nom_commercial": "nom tel qu'écrit", "molecule_probable": "DCI si connue, sinon null"}
   ]
 }
 
 RÈGLES :
+- Extrais le nom du patient s'il est visible sur l'ordonnance
 - Extrais TOUS les noms de médicaments (commerciaux ou DCI)
 - Si tu reconnais la DCI, indique-la
 - Ne retourne RIEN d'autre que ce JSON`;
