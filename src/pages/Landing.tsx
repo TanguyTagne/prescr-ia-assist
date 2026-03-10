@@ -27,6 +27,8 @@ const AccessRequestForm = () => {
     try {
       const { error } = await supabase.from("access_requests" as any).insert(form as any);
       if (error) throw error;
+      // Notify admin by email (fire-and-forget)
+      supabase.functions.invoke("notify-access-request", { body: form }).catch(console.error);
       setSubmitted(true);
       toast.success("Demande envoyée ! Nous reviendrons vers vous rapidement.");
     } catch (err: any) {
