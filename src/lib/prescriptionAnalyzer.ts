@@ -62,6 +62,7 @@ export interface AnalysisResult {
     first_seen: string;
   };
   patient_name?: string;
+  clinicalPathologieIds?: string[];
 }
 
 export interface RefinedResult {
