@@ -141,6 +141,119 @@ export type Database = {
           },
         ]
       }
+      classe_atc: {
+        Row: {
+          atc_code: string
+          created_at: string
+          description: string | null
+          niveau: number
+          nom_classe: string
+          parent_code: string | null
+        }
+        Insert: {
+          atc_code: string
+          created_at?: string
+          description?: string | null
+          niveau?: number
+          nom_classe: string
+          parent_code?: string | null
+        }
+        Update: {
+          atc_code?: string
+          created_at?: string
+          description?: string | null
+          niveau?: number
+          nom_classe?: string
+          parent_code?: string | null
+        }
+        Relationships: []
+      }
+      conseils_associes: {
+        Row: {
+          conseil: string
+          created_at: string
+          description: string | null
+          id: string
+          pathologie_id: string
+          priorite: number
+        }
+        Insert: {
+          conseil: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          pathologie_id: string
+          priorite?: number
+        }
+        Update: {
+          conseil?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          pathologie_id?: string
+          priorite?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conseils_associes_pathologie_id_fkey"
+            columns: ["pathologie_id"]
+            isOneToOne: false
+            referencedRelation: "pathologies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      medicaments: {
+        Row: {
+          atc_code: string | null
+          cip_code: string | null
+          created_at: string
+          dosage: string | null
+          forme_galenique: string | null
+          id: string
+          laboratoire: string | null
+          molecule_id: string | null
+          nom_commercial: string
+        }
+        Insert: {
+          atc_code?: string | null
+          cip_code?: string | null
+          created_at?: string
+          dosage?: string | null
+          forme_galenique?: string | null
+          id?: string
+          laboratoire?: string | null
+          molecule_id?: string | null
+          nom_commercial: string
+        }
+        Update: {
+          atc_code?: string | null
+          cip_code?: string | null
+          created_at?: string
+          dosage?: string | null
+          forme_galenique?: string | null
+          id?: string
+          laboratoire?: string | null
+          molecule_id?: string | null
+          nom_commercial?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medicaments_atc_code_fkey"
+            columns: ["atc_code"]
+            isOneToOne: false
+            referencedRelation: "classe_atc"
+            referencedColumns: ["atc_code"]
+          },
+          {
+            foreignKeyName: "medicaments_molecule_id_fkey"
+            columns: ["molecule_id"]
+            isOneToOne: false
+            referencedRelation: "molecules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       medications: {
         Row: {
           classe_therapeutique_id: string | null
@@ -185,6 +298,66 @@ export type Database = {
           },
         ]
       }
+      molecule_pathologie: {
+        Row: {
+          id: string
+          molecule_id: string
+          pathologie_id: string
+        }
+        Insert: {
+          id?: string
+          molecule_id: string
+          pathologie_id: string
+        }
+        Update: {
+          id?: string
+          molecule_id?: string
+          pathologie_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "molecule_pathologie_molecule_id_fkey"
+            columns: ["molecule_id"]
+            isOneToOne: false
+            referencedRelation: "molecules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "molecule_pathologie_pathologie_id_fkey"
+            columns: ["pathologie_id"]
+            isOneToOne: false
+            referencedRelation: "pathologies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      molecules: {
+        Row: {
+          atc_code: string | null
+          classe_therapeutique: string | null
+          created_at: string
+          description: string | null
+          id: string
+          nom_molecule: string
+        }
+        Insert: {
+          atc_code?: string | null
+          classe_therapeutique?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          nom_molecule: string
+        }
+        Update: {
+          atc_code?: string | null
+          classe_therapeutique?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          nom_molecule?: string
+        }
+        Relationships: []
+      }
       otc_suggestions: {
         Row: {
           categorie_produit: string
@@ -222,6 +395,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      pathologies: {
+        Row: {
+          categorie: string | null
+          created_at: string
+          description: string | null
+          id: string
+          nom_pathologie: string
+        }
+        Insert: {
+          categorie?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          nom_pathologie: string
+        }
+        Update: {
+          categorie?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          nom_pathologie?: string
+        }
+        Relationships: []
       }
       patient_needs: {
         Row: {
@@ -399,6 +596,44 @@ export type Database = {
           },
         ]
       }
+      produits_complementaires: {
+        Row: {
+          categorie: string | null
+          created_at: string
+          description: string | null
+          id: string
+          pathologie_id: string
+          priorite: number
+          produit: string
+        }
+        Insert: {
+          categorie?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          pathologie_id: string
+          priorite?: number
+          produit: string
+        }
+        Update: {
+          categorie?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          pathologie_id?: string
+          priorite?: number
+          produit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "produits_complementaires_pathologie_id_fkey"
+            columns: ["pathologie_id"]
+            isOneToOne: false
+            referencedRelation: "pathologies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -482,6 +717,41 @@ export type Database = {
             columns: ["question_id"]
             isOneToOne: false
             referencedRelation: "pharma_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      regles_ranking: {
+        Row: {
+          created_at: string
+          id: string
+          produit_id: string | null
+          score_panier: number
+          score_pathologie: number
+          score_saison: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          produit_id?: string | null
+          score_panier?: number
+          score_pathologie?: number
+          score_saison?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          produit_id?: string | null
+          score_panier?: number
+          score_pathologie?: number
+          score_saison?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "regles_ranking_produit_id_fkey"
+            columns: ["produit_id"]
+            isOneToOne: false
+            referencedRelation: "produits_complementaires"
             referencedColumns: ["id"]
           },
         ]
