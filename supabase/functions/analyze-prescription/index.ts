@@ -478,7 +478,350 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { prescriptionText, imageBase64, mode, analysisContext, answers } = body;
+    const { prescriptionText, imageBase64 } = body;
+
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) throw new Error("Missing Supabase config");
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    // ============ ANALYSIS MODE (only mode now - no more questions/refine) ============
+
+    // Step 1: Extract medication names and patient name
+    let medEntries: { nom_commercial: string; molecule_probable?: string; confiance?: string }[] = [];
+    let extractedPatientName: string | null = null;
+
+    if (imageBase64) {
+      console.log("Using OCR model (gemini-2.5-pro) for handwritten prescription analysis");
+      const parsed = await callAI(LOVABLE_API_KEY, [
+        { role: "system", content: EXTRACTION_PROMPT },
+        { role: "user", content: [
+          { type: "text", text: "Extrais les noms de médicaments et le nom du patient de cette ordonnance. L'écriture peut être manuscrite et difficile à lire — utilise le contexte médical pour interpréter." },
+          { type: "image_url", image_url: { url: imageBase64 } },
+        ]},
+      ], 0.1, OCR_MODEL);
+      medEntries = parsed.medicaments_detectes || [];
+      extractedPatientName = parsed.patient_nom || null;
+    } else if (prescriptionText) {
+      const parsed = await callAI(LOVABLE_API_KEY, [
+        { role: "system", content: EXTRACTION_PROMPT },
+        { role: "user", content: `Extrais les médicaments et le nom du patient :\n\n${prescriptionText}` },
+      ], 0.1, TEXT_MODEL);
+      medEntries = parsed.medicaments_detectes || [];
+      extractedPatientName = parsed.patient_nom || null;
+    } else {
+      return new Response(JSON.stringify({ error: "Aucune donnée d'ordonnance fournie" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (medEntries.length === 0) {
+      return new Response(JSON.stringify({
+        medicaments: [], interactions: [], contextes: [], conseil: "", sources: [],
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    const medNames = medEntries.map((m: any) => typeof m === "string" ? m : m.nom_commercial);
+    const medMolecules = medEntries.map((m: any) => typeof m === "string" ? null : m.molecule_probable);
+
+    // Step 2: Clinical Knowledge Base lookup (primary source)
+    const clinicalResults: any[] = [];
+    const allPathologieIds: string[] = [];
+    const allDbConseils: any[] = [];
+    const allDbProduits: any[] = [];
+    const sources: string[] = [];
+
+    for (let i = 0; i < medNames.length; i++) {
+      const clinical = await clinicalLookup(supabase, medNames[i], medMolecules[i]);
+      if (clinical) {
+        clinicalResults.push({ index: i, ...clinical });
+        if (clinical.pathologies) {
+          for (const p of clinical.pathologies) {
+            if (!allPathologieIds.includes(p.id)) allPathologieIds.push(p.id);
+          }
+        }
+        if (clinical.conseils) allDbConseils.push(...clinical.conseils);
+        if (clinical.produits) allDbProduits.push(...clinical.produits);
+        if (!sources.includes("Base clinique PrescrIA")) sources.push("Base clinique PrescrIA");
+      }
+    }
+
+    // Step 3: Fallback to old medications table + public APIs for unmatched meds
+    const dbMeds = await findMedicationsInDB(supabase, medNames);
+
+    const enrichedMeds: any[] = [];
+
+    for (let i = 0; i < medNames.length; i++) {
+      const clinical = clinicalResults.find((c) => c.index === i);
+      const dbMed = dbMeds[i];
+
+      if (clinical?.found) {
+        enrichedMeds.push({
+          nom_commercial: clinical.medicament?.nom_commercial || medNames[i],
+          molecule_active: clinical.molecule?.nom || null,
+          code_atc: clinical.molecule?.atc_code || clinical.classe_atc?.code || null,
+          classe_therapeutique: clinical.molecule?.classe_therapeutique || clinical.classe_atc?.nom || null,
+          therapeutic_classes: { nom: clinical.molecule?.classe_therapeutique || clinical.classe_atc?.nom || "" },
+          matched: true,
+          clinical_kb: true,
+          pathologies: clinical.pathologies || [],
+        });
+        continue;
+      }
+
+      if (dbMed?.matched) {
+        enrichedMeds.push({ ...dbMed, clinical_kb: false });
+        if (!sources.includes("Base PrescrIA (données structurées)")) sources.push("Base PrescrIA (données structurées)");
+        continue;
+      }
+
+      const searchName = medMolecules[i] || medNames[i];
+      console.log(`Querying public APIs for: ${searchName}`);
+
+      const [atcData, fdaData] = await Promise.all([
+        rxnavGetATC(searchName),
+        openFDAGetDrugInfo(searchName),
+      ]);
+
+      if (atcData && !sources.includes("RxNav/NIH (classification ATC)")) sources.push("RxNav/NIH (classification ATC)");
+      if (fdaData && !sources.includes("OpenFDA (données médicament)")) sources.push("OpenFDA (données médicament)");
+
+      const publicData: any = {};
+      if (atcData) publicData.atc = { code: atcData.classId, className: atcData.className };
+      if (fdaData) {
+        publicData.openfda = {
+          indications: fdaData.indications?.substring(0, 500),
+          warnings: fdaData.warnings?.substring(0, 300),
+          drug_interactions: fdaData.drugInteractions?.substring(0, 300),
+          adverse_reactions: fdaData.adverseReactions?.substring(0, 300),
+          pharmacological_class: fdaData.pharmacoClass,
+        };
+      }
+
+      const prompt = ENRICHMENT_PROMPT.replace("{PUBLIC_DATA}", JSON.stringify(publicData, null, 2));
+      try {
+        const aiData = await callAI(LOVABLE_API_KEY, [
+          { role: "system", content: prompt },
+          { role: "user", content: `Médicament : ${medNames[i]}${medMolecules[i] ? ` (DCI probable: ${medMolecules[i]})` : ""}` },
+        ]);
+        enrichedMeds.push({
+          ...dbMed,
+          molecule_active: aiData.molecule_active,
+          code_atc: aiData.code_atc,
+          classe_therapeutique: aiData.classe_therapeutique,
+          therapeutic_classes: { nom: aiData.classe_therapeutique },
+          matched: true,
+          ai_enriched: true,
+          ai_contexts: aiData.contextes_therapeutiques,
+          public_data: publicData,
+        });
+      } catch (e) {
+        console.error("AI enrichment failed:", e);
+        enrichedMeds.push(dbMed);
+      }
+    }
+
+    // Step 4: Build direct recommendations per medication (max 3 per med)
+    const allContexts: string[] = [];
+    let hasStructuredData = clinicalResults.length > 0;
+    const medRecommendations: Map<number, any[]> = new Map();
+
+    for (let i = 0; i < enrichedMeds.length; i++) {
+      const med = enrichedMeds[i];
+      const recs: any[] = [];
+
+      if (med.clinical_kb) {
+        hasStructuredData = true;
+        const pathNames = (med.pathologies || []).map((p: any) => p.nom_pathologie);
+        for (const pName of pathNames) {
+          allContexts.push(`Traitement souvent associé à : ${pName}`);
+        }
+        const clinical = clinicalResults.find((c: any) => c.index === i);
+        if (clinical?.produits) {
+          const seen = new Set<string>();
+          for (const p of clinical.produits) {
+            if (seen.has(p.produit)) continue;
+            seen.add(p.produit);
+            recs.push({
+              produit: p.produit,
+              categorie: p.categorie || "Complément",
+              description: p.description || "",
+              priorite: p.priorite || 50,
+              pathologie: p.pathologies?.nom_pathologie || "",
+            });
+            if (recs.length >= 3) break;
+          }
+        }
+      } else if (med.matched && !med.clinical_kb && !med.ai_enriched) {
+        const therapeuticData = await getTherapeuticData(supabase, med);
+        if (therapeuticData) {
+          hasStructuredData = true;
+          for (const ctx of therapeuticData) {
+            allContexts.push(ctx.description);
+          }
+        }
+      } else if (med.ai_enriched) {
+        if (med.ai_contexts) {
+          for (const ctx of med.ai_contexts) allContexts.push(ctx.description);
+        }
+      }
+
+      // Fallback: find from allDbProduits
+      if (recs.length === 0 && med.pathologies?.length > 0) {
+        const pathIds = med.pathologies.map((p: any) => p.id);
+        const seen = new Set<string>();
+        for (const p of allDbProduits) {
+          if (pathIds.includes(p.pathologie_id) && !seen.has(p.produit)) {
+            seen.add(p.produit);
+            recs.push({
+              produit: p.produit,
+              categorie: p.categorie || "Complément",
+              description: p.description || "",
+              priorite: p.priorite || 50,
+              pathologie: p.pathologies?.nom_pathologie || "",
+            });
+            if (recs.length >= 3) break;
+          }
+        }
+      }
+
+      medRecommendations.set(i, recs);
+    }
+
+    // Step 5: Check interactions
+    const matchedMeds = enrichedMeds.filter((m: any) => m.matched || m.ai_enriched);
+    const interactions = checkLocalInteractions(matchedMeds);
+
+    if (matchedMeds.length >= 2) {
+      for (let i = 0; i < matchedMeds.length - 1; i++) {
+        for (let j = i + 1; j < matchedMeds.length; j++) {
+          const mol1 = matchedMeds[i].molecule_active;
+          const mol2 = matchedMeds[j].molecule_active;
+          if (mol1 && mol2) {
+            const alreadyFound = interactions.some((inter: any) =>
+              inter.medicaments.includes(matchedMeds[i].nom_commercial) &&
+              inter.medicaments.includes(matchedMeds[j].nom_commercial)
+            );
+            if (!alreadyFound) {
+              const fdaInteraction = await openFDAGetInteractions(mol1, mol2);
+              if (fdaInteraction) {
+                interactions.push({
+                  medicaments: [matchedMeds[i].nom_commercial, matchedMeds[j].nom_commercial],
+                  niveau: "modérée",
+                  description: `${fdaInteraction} (source: OpenFDA)`,
+                });
+                if (!sources.includes("OpenFDA (effets indésirables)")) sources.push("OpenFDA (effets indésirables)");
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Step 6: Build conseil from DB
+    let conseilText = "N'hésitez pas à me poser des questions sur votre traitement, je suis là pour vous accompagner.";
+    if (allDbConseils.length > 0) {
+      const topConseils = allDbConseils
+        .filter((c: any, idx: number, arr: any[]) => arr.findIndex((x: any) => x.conseil === c.conseil) === idx)
+        .sort((a: any, b: any) => (b.priorite || 0) - (a.priorite || 0))
+        .slice(0, 2);
+      conseilText = topConseils.map((c: any) => c.conseil + (c.description ? ` (${c.description})` : "")).join(". ") + ". " + conseilText;
+    }
+
+    // Step 7: Build result
+    const totalRecs = [...medRecommendations.values()].reduce((sum, r) => sum + r.length, 0);
+    const result: any = {
+      medicaments: enrichedMeds.map((m: any, i: number) => ({
+        nom: m.nom_commercial,
+        classe: m.classe_therapeutique || m.therapeutic_classes?.nom || "Non classifié",
+        molecule: m.molecule_active || null,
+        code_atc: m.code_atc || null,
+        recommendations: medRecommendations.get(i) || [],
+      })),
+      interactions,
+      contextes: [...new Set(allContexts)].slice(0, 5),
+      conseil: conseilText,
+      structuredData: hasStructuredData,
+      sources,
+      patient_name: extractedPatientName,
+    };
+
+    // Step 8: Save to analysis_history
+    try {
+      const authHeader = req.headers.get("authorization");
+      const pharmacyId = await getPharmacyIdFromAuth(supabase, authHeader);
+      
+      if (pharmacyId && authHeader) {
+        const token = authHeader.replace("Bearer ", "");
+        const payload = JSON.parse(atob(token.split(".")[1]));
+        const userId = payload.sub;
+
+        const inputText = prescriptionText || medNames.join(",");
+        const encoder = new TextEncoder();
+        const prescriptionHashBuffer = await crypto.subtle.digest("SHA-256", encoder.encode(inputText));
+        const prescriptionHash = Array.from(new Uint8Array(prescriptionHashBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
+        
+        const patientName = extractedPatientName || null;
+        const patientSig = patientName ? patientName.trim().toLowerCase().replace(/\s+/g, " ") : medNames.sort().join("|").toLowerCase();
+        const patientHashBuffer = await crypto.subtle.digest("SHA-256", encoder.encode(patientSig));
+        const patientHash = Array.from(new Uint8Array(patientHashBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
+
+        const hasMajor = interactions.some((inter: any) => inter.niveau === "majeure");
+
+        await supabase.from("analysis_history").insert({
+          pharmacy_id: pharmacyId,
+          user_id: userId,
+          patient_hash: patientHash,
+          patient_name: patientName,
+          prescription_hash: prescriptionHash,
+          medicaments: result.medicaments,
+          interactions_count: interactions.length,
+          suggestions_count: totalRecs,
+          has_major_interaction: hasMajor,
+          metadata: { sources, contextes_count: allContexts.length, clinical_kb_matches: clinicalResults.length },
+        });
+
+        const { data: duplicates } = await supabase
+          .from("analysis_history").select("id, created_at")
+          .eq("pharmacy_id", pharmacyId).eq("prescription_hash", prescriptionHash)
+          .neq("id", "placeholder")
+          .order("created_at", { ascending: false }).limit(5);
+
+        if (duplicates && duplicates.length > 1) {
+          result.duplicate_warning = { count: duplicates.length, last_seen: duplicates[1]?.created_at };
+        }
+
+        const { data: patientHistory } = await supabase
+          .from("analysis_history").select("id, created_at, medicaments")
+          .eq("pharmacy_id", pharmacyId).eq("patient_hash", patientHash)
+          .order("created_at", { ascending: false }).limit(10);
+
+        if (patientHistory && patientHistory.length > 1) {
+          result.patient_history = {
+            previous_analyses: patientHistory.length - 1,
+            first_seen: patientHistory[patientHistory.length - 1]?.created_at,
+          };
+        }
+      }
+    } catch (historyErr) {
+      console.error("Failed to save analysis history:", historyErr);
+    }
+
+    return new Response(JSON.stringify(result), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  } catch (e) {
+    console.error("analyze-prescription error:", e);
+    const msg = e instanceof Error ? e.message : "Erreur inconnue";
+    if (msg === "RATE_LIMIT") return new Response(JSON.stringify({ error: "Trop de requêtes, réessayez." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    if (msg === "CREDITS_EXHAUSTED") return new Response(JSON.stringify({ error: "Crédits IA épuisés." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ error: msg }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
+});
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
