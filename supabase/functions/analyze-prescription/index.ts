@@ -749,16 +749,128 @@ IMPORTANT: Utilise les produits complémentaires de la base PrescrIA ci-dessus p
       }
     }
 
-    // Step 4: Get therapeutic data from DB (old + new systems)
+    // Step 4: Build direct recommendations per medication (no questions)
     const allContexts: string[] = [];
-    const allQuestions: any[] = [];
     let hasStructuredData = clinicalResults.length > 0;
+    const medRecommendations: Map<number, any[]> = new Map();
 
-    for (const med of enrichedMeds) {
+    for (let i = 0; i < enrichedMeds.length; i++) {
+      const med = enrichedMeds[i];
+      const recs: any[] = [];
+
       if (med.clinical_kb) {
-        // Already have pathologies from clinical KB, build questions from AI context
-        // Clinical KB provides structured produits/conseils, we need questions for patient
         hasStructuredData = true;
+        const pathNames = (med.pathologies || []).map((p: any) => p.nom_pathologie);
+        for (const pName of pathNames) {
+          allContexts.push(`Traitement souvent associé à : ${pName}`);
+        }
+        const clinical = clinicalResults.find((c: any) => c.index === i);
+        if (clinical?.produits) {
+          const seen = new Set<string>();
+          for (const p of clinical.produits) {
+            if (seen.has(p.produit)) continue;
+            seen.add(p.produit);
+            recs.push({
+              produit: p.produit,
+              categorie: p.categorie || "Complément",
+              description: p.description || "",
+              priorite: p.priorite || 50,
+              pathologie: p.pathologies?.nom_pathologie || "",
+            });
+            if (recs.length >= 3) break;
+          }
+        }
+      } else if (med.matched && !med.clinical_kb) {
+        const therapeuticData = await getTherapeuticData(supabase, med);
+        if (therapeuticData) {
+          hasStructuredData = true;
+          for (const ctx of therapeuticData) {
+            allContexts.push(ctx.description);
+          }
+        }
+      } else if (med.ai_enriched) {
+        if (med.ai_contexts) {
+          for (const ctx of med.ai_contexts) allContexts.push(ctx.description);
+        }
+      }
+
+      if (recs.length === 0 && med.pathologies?.length > 0) {
+        const pathIds = med.pathologies.map((p: any) => p.id);
+        const seen = new Set<string>();
+        for (const p of allDbProduits) {
+          if (pathIds.includes(p.pathologie_id) && !seen.has(p.produit)) {
+            seen.add(p.produit);
+            recs.push({
+              produit: p.produit,
+              categorie: p.categorie || "Complément",
+              description: p.description || "",
+              priorite: p.priorite || 50,
+              pathologie: p.pathologies?.nom_pathologie || "",
+            });
+            if (recs.length >= 3) break;
+          }
+        }
+      }
+
+      medRecommendations.set(i, recs);
+    }
+
+    // Step 5: Check interactions
+    const matchedMeds = enrichedMeds.filter((m: any) => m.matched || m.ai_enriched);
+    const interactions = checkLocalInteractions(matchedMeds);
+
+    if (matchedMeds.length >= 2) {
+      for (let i = 0; i < matchedMeds.length - 1; i++) {
+        for (let j = i + 1; j < matchedMeds.length; j++) {
+          const mol1 = matchedMeds[i].molecule_active;
+          const mol2 = matchedMeds[j].molecule_active;
+          if (mol1 && mol2) {
+            const alreadyFound = interactions.some((inter: any) =>
+              inter.medicaments.includes(matchedMeds[i].nom_commercial) &&
+              inter.medicaments.includes(matchedMeds[j].nom_commercial)
+            );
+            if (!alreadyFound) {
+              const fdaInteraction = await openFDAGetInteractions(mol1, mol2);
+              if (fdaInteraction) {
+                interactions.push({
+                  medicaments: [matchedMeds[i].nom_commercial, matchedMeds[j].nom_commercial],
+                  niveau: "modérée",
+                  description: `${fdaInteraction} (source: OpenFDA)`,
+                });
+                if (!sources.includes("OpenFDA (effets indésirables)")) sources.push("OpenFDA (effets indésirables)");
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Step 6: Build conseil from DB conseils
+    let conseilText = "N'hésitez pas à me poser des questions sur votre traitement, je suis là pour vous accompagner.";
+    if (allDbConseils.length > 0) {
+      const topConseils = allDbConseils
+        .filter((c: any, i: number, arr: any[]) => arr.findIndex((x: any) => x.conseil === c.conseil) === i)
+        .sort((a: any, b: any) => (b.priorite || 0) - (a.priorite || 0))
+        .slice(0, 2);
+      conseilText = topConseils.map((c: any) => c.conseil + (c.description ? ` (${c.description})` : "")).join(". ") + ". " + conseilText;
+    }
+
+    // Step 7: Build result with recommendations per medication
+    const result: any = {
+      medicaments: enrichedMeds.map((m: any, i: number) => ({
+        nom: m.nom_commercial,
+        classe: m.classe_therapeutique || m.therapeutic_classes?.nom || "Non classifié",
+        molecule: m.molecule_active || null,
+        code_atc: m.code_atc || null,
+        recommendations: medRecommendations.get(i) || [],
+      })),
+      interactions,
+      contextes: [...new Set(allContexts)].slice(0, 5),
+      conseil: conseilText,
+      structuredData: hasStructuredData,
+      sources,
+      patient_name: extractedPatientName,
+    };
         const pathNames = (med.pathologies || []).map((p: any) => p.nom_pathologie);
         for (const pName of pathNames) {
           allContexts.push(`Traitement souvent associé à : ${pName}`);
