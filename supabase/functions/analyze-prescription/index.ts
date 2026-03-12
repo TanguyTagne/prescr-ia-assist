@@ -873,12 +873,6 @@ IMPORTANT: Utilise les produits complémentaires de la base PrescrIA ci-dessus p
     };
 
 
-        const therapeuticData = await getTherapeuticData(supabase, med);
-        if (therapeuticData) {
-          hasStructuredData = true;
-          for (const ctx of therapeuticData) {
-            allContexts.push(ctx.description);
-            for (const symptom of ctx.symptoms) {
               for (const q of (symptom.pharma_questions || [])) {
                 const otcSuggs = (symptom.patient_needs || []).flatMap((n: any) => n.otc_suggestions || []);
                 allQuestions.push({
