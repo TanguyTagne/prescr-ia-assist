@@ -871,14 +871,8 @@ IMPORTANT: Utilise les produits complémentaires de la base PrescrIA ci-dessus p
       sources,
       patient_name: extractedPatientName,
     };
-        const pathNames = (med.pathologies || []).map((p: any) => p.nom_pathologie);
-        for (const pName of pathNames) {
-          allContexts.push(`Traitement souvent associé à : ${pName}`);
-        }
-        continue;
-      }
 
-      if (med.matched && !med.clinical_kb) {
+
         const therapeuticData = await getTherapeuticData(supabase, med);
         if (therapeuticData) {
           hasStructuredData = true;
