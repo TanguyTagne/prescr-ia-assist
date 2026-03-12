@@ -155,5 +155,6 @@ function normalizeResult(data: any): AnalysisResult {
     duplicate_warning: data.duplicate_warning || undefined,
     patient_history: data.patient_history || undefined,
     patient_name: data.patient_name || undefined,
+    clinicalPathologieIds: data.clinicalPathologieIds || [],
   };
 }
