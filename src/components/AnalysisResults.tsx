@@ -1,9 +1,8 @@
 import { useState } from "react";
-import { Pill, MessageCircleQuestion, ShoppingBag, RotateCcw, AlertTriangle, MessageSquare, ThumbsUp, ThumbsDown, Loader2, Sparkles, Database, Package, Check } from "lucide-react";
+import { Pill, RotateCcw, AlertTriangle, MessageSquare, Loader2, Sparkles, Database, ShoppingCart, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import type { AnalysisResult, RefinedResult } from "@/lib/prescriptionAnalyzer";
-import { refinePrescription } from "@/lib/prescriptionAnalyzer";
+import type { AnalysisResult } from "@/lib/prescriptionAnalyzer";
 import LegalDisclaimer from "./LegalDisclaimer";
 import { trackEvent } from "@/hooks/useAnalytics";
 import { toast } from "sonner";
@@ -14,10 +13,7 @@ interface AnalysisResultsProps {
 }
 
 const AnalysisResults = ({ result, onReset }: AnalysisResultsProps) => {
-  const [answers, setAnswers] = useState<Record<number, boolean>>({});
-  const [refined, setRefined] = useState<RefinedResult | null>(null);
-  const [isRefining, setIsRefining] = useState(false);
-  const [showConseil, setShowConseil] = useState(false);
+  const [orderedItems, setOrderedItems] = useState<Set<string>>(new Set());
 
   if (result.medicaments.length === 0) {
     return (
@@ -39,34 +35,14 @@ const AnalysisResults = ({ result, onReset }: AnalysisResultsProps) => {
     }
   };
 
-  const handleAnswer = (qIndex: number, answer: boolean) => {
-    setAnswers(prev => ({ ...prev, [qIndex]: answer }));
-    trackEvent("question_answered", { question_index: qIndex, answer: answer ? "oui" : "non" });
+  const handleOrder = (medNom: string, produit: string) => {
+    const key = `${medNom}::${produit}`;
+    setOrderedItems(prev => new Set(prev).add(key));
+    trackEvent("product_ordered", { medicament: medNom, produit });
+    toast.success(`${produit} ajouté à la commande`);
   };
 
-  const allQuestionsAnswered = result.questions.length > 0 && result.questions.every((_, i) => answers[i] !== undefined);
-
-  const handleRefine = async () => {
-    setIsRefining(true);
-    try {
-      const refinedData = await refinePrescription(result, answers);
-      setRefined(refinedData);
-      trackEvent("recommendations_refined", { 
-        answers_count: Object.keys(answers).length,
-        suggestions_count: refinedData.suggestions.length 
-      });
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erreur lors de l'affinage");
-    } finally {
-      setIsRefining(false);
-    }
-  };
-
-  const handleSuggestionClick = (categorie: string) => {
-    trackEvent("suggestion_used", { categorie });
-  };
-
-  const conseil = refined?.conseil || result.conseil;
+  const isOrdered = (medNom: string, produit: string) => orderedItems.has(`${medNom}::${produit}`);
 
   return (
     <div className="space-y-2 animate-fade-in">
@@ -107,22 +83,6 @@ const AnalysisResults = ({ result, onReset }: AnalysisResultsProps) => {
         </div>
       )}
 
-      {/* Médicaments */}
-      <div className="rounded-lg border border-border p-2.5">
-        <div className="flex items-center gap-1.5 mb-1.5">
-          <Pill className="h-3 w-3 text-primary" />
-          <span className="font-semibold text-xs">Médicaments</span>
-        </div>
-        <div className="flex flex-wrap gap-1">
-          {result.medicaments.map((med, i) => (
-            <Badge key={i} variant="secondary" className="text-[10px] py-0.5 px-1.5">
-              {med.nom} <span className="text-muted-foreground ml-0.5">({med.classe})</span>
-              {med.code_atc && <span className="text-muted-foreground/60 ml-0.5 text-[8px]">[{med.code_atc}]</span>}
-            </Badge>
-          ))}
-        </div>
-      </div>
-
       {/* Interactions */}
       {result.interactions.length > 0 && (
         <div className="rounded-lg border border-destructive/30 p-2.5">
@@ -139,145 +99,79 @@ const AnalysisResults = ({ result, onReset }: AnalysisResultsProps) => {
         </div>
       )}
 
-      {/* Questions interactives */}
-      {!refined && (
-        <div className="rounded-lg border border-border p-2.5">
-          <div className="flex items-center gap-1.5 mb-1.5">
-            <MessageCircleQuestion className="h-3 w-3 text-primary" />
-            <span className="font-semibold text-xs">Questions à poser au patient</span>
-            <Badge variant="outline" className="text-[9px] ml-auto">
-              {Object.keys(answers).length}/{result.questions.length}
-            </Badge>
+      {/* Médicaments + Recommandations directes */}
+      {result.medicaments.map((med, i) => (
+        <div key={i} className="rounded-lg border border-border p-2.5 space-y-1.5 animate-fade-in">
+          <div className="flex items-center gap-1.5">
+            <Pill className="h-3 w-3 text-primary shrink-0" />
+            <span className="font-semibold text-xs">{med.nom}</span>
+            {med.code_atc && <span className="text-[8px] text-muted-foreground/60">[{med.code_atc}]</span>}
           </div>
-          <div className="space-y-2">
-            {result.questions.map((q, i) => (
-              <div key={i} className="space-y-1 animate-fade-in">
-                <p className="text-[11px] leading-tight">{q.question}</p>
-                {q.contexte && (
-                  <p className="text-[9px] text-muted-foreground italic">{q.contexte}</p>
-                )}
-                {answers[i] === undefined ? (
-                  <div className="flex gap-1.5">
+          <p className="text-[10px] text-muted-foreground">
+            {med.molecule && <span>{med.molecule} — </span>}{med.classe}
+          </p>
+
+          {/* Recommendations for this medication */}
+          {med.recommendations && med.recommendations.length > 0 && (
+            <div className="space-y-1 pt-1 border-t border-border/50">
+              <div className="flex items-center gap-1 text-[9px] text-primary font-semibold uppercase tracking-wider">
+                <Sparkles className="h-2.5 w-2.5" />
+                Conseils associés
+              </div>
+              {med.recommendations.map((rec, j) => {
+                const ordered = isOrdered(med.nom, rec.produit);
+                return (
+                  <div key={j} className="flex items-center gap-2 py-1 px-1.5 rounded-md bg-secondary/50">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1">
+                        <span className="font-medium text-[11px]">{rec.produit}</span>
+                        {rec.priorite >= 80 && (
+                          <Badge className="bg-primary/20 text-primary text-[8px] px-1 py-0">prioritaire</Badge>
+                        )}
+                      </div>
+                      <span className="text-[9px] text-muted-foreground block leading-tight">
+                        {rec.categorie}{rec.pathologie ? ` · ${rec.pathologie}` : ""}
+                      </span>
+                    </div>
                     <button
-                      onClick={() => handleAnswer(i, true)}
-                      className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-primary/10 hover:bg-primary/20 text-primary text-[10px] font-medium transition-colors"
+                      onClick={() => handleOrder(med.nom, rec.produit)}
+                      disabled={ordered}
+                      className={`shrink-0 flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium transition-all ${
+                        ordered
+                          ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                          : "bg-primary/10 hover:bg-primary/20 text-primary"
+                      }`}
                     >
-                      <ThumbsUp className="h-3 w-3" />
-                      Oui
-                    </button>
-                    <button
-                      onClick={() => handleAnswer(i, false)}
-                      className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-muted hover:bg-accent text-muted-foreground text-[10px] font-medium transition-colors"
-                    >
-                      <ThumbsDown className="h-3 w-3" />
-                      Non
+                      {ordered ? (
+                        <>
+                          <Check className="h-3 w-3" />
+                          Ajouté
+                        </>
+                      ) : (
+                        <>
+                          <ShoppingCart className="h-3 w-3" />
+                          Commander
+                        </>
+                      )}
                     </button>
                   </div>
-                ) : (
-                  <Badge variant="outline" className="text-[9px] py-0">
-                    {answers[i] ? "✓ Oui" : "✗ Non"}
-                  </Badge>
-                )}
-              </div>
-            ))}
-          </div>
-
-          {allQuestionsAnswered && !isRefining && (
-            <Button
-              onClick={handleRefine}
-              size="sm"
-              className="w-full h-8 text-xs font-semibold pharmacy-gradient border-0 gap-1.5 mt-3"
-            >
-              <Sparkles className="h-3 w-3" />
-              Obtenir les recommandations
-            </Button>
-          )}
-          {isRefining && (
-            <div className="flex items-center justify-center py-3 gap-2">
-              <Loader2 className="h-4 w-4 text-primary animate-spin" />
-              <p className="text-xs text-muted-foreground">Analyse des réponses...</p>
+                );
+              })}
             </div>
           )}
         </div>
-      )}
-
-      {/* AI Refined Suggestions */}
-      {refined && refined.suggestions.length > 0 && (
-        <div className="rounded-lg border border-primary/30 p-2.5 animate-fade-in">
-          <div className="flex items-center gap-1.5 mb-1">
-            <ShoppingBag className="h-3 w-3 text-primary" />
-            <span className="font-semibold text-xs">Recommandations personnalisées</span>
-          </div>
-          <div className="space-y-1">
-            {refined.suggestions.map((sug, i) => (
-              <div
-                key={i}
-                className="w-full space-y-1 py-1.5 px-2 rounded-md bg-secondary animate-fade-in"
-              >
-                <button
-                  onClick={() => handleSuggestionClick(sug.categorie)}
-                  className="w-full flex items-center gap-2 hover:bg-accent transition-colors text-left rounded"
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1">
-                      <span className="font-medium text-[11px] leading-tight">{sug.categorie}</span>
-                      {sug.priorite === "haute" && (
-                        <Badge className="bg-primary/20 text-primary text-[8px] px-1 py-0">prioritaire</Badge>
-                      )}
-                    </div>
-                    <span className="text-[10px] text-muted-foreground leading-tight">{sug.raison}</span>
-                  </div>
-                </button>
-                {/* LGO Products */}
-                {sug.produits_lgo && sug.produits_lgo.length > 0 && (
-                  <div className="ml-2 space-y-0.5 border-l-2 border-primary/20 pl-2">
-                    <div className="flex items-center gap-1 text-[9px] text-muted-foreground font-medium uppercase tracking-wider">
-                      <Package className="h-2.5 w-2.5" />
-                      En stock
-                    </div>
-                    {sug.produits_lgo.map((prod, j) => (
-                      <div key={j} className="flex items-center justify-between text-[10px] py-0.5">
-                        <div className="flex items-center gap-1 min-w-0 flex-1">
-                          <Check className="h-2.5 w-2.5 text-green-600 shrink-0" />
-                          <span className="truncate">{prod.nom}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 shrink-0 ml-1">
-                          {prod.prix > 0 && (
-                            <span className="font-semibold text-foreground">{prod.prix.toFixed(2)}€</span>
-                          )}
-                          <Badge variant="outline" className="text-[8px] py-0 px-1">
-                            {prod.stock} dispo
-                          </Badge>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      ))}
 
       {/* Conseil */}
-      {(refined || showConseil) && (
-        <div className="rounded-lg border border-primary/20 p-2.5 animate-fade-in">
-          <div className="flex items-center gap-1.5 mb-1">
-            <MessageSquare className="h-3 w-3 text-primary" />
-            <span className="font-semibold text-xs">Phrase conseil</span>
-          </div>
-          <p className="text-[11px] leading-relaxed italic text-foreground">
-            "{conseil || "Un accompagnement adapté peut aider à améliorer le confort au quotidien."}"
-          </p>
+      <div className="rounded-lg border border-primary/20 p-2.5 animate-fade-in">
+        <div className="flex items-center gap-1.5 mb-1">
+          <MessageSquare className="h-3 w-3 text-primary" />
+          <span className="font-semibold text-xs">Phrase conseil</span>
         </div>
-      )}
-
-      {!refined && !showConseil && (
-        <Button onClick={() => { setShowConseil(true); trackEvent("conseil_clicked"); }} size="sm" className="w-full h-8 text-xs font-semibold pharmacy-gradient border-0 gap-1.5">
-          <MessageSquare className="h-3 w-3" />
-          Voir conseil
-        </Button>
-      )}
+        <p className="text-[11px] leading-relaxed italic text-foreground">
+          "{result.conseil || "Un accompagnement adapté peut aider à améliorer le confort au quotidien."}"
+        </p>
+      </div>
 
       {/* Reset + disclaimer */}
       <div className="flex items-center gap-2">
@@ -285,6 +179,11 @@ const AnalysisResults = ({ result, onReset }: AnalysisResultsProps) => {
           <RotateCcw className="h-3 w-3" />
           Nouvelle ordonnance
         </Button>
+        {orderedItems.size > 0 && (
+          <Badge variant="secondary" className="text-[10px]">
+            {orderedItems.size} produit(s) commandé(s)
+          </Badge>
+        )}
       </div>
       <LegalDisclaimer />
     </div>
