@@ -11,15 +11,16 @@ export interface MedicamentInfo {
   classe: string;
   molecule?: string;
   code_atc?: string;
+  recommendations?: Recommendation[];
 }
 
-export interface OTCSuggestion {
-  categorie_produit?: string;
-  categorie?: string;
+export interface Recommendation {
+  produit: string;
+  categorie: string;
   description?: string;
-  desc?: string;
-  icon: string;
-  priorite: string;
+  priorite: number;
+  pathologie?: string;
+  ordered?: boolean;
 }
 
 export interface LGOProduct {
@@ -38,18 +39,10 @@ export interface Suggestion {
   produits_lgo?: LGOProduct[];
 }
 
-export interface AnalysisQuestion {
-  question: string;
-  contexte: string;
-  otcSuggestions?: OTCSuggestion[];
-  source?: string;
-}
-
 export interface AnalysisResult {
   medicaments: MedicamentInfo[];
   interactions: Interaction[];
   contextes: string[];
-  questions: AnalysisQuestion[];
   conseil: string;
   structuredData?: boolean;
   sources?: string[];
@@ -62,12 +55,6 @@ export interface AnalysisResult {
     first_seen: string;
   };
   patient_name?: string;
-  clinicalPathologieIds?: string[];
-}
-
-export interface RefinedResult {
-  suggestions: Suggestion[];
-  conseil: string;
 }
 
 export async function analyzePrescription(input: string): Promise<AnalysisResult> {
@@ -96,30 +83,6 @@ export async function analyzePrescriptionImage(imageBase64: string): Promise<Ana
   return normalizeResult(data);
 }
 
-export async function refinePrescription(
-  analysisContext: AnalysisResult,
-  answers: Record<number, boolean>
-): Promise<RefinedResult> {
-  const { data, error } = await supabase.functions.invoke("analyze-prescription", {
-    body: {
-      mode: "refine",
-      analysisContext,
-      answers,
-    },
-  });
-
-  if (error) {
-    console.error("Edge function error:", error);
-    throw new Error(error.message || "Erreur lors de l'affinage");
-  }
-  if (data?.error) throw new Error(data.error);
-
-  return {
-    suggestions: data.suggestions || [],
-    conseil: data.conseil || "",
-  };
-}
-
 export async function trackRecommendationUsage(
   eventType: string,
   questionId?: string,
@@ -145,16 +108,20 @@ export async function seedPharmaData(): Promise<any> {
 
 function normalizeResult(data: any): AnalysisResult {
   return {
-    medicaments: data.medicaments || [],
+    medicaments: (data.medicaments || []).map((med: any) => ({
+      nom: med.nom,
+      classe: med.classe,
+      molecule: med.molecule,
+      code_atc: med.code_atc,
+      recommendations: (med.recommendations || []).slice(0, 3),
+    })),
     interactions: data.interactions || [],
     contextes: data.contextes || [],
-    questions: (data.questions || []).slice(0, 4),
     conseil: data.conseil || "",
     structuredData: data.structuredData || false,
     sources: data.sources || [],
     duplicate_warning: data.duplicate_warning || undefined,
     patient_history: data.patient_history || undefined,
     patient_name: data.patient_name || undefined,
-    clinicalPathologieIds: data.clinicalPathologieIds || [],
   };
 }
