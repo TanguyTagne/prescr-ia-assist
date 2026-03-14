@@ -707,6 +707,63 @@ export type Database = {
           },
         ]
       }
+      produit_complementaire_ranking: {
+        Row: {
+          created_at: string
+          id: string
+          pathologie_id: string
+          produit_id: string
+          score_clinique: number
+          score_cross_sell: number
+          score_final: number | null
+          score_pertinence_pathologie: number
+          score_popularite: number
+          score_saisonnalite: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          pathologie_id: string
+          produit_id: string
+          score_clinique?: number
+          score_cross_sell?: number
+          score_final?: number | null
+          score_pertinence_pathologie?: number
+          score_popularite?: number
+          score_saisonnalite?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          pathologie_id?: string
+          produit_id?: string
+          score_clinique?: number
+          score_cross_sell?: number
+          score_final?: number | null
+          score_pertinence_pathologie?: number
+          score_popularite?: number
+          score_saisonnalite?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "produit_complementaire_ranking_pathologie_id_fkey"
+            columns: ["pathologie_id"]
+            isOneToOne: false
+            referencedRelation: "pathologies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "produit_complementaire_ranking_produit_id_fkey"
+            columns: ["produit_id"]
+            isOneToOne: false
+            referencedRelation: "produits_complementaires"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       produits_complementaires: {
         Row: {
           categorie: string | null
@@ -1191,6 +1248,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_top_produits: {
+        Args: { p_limit?: number; p_pathologie_id: string }
+        Returns: {
+          categorie: string
+          description: string
+          produit: string
+          produit_id: string
+          score_final: number
+          type_produit: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
