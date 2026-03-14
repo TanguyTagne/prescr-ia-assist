@@ -108,9 +108,6 @@ const AnalysisResults = ({ result, onReset }: AnalysisResultsProps) => {
             <span className="font-semibold text-xs">{med.nom}</span>
             {med.code_atc && <span className="text-[8px] text-muted-foreground/60">[{med.code_atc}]</span>}
           </div>
-          <p className="text-[10px] text-muted-foreground">
-            {med.molecule && <span>{med.molecule} — </span>}{med.classe}
-          </p>
 
           {med.conseil_associe && (
             <button
