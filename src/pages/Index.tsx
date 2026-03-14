@@ -92,16 +92,16 @@ const Index = () => {
   const handleReset = () => setResult(null);
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {/* Minimal header */}
-      <header className="pharmacy-gradient px-3 py-1.5">
+    <div className="h-screen bg-background flex flex-col overflow-hidden">
+      {/* Fixed header */}
+      <header className="pharmacy-gradient px-3 py-1.5 shrink-0 sticky top-0 z-10">
         <div className="container max-w-xl mx-auto flex items-center gap-2">
           <Pill className="h-4 w-4 text-primary-foreground" />
           <span className="text-sm font-bold text-primary-foreground tracking-tight">PrescrIA</span>
         </div>
       </header>
 
-      <main className="container max-w-xl mx-auto px-3 py-3 flex-1">
+      <main className="container max-w-xl mx-auto px-3 py-1 flex-1 overflow-y-auto">
         {isLoading ? (
           <div className="flex items-center justify-center py-10 gap-2 animate-fade-in">
             <Loader2 className="h-5 w-5 text-primary animate-spin" />
