@@ -253,6 +253,70 @@ async function clinicalLookup(supabase: any, medName: string, moleculeName?: str
 
 // ====== CLINICAL FALLBACK HELPERS ======
 
+const MAX_RECOMMENDATIONS_PER_MED = 2;
+const LOW_FRICTION_BLOCKLIST = [
+  "inhalateur",
+  "nébuliseur",
+  "nebuliseur",
+  "orthèse",
+  "orthese",
+  "fauteuil",
+  "appareil coûteux",
+];
+
+function normalizeText(value: string) {
+  return (value || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+}
+
+function isLowFrictionProduct(productName: string) {
+  const normalized = normalizeText(productName);
+  return normalized && !LOW_FRICTION_BLOCKLIST.some((blocked) => normalized.includes(normalizeText(blocked)));
+}
+
+function pickDistinctProducts(products: any[], max = MAX_RECOMMENDATIONS_PER_MED) {
+  const selected: any[] = [];
+  const seen = new Set<string>();
+
+  for (const product of products || []) {
+    const key = normalizeText(product?.produit || "");
+    if (!key || seen.has(key) || !isLowFrictionProduct(product?.produit || "")) continue;
+    seen.add(key);
+    selected.push(product);
+    if (selected.length >= max) break;
+  }
+
+  return selected;
+}
+
+function pickMainAdviceFromConseils(conseils: any[]) {
+  if (!conseils?.length) return null;
+
+  const sorted = [...conseils].sort((a: any, b: any) => (b?.priorite || 0) - (a?.priorite || 0));
+  const best = sorted[0];
+  if (!best?.conseil) return null;
+  return best.description ? `${best.conseil} (${best.description})` : best.conseil;
+}
+
+function findProtocolForPathologies(protocols: any[], pathologies: any[]) {
+  if (!protocols?.length || !pathologies?.length) return null;
+
+  const pathNames = pathologies
+    .map((p: any) => normalizeText(p?.nom_pathologie || ""))
+    .filter(Boolean);
+
+  if (!pathNames.length) return null;
+
+  return protocols.find((row: any) => {
+    const protocolPath = normalizeText(row?.pathologie || "");
+    if (!protocolPath) return false;
+    return pathNames.some((p) => p.includes(protocolPath) || protocolPath.includes(p));
+  }) || null;
+}
+
 async function getRecommendationsFromMoleculeIds(supabase: any, moleculeIds: string[]) {
   if (moleculeIds.length === 0) return [];
 
@@ -270,28 +334,15 @@ async function getRecommendationsFromMoleculeIds(supabase: any, moleculeIds: str
     .select("*, pathologies(nom_pathologie)")
     .in("pathologie_id", pathologieIds)
     .order("priorite", { ascending: false })
-    .limit(30);
+    .limit(40);
 
-  const uniqueProducts: any[] = [];
-  const seen = new Set<string>();
-
-  for (const p of produits || []) {
-    const key = (p.produit || "").trim().toLowerCase();
-    if (!key || seen.has(key)) continue;
-    seen.add(key);
-
-    uniqueProducts.push({
-      produit: p.produit,
-      categorie: p.categorie || "Complément",
-      description: p.description || "",
-      priorite: p.priorite || 50,
-      pathologie: p.pathologies?.nom_pathologie || "",
-    });
-
-    if (uniqueProducts.length >= 3) break;
-  }
-
-  return uniqueProducts;
+  return pickDistinctProducts((produits || []).map((p: any) => ({
+    produit: p.produit,
+    categorie: p.categorie || "Complément",
+    description: p.description || "",
+    priorite: p.priorite || 50,
+    pathologie: p.pathologies?.nom_pathologie || "",
+  })));
 }
 
 async function getAtcFallbackRecommendations(supabase: any, atcCode: string) {
@@ -310,11 +361,6 @@ async function getAtcFallbackRecommendations(supabase: any, atcCode: string) {
 async function getClassFallbackRecommendations(supabase: any, therapeuticClass: string) {
   if (!therapeuticClass) return [];
 
-  const normalize = (value: string) => value
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
-
   let { data: exactClassMolecules } = await supabase
     .from("molecules")
     .select("id")
@@ -331,7 +377,7 @@ async function getClassFallbackRecommendations(supabase: any, therapeuticClass: 
   }
 
   if (!exactClassMolecules?.length) {
-    const classKeywords = normalize(therapeuticClass)
+    const classKeywords = normalizeText(therapeuticClass)
       .split(/[^a-z0-9]+/)
       .filter((word) => word.length >= 5)
       .slice(0, 3);
