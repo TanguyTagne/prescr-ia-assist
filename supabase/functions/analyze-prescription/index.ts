@@ -763,28 +763,52 @@ serve(async (req) => {
 
         const clinical = clinicalResults.find((c: any) => c.index === i);
 
-        // Priority rule: protocol table (pathology_protocol)
-        const matchedProtocol = findProtocolForPathologies(pathologyProtocols || [], med.pathologies || []);
+        // Priority rule: protocole_pathologie (new) or pathology_protocol (legacy)
+        const matchedProtocol = findProtocolForPathologies(allProtocols, med.pathologies || []);
         if (matchedProtocol) {
-          advice = matchedProtocol.conseil;
+          // New protocole_pathologie format (has conseil_1 object)
+          if (matchedProtocol.conseil_1) {
+            const c1 = matchedProtocol.conseil_1;
+            const c2 = matchedProtocol.conseil_2;
+            advice = c1.conseil + (c1.description ? ` (${c1.description})` : "");
+            if (c2?.conseil) {
+              advice += `. ${c2.conseil}${c2.description ? ` (${c2.description})` : ""}`;
+            }
 
-          const protocolProducts = [matchedProtocol.produit_1, matchedProtocol.produit_2]
-            .filter(Boolean)
-            .map((productName: string, idx: number) => {
-              const fromClinical = (clinical?.produits || []).find((p: any) =>
-                normalizeText(p?.produit || "") === normalizeText(productName)
-              );
+            const protocolProducts = [
+              matchedProtocol.produit_1 ? { ...matchedProtocol.produit_1, just: matchedProtocol.justification_1, prio: matchedProtocol.priorite_produit_1 } : null,
+              matchedProtocol.produit_2 ? { ...matchedProtocol.produit_2, just: matchedProtocol.justification_2, prio: matchedProtocol.priorite_produit_2 } : null,
+              matchedProtocol.produit_3 ? { ...matchedProtocol.produit_3, just: matchedProtocol.justification_3, prio: matchedProtocol.priorite_produit_3 } : null,
+            ]
+              .filter(Boolean)
+              .map((p: any) => ({
+                produit: p.produit,
+                categorie: p.categorie || "Complément",
+                description: p.just || p.description || "",
+                priorite: p.prio || p.priorite || 50,
+                pathologie: matchedProtocol.pathologie_nom || "",
+              }));
 
-              return {
-                produit: productName,
-                categorie: fromClinical?.categorie || "Complément",
-                description: fromClinical?.description || "Produit pertinent et facile à conseiller au comptoir",
-                priorite: fromClinical?.priorite || (matchedProtocol.priority || 80) - idx,
-                pathologie: fromClinical?.pathologies?.nom_pathologie || matchedProtocol.pathologie,
-              };
-            });
-
-          recs.push(...pickDistinctProducts(protocolProducts, MAX_RECOMMENDATIONS_PER_MED));
+            recs.push(...pickDistinctProducts(protocolProducts, MAX_RECOMMENDATIONS_PER_MED));
+          } else {
+            // Legacy pathology_protocol format
+            advice = matchedProtocol.conseil;
+            const protocolProducts = [matchedProtocol.produit_1, matchedProtocol.produit_2]
+              .filter(Boolean)
+              .map((productName: string, idx: number) => {
+                const fromClinical = (clinical?.produits || []).find((p: any) =>
+                  normalizeText(p?.produit || "") === normalizeText(productName)
+                );
+                return {
+                  produit: productName,
+                  categorie: fromClinical?.categorie || "Complément",
+                  description: fromClinical?.description || "Produit pertinent",
+                  priorite: fromClinical?.priorite || (matchedProtocol.priority || 80) - idx,
+                  pathologie: fromClinical?.pathologies?.nom_pathologie || matchedProtocol.pathologie,
+                };
+              });
+            recs.push(...pickDistinctProducts(protocolProducts, MAX_RECOMMENDATIONS_PER_MED));
+          }
         }
 
         // Fallback on existing clinical product rows
