@@ -92,31 +92,16 @@ const Index = () => {
   const handleReset = () => setResult(null);
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Compact header */}
-      <header className="pharmacy-gradient px-3 py-2">
-        <div className="container max-w-xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/")}>
-            <Pill className="h-4 w-4 text-primary-foreground" />
-            <span className="text-sm font-bold text-primary-foreground tracking-tight">PrescrIA</span>
-          </div>
-          <div className="flex items-center gap-0.5">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")} className="text-primary-foreground hover:bg-primary-foreground/10 h-7 w-7">
-              <BarChart3 className="h-3.5 w-3.5" />
-            </Button>
-            {!isInstalled && (
-              <Button variant="ghost" size="icon" onClick={handleInstall} className="text-primary-foreground hover:bg-primary-foreground/10 h-7 w-7">
-                <Download className="h-3.5 w-3.5" />
-              </Button>
-            )}
-            <Button variant="ghost" size="icon" onClick={signOut} className="text-primary-foreground hover:bg-primary-foreground/10 h-7 w-7">
-              <LogOut className="h-3.5 w-3.5" />
-            </Button>
-          </div>
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Minimal header */}
+      <header className="pharmacy-gradient px-3 py-1.5">
+        <div className="container max-w-xl mx-auto flex items-center gap-2">
+          <Pill className="h-4 w-4 text-primary-foreground" />
+          <span className="text-sm font-bold text-primary-foreground tracking-tight">PrescrIA</span>
         </div>
       </header>
 
-      <main className="container max-w-xl mx-auto px-3 py-3">
+      <main className="container max-w-xl mx-auto px-3 py-3 flex-1">
         {isLoading ? (
           <div className="flex items-center justify-center py-10 gap-2 animate-fade-in">
             <Loader2 className="h-5 w-5 text-primary animate-spin" />
@@ -124,10 +109,6 @@ const Index = () => {
           </div>
         ) : !result ? (
           <div className="space-y-3">
-            <div className="text-center space-y-0.5">
-              <h2 className="text-base font-bold">Analyser une ordonnance</h2>
-              <p className="text-xs text-muted-foreground">Entrez les médicaments pour obtenir questions et suggestions.</p>
-            </div>
             <PrescriptionInput onAnalyze={handleAnalyze} onAnalyzeImage={handleAnalyzeImage} />
             <LegalDisclaimer />
             <div className="flex flex-wrap items-center gap-1.5">
@@ -143,6 +124,24 @@ const Index = () => {
           <AnalysisResults result={result} onReset={handleReset} />
         )}
       </main>
+
+      {/* Footer actions */}
+      <footer className="container max-w-xl mx-auto px-3 py-2 flex items-center justify-center gap-2 border-t border-border">
+        <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")} className="text-muted-foreground h-7 text-xs gap-1">
+          <BarChart3 className="h-3.5 w-3.5" />
+          Dashboard
+        </Button>
+        {!isInstalled && (
+          <Button variant="ghost" size="sm" onClick={handleInstall} className="text-muted-foreground h-7 text-xs gap-1">
+            <Download className="h-3.5 w-3.5" />
+            Installer
+          </Button>
+        )}
+        <Button variant="ghost" size="sm" onClick={signOut} className="text-muted-foreground h-7 text-xs gap-1">
+          <LogOut className="h-3.5 w-3.5" />
+          Déconnexion
+        </Button>
+      </footer>
     </div>
   );
 };
