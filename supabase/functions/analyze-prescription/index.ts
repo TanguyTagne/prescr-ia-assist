@@ -253,18 +253,7 @@ async function clinicalLookup(supabase: any, medName: string, moleculeName?: str
 
 // ====== CLINICAL FALLBACK HELPERS ======
 
-async function getAtcFallbackRecommendations(supabase: any, atcCode: string) {
-  if (!atcCode) return [];
-
-  const { data: molecules } = await supabase
-    .from("molecules")
-    .select("id")
-    .eq("atc_code", atcCode)
-    .limit(50);
-
-  if (!molecules?.length) return [];
-
-  const moleculeIds = molecules.map((m: any) => m.id).filter(Boolean);
+async function getRecommendationsFromMoleculeIds(supabase: any, moleculeIds: string[]) {
   if (moleculeIds.length === 0) return [];
 
   const { data: moleculePathologies } = await supabase
@@ -303,6 +292,41 @@ async function getAtcFallbackRecommendations(supabase: any, atcCode: string) {
   }
 
   return uniqueProducts;
+}
+
+async function getAtcFallbackRecommendations(supabase: any, atcCode: string) {
+  if (!atcCode) return [];
+
+  const { data: molecules } = await supabase
+    .from("molecules")
+    .select("id")
+    .eq("atc_code", atcCode)
+    .limit(50);
+
+  const moleculeIds = (molecules || []).map((m: any) => m.id).filter(Boolean);
+  return getRecommendationsFromMoleculeIds(supabase, moleculeIds);
+}
+
+async function getClassFallbackRecommendations(supabase: any, therapeuticClass: string) {
+  if (!therapeuticClass) return [];
+
+  let { data: exactClassMolecules } = await supabase
+    .from("molecules")
+    .select("id")
+    .ilike("classe_therapeutique", therapeuticClass.trim())
+    .limit(50);
+
+  if (!exactClassMolecules?.length) {
+    const { data: partialClassMolecules } = await supabase
+      .from("molecules")
+      .select("id")
+      .ilike("classe_therapeutique", `%${therapeuticClass.trim()}%`)
+      .limit(50);
+    exactClassMolecules = partialClassMolecules || [];
+  }
+
+  const moleculeIds = (exactClassMolecules || []).map((m: any) => m.id).filter(Boolean);
+  return getRecommendationsFromMoleculeIds(supabase, moleculeIds);
 }
 
 // ====== OLD DB HELPERS (legacy medications table fallback) ======
