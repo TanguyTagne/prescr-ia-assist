@@ -314,11 +314,16 @@ function findProtocolForPathologies(protocols: any[], pathologies: any[]) {
 
   if (!pathNames.length) return null;
 
-  return protocols.find((row: any) => {
+  // Find ALL matching protocols, then pick highest priority
+  const matches = protocols.filter((row: any) => {
     const protocolPath = normalizeText(row?.pathologie || "");
     if (!protocolPath) return false;
     return pathNames.some((p) => p.includes(protocolPath) || protocolPath.includes(p));
-  }) || null;
+  });
+
+  if (matches.length === 0) return null;
+  // Already sorted by priority desc from the query, but double-check
+  return matches.sort((a: any, b: any) => (b?.priority || 0) - (a?.priority || 0))[0];
 }
 
 async function getRecommendationsFromMoleculeIds(supabase: any, moleculeIds: string[]) {

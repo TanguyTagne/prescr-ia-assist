@@ -4,7 +4,8 @@ import App from "./App.tsx";
 import "./index.css";
 
 // Service worker only in production to avoid stale dev chunk mismatches
-if ("serviceWorker" in navigator) {
+  // Force SW update on every load to bust stale caches
+  if ("serviceWorker" in navigator) {
   window.addEventListener("load", async () => {
     if (import.meta.env.PROD) {
       navigator.serviceWorker
