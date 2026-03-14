@@ -692,10 +692,38 @@ serve(async (req) => {
     const medRecommendations: Map<number, any[]> = new Map();
     const medMainAdvice: Map<number, string> = new Map();
 
-    const { data: pathologyProtocols } = await supabase
+    // Load new protocole_pathologie with joined data
+    const { data: protocoles } = await supabase
+      .from("protocole_pathologie")
+      .select(`
+        id, pathologie_id, actif,
+        conseil_1:conseils_associes!protocole_pathologie_conseil_1_id_fkey(conseil, description),
+        conseil_2:conseils_associes!protocole_pathologie_conseil_2_id_fkey(conseil, description),
+        produit_1:produits_complementaires!protocole_pathologie_produit_complementaire_1_id_fkey(produit, categorie, description, priorite),
+        produit_2:produits_complementaires!protocole_pathologie_produit_complementaire_2_id_fkey(produit, categorie, description, priorite),
+        produit_3:produits_complementaires!protocole_pathologie_produit_complementaire_3_id_fkey(produit, categorie, description, priorite),
+        justification_1, justification_2, justification_3,
+        priorite_produit_1, priorite_produit_2, priorite_produit_3,
+        pathologies(nom_pathologie)
+      `)
+      .eq("actif", true);
+
+    // Also load legacy pathology_protocol as fallback
+    const { data: legacyProtocols } = await supabase
       .from("pathology_protocol")
       .select("pathologie, conseil, produit_1, produit_2, priority")
       .order("priority", { ascending: false });
+
+    const allProtocols = [
+      ...(protocoles || []).map((p: any) => ({
+        ...p,
+        pathologie_nom: p.pathologies?.nom_pathologie,
+      })),
+      ...(legacyProtocols || []).map((p: any) => ({
+        ...p,
+        pathologie_nom: p.pathologie,
+      })),
+    ];
 
     // Preload ATC/class fallback recommendations from clinical DB for medications with no direct mapping
     const atcFallbackMap = new Map<string, any[]>();
