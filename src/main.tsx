@@ -7,9 +7,12 @@ import "./index.css";
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", async () => {
     if (import.meta.env.PROD) {
-      navigator.serviceWorker.register("/sw.js").catch((err) => {
-        console.log("SW registration failed:", err);
-      });
+      navigator.serviceWorker
+        .register("/sw.js")
+        .then((registration) => registration.update())
+        .catch((err) => {
+          console.log("SW registration failed:", err);
+        });
       return;
     }
 

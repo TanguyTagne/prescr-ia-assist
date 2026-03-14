@@ -1,5 +1,11 @@
-const CACHE_NAME = "prescria-v1";
-const PRECACHE_URLS = ["/", "/index.html"];
+const CACHE_NAME = "prescria-v2";
+const PRECACHE_URLS = ["/", "/index.html", "/manifest.json", "/favicon.ico"];
+
+const isBackendRequest = (url) =>
+  url.includes("/functions/") || url.includes("supabase.co");
+
+const isNavigationRequest = (request) =>
+  request.mode === "navigate" || request.destination === "document";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -18,21 +24,44 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
-  // Network-first for API calls, cache-first for assets
-  if (event.request.url.includes("/functions/") || event.request.url.includes("supabase")) {
-    event.respondWith(fetch(event.request));
+  const { request } = event;
+
+  if (request.method !== "GET") return;
+  if (isBackendRequest(request.url)) {
+    event.respondWith(fetch(request));
     return;
   }
 
+  // Always try network first for HTML/navigation so new deployments are visible immediately
+  if (isNavigationRequest(request)) {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (response && response.status === 200) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put("/index.html", clone));
+          }
+          return response;
+        })
+        .catch(async () => (await caches.match(request)) || caches.match("/index.html"))
+    );
+    return;
+  }
+
+  // Static assets: return cache fast, then refresh in background
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      const fetched = fetch(event.request).then((response) => {
-        if (response && response.status === 200) {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-        }
-        return response;
-      });
+    caches.match(request).then((cached) => {
+      const fetched = fetch(request)
+        .then((response) => {
+          const url = new URL(request.url);
+          if (response && response.status === 200 && url.origin === self.location.origin) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+          }
+          return response;
+        })
+        .catch(() => cached);
+
       return cached || fetched;
     })
   );
