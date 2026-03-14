@@ -310,6 +310,11 @@ async function getAtcFallbackRecommendations(supabase: any, atcCode: string) {
 async function getClassFallbackRecommendations(supabase: any, therapeuticClass: string) {
   if (!therapeuticClass) return [];
 
+  const normalize = (value: string) => value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
   let { data: exactClassMolecules } = await supabase
     .from("molecules")
     .select("id")
@@ -323,6 +328,33 @@ async function getClassFallbackRecommendations(supabase: any, therapeuticClass: 
       .ilike("classe_therapeutique", `%${therapeuticClass.trim()}%`)
       .limit(50);
     exactClassMolecules = partialClassMolecules || [];
+  }
+
+  if (!exactClassMolecules?.length) {
+    const classKeywords = normalize(therapeuticClass)
+      .split(/[^a-z0-9]+/)
+      .filter((word) => word.length >= 5)
+      .slice(0, 3);
+
+    if (classKeywords.length > 0) {
+      const keywordMatches = await Promise.all(
+        classKeywords.map(async (keyword) => {
+          const { data } = await supabase
+            .from("molecules")
+            .select("id, classe_therapeutique")
+            .ilike("classe_therapeutique", `%${keyword}%`)
+            .limit(50);
+          return data || [];
+        })
+      );
+
+      const seen = new Set<string>();
+      exactClassMolecules = keywordMatches.flat().filter((molecule: any) => {
+        if (!molecule?.id || seen.has(molecule.id)) return false;
+        seen.add(molecule.id);
+        return true;
+      });
+    }
   }
 
   const moleculeIds = (exactClassMolecules || []).map((m: any) => m.id).filter(Boolean);
