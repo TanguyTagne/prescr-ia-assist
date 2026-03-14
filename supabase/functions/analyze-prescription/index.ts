@@ -599,17 +599,29 @@ serve(async (req) => {
     let hasStructuredData = clinicalResults.length > 0;
     const medRecommendations: Map<number, any[]> = new Map();
 
-    // Preload ATC fallback recommendations from clinical DB for medications with no direct mapping
+    // Preload ATC/class fallback recommendations from clinical DB for medications with no direct mapping
     const atcFallbackMap = new Map<string, any[]>();
-    const atcCodes = [...new Set(enrichedMeds.map((m: any) => m.code_atc).filter(Boolean))] as string[];
+    const classFallbackMap = new Map<string, any[]>();
 
-    await Promise.all(atcCodes.map(async (code) => {
-      const recs = await getAtcFallbackRecommendations(supabase, code);
-      if (recs.length > 0) {
-        atcFallbackMap.set(code, recs);
-        if (!sources.includes("Base clinique PrescrIA")) sources.push("Base clinique PrescrIA");
-      }
-    }));
+    const atcCodes = [...new Set(enrichedMeds.map((m: any) => m.code_atc).filter(Boolean))] as string[];
+    const therapeuticClasses = [...new Set(enrichedMeds.map((m: any) => m.classe_therapeutique).filter(Boolean))] as string[];
+
+    await Promise.all([
+      ...atcCodes.map(async (code) => {
+        const recs = await getAtcFallbackRecommendations(supabase, code);
+        if (recs.length > 0) {
+          atcFallbackMap.set(code, recs);
+          if (!sources.includes("Base clinique PrescrIA")) sources.push("Base clinique PrescrIA");
+        }
+      }),
+      ...therapeuticClasses.map(async (therapeuticClass) => {
+        const recs = await getClassFallbackRecommendations(supabase, therapeuticClass);
+        if (recs.length > 0) {
+          classFallbackMap.set(therapeuticClass, recs);
+          if (!sources.includes("Base clinique PrescrIA")) sources.push("Base clinique PrescrIA");
+        }
+      }),
+    ]);
 
     for (let i = 0; i < enrichedMeds.length; i++) {
       const med = enrichedMeds[i];
