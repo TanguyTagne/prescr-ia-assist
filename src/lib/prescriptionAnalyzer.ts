@@ -11,6 +11,7 @@ export interface MedicamentInfo {
   classe: string;
   molecule?: string;
   code_atc?: string;
+  conseil_associe?: string;
   recommendations?: Recommendation[];
 }
 
