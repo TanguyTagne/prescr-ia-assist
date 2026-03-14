@@ -250,6 +250,21 @@ serve(async (req) => {
         type_produit: p.type_produit,
         pathologie: p.pathologies?.nom_pathologie,
       })),
+      ranked_produits: rankedProduits.map((r: any) => ({
+        produit: r.produits_complementaires?.produit,
+        categorie: r.produits_complementaires?.categorie,
+        description: r.produits_complementaires?.description,
+        type_produit: r.produits_complementaires?.type_produit,
+        pathologie: r.pathologies?.nom_pathologie,
+        score_final: r.score_final,
+        scores: {
+          clinique: r.score_clinique,
+          pertinence: r.score_pertinence_pathologie,
+          cross_sell: r.score_cross_sell,
+          saisonnalite: r.score_saisonnalite,
+          popularite: r.score_popularite,
+        },
+      })),
     };
 
     return new Response(JSON.stringify(response), {
