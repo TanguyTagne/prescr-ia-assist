@@ -83,17 +83,6 @@ const AnalysisResults = ({ result, onReset }: AnalysisResultsProps) => {
         </div>
       )}
 
-      {/* Sources de données */}
-      {result.sources && result.sources.length > 0 && (
-        <div className="flex items-center gap-1 flex-wrap">
-          <Database className="h-2.5 w-2.5 text-muted-foreground shrink-0" />
-          {result.sources.map((src, i) => (
-            <Badge key={i} variant="outline" className="text-[8px] py-0 px-1 text-muted-foreground">
-              {src}
-            </Badge>
-          ))}
-        </div>
-      )}
 
       {/* Interactions */}
       {result.interactions.length > 0 && (
@@ -119,9 +108,6 @@ const AnalysisResults = ({ result, onReset }: AnalysisResultsProps) => {
             <span className="font-semibold text-xs">{med.nom}</span>
             {med.code_atc && <span className="text-[8px] text-muted-foreground/60">[{med.code_atc}]</span>}
           </div>
-          <p className="text-[10px] text-muted-foreground">
-            {med.molecule && <span>{med.molecule} — </span>}{med.classe}
-          </p>
 
           {med.conseil_associe && (
             <button
@@ -156,9 +142,6 @@ const AnalysisResults = ({ result, onReset }: AnalysisResultsProps) => {
                           <Badge className="bg-primary/20 text-primary text-[8px] px-1 py-0">prioritaire</Badge>
                         )}
                       </div>
-                      <span className="text-[9px] text-muted-foreground block leading-tight">
-                        {rec.categorie}{rec.pathologie ? ` · ${rec.pathologie}` : ""}
-                      </span>
                     </div>
                     <button
                       onClick={() => handleOrder(med.nom, rec.produit)}
