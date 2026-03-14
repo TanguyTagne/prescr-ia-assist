@@ -11,6 +11,7 @@ export interface MedicamentInfo {
   classe: string;
   molecule?: string;
   code_atc?: string;
+  conseil_associe?: string;
   recommendations?: Recommendation[];
 }
 
@@ -113,6 +114,7 @@ function normalizeResult(data: any): AnalysisResult {
       classe: med.classe,
       molecule: med.molecule,
       code_atc: med.code_atc,
+      conseil_associe: med.conseil_associe || undefined,
       recommendations: (med.recommendations || []).slice(0, 3),
     })),
     interactions: data.interactions || [],

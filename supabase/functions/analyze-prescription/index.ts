@@ -253,6 +253,74 @@ async function clinicalLookup(supabase: any, medName: string, moleculeName?: str
 
 // ====== CLINICAL FALLBACK HELPERS ======
 
+const MAX_RECOMMENDATIONS_PER_MED = 2;
+const LOW_FRICTION_BLOCKLIST = [
+  "inhalateur",
+  "nébuliseur",
+  "nebuliseur",
+  "orthèse",
+  "orthese",
+  "fauteuil",
+  "appareil coûteux",
+];
+
+function normalizeText(value: string) {
+  return (value || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+}
+
+function isLowFrictionProduct(productName: string) {
+  const normalized = normalizeText(productName);
+  return normalized && !LOW_FRICTION_BLOCKLIST.some((blocked) => normalized.includes(normalizeText(blocked)));
+}
+
+function normalizeAdviceSentence(text: string) {
+  return (text || "").trim().replace(/[.\s]+$/g, "");
+}
+
+function pickDistinctProducts(products: any[], max = MAX_RECOMMENDATIONS_PER_MED) {
+  const selected: any[] = [];
+  const seen = new Set<string>();
+
+  for (const product of products || []) {
+    const key = normalizeText(product?.produit || "");
+    if (!key || seen.has(key) || !isLowFrictionProduct(product?.produit || "")) continue;
+    seen.add(key);
+    selected.push(product);
+    if (selected.length >= max) break;
+  }
+
+  return selected;
+}
+
+function pickMainAdviceFromConseils(conseils: any[]) {
+  if (!conseils?.length) return null;
+
+  const sorted = [...conseils].sort((a: any, b: any) => (b?.priorite || 0) - (a?.priorite || 0));
+  const best = sorted[0];
+  if (!best?.conseil) return null;
+  return best.description ? `${best.conseil} (${best.description})` : best.conseil;
+}
+
+function findProtocolForPathologies(protocols: any[], pathologies: any[]) {
+  if (!protocols?.length || !pathologies?.length) return null;
+
+  const pathNames = pathologies
+    .map((p: any) => normalizeText(p?.nom_pathologie || ""))
+    .filter(Boolean);
+
+  if (!pathNames.length) return null;
+
+  return protocols.find((row: any) => {
+    const protocolPath = normalizeText(row?.pathologie || "");
+    if (!protocolPath) return false;
+    return pathNames.some((p) => p.includes(protocolPath) || protocolPath.includes(p));
+  }) || null;
+}
+
 async function getRecommendationsFromMoleculeIds(supabase: any, moleculeIds: string[]) {
   if (moleculeIds.length === 0) return [];
 
@@ -270,28 +338,15 @@ async function getRecommendationsFromMoleculeIds(supabase: any, moleculeIds: str
     .select("*, pathologies(nom_pathologie)")
     .in("pathologie_id", pathologieIds)
     .order("priorite", { ascending: false })
-    .limit(30);
+    .limit(40);
 
-  const uniqueProducts: any[] = [];
-  const seen = new Set<string>();
-
-  for (const p of produits || []) {
-    const key = (p.produit || "").trim().toLowerCase();
-    if (!key || seen.has(key)) continue;
-    seen.add(key);
-
-    uniqueProducts.push({
-      produit: p.produit,
-      categorie: p.categorie || "Complément",
-      description: p.description || "",
-      priorite: p.priorite || 50,
-      pathologie: p.pathologies?.nom_pathologie || "",
-    });
-
-    if (uniqueProducts.length >= 3) break;
-  }
-
-  return uniqueProducts;
+  return pickDistinctProducts((produits || []).map((p: any) => ({
+    produit: p.produit,
+    categorie: p.categorie || "Complément",
+    description: p.description || "",
+    priorite: p.priorite || 50,
+    pathologie: p.pathologies?.nom_pathologie || "",
+  })));
 }
 
 async function getAtcFallbackRecommendations(supabase: any, atcCode: string) {
@@ -310,11 +365,6 @@ async function getAtcFallbackRecommendations(supabase: any, atcCode: string) {
 async function getClassFallbackRecommendations(supabase: any, therapeuticClass: string) {
   if (!therapeuticClass) return [];
 
-  const normalize = (value: string) => value
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
-
   let { data: exactClassMolecules } = await supabase
     .from("molecules")
     .select("id")
@@ -331,7 +381,7 @@ async function getClassFallbackRecommendations(supabase: any, therapeuticClass: 
   }
 
   if (!exactClassMolecules?.length) {
-    const classKeywords = normalize(therapeuticClass)
+    const classKeywords = normalizeText(therapeuticClass)
       .split(/[^a-z0-9]+/)
       .filter((word) => word.length >= 5)
       .slice(0, 3);
@@ -626,10 +676,16 @@ serve(async (req) => {
       }
     }
 
-    // Step 4: Build direct recommendations per medication (max 3 per med)
+    // Step 4: Build direct recommendations per medication (1 conseil + 2 produits max)
     const allContexts: string[] = [];
     let hasStructuredData = clinicalResults.length > 0;
     const medRecommendations: Map<number, any[]> = new Map();
+    const medMainAdvice: Map<number, string> = new Map();
+
+    const { data: pathologyProtocols } = await supabase
+      .from("pathology_protocol")
+      .select("pathologie, conseil, produit_1, produit_2, priority")
+      .order("priority", { ascending: false });
 
     // Preload ATC/class fallback recommendations from clinical DB for medications with no direct mapping
     const atcFallbackMap = new Map<string, any[]>();
@@ -658,6 +714,7 @@ serve(async (req) => {
     for (let i = 0; i < enrichedMeds.length; i++) {
       const med = enrichedMeds[i];
       const recs: any[] = [];
+      let advice: string | null = null;
 
       if (med.clinical_kb) {
         hasStructuredData = true;
@@ -665,21 +722,48 @@ serve(async (req) => {
         for (const pName of pathNames) {
           allContexts.push(`Traitement souvent associé à : ${pName}`);
         }
+
         const clinical = clinicalResults.find((c: any) => c.index === i);
-        if (clinical?.produits) {
-          const seen = new Set<string>();
-          for (const p of clinical.produits) {
-            if (seen.has(p.produit)) continue;
-            seen.add(p.produit);
-            recs.push({
-              produit: p.produit,
-              categorie: p.categorie || "Complément",
-              description: p.description || "",
-              priorite: p.priorite || 50,
-              pathologie: p.pathologies?.nom_pathologie || "",
+
+        // Priority rule: protocol table (pathology_protocol)
+        const matchedProtocol = findProtocolForPathologies(pathologyProtocols || [], med.pathologies || []);
+        if (matchedProtocol) {
+          advice = matchedProtocol.conseil;
+
+          const protocolProducts = [matchedProtocol.produit_1, matchedProtocol.produit_2]
+            .filter(Boolean)
+            .map((productName: string, idx: number) => {
+              const fromClinical = (clinical?.produits || []).find((p: any) =>
+                normalizeText(p?.produit || "") === normalizeText(productName)
+              );
+
+              return {
+                produit: productName,
+                categorie: fromClinical?.categorie || "Complément",
+                description: fromClinical?.description || "Produit pertinent et facile à conseiller au comptoir",
+                priorite: fromClinical?.priorite || (matchedProtocol.priority || 80) - idx,
+                pathologie: fromClinical?.pathologies?.nom_pathologie || matchedProtocol.pathologie,
+              };
             });
-            if (recs.length >= 3) break;
-          }
+
+          recs.push(...pickDistinctProducts(protocolProducts, MAX_RECOMMENDATIONS_PER_MED));
+        }
+
+        // Fallback on existing clinical product rows
+        if (recs.length === 0 && clinical?.produits) {
+          const mappedClinicalProducts = (clinical.produits || []).map((p: any) => ({
+            produit: p.produit,
+            categorie: p.categorie || "Complément",
+            description: p.description || "",
+            priorite: p.priorite || 50,
+            pathologie: p.pathologies?.nom_pathologie || "",
+          }));
+
+          recs.push(...pickDistinctProducts(mappedClinicalProducts, MAX_RECOMMENDATIONS_PER_MED));
+        }
+
+        if (!advice && clinical?.conseils?.length) {
+          advice = pickMainAdviceFromConseils(clinical.conseils);
         }
       } else if (med.matched && !med.clinical_kb && !med.ai_enriched) {
         const therapeuticData = await getTherapeuticData(supabase, med);
@@ -689,34 +773,29 @@ serve(async (req) => {
             allContexts.push(ctx.description);
           }
         }
-      } else if (med.ai_enriched) {
-        if (med.ai_contexts) {
-          for (const ctx of med.ai_contexts) allContexts.push(ctx.description);
-        }
+      } else if (med.ai_enriched && med.ai_contexts) {
+        for (const ctx of med.ai_contexts) allContexts.push(ctx.description);
       }
 
-      // Fallback 1: find from pathologies loaded in current prescription scope
+      // Fallback 1: products from pathologies already loaded in current prescription scope
       if (recs.length === 0 && med.pathologies?.length > 0) {
         const pathIds = med.pathologies.map((p: any) => p.id);
-        const seen = new Set<string>();
-        for (const p of allDbProduits) {
-          if (pathIds.includes(p.pathologie_id) && !seen.has(p.produit)) {
-            seen.add(p.produit);
-            recs.push({
-              produit: p.produit,
-              categorie: p.categorie || "Complément",
-              description: p.description || "",
-              priorite: p.priorite || 50,
-              pathologie: p.pathologies?.nom_pathologie || "",
-            });
-            if (recs.length >= 3) break;
-          }
-        }
+        const pathProducts = allDbProduits
+          .filter((p: any) => pathIds.includes(p.pathologie_id))
+          .map((p: any) => ({
+            produit: p.produit,
+            categorie: p.categorie || "Complément",
+            description: p.description || "",
+            priorite: p.priorite || 50,
+            pathologie: p.pathologies?.nom_pathologie || "",
+          }));
+
+        recs.push(...pickDistinctProducts(pathProducts, MAX_RECOMMENDATIONS_PER_MED));
       }
 
-      // Fallback 2: use ATC-linked products from clinical DB
+      // Fallback 2: ATC linked products
       if (recs.length === 0 && med.code_atc && atcFallbackMap.has(med.code_atc)) {
-        const atcRecs = (atcFallbackMap.get(med.code_atc) || []).slice(0, 3);
+        const atcRecs = pickDistinctProducts(atcFallbackMap.get(med.code_atc) || [], MAX_RECOMMENDATIONS_PER_MED);
         recs.push(...atcRecs);
         if (atcRecs.length > 0) {
           hasStructuredData = true;
@@ -726,9 +805,9 @@ serve(async (req) => {
         }
       }
 
-      // Fallback 3: use therapeutic-class-linked products from clinical DB
+      // Fallback 3: class linked products
       if (recs.length === 0 && med.classe_therapeutique && classFallbackMap.has(med.classe_therapeutique)) {
-        const classRecs = (classFallbackMap.get(med.classe_therapeutique) || []).slice(0, 3);
+        const classRecs = pickDistinctProducts(classFallbackMap.get(med.classe_therapeutique) || [], MAX_RECOMMENDATIONS_PER_MED);
         recs.push(...classRecs);
         if (classRecs.length > 0) {
           hasStructuredData = true;
@@ -738,7 +817,16 @@ serve(async (req) => {
         }
       }
 
-      medRecommendations.set(i, recs.slice(0, 3));
+      if (!advice) {
+        const pathIds = med.pathologies?.map((p: any) => p.id) || [];
+        const scopedConseils = allDbConseils
+          .filter((c: any) => !pathIds.length || pathIds.includes(c.pathologie_id))
+          .sort((a: any, b: any) => (b.priorite || 0) - (a.priorite || 0));
+        advice = pickMainAdviceFromConseils(scopedConseils);
+      }
+
+      if (advice) medMainAdvice.set(i, advice);
+      medRecommendations.set(i, recs.slice(0, MAX_RECOMMENDATIONS_PER_MED));
     }
 
     // Step 5: Check interactions
@@ -771,32 +859,62 @@ serve(async (req) => {
       }
     }
 
-    // Step 6: Build conseil from DB
-    let conseilText = "N'hésitez pas à me poser des questions sur votre traitement, je suis là pour vous accompagner.";
-    if (allDbConseils.length > 0) {
+    // Step 6: Build global conseil (from per-med advice first)
+    const uniqueMedAdvice = [...new Set([...medMainAdvice.values()].filter(Boolean))];
+    const defaultFollowup = "N'hésitez pas à me poser des questions sur votre traitement, je suis là pour vous accompagner.";
+
+    let conseilText = defaultFollowup;
+    if (uniqueMedAdvice.length > 0) {
+      const formattedAdvice = uniqueMedAdvice
+        .slice(0, 2)
+        .map((advice) => normalizeAdviceSentence(advice))
+        .filter(Boolean);
+      conseilText = `${formattedAdvice.join(". ")}. ${defaultFollowup}`;
+    } else if (allDbConseils.length > 0) {
       const topConseils = allDbConseils
         .filter((c: any, idx: number, arr: any[]) => arr.findIndex((x: any) => x.conseil === c.conseil) === idx)
         .sort((a: any, b: any) => (b.priorite || 0) - (a.priorite || 0))
         .slice(0, 2);
-      conseilText = topConseils.map((c: any) => c.conseil + (c.description ? ` (${c.description})` : "")).join(". ") + ". " + conseilText;
+      const formattedAdvice = topConseils
+        .map((c: any) => normalizeAdviceSentence(c.conseil + (c.description ? ` (${c.description})` : "")))
+        .filter(Boolean);
+      conseilText = `${formattedAdvice.join(". ")}. ${defaultFollowup}`;
     }
 
     // Step 7: Build result
+    const medicamentsResult = enrichedMeds.map((m: any, i: number) => ({
+      nom: m.nom_commercial,
+      classe: m.classe_therapeutique || m.therapeutic_classes?.nom || "Non classifié",
+      molecule: m.molecule_active || null,
+      code_atc: m.code_atc || null,
+      conseil_associe: medMainAdvice.get(i) || null,
+      recommendations: medRecommendations.get(i) || [],
+    }));
+
     const totalRecs = [...medRecommendations.values()].reduce((sum, r) => sum + r.length, 0);
+
+    // Legacy compatibility for old clients still expecting suggestions/questions keys
+    const legacySuggestions = medicamentsResult
+      .flatMap((med: any) => med.recommendations || [])
+      .slice(0, 8)
+      .map((rec: any) => ({
+        categorie: rec.categorie || "Complément",
+        raison: rec.pathologie ? `Contexte : ${rec.pathologie}` : "Produit complémentaire pertinent",
+        icon: "💊",
+        priorite: rec.priorite >= 80 ? "haute" : "moyenne",
+        produits_lgo: [{ nom: rec.produit, cip: "", prix: 0, stock: 999, categorie: rec.categorie || "Complément" }],
+      }));
+
     const result: any = {
-      medicaments: enrichedMeds.map((m: any, i: number) => ({
-        nom: m.nom_commercial,
-        classe: m.classe_therapeutique || m.therapeutic_classes?.nom || "Non classifié",
-        molecule: m.molecule_active || null,
-        code_atc: m.code_atc || null,
-        recommendations: medRecommendations.get(i) || [],
-      })),
+      medicaments: medicamentsResult,
       interactions,
       contextes: [...new Set(allContexts)].slice(0, 5),
       conseil: conseilText,
       structuredData: hasStructuredData,
       sources,
       patient_name: extractedPatientName,
+      suggestions: legacySuggestions,
+      questions: [],
     };
 
     // Step 8: Save to analysis_history
