@@ -308,22 +308,27 @@ function pickMainAdviceFromConseils(conseils: any[]) {
 function findProtocolForPathologies(protocols: any[], pathologies: any[]) {
   if (!protocols?.length || !pathologies?.length) return null;
 
-  const pathNames = pathologies
-    .map((p: any) => normalizeText(p?.nom_pathologie || ""))
-    .filter(Boolean);
+  const pathIds = pathologies.map((p: any) => p?.id).filter(Boolean);
+  if (!pathIds.length) return null;
 
-  if (!pathNames.length) return null;
-
-  // Find ALL matching protocols, then pick highest priority
+  // Match by pathologie_id (new protocole_pathologie table)
   const matches = protocols.filter((row: any) => {
-    const protocolPath = normalizeText(row?.pathologie || "");
-    if (!protocolPath) return false;
-    return pathNames.some((p) => p.includes(protocolPath) || protocolPath.includes(p));
+    return pathIds.includes(row?.pathologie_id);
   });
 
-  if (matches.length === 0) return null;
-  // Already sorted by priority desc from the query, but double-check
-  return matches.sort((a: any, b: any) => (b?.priority || 0) - (a?.priority || 0))[0];
+  if (matches.length === 0) {
+    // Fallback: match by name (legacy pathology_protocol table)
+    const pathNames = pathologies.map((p: any) => normalizeText(p?.nom_pathologie || "")).filter(Boolean);
+    const nameMatches = protocols.filter((row: any) => {
+      const protocolPath = normalizeText(row?.pathologie || row?.pathologie_nom || "");
+      if (!protocolPath) return false;
+      return pathNames.some((p) => p.includes(protocolPath) || protocolPath.includes(p));
+    });
+    if (nameMatches.length === 0) return null;
+    return nameMatches.sort((a: any, b: any) => (b?.priorite_produit_1 || b?.priority || 0) - (a?.priorite_produit_1 || a?.priority || 0))[0];
+  }
+
+  return matches.sort((a: any, b: any) => (b?.priorite_produit_1 || 0) - (a?.priorite_produit_1 || 0))[0];
 }
 
 async function getRecommendationsFromMoleculeIds(supabase: any, moleculeIds: string[]) {
