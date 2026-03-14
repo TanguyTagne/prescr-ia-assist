@@ -277,6 +277,10 @@ function isLowFrictionProduct(productName: string) {
   return normalized && !LOW_FRICTION_BLOCKLIST.some((blocked) => normalized.includes(normalizeText(blocked)));
 }
 
+function normalizeAdviceSentence(text: string) {
+  return (text || "").trim().replace(/[.\s]+$/g, "");
+}
+
 function pickDistinctProducts(products: any[], max = MAX_RECOMMENDATIONS_PER_MED) {
   const selected: any[] = [];
   const seen = new Set<string>();
