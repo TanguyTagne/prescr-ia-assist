@@ -142,9 +142,6 @@ const AnalysisResults = ({ result, onReset }: AnalysisResultsProps) => {
                           <Badge className="bg-primary/20 text-primary text-[8px] px-1 py-0">prioritaire</Badge>
                         )}
                       </div>
-                      <span className="text-[9px] text-muted-foreground block leading-tight">
-                        {rec.categorie}{rec.pathologie ? ` · ${rec.pathologie}` : ""}
-                      </span>
                     </div>
                     <button
                       onClick={() => handleOrder(med.nom, rec.produit)}
