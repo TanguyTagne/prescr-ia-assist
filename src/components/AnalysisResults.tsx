@@ -83,17 +83,6 @@ const AnalysisResults = ({ result, onReset }: AnalysisResultsProps) => {
         </div>
       )}
 
-      {/* Sources de données */}
-      {result.sources && result.sources.length > 0 && (
-        <div className="flex items-center gap-1 flex-wrap">
-          <Database className="h-2.5 w-2.5 text-muted-foreground shrink-0" />
-          {result.sources.map((src, i) => (
-            <Badge key={i} variant="outline" className="text-[8px] py-0 px-1 text-muted-foreground">
-              {src}
-            </Badge>
-          ))}
-        </div>
-      )}
 
       {/* Interactions */}
       {result.interactions.length > 0 && (
