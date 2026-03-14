@@ -694,6 +694,18 @@ serve(async (req) => {
         }
       }
 
+      // Fallback 3: use therapeutic-class-linked products from clinical DB
+      if (recs.length === 0 && med.classe_therapeutique && classFallbackMap.has(med.classe_therapeutique)) {
+        const classRecs = (classFallbackMap.get(med.classe_therapeutique) || []).slice(0, 3);
+        recs.push(...classRecs);
+        if (classRecs.length > 0) {
+          hasStructuredData = true;
+          for (const rec of classRecs) {
+            if (rec.pathologie) allContexts.push(`Traitement souvent associé à : ${rec.pathologie}`);
+          }
+        }
+      }
+
       medRecommendations.set(i, recs.slice(0, 3));
     }
 
