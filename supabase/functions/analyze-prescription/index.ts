@@ -251,6 +251,60 @@ async function clinicalLookup(supabase: any, medName: string, moleculeName?: str
   };
 }
 
+// ====== CLINICAL FALLBACK HELPERS ======
+
+async function getAtcFallbackRecommendations(supabase: any, atcCode: string) {
+  if (!atcCode) return [];
+
+  const { data: molecules } = await supabase
+    .from("molecules")
+    .select("id")
+    .eq("atc_code", atcCode)
+    .limit(50);
+
+  if (!molecules?.length) return [];
+
+  const moleculeIds = molecules.map((m: any) => m.id).filter(Boolean);
+  if (moleculeIds.length === 0) return [];
+
+  const { data: moleculePathologies } = await supabase
+    .from("molecule_pathologie")
+    .select("pathologie_id")
+    .in("molecule_id", moleculeIds)
+    .limit(200);
+
+  const pathologieIds = [...new Set((moleculePathologies || []).map((mp: any) => mp.pathologie_id).filter(Boolean))];
+  if (pathologieIds.length === 0) return [];
+
+  const { data: produits } = await supabase
+    .from("produits_complementaires")
+    .select("*, pathologies(nom_pathologie)")
+    .in("pathologie_id", pathologieIds)
+    .order("priorite", { ascending: false })
+    .limit(30);
+
+  const uniqueProducts: any[] = [];
+  const seen = new Set<string>();
+
+  for (const p of produits || []) {
+    const key = (p.produit || "").trim().toLowerCase();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+
+    uniqueProducts.push({
+      produit: p.produit,
+      categorie: p.categorie || "Complément",
+      description: p.description || "",
+      priorite: p.priorite || 50,
+      pathologie: p.pathologies?.nom_pathologie || "",
+    });
+
+    if (uniqueProducts.length >= 3) break;
+  }
+
+  return uniqueProducts;
+}
+
 // ====== OLD DB HELPERS (legacy medications table fallback) ======
 
 async function findMedicationsInDB(supabase: any, names: string[]) {
