@@ -3,28 +3,31 @@ import { BrowserRouter } from "react-router-dom";
 import App from "./App.tsx";
 import "./index.css";
 
-// Service worker only in production to avoid stale dev chunk mismatches
-  // Force SW update on every load to bust stale caches
-  if ("serviceWorker" in navigator) {
+const SW_VERSION = "v5";
+const isDesktopRuntime =
+  !!(window as any).electronAPI?.isDesktop ||
+  new URLSearchParams(window.location.search).get("desktop") === "1";
+
+if ("serviceWorker" in navigator) {
   window.addEventListener("load", async () => {
-    if (import.meta.env.PROD) {
-      navigator.serviceWorker
-        .register("/sw.js")
-        .then((registration) => registration.update())
-        .catch((err) => {
-          console.log("SW registration failed:", err);
-        });
+    // Disable SW in desktop + dev/preview to prevent stale bundles
+    if (!import.meta.env.PROD || isDesktopRuntime) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(registrations.map((r) => r.unregister()));
+
+      if ("caches" in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((key) => caches.delete(key)));
+      }
       return;
     }
 
-    // Dev/preview safety: clear old SW + caches that can mix Vite chunks
-    const registrations = await navigator.serviceWorker.getRegistrations();
-    await Promise.all(registrations.map((r) => r.unregister()));
-
-    if ("caches" in window) {
-      const keys = await caches.keys();
-      await Promise.all(keys.map((key) => caches.delete(key)));
-    }
+    navigator.serviceWorker
+      .register(`/sw.js?${SW_VERSION}`)
+      .then((registration) => registration.update())
+      .catch((err) => {
+        console.log("SW registration failed:", err);
+      });
   });
 }
 
