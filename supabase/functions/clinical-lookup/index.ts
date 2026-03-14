@@ -19,7 +19,15 @@ serve(async (req) => {
 
     const { query, cip_code } = await req.json();
 
-    // Step 1: Find medicament by CIP or name
+    // Helper: extract core drug name (strip dosage, forms)
+    function extractCore(name: string): string {
+      return (name || "").trim()
+        .replace(/\d+\s*(mg|g|ml|ui|µg|mcg|%)/gi, "")
+        .replace(/\b(comprimé|comprimés|gélule|gélules|sachet|sachets|sirop|suspension|solution|crème|gel|patch|spray|gouttes|pommade|injectable|lyoc|effervescent|orodispersible|lp|fort|adulte|enfant|nourrisson|buvable)\b/gi, "")
+        .replace(/\s+/g, " ").trim();
+    }
+
+    // Step 1: Find medicament by CIP or name (with fuzzy matching)
     let medicament = null;
     if (cip_code) {
       const { data } = await supabase
@@ -30,13 +38,53 @@ serve(async (req) => {
       medicament = data;
     }
     if (!medicament && query) {
-      const { data } = await supabase
+      // Try exact match first
+      const { data: exact } = await supabase
         .from("medicaments")
         .select("*, molecules(*)")
-        .ilike("nom_commercial", `%${query}%`)
+        .ilike("nom_commercial", query.trim())
         .limit(1)
         .maybeSingle();
-      medicament = data;
+      medicament = exact;
+
+      // Try partial match
+      if (!medicament) {
+        const { data: partial } = await supabase
+          .from("medicaments")
+          .select("*, molecules(*)")
+          .ilike("nom_commercial", `%${query.trim()}%`)
+          .limit(1)
+          .maybeSingle();
+        medicament = partial;
+      }
+
+      // Try core name (strip dosage/form)
+      if (!medicament) {
+        const core = extractCore(query);
+        if (core && core !== query.trim()) {
+          const { data: coreMatch } = await supabase
+            .from("medicaments")
+            .select("*, molecules(*)")
+            .ilike("nom_commercial", `%${core}%`)
+            .limit(1)
+            .maybeSingle();
+          medicament = coreMatch;
+        }
+      }
+
+      // Try first word only (brand name)
+      if (!medicament) {
+        const firstWord = extractCore(query).split(/\s+/)[0];
+        if (firstWord && firstWord.length >= 3) {
+          const { data: brandMatch } = await supabase
+            .from("medicaments")
+            .select("*, molecules(*)")
+            .ilike("nom_commercial", `%${firstWord}%`)
+            .limit(1)
+            .maybeSingle();
+          medicament = brandMatch;
+        }
+      }
     }
 
     if (!medicament) {
