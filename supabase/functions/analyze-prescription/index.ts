@@ -253,7 +253,7 @@ async function clinicalLookup(supabase: any, medName: string, moleculeName?: str
 
 // ====== CLINICAL FALLBACK HELPERS ======
 
-const MAX_RECOMMENDATIONS_PER_MED = 2;
+const MAX_RECOMMENDATIONS_PER_MED = 3;
 const LOW_FRICTION_BLOCKLIST = [
   "inhalateur",
   "nébuliseur",
@@ -308,22 +308,27 @@ function pickMainAdviceFromConseils(conseils: any[]) {
 function findProtocolForPathologies(protocols: any[], pathologies: any[]) {
   if (!protocols?.length || !pathologies?.length) return null;
 
-  const pathNames = pathologies
-    .map((p: any) => normalizeText(p?.nom_pathologie || ""))
-    .filter(Boolean);
+  const pathIds = pathologies.map((p: any) => p?.id).filter(Boolean);
+  if (!pathIds.length) return null;
 
-  if (!pathNames.length) return null;
-
-  // Find ALL matching protocols, then pick highest priority
+  // Match by pathologie_id (new protocole_pathologie table)
   const matches = protocols.filter((row: any) => {
-    const protocolPath = normalizeText(row?.pathologie || "");
-    if (!protocolPath) return false;
-    return pathNames.some((p) => p.includes(protocolPath) || protocolPath.includes(p));
+    return pathIds.includes(row?.pathologie_id);
   });
 
-  if (matches.length === 0) return null;
-  // Already sorted by priority desc from the query, but double-check
-  return matches.sort((a: any, b: any) => (b?.priority || 0) - (a?.priority || 0))[0];
+  if (matches.length === 0) {
+    // Fallback: match by name (legacy pathology_protocol table)
+    const pathNames = pathologies.map((p: any) => normalizeText(p?.nom_pathologie || "")).filter(Boolean);
+    const nameMatches = protocols.filter((row: any) => {
+      const protocolPath = normalizeText(row?.pathologie || row?.pathologie_nom || "");
+      if (!protocolPath) return false;
+      return pathNames.some((p) => p.includes(protocolPath) || protocolPath.includes(p));
+    });
+    if (nameMatches.length === 0) return null;
+    return nameMatches.sort((a: any, b: any) => (b?.priorite_produit_1 || b?.priority || 0) - (a?.priorite_produit_1 || a?.priority || 0))[0];
+  }
+
+  return matches.sort((a: any, b: any) => (b?.priorite_produit_1 || 0) - (a?.priorite_produit_1 || 0))[0];
 }
 
 async function getRecommendationsFromMoleculeIds(supabase: any, moleculeIds: string[]) {
@@ -687,10 +692,38 @@ serve(async (req) => {
     const medRecommendations: Map<number, any[]> = new Map();
     const medMainAdvice: Map<number, string> = new Map();
 
-    const { data: pathologyProtocols } = await supabase
+    // Load new protocole_pathologie with joined data
+    const { data: protocoles } = await supabase
+      .from("protocole_pathologie")
+      .select(`
+        id, pathologie_id, actif,
+        conseil_1:conseils_associes!protocole_pathologie_conseil_1_id_fkey(conseil, description),
+        conseil_2:conseils_associes!protocole_pathologie_conseil_2_id_fkey(conseil, description),
+        produit_1:produits_complementaires!protocole_pathologie_produit_complementaire_1_id_fkey(produit, categorie, description, priorite),
+        produit_2:produits_complementaires!protocole_pathologie_produit_complementaire_2_id_fkey(produit, categorie, description, priorite),
+        produit_3:produits_complementaires!protocole_pathologie_produit_complementaire_3_id_fkey(produit, categorie, description, priorite),
+        justification_1, justification_2, justification_3,
+        priorite_produit_1, priorite_produit_2, priorite_produit_3,
+        pathologies(nom_pathologie)
+      `)
+      .eq("actif", true);
+
+    // Also load legacy pathology_protocol as fallback
+    const { data: legacyProtocols } = await supabase
       .from("pathology_protocol")
       .select("pathologie, conseil, produit_1, produit_2, priority")
       .order("priority", { ascending: false });
+
+    const allProtocols = [
+      ...(protocoles || []).map((p: any) => ({
+        ...p,
+        pathologie_nom: p.pathologies?.nom_pathologie,
+      })),
+      ...(legacyProtocols || []).map((p: any) => ({
+        ...p,
+        pathologie_nom: p.pathologie,
+      })),
+    ];
 
     // Preload ATC/class fallback recommendations from clinical DB for medications with no direct mapping
     const atcFallbackMap = new Map<string, any[]>();
@@ -730,28 +763,52 @@ serve(async (req) => {
 
         const clinical = clinicalResults.find((c: any) => c.index === i);
 
-        // Priority rule: protocol table (pathology_protocol)
-        const matchedProtocol = findProtocolForPathologies(pathologyProtocols || [], med.pathologies || []);
+        // Priority rule: protocole_pathologie (new) or pathology_protocol (legacy)
+        const matchedProtocol = findProtocolForPathologies(allProtocols, med.pathologies || []);
         if (matchedProtocol) {
-          advice = matchedProtocol.conseil;
+          // New protocole_pathologie format (has conseil_1 object)
+          if (matchedProtocol.conseil_1) {
+            const c1 = matchedProtocol.conseil_1;
+            const c2 = matchedProtocol.conseil_2;
+            advice = c1.conseil + (c1.description ? ` (${c1.description})` : "");
+            if (c2?.conseil) {
+              advice += `. ${c2.conseil}${c2.description ? ` (${c2.description})` : ""}`;
+            }
 
-          const protocolProducts = [matchedProtocol.produit_1, matchedProtocol.produit_2]
-            .filter(Boolean)
-            .map((productName: string, idx: number) => {
-              const fromClinical = (clinical?.produits || []).find((p: any) =>
-                normalizeText(p?.produit || "") === normalizeText(productName)
-              );
+            const protocolProducts = [
+              matchedProtocol.produit_1 ? { ...matchedProtocol.produit_1, just: matchedProtocol.justification_1, prio: matchedProtocol.priorite_produit_1 } : null,
+              matchedProtocol.produit_2 ? { ...matchedProtocol.produit_2, just: matchedProtocol.justification_2, prio: matchedProtocol.priorite_produit_2 } : null,
+              matchedProtocol.produit_3 ? { ...matchedProtocol.produit_3, just: matchedProtocol.justification_3, prio: matchedProtocol.priorite_produit_3 } : null,
+            ]
+              .filter(Boolean)
+              .map((p: any) => ({
+                produit: p.produit,
+                categorie: p.categorie || "Complément",
+                description: p.just || p.description || "",
+                priorite: p.prio || p.priorite || 50,
+                pathologie: matchedProtocol.pathologie_nom || "",
+              }));
 
-              return {
-                produit: productName,
-                categorie: fromClinical?.categorie || "Complément",
-                description: fromClinical?.description || "Produit pertinent et facile à conseiller au comptoir",
-                priorite: fromClinical?.priorite || (matchedProtocol.priority || 80) - idx,
-                pathologie: fromClinical?.pathologies?.nom_pathologie || matchedProtocol.pathologie,
-              };
-            });
-
-          recs.push(...pickDistinctProducts(protocolProducts, MAX_RECOMMENDATIONS_PER_MED));
+            recs.push(...pickDistinctProducts(protocolProducts, MAX_RECOMMENDATIONS_PER_MED));
+          } else {
+            // Legacy pathology_protocol format
+            advice = matchedProtocol.conseil;
+            const protocolProducts = [matchedProtocol.produit_1, matchedProtocol.produit_2]
+              .filter(Boolean)
+              .map((productName: string, idx: number) => {
+                const fromClinical = (clinical?.produits || []).find((p: any) =>
+                  normalizeText(p?.produit || "") === normalizeText(productName)
+                );
+                return {
+                  produit: productName,
+                  categorie: fromClinical?.categorie || "Complément",
+                  description: fromClinical?.description || "Produit pertinent",
+                  priorite: fromClinical?.priorite || (matchedProtocol.priority || 80) - idx,
+                  pathologie: fromClinical?.pathologies?.nom_pathologie || matchedProtocol.pathologie,
+                };
+              });
+            recs.push(...pickDistinctProducts(protocolProducts, MAX_RECOMMENDATIONS_PER_MED));
+          }
         }
 
         // Fallback on existing clinical product rows
