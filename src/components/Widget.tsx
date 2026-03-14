@@ -110,7 +110,7 @@ const WidgetApp = () => {
   };
 
   return (
-    <div className="p-4 space-y-3">
+    <div className="p-4 space-y-3 py-0">
       
 
 
@@ -179,7 +179,7 @@ const Widget = ({ forceOpen = false }: {forceOpen?: boolean;}) => {
       </button>
 
       {open &&
-      <div className="fixed bottom-[4.5rem] right-4 z-[9998] w-[320px] max-h-[480px] overflow-y-auto rounded-xl border border-border bg-background shadow-2xl animate-in slide-in-from-bottom-2 fade-in duration-200">
+      <div className="fixed bottom-[4.5rem] right-4 z-[9998] w-[320px] max-h-[480px] overflow-y-auto rounded-xl border border-border bg-background shadow-2xl animate-in slide-in-from-bottom-2 fade-in duration-200 py-0">
           <div className="pharmacy-gradient px-3 py-1.5 rounded-t-xl flex items-center gap-1.5">
             <Pill className="h-3 w-3 text-primary-foreground" />
             <span className="text-[11px] font-bold text-primary-foreground tracking-tight">PrescrIA</span>
