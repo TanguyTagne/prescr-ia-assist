@@ -15,6 +15,17 @@ interface AnalysisResultsProps {
 
 const AnalysisResults = ({ result, onReset }: AnalysisResultsProps) => {
   const [orderedItems, setOrderedItems] = useState<Set<string>>(new Set());
+  const [expandedConseils, setExpandedConseils] = useState<Set<number>>(new Set());
+  const [conseilGlobalOpen, setConseilGlobalOpen] = useState(false);
+
+  const toggleConseil = (index: number) => {
+    setExpandedConseils(prev => {
+      const next = new Set(prev);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return next;
+    });
+  };
 
   if (result.medicaments.length === 0) {
     return (
