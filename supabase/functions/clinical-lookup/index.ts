@@ -151,13 +151,14 @@ serve(async (req) => {
 
     const pathologieIds = [...pathologieIdSet];
 
-    // Step 4: Get protocoles for all pathologies (new table)
+    // Step 4: Get protocoles + ranked products for all pathologies
     let protocoles: any[] = [];
     let conseils: any[] = [];
     let produits: any[] = [];
+    let rankedProduits: any[] = [];
 
     if (pathologieIds.length > 0) {
-      const [protocolesRes, conseilsRes, produitsRes] = await Promise.all([
+      const [protocolesRes, conseilsRes, produitsRes, rankingRes] = await Promise.all([
         supabase
           .from("protocole_pathologie")
           .select(`
@@ -180,10 +181,16 @@ serve(async (req) => {
           .select("*, pathologies(nom_pathologie)")
           .in("pathologie_id", pathologieIds)
           .order("priorite", { ascending: false }),
+        supabase
+          .from("produit_complementaire_ranking")
+          .select("*, produits_complementaires(produit, categorie, description, type_produit), pathologies(nom_pathologie)")
+          .in("pathologie_id", pathologieIds)
+          .order("score_final", { ascending: false }),
       ]);
       protocoles = protocolesRes.data || [];
       conseils = conseilsRes.data || [];
       produits = produitsRes.data || [];
+      rankedProduits = rankingRes.data || [];
     }
 
     // Step 5: Build structured response
@@ -242,6 +249,21 @@ serve(async (req) => {
         priorite: p.priorite,
         type_produit: p.type_produit,
         pathologie: p.pathologies?.nom_pathologie,
+      })),
+      ranked_produits: rankedProduits.map((r: any) => ({
+        produit: r.produits_complementaires?.produit,
+        categorie: r.produits_complementaires?.categorie,
+        description: r.produits_complementaires?.description,
+        type_produit: r.produits_complementaires?.type_produit,
+        pathologie: r.pathologies?.nom_pathologie,
+        score_final: r.score_final,
+        scores: {
+          clinique: r.score_clinique,
+          pertinence: r.score_pertinence_pathologie,
+          cross_sell: r.score_cross_sell,
+          saisonnalite: r.score_saisonnalite,
+          popularite: r.score_popularite,
+        },
       })),
     };
 
