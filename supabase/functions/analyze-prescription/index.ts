@@ -251,6 +251,116 @@ async function clinicalLookup(supabase: any, medName: string, moleculeName?: str
   };
 }
 
+// ====== CLINICAL FALLBACK HELPERS ======
+
+async function getRecommendationsFromMoleculeIds(supabase: any, moleculeIds: string[]) {
+  if (moleculeIds.length === 0) return [];
+
+  const { data: moleculePathologies } = await supabase
+    .from("molecule_pathologie")
+    .select("pathologie_id")
+    .in("molecule_id", moleculeIds)
+    .limit(200);
+
+  const pathologieIds = [...new Set((moleculePathologies || []).map((mp: any) => mp.pathologie_id).filter(Boolean))];
+  if (pathologieIds.length === 0) return [];
+
+  const { data: produits } = await supabase
+    .from("produits_complementaires")
+    .select("*, pathologies(nom_pathologie)")
+    .in("pathologie_id", pathologieIds)
+    .order("priorite", { ascending: false })
+    .limit(30);
+
+  const uniqueProducts: any[] = [];
+  const seen = new Set<string>();
+
+  for (const p of produits || []) {
+    const key = (p.produit || "").trim().toLowerCase();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+
+    uniqueProducts.push({
+      produit: p.produit,
+      categorie: p.categorie || "Complément",
+      description: p.description || "",
+      priorite: p.priorite || 50,
+      pathologie: p.pathologies?.nom_pathologie || "",
+    });
+
+    if (uniqueProducts.length >= 3) break;
+  }
+
+  return uniqueProducts;
+}
+
+async function getAtcFallbackRecommendations(supabase: any, atcCode: string) {
+  if (!atcCode) return [];
+
+  const { data: molecules } = await supabase
+    .from("molecules")
+    .select("id")
+    .eq("atc_code", atcCode)
+    .limit(50);
+
+  const moleculeIds = (molecules || []).map((m: any) => m.id).filter(Boolean);
+  return getRecommendationsFromMoleculeIds(supabase, moleculeIds);
+}
+
+async function getClassFallbackRecommendations(supabase: any, therapeuticClass: string) {
+  if (!therapeuticClass) return [];
+
+  const normalize = (value: string) => value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  let { data: exactClassMolecules } = await supabase
+    .from("molecules")
+    .select("id")
+    .ilike("classe_therapeutique", therapeuticClass.trim())
+    .limit(50);
+
+  if (!exactClassMolecules?.length) {
+    const { data: partialClassMolecules } = await supabase
+      .from("molecules")
+      .select("id")
+      .ilike("classe_therapeutique", `%${therapeuticClass.trim()}%`)
+      .limit(50);
+    exactClassMolecules = partialClassMolecules || [];
+  }
+
+  if (!exactClassMolecules?.length) {
+    const classKeywords = normalize(therapeuticClass)
+      .split(/[^a-z0-9]+/)
+      .filter((word) => word.length >= 5)
+      .slice(0, 3);
+
+    if (classKeywords.length > 0) {
+      const keywordMatches = await Promise.all(
+        classKeywords.map(async (keyword) => {
+          const { data } = await supabase
+            .from("molecules")
+            .select("id, classe_therapeutique")
+            .ilike("classe_therapeutique", `%${keyword}%`)
+            .limit(50);
+          return data || [];
+        })
+      );
+
+      const seen = new Set<string>();
+      exactClassMolecules = keywordMatches.flat().filter((molecule: any) => {
+        if (!molecule?.id || seen.has(molecule.id)) return false;
+        seen.add(molecule.id);
+        return true;
+      });
+    }
+  }
+
+  const moleculeIds = (exactClassMolecules || []).map((m: any) => m.id).filter(Boolean);
+  return getRecommendationsFromMoleculeIds(supabase, moleculeIds);
+}
+
 // ====== OLD DB HELPERS (legacy medications table fallback) ======
 
 async function findMedicationsInDB(supabase: any, names: string[]) {
@@ -521,6 +631,30 @@ serve(async (req) => {
     let hasStructuredData = clinicalResults.length > 0;
     const medRecommendations: Map<number, any[]> = new Map();
 
+    // Preload ATC/class fallback recommendations from clinical DB for medications with no direct mapping
+    const atcFallbackMap = new Map<string, any[]>();
+    const classFallbackMap = new Map<string, any[]>();
+
+    const atcCodes = [...new Set(enrichedMeds.map((m: any) => m.code_atc).filter(Boolean))] as string[];
+    const therapeuticClasses = [...new Set(enrichedMeds.map((m: any) => m.classe_therapeutique).filter(Boolean))] as string[];
+
+    await Promise.all([
+      ...atcCodes.map(async (code) => {
+        const recs = await getAtcFallbackRecommendations(supabase, code);
+        if (recs.length > 0) {
+          atcFallbackMap.set(code, recs);
+          if (!sources.includes("Base clinique PrescrIA")) sources.push("Base clinique PrescrIA");
+        }
+      }),
+      ...therapeuticClasses.map(async (therapeuticClass) => {
+        const recs = await getClassFallbackRecommendations(supabase, therapeuticClass);
+        if (recs.length > 0) {
+          classFallbackMap.set(therapeuticClass, recs);
+          if (!sources.includes("Base clinique PrescrIA")) sources.push("Base clinique PrescrIA");
+        }
+      }),
+    ]);
+
     for (let i = 0; i < enrichedMeds.length; i++) {
       const med = enrichedMeds[i];
       const recs: any[] = [];
@@ -561,7 +695,7 @@ serve(async (req) => {
         }
       }
 
-      // Fallback: find from allDbProduits
+      // Fallback 1: find from pathologies loaded in current prescription scope
       if (recs.length === 0 && med.pathologies?.length > 0) {
         const pathIds = med.pathologies.map((p: any) => p.id);
         const seen = new Set<string>();
@@ -580,7 +714,31 @@ serve(async (req) => {
         }
       }
 
-      medRecommendations.set(i, recs);
+      // Fallback 2: use ATC-linked products from clinical DB
+      if (recs.length === 0 && med.code_atc && atcFallbackMap.has(med.code_atc)) {
+        const atcRecs = (atcFallbackMap.get(med.code_atc) || []).slice(0, 3);
+        recs.push(...atcRecs);
+        if (atcRecs.length > 0) {
+          hasStructuredData = true;
+          for (const rec of atcRecs) {
+            if (rec.pathologie) allContexts.push(`Traitement souvent associé à : ${rec.pathologie}`);
+          }
+        }
+      }
+
+      // Fallback 3: use therapeutic-class-linked products from clinical DB
+      if (recs.length === 0 && med.classe_therapeutique && classFallbackMap.has(med.classe_therapeutique)) {
+        const classRecs = (classFallbackMap.get(med.classe_therapeutique) || []).slice(0, 3);
+        recs.push(...classRecs);
+        if (classRecs.length > 0) {
+          hasStructuredData = true;
+          for (const rec of classRecs) {
+            if (rec.pathologie) allContexts.push(`Traitement souvent associé à : ${rec.pathologie}`);
+          }
+        }
+      }
+
+      medRecommendations.set(i, recs.slice(0, 3));
     }
 
     // Step 5: Check interactions
