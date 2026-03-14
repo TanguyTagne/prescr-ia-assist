@@ -833,8 +833,17 @@ serve(async (req) => {
 
         const clinical = clinicalResults.find((c: any) => c.index === i);
 
-        // Priority rule: protocole_pathologie (new) or pathology_protocol (legacy)
-        const matchedProtocol = findProtocolForPathologies(allProtocols, med.pathologies || []);
+        // Use protocols from clinicalLookup first (per-medication, already filtered)
+        const perMedProtocols = clinical?.protocoles || [];
+        let matchedProtocol = perMedProtocols.length > 0
+          ? perMedProtocols.sort((a: any, b: any) => (b?.priorite_produit_1 || 0) - (a?.priorite_produit_1 || 0))[0]
+          : null;
+
+        // Fallback to global protocol search
+        if (!matchedProtocol) {
+          matchedProtocol = findProtocolForPathologies(allProtocols, med.pathologies || []);
+        }
+
         if (matchedProtocol) {
           // New protocole_pathologie format (has conseil_1 object)
           if (matchedProtocol.conseil_1) {
@@ -856,7 +865,7 @@ serve(async (req) => {
                 categorie: p.categorie || "Complément",
                 description: p.just || p.description || "",
                 priorite: p.prio || p.priorite || 50,
-                pathologie: matchedProtocol.pathologie_nom || "",
+                pathologie: matchedProtocol.pathologie_nom || matchedProtocol.pathologies?.nom_pathologie || "",
               }));
 
             recs.push(...pickDistinctProducts(protocolProducts, MAX_RECOMMENDATIONS_PER_MED));
