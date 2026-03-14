@@ -122,7 +122,7 @@ const AnalysisResults = ({ result, onReset }: AnalysisResultsProps) => {
             <div className="space-y-1 pt-1 border-t border-border/50">
               <div className="flex items-center gap-1 text-[9px] text-primary font-semibold uppercase tracking-wider">
                 <Sparkles className="h-2.5 w-2.5" />
-                Conseils associés
+                Produits complémentaires
               </div>
               {med.recommendations.map((rec, j) => {
                 const ordered = isOrdered(med.nom, rec.produit);
