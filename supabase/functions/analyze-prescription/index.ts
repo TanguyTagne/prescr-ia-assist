@@ -855,32 +855,55 @@ serve(async (req) => {
       }
     }
 
-    // Step 6: Build conseil from DB
-    let conseilText = "N'hésitez pas à me poser des questions sur votre traitement, je suis là pour vous accompagner.";
-    if (allDbConseils.length > 0) {
+    // Step 6: Build global conseil (from per-med advice first)
+    const uniqueMedAdvice = [...new Set([...medMainAdvice.values()].filter(Boolean))];
+    const defaultFollowup = "N'hésitez pas à me poser des questions sur votre traitement, je suis là pour vous accompagner.";
+
+    let conseilText = defaultFollowup;
+    if (uniqueMedAdvice.length > 0) {
+      conseilText = `${uniqueMedAdvice.slice(0, 2).join(". ")}. ${defaultFollowup}`;
+    } else if (allDbConseils.length > 0) {
       const topConseils = allDbConseils
         .filter((c: any, idx: number, arr: any[]) => arr.findIndex((x: any) => x.conseil === c.conseil) === idx)
         .sort((a: any, b: any) => (b.priorite || 0) - (a.priorite || 0))
         .slice(0, 2);
-      conseilText = topConseils.map((c: any) => c.conseil + (c.description ? ` (${c.description})` : "")).join(". ") + ". " + conseilText;
+      conseilText = `${topConseils.map((c: any) => c.conseil + (c.description ? ` (${c.description})` : "")).join(". ")}. ${defaultFollowup}`;
     }
 
     // Step 7: Build result
+    const medicamentsResult = enrichedMeds.map((m: any, i: number) => ({
+      nom: m.nom_commercial,
+      classe: m.classe_therapeutique || m.therapeutic_classes?.nom || "Non classifié",
+      molecule: m.molecule_active || null,
+      code_atc: m.code_atc || null,
+      conseil_associe: medMainAdvice.get(i) || null,
+      recommendations: medRecommendations.get(i) || [],
+    }));
+
     const totalRecs = [...medRecommendations.values()].reduce((sum, r) => sum + r.length, 0);
+
+    // Legacy compatibility for old clients still expecting suggestions/questions keys
+    const legacySuggestions = medicamentsResult
+      .flatMap((med: any) => med.recommendations || [])
+      .slice(0, 8)
+      .map((rec: any) => ({
+        categorie: rec.categorie || "Complément",
+        raison: rec.pathologie ? `Contexte : ${rec.pathologie}` : "Produit complémentaire pertinent",
+        icon: "💊",
+        priorite: rec.priorite >= 80 ? "haute" : "moyenne",
+        produits_lgo: [{ nom: rec.produit, cip: "", prix: 0, stock: 999, categorie: rec.categorie || "Complément" }],
+      }));
+
     const result: any = {
-      medicaments: enrichedMeds.map((m: any, i: number) => ({
-        nom: m.nom_commercial,
-        classe: m.classe_therapeutique || m.therapeutic_classes?.nom || "Non classifié",
-        molecule: m.molecule_active || null,
-        code_atc: m.code_atc || null,
-        recommendations: medRecommendations.get(i) || [],
-      })),
+      medicaments: medicamentsResult,
       interactions,
       contextes: [...new Set(allContexts)].slice(0, 5),
       conseil: conseilText,
       structuredData: hasStructuredData,
       sources,
       patient_name: extractedPatientName,
+      suggestions: legacySuggestions,
+      questions: [],
     };
 
     // Step 8: Save to analysis_history
