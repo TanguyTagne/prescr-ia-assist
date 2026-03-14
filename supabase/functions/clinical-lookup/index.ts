@@ -151,13 +151,14 @@ serve(async (req) => {
 
     const pathologieIds = [...pathologieIdSet];
 
-    // Step 4: Get protocoles for all pathologies (new table)
+    // Step 4: Get protocoles + ranked products for all pathologies
     let protocoles: any[] = [];
     let conseils: any[] = [];
     let produits: any[] = [];
+    let rankedProduits: any[] = [];
 
     if (pathologieIds.length > 0) {
-      const [protocolesRes, conseilsRes, produitsRes] = await Promise.all([
+      const [protocolesRes, conseilsRes, produitsRes, rankingRes] = await Promise.all([
         supabase
           .from("protocole_pathologie")
           .select(`
@@ -180,10 +181,16 @@ serve(async (req) => {
           .select("*, pathologies(nom_pathologie)")
           .in("pathologie_id", pathologieIds)
           .order("priorite", { ascending: false }),
+        supabase
+          .from("produit_complementaire_ranking")
+          .select("*, produits_complementaires(produit, categorie, description, type_produit), pathologies(nom_pathologie)")
+          .in("pathologie_id", pathologieIds)
+          .order("score_final", { ascending: false }),
       ]);
       protocoles = protocolesRes.data || [];
       conseils = conseilsRes.data || [];
       produits = produitsRes.data || [];
+      rankedProduits = rankingRes.data || [];
     }
 
     // Step 5: Build structured response
