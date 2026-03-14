@@ -88,9 +88,30 @@ const Admin = () => {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <h1 className="text-xl font-bold">Administration</h1>
-          <Button variant="ghost" size="icon" onClick={loadData} className="h-8 w-8 ml-auto">
-            <RefreshCw className="h-4 w-4" />
-          </Button>
+          <div className="ml-auto flex gap-1">
+            <Button variant="ghost" size="icon" onClick={async () => {
+              try {
+                toast.info("Export en cours...");
+                const { data, error } = await supabase.functions.invoke("export-clinical-data");
+                if (error) throw error;
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `prescria-clinical-data-${new Date().toISOString().slice(0,10)}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                toast.success("Base clinique exportée !");
+              } catch (e: any) {
+                toast.error("Erreur: " + e.message);
+              }
+            }} className="h-8 w-8" title="Exporter la base clinique">
+              <Download className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="icon" onClick={loadData} className="h-8 w-8">
+              <RefreshCw className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
         <div className="flex gap-2">
