@@ -1,4 +1,4 @@
-const CACHE_NAME = "prescria-v2";
+const CACHE_NAME = "prescria-v4";
 const PRECACHE_URLS = ["/", "/index.html", "/manifest.json", "/favicon.ico"];
 
 const isBackendRequest = (url) =>
