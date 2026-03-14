@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { Pill, RotateCcw, AlertTriangle, MessageSquare, Loader2, Sparkles, Database, ShoppingCart, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +15,17 @@ interface AnalysisResultsProps {
 
 const AnalysisResults = ({ result, onReset }: AnalysisResultsProps) => {
   const [orderedItems, setOrderedItems] = useState<Set<string>>(new Set());
+  const [expandedConseils, setExpandedConseils] = useState<Set<number>>(new Set());
+  const [conseilGlobalOpen, setConseilGlobalOpen] = useState(false);
+
+  const toggleConseil = (index: number) => {
+    setExpandedConseils(prev => {
+      const next = new Set(prev);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return next;
+    });
+  };
 
   if (result.medicaments.length === 0) {
     return (
@@ -112,8 +124,17 @@ const AnalysisResults = ({ result, onReset }: AnalysisResultsProps) => {
           </p>
 
           {med.conseil_associe && (
-            <p className="text-[10px] text-foreground/90 leading-relaxed">
-              <span className="font-semibold">Conseil :</span> {med.conseil_associe}
+            <button
+              onClick={() => toggleConseil(i)}
+              className="flex items-center gap-1 text-[10px] text-primary/80 hover:text-primary transition-colors w-full text-left"
+            >
+              {expandedConseils.has(i) ? <ChevronDown className="h-3 w-3 shrink-0" /> : <ChevronRight className="h-3 w-3 shrink-0" />}
+              <span className="font-semibold">Conseil</span>
+            </button>
+          )}
+          {med.conseil_associe && expandedConseils.has(i) && (
+            <p className="text-[10px] text-foreground/90 leading-relaxed pl-4 animate-fade-in">
+              {med.conseil_associe}
             </p>
           )}
 
@@ -168,15 +189,21 @@ const AnalysisResults = ({ result, onReset }: AnalysisResultsProps) => {
         </div>
       ))}
 
-      {/* Conseil */}
-      <div className="rounded-lg border border-primary/20 p-2.5 animate-fade-in">
-        <div className="flex items-center gap-1.5 mb-1">
+      {/* Conseil global - collapsible */}
+      <div className="rounded-lg border border-primary/20 animate-fade-in">
+        <button
+          onClick={() => setConseilGlobalOpen(!conseilGlobalOpen)}
+          className="flex items-center gap-1.5 w-full p-2.5 text-left hover:bg-primary/5 transition-colors rounded-lg"
+        >
+          {conseilGlobalOpen ? <ChevronDown className="h-3 w-3 text-primary" /> : <ChevronRight className="h-3 w-3 text-primary" />}
           <MessageSquare className="h-3 w-3 text-primary" />
           <span className="font-semibold text-xs">Phrase conseil</span>
-        </div>
-        <p className="text-[11px] leading-relaxed italic text-foreground">
-          "{result.conseil || "Un accompagnement adapté peut aider à améliorer le confort au quotidien."}"
-        </p>
+        </button>
+        {conseilGlobalOpen && (
+          <p className="text-[11px] leading-relaxed italic text-foreground px-2.5 pb-2.5 animate-fade-in">
+            "{result.conseil || "Un accompagnement adapté peut aider à améliorer le confort au quotidien."}"
+          </p>
+        )}
       </div>
 
       {/* Reset + disclaimer */}
