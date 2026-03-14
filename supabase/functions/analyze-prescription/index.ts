@@ -865,13 +865,20 @@ serve(async (req) => {
 
     let conseilText = defaultFollowup;
     if (uniqueMedAdvice.length > 0) {
-      conseilText = `${uniqueMedAdvice.slice(0, 2).join(". ")}. ${defaultFollowup}`;
+      const formattedAdvice = uniqueMedAdvice
+        .slice(0, 2)
+        .map((advice) => normalizeAdviceSentence(advice))
+        .filter(Boolean);
+      conseilText = `${formattedAdvice.join(". ")}. ${defaultFollowup}`;
     } else if (allDbConseils.length > 0) {
       const topConseils = allDbConseils
         .filter((c: any, idx: number, arr: any[]) => arr.findIndex((x: any) => x.conseil === c.conseil) === idx)
         .sort((a: any, b: any) => (b.priorite || 0) - (a.priorite || 0))
         .slice(0, 2);
-      conseilText = `${topConseils.map((c: any) => c.conseil + (c.description ? ` (${c.description})` : "")).join(". ")}. ${defaultFollowup}`;
+      const formattedAdvice = topConseils
+        .map((c: any) => normalizeAdviceSentence(c.conseil + (c.description ? ` (${c.description})` : "")))
+        .filter(Boolean);
+      conseilText = `${formattedAdvice.join(". ")}. ${defaultFollowup}`;
     }
 
     // Step 7: Build result
