@@ -672,10 +672,16 @@ serve(async (req) => {
       }
     }
 
-    // Step 4: Build direct recommendations per medication (max 3 per med)
+    // Step 4: Build direct recommendations per medication (1 conseil + 2 produits max)
     const allContexts: string[] = [];
     let hasStructuredData = clinicalResults.length > 0;
     const medRecommendations: Map<number, any[]> = new Map();
+    const medMainAdvice: Map<number, string> = new Map();
+
+    const { data: pathologyProtocols } = await supabase
+      .from("pathology_protocol")
+      .select("pathologie, conseil, produit_1, produit_2, priority")
+      .order("priority", { ascending: false });
 
     // Preload ATC/class fallback recommendations from clinical DB for medications with no direct mapping
     const atcFallbackMap = new Map<string, any[]>();
@@ -704,6 +710,7 @@ serve(async (req) => {
     for (let i = 0; i < enrichedMeds.length; i++) {
       const med = enrichedMeds[i];
       const recs: any[] = [];
+      let advice: string | null = null;
 
       if (med.clinical_kb) {
         hasStructuredData = true;
@@ -711,21 +718,48 @@ serve(async (req) => {
         for (const pName of pathNames) {
           allContexts.push(`Traitement souvent associé à : ${pName}`);
         }
+
         const clinical = clinicalResults.find((c: any) => c.index === i);
-        if (clinical?.produits) {
-          const seen = new Set<string>();
-          for (const p of clinical.produits) {
-            if (seen.has(p.produit)) continue;
-            seen.add(p.produit);
-            recs.push({
-              produit: p.produit,
-              categorie: p.categorie || "Complément",
-              description: p.description || "",
-              priorite: p.priorite || 50,
-              pathologie: p.pathologies?.nom_pathologie || "",
+
+        // Priority rule: protocol table (pathology_protocol)
+        const matchedProtocol = findProtocolForPathologies(pathologyProtocols || [], med.pathologies || []);
+        if (matchedProtocol) {
+          advice = matchedProtocol.conseil;
+
+          const protocolProducts = [matchedProtocol.produit_1, matchedProtocol.produit_2]
+            .filter(Boolean)
+            .map((productName: string, idx: number) => {
+              const fromClinical = (clinical?.produits || []).find((p: any) =>
+                normalizeText(p?.produit || "") === normalizeText(productName)
+              );
+
+              return {
+                produit: productName,
+                categorie: fromClinical?.categorie || "Complément",
+                description: fromClinical?.description || "Produit pertinent et facile à conseiller au comptoir",
+                priorite: fromClinical?.priorite || (matchedProtocol.priority || 80) - idx,
+                pathologie: fromClinical?.pathologies?.nom_pathologie || matchedProtocol.pathologie,
+              };
             });
-            if (recs.length >= 3) break;
-          }
+
+          recs.push(...pickDistinctProducts(protocolProducts, MAX_RECOMMENDATIONS_PER_MED));
+        }
+
+        // Fallback on existing clinical product rows
+        if (recs.length === 0 && clinical?.produits) {
+          const mappedClinicalProducts = (clinical.produits || []).map((p: any) => ({
+            produit: p.produit,
+            categorie: p.categorie || "Complément",
+            description: p.description || "",
+            priorite: p.priorite || 50,
+            pathologie: p.pathologies?.nom_pathologie || "",
+          }));
+
+          recs.push(...pickDistinctProducts(mappedClinicalProducts, MAX_RECOMMENDATIONS_PER_MED));
+        }
+
+        if (!advice && clinical?.conseils?.length) {
+          advice = pickMainAdviceFromConseils(clinical.conseils);
         }
       } else if (med.matched && !med.clinical_kb && !med.ai_enriched) {
         const therapeuticData = await getTherapeuticData(supabase, med);
@@ -735,34 +769,29 @@ serve(async (req) => {
             allContexts.push(ctx.description);
           }
         }
-      } else if (med.ai_enriched) {
-        if (med.ai_contexts) {
-          for (const ctx of med.ai_contexts) allContexts.push(ctx.description);
-        }
+      } else if (med.ai_enriched && med.ai_contexts) {
+        for (const ctx of med.ai_contexts) allContexts.push(ctx.description);
       }
 
-      // Fallback 1: find from pathologies loaded in current prescription scope
+      // Fallback 1: products from pathologies already loaded in current prescription scope
       if (recs.length === 0 && med.pathologies?.length > 0) {
         const pathIds = med.pathologies.map((p: any) => p.id);
-        const seen = new Set<string>();
-        for (const p of allDbProduits) {
-          if (pathIds.includes(p.pathologie_id) && !seen.has(p.produit)) {
-            seen.add(p.produit);
-            recs.push({
-              produit: p.produit,
-              categorie: p.categorie || "Complément",
-              description: p.description || "",
-              priorite: p.priorite || 50,
-              pathologie: p.pathologies?.nom_pathologie || "",
-            });
-            if (recs.length >= 3) break;
-          }
-        }
+        const pathProducts = allDbProduits
+          .filter((p: any) => pathIds.includes(p.pathologie_id))
+          .map((p: any) => ({
+            produit: p.produit,
+            categorie: p.categorie || "Complément",
+            description: p.description || "",
+            priorite: p.priorite || 50,
+            pathologie: p.pathologies?.nom_pathologie || "",
+          }));
+
+        recs.push(...pickDistinctProducts(pathProducts, MAX_RECOMMENDATIONS_PER_MED));
       }
 
-      // Fallback 2: use ATC-linked products from clinical DB
+      // Fallback 2: ATC linked products
       if (recs.length === 0 && med.code_atc && atcFallbackMap.has(med.code_atc)) {
-        const atcRecs = (atcFallbackMap.get(med.code_atc) || []).slice(0, 3);
+        const atcRecs = pickDistinctProducts(atcFallbackMap.get(med.code_atc) || [], MAX_RECOMMENDATIONS_PER_MED);
         recs.push(...atcRecs);
         if (atcRecs.length > 0) {
           hasStructuredData = true;
@@ -772,9 +801,9 @@ serve(async (req) => {
         }
       }
 
-      // Fallback 3: use therapeutic-class-linked products from clinical DB
+      // Fallback 3: class linked products
       if (recs.length === 0 && med.classe_therapeutique && classFallbackMap.has(med.classe_therapeutique)) {
-        const classRecs = (classFallbackMap.get(med.classe_therapeutique) || []).slice(0, 3);
+        const classRecs = pickDistinctProducts(classFallbackMap.get(med.classe_therapeutique) || [], MAX_RECOMMENDATIONS_PER_MED);
         recs.push(...classRecs);
         if (classRecs.length > 0) {
           hasStructuredData = true;
@@ -784,7 +813,16 @@ serve(async (req) => {
         }
       }
 
-      medRecommendations.set(i, recs.slice(0, 3));
+      if (!advice) {
+        const pathIds = med.pathologies?.map((p: any) => p.id) || [];
+        const scopedConseils = allDbConseils
+          .filter((c: any) => !pathIds.length || pathIds.includes(c.pathologie_id))
+          .sort((a: any, b: any) => (b.priorite || 0) - (a.priorite || 0));
+        advice = pickMainAdviceFromConseils(scopedConseils);
+      }
+
+      if (advice) medMainAdvice.set(i, advice);
+      medRecommendations.set(i, recs.slice(0, MAX_RECOMMENDATIONS_PER_MED));
     }
 
     // Step 5: Check interactions
