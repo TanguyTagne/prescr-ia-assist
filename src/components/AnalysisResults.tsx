@@ -111,6 +111,12 @@ const AnalysisResults = ({ result, onReset }: AnalysisResultsProps) => {
             {med.molecule && <span>{med.molecule} — </span>}{med.classe}
           </p>
 
+          {med.conseil_associe && (
+            <p className="text-[10px] text-foreground/90 leading-relaxed">
+              <span className="font-semibold">Conseil :</span> {med.conseil_associe}
+            </p>
+          )}
+
           {/* Recommendations for this medication */}
           {med.recommendations && med.recommendations.length > 0 && (
             <div className="space-y-1 pt-1 border-t border-border/50">
