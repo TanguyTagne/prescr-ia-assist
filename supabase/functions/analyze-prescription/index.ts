@@ -131,32 +131,63 @@ RÈGLES :
 
 // ====== CLINICAL KNOWLEDGE BASE LOOKUP ======
 
+// Extract the core drug name for fuzzy matching (strip dosage, form, brand suffixes)
+function extractCoreDrugName(name: string): string {
+  return (name || "")
+    .trim()
+    .replace(/\d+\s*(mg|g|ml|ui|µg|mcg|%)/gi, "") // strip dosage
+    .replace(/\b(comprimé|comprimés|gélule|gélules|sachet|sachets|sirop|suspension|solution|crème|gel|patch|spray|gouttes|pommade|injectable|lyoc|effervescent|orodispersible|lp|fort|adulte|enfant|nourrisson|buvable)\b/gi, "") // strip forms
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+// Build multiple search variants for a drug name
+function buildSearchVariants(medName: string): string[] {
+  const trimmed = medName.trim();
+  const core = extractCoreDrugName(trimmed);
+  const variants = new Set<string>();
+  variants.add(trimmed);
+  if (core && core !== trimmed) variants.add(core);
+  // Also try first word only (brand name)
+  const firstWord = core.split(/\s+/)[0];
+  if (firstWord && firstWord.length >= 3) variants.add(firstWord);
+  return [...variants];
+}
+
 async function clinicalLookup(supabase: any, medName: string, moleculeName?: string | null) {
   let medicament = null;
   let molecule = null;
 
-  const { data: exactMatch } = await supabase
-    .from("medicaments")
-    .select("*, molecules(*)")
-    .ilike("nom_commercial", medName.trim())
-    .limit(1)
-    .maybeSingle();
-  
-  if (exactMatch) {
-    medicament = exactMatch;
-    molecule = exactMatch.molecules;
+  const searchVariants = buildSearchVariants(medName);
+
+  // Try each variant: exact match first, then partial
+  for (const variant of searchVariants) {
+    if (medicament) break;
+    const { data: exactMatch } = await supabase
+      .from("medicaments")
+      .select("*, molecules(*)")
+      .ilike("nom_commercial", variant)
+      .limit(1)
+      .maybeSingle();
+    if (exactMatch) {
+      medicament = exactMatch;
+      molecule = exactMatch.molecules;
+    }
   }
 
   if (!medicament) {
-    const { data: partialMatch } = await supabase
-      .from("medicaments")
-      .select("*, molecules(*)")
-      .ilike("nom_commercial", `%${medName.trim()}%`)
-      .limit(1)
-      .maybeSingle();
-    if (partialMatch) {
-      medicament = partialMatch;
-      molecule = partialMatch.molecules;
+    for (const variant of searchVariants) {
+      if (medicament) break;
+      const { data: partialMatch } = await supabase
+        .from("medicaments")
+        .select("*, molecules(*)")
+        .ilike("nom_commercial", `%${variant}%`)
+        .limit(1)
+        .maybeSingle();
+      if (partialMatch) {
+        medicament = partialMatch;
+        molecule = partialMatch.molecules;
+      }
     }
   }
 
@@ -194,22 +225,47 @@ async function clinicalLookup(supabase: any, medName: string, moleculeName?: str
     classeAtc = data;
   }
 
+  // ====== PATHOLOGY LOOKUP: molecule_pathologie + medicament_pathologie ======
   let pathologies: any[] = [];
+  const pathologieIdSet = new Set<string>();
+
+  // 1) Via molecule_pathologie
   const moleculeId = molecule?.id;
   if (moleculeId) {
     const { data } = await supabase
       .from("molecule_pathologie")
       .select("pathologie_id, pathologies(*)")
       .eq("molecule_id", moleculeId);
-    pathologies = (data || []).map((mp: any) => mp.pathologies).filter(Boolean);
+    for (const mp of data || []) {
+      if (mp.pathologies && !pathologieIdSet.has(mp.pathologies.id)) {
+        pathologieIdSet.add(mp.pathologies.id);
+        pathologies.push(mp.pathologies);
+      }
+    }
   }
 
-  const pathologieIds = pathologies.map((p: any) => p.id);
+  // 2) Via medicament_pathologie (critical for meds without molecule like Gaviscon)
+  if (medicament?.id) {
+    const { data } = await supabase
+      .from("medicament_pathologie")
+      .select("pathologie_id, score_pertinence, pathologies(*)")
+      .eq("medicament_id", medicament.id)
+      .order("score_pertinence", { ascending: false });
+    for (const mp of data || []) {
+      if (mp.pathologies && !pathologieIdSet.has(mp.pathologies.id)) {
+        pathologieIdSet.add(mp.pathologies.id);
+        pathologies.push(mp.pathologies);
+      }
+    }
+  }
+
+  const pathologieIds = [...pathologieIdSet];
   let conseils: any[] = [];
   let produits: any[] = [];
+  let protocoles: any[] = [];
 
   if (pathologieIds.length > 0) {
-    const [conseilsRes, produitsRes] = await Promise.all([
+    const [conseilsRes, produitsRes, protocolesRes] = await Promise.all([
       supabase
         .from("conseils_associes")
         .select("*, pathologies(nom_pathologie)")
@@ -220,9 +276,22 @@ async function clinicalLookup(supabase: any, medName: string, moleculeName?: str
         .select("*, pathologies(nom_pathologie)")
         .in("pathologie_id", pathologieIds)
         .order("priorite", { ascending: false }),
+      supabase
+        .from("protocole_pathologie")
+        .select(`
+          *, pathologies(nom_pathologie),
+          conseil_1:conseils_associes!protocole_pathologie_conseil_1_id_fkey(conseil, description),
+          conseil_2:conseils_associes!protocole_pathologie_conseil_2_id_fkey(conseil, description),
+          produit_1:produits_complementaires!protocole_pathologie_produit_complementaire_1_id_fkey(produit, categorie, description, priorite),
+          produit_2:produits_complementaires!protocole_pathologie_produit_complementaire_2_id_fkey(produit, categorie, description, priorite),
+          produit_3:produits_complementaires!protocole_pathologie_produit_complementaire_3_id_fkey(produit, categorie, description, priorite)
+        `)
+        .in("pathologie_id", pathologieIds)
+        .eq("actif", true),
     ]);
     conseils = conseilsRes.data || [];
     produits = produitsRes.data || [];
+    protocoles = protocolesRes.data || [];
   }
 
   return {
@@ -248,6 +317,7 @@ async function clinicalLookup(supabase: any, medName: string, moleculeName?: str
     pathologies,
     conseils,
     produits,
+    protocoles,
   };
 }
 
@@ -763,8 +833,17 @@ serve(async (req) => {
 
         const clinical = clinicalResults.find((c: any) => c.index === i);
 
-        // Priority rule: protocole_pathologie (new) or pathology_protocol (legacy)
-        const matchedProtocol = findProtocolForPathologies(allProtocols, med.pathologies || []);
+        // Use protocols from clinicalLookup first (per-medication, already filtered)
+        const perMedProtocols = clinical?.protocoles || [];
+        let matchedProtocol = perMedProtocols.length > 0
+          ? perMedProtocols.sort((a: any, b: any) => (b?.priorite_produit_1 || 0) - (a?.priorite_produit_1 || 0))[0]
+          : null;
+
+        // Fallback to global protocol search
+        if (!matchedProtocol) {
+          matchedProtocol = findProtocolForPathologies(allProtocols, med.pathologies || []);
+        }
+
         if (matchedProtocol) {
           // New protocole_pathologie format (has conseil_1 object)
           if (matchedProtocol.conseil_1) {
@@ -786,7 +865,7 @@ serve(async (req) => {
                 categorie: p.categorie || "Complément",
                 description: p.just || p.description || "",
                 priorite: p.prio || p.priorite || 50,
-                pathologie: matchedProtocol.pathologie_nom || "",
+                pathologie: matchedProtocol.pathologie_nom || matchedProtocol.pathologies?.nom_pathologie || "",
               }));
 
             recs.push(...pickDistinctProducts(protocolProducts, MAX_RECOMMENDATIONS_PER_MED));
