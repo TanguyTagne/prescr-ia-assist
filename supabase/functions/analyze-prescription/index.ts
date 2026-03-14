@@ -253,7 +253,7 @@ async function clinicalLookup(supabase: any, medName: string, moleculeName?: str
 
 // ====== CLINICAL FALLBACK HELPERS ======
 
-const MAX_RECOMMENDATIONS_PER_MED = 2;
+const MAX_RECOMMENDATIONS_PER_MED = 3;
 const LOW_FRICTION_BLOCKLIST = [
   "inhalateur",
   "nébuliseur",
