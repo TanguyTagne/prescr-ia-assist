@@ -124,8 +124,17 @@ const AnalysisResults = ({ result, onReset }: AnalysisResultsProps) => {
           </p>
 
           {med.conseil_associe && (
-            <p className="text-[10px] text-foreground/90 leading-relaxed">
-              <span className="font-semibold">Conseil :</span> {med.conseil_associe}
+            <button
+              onClick={() => toggleConseil(i)}
+              className="flex items-center gap-1 text-[10px] text-primary/80 hover:text-primary transition-colors w-full text-left"
+            >
+              {expandedConseils.has(i) ? <ChevronDown className="h-3 w-3 shrink-0" /> : <ChevronRight className="h-3 w-3 shrink-0" />}
+              <span className="font-semibold">Conseil</span>
+            </button>
+          )}
+          {med.conseil_associe && expandedConseils.has(i) && (
+            <p className="text-[10px] text-foreground/90 leading-relaxed pl-4 animate-fade-in">
+              {med.conseil_associe}
             </p>
           )}
 
