@@ -420,6 +420,39 @@ export type Database = {
         }
         Relationships: []
       }
+      pathology_protocol: {
+        Row: {
+          conseil: string
+          created_at: string
+          id: string
+          pathologie: string
+          priority: number
+          produit_1: string
+          produit_2: string
+          updated_at: string
+        }
+        Insert: {
+          conseil: string
+          created_at?: string
+          id?: string
+          pathologie: string
+          priority?: number
+          produit_1: string
+          produit_2: string
+          updated_at?: string
+        }
+        Update: {
+          conseil?: string
+          created_at?: string
+          id?: string
+          pathologie?: string
+          priority?: number
+          produit_1?: string
+          produit_2?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       patient_needs: {
         Row: {
           besoin: string
