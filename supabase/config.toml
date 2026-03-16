@@ -2,3 +2,6 @@ project_id = "oknjfjplseopgymijnca"
 
 [functions.analyze-prescription]
 verify_jwt = false
+
+[functions.scanner-webhook]
+verify_jwt = false
