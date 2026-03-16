@@ -116,6 +116,7 @@ const Index = () => {
       </header>
 
       <main className="container max-w-xl mx-auto px-3 py-1 flex-1 overflow-y-auto">
+        <ScannerStatus onViewResult={handleScanResult} />
         {isLoading ? (
           <div className="flex items-center justify-center py-10 gap-2 animate-fade-in">
             <Loader2 className="h-5 w-5 text-primary animate-spin" />
