@@ -11,6 +11,7 @@ import LegalDisclaimer from "@/components/LegalDisclaimer";
 import { analyzePrescription, analyzePrescriptionImage, type AnalysisResult } from "@/lib/prescriptionAnalyzer";
 import { trackEvent } from "@/hooks/useAnalytics";
 import { useNavigate } from "react-router-dom";
+import { ScannerStatus } from "@/components/ScannerStatus";
 
 const WidgetAuth = () => {
   const [isLogin, setIsLogin] = useState(true);
