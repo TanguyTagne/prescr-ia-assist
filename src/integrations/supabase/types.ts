@@ -707,6 +707,41 @@ export type Database = {
           },
         ]
       }
+      pharmacy_scanner_keys: {
+        Row: {
+          active: boolean
+          api_key: string
+          created_at: string
+          id: string
+          label: string | null
+          pharmacy_id: string
+        }
+        Insert: {
+          active?: boolean
+          api_key?: string
+          created_at?: string
+          id?: string
+          label?: string | null
+          pharmacy_id: string
+        }
+        Update: {
+          active?: boolean
+          api_key?: string
+          created_at?: string
+          id?: string
+          label?: string | null
+          pharmacy_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pharmacy_scanner_keys_pharmacy_id_fkey"
+            columns: ["pharmacy_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       produit_complementaire_ranking: {
         Row: {
           created_at: string
@@ -1066,6 +1101,53 @@ export type Database = {
             columns: ["produit_id"]
             isOneToOne: false
             referencedRelation: "produits_complementaires"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scan_queue: {
+        Row: {
+          created_at: string
+          device_id: string | null
+          id: string
+          input_data: Json
+          pharmacy_id: string
+          processed_at: string | null
+          result: Json | null
+          scan_type: string
+          source: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          device_id?: string | null
+          id?: string
+          input_data?: Json
+          pharmacy_id: string
+          processed_at?: string | null
+          result?: Json | null
+          scan_type?: string
+          source?: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          device_id?: string | null
+          id?: string
+          input_data?: Json
+          pharmacy_id?: string
+          processed_at?: string | null
+          result?: Json | null
+          scan_type?: string
+          source?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scan_queue_pharmacy_id_fkey"
+            columns: ["pharmacy_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacies"
             referencedColumns: ["id"]
           },
         ]

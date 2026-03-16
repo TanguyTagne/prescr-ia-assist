@@ -9,6 +9,8 @@ import { trackEvent } from "@/hooks/useAnalytics";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { ScannerStatus } from "@/components/ScannerStatus";
+import type { ScanEvent } from "@/hooks/useScanQueue";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -91,6 +93,18 @@ const Index = () => {
 
   const handleReset = () => setResult(null);
 
+  const handleScanResult = (scan: ScanEvent) => {
+    if (scan.scan_type === "prescription" && scan.result) {
+      setResult({
+        medicaments: scan.result.medicaments || [],
+        interactions: scan.result.interactions || [],
+        contextes: scan.result.contextes || [],
+        conseil: scan.result.conseil || "",
+        structuredData: scan.result.structuredData || false,
+        sources: scan.result.sources || [],
+      });
+    }
+  };
   return (
     <div className="h-screen bg-background flex flex-col overflow-hidden">
       {/* Fixed header */}
@@ -102,6 +116,7 @@ const Index = () => {
       </header>
 
       <main className="container max-w-xl mx-auto px-3 py-1 flex-1 overflow-y-auto">
+        <ScannerStatus onViewResult={handleScanResult} />
         {isLoading ? (
           <div className="flex items-center justify-center py-10 gap-2 animate-fade-in">
             <Loader2 className="h-5 w-5 text-primary animate-spin" />
