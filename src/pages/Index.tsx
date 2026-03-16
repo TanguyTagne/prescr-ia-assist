@@ -9,6 +9,8 @@ import { trackEvent } from "@/hooks/useAnalytics";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { ScannerStatus } from "@/components/ScannerStatus";
+import type { ScanEvent } from "@/hooks/useScanQueue";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
