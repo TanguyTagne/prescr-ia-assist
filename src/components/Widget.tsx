@@ -109,15 +109,26 @@ const WidgetApp = () => {
     }
   };
 
+  const handleScanResult = (scan: any) => {
+    if (scan.scan_type === "prescription" && scan.result) {
+      try {
+        const normalized = {
+          medicaments: scan.result.medicaments || [],
+          interactions: scan.result.interactions || [],
+          contextes: scan.result.contextes || [],
+          conseil: scan.result.conseil || "",
+          structuredData: scan.result.structuredData || false,
+          sources: scan.result.sources || [],
+        };
+        setResult(normalized as AnalysisResult);
+      } catch {}
+    }
+  };
+
   return (
     <div className="p-4 space-y-3 py-0">
-      
+      <ScannerStatus onViewResult={handleScanResult} />
 
-
-
-
-
-      
       {isLoading ?
       <div className="flex items-center justify-center py-6 gap-2">
           <Loader2 className="h-4 w-4 text-primary animate-spin" />
