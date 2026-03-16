@@ -93,6 +93,18 @@ const Index = () => {
 
   const handleReset = () => setResult(null);
 
+  const handleScanResult = (scan: ScanEvent) => {
+    if (scan.scan_type === "prescription" && scan.result) {
+      setResult({
+        medicaments: scan.result.medicaments || [],
+        interactions: scan.result.interactions || [],
+        contextes: scan.result.contextes || [],
+        conseil: scan.result.conseil || "",
+        structuredData: scan.result.structuredData || false,
+        sources: scan.result.sources || [],
+      });
+    }
+  };
   return (
     <div className="h-screen bg-background flex flex-col overflow-hidden">
       {/* Fixed header */}
