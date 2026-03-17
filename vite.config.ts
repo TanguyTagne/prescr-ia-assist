@@ -27,4 +27,12 @@ export default defineConfig(({ mode }) => ({
       "@supabase/supabase-js",
     ],
   },
+  optimizeDeps: {
+    force: true,
+    include: [
+      "react",
+      "react-dom",
+      "@radix-ui/react-dialog",
+    ],
+  },
 }));
