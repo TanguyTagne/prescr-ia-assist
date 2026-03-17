@@ -128,7 +128,7 @@ const WidgetApp = () => {
 
   return (
     <div className="p-4 space-y-3 py-0">
-      <ScannerStatus onViewResult={handleScanResult} />
+      <ScannerStatus onViewResult={handleScanResult} onNewFile={() => {}} onBarcodeScan={() => {}} />
 
       {isLoading ?
       <div className="flex items-center justify-center py-6 gap-2">

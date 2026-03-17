@@ -171,55 +171,16 @@ const PrescriptionInput = ({ onAnalyze, onAnalyzeImage }: PrescriptionInputProps
         </div>
       )}
 
-      {/* Scanner auto mode */}
-      {mode === "scanner" && (
-        <div>
-          {!isWatching ? (
-            <div
-              onClick={startWatching}
-              className="cursor-pointer rounded-lg border border-dashed border-border hover:border-primary/50 transition-all flex items-center gap-3 py-4 px-4"
-            >
-              <FolderSearch className="h-5 w-5 text-muted-foreground shrink-0" />
-              <p className="text-xs font-medium">Sélectionner le dossier du scanner</p>
-            </div>
-          ) : (
-            <div className="rounded-lg border border-primary/30 bg-accent/30 p-3 space-y-2">
-              <div className="flex items-center gap-2">
-                <div className="relative">
-                  <FolderSearch className="h-4 w-4 text-primary" />
-                  <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                </div>
-                <span className="text-xs font-medium flex-1">Surveillance : {folderName}</span>
-                <Button variant="outline" size="sm" onClick={stopWatching} className="text-[10px] h-6 px-2">Stop</Button>
-              </div>
-              {isProcessingFile && (
-                <div className="flex items-center gap-2">
-                  <Loader2 className="h-3 w-3 text-primary animate-spin" />
-                  <Progress value={70} className="flex-1 h-1.5" />
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
       {/* Submit */}
-      {!(mode === "scanner" && isWatching) && (
-        <Button
-          onClick={handleSubmit}
-          size="sm"
-          className="w-full h-9 text-sm font-semibold pharmacy-gradient border-0"
-          disabled={
-            isProcessingFile ||
-            (mode === "image" ? !imagePreview : mode === "scanner" ? false : !(mode === "quick" ? quickInput : textInput).trim())
-          }
-        >
-          <Search className="h-3.5 w-3.5 mr-1.5" />
-          Analyser l'ordonnance
-        </Button>
-      )}
-    </div>
-  );
-};
-
-export default PrescriptionInput;
+      <Button
+        onClick={handleSubmit}
+        size="sm"
+        className="w-full h-9 text-sm font-semibold pharmacy-gradient border-0"
+        disabled={
+          isProcessingFile ||
+          (mode === "image" ? !imagePreview : !(mode === "quick" ? quickInput : textInput).trim())
+        }
+      >
+        <Search className="h-3.5 w-3.5 mr-1.5" />
+        Analyser l'ordonnance
+      </Button>
