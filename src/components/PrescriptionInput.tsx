@@ -45,45 +45,6 @@ const PrescriptionInput = ({ onAnalyze, onAnalyzeImage }: PrescriptionInputProps
     }
   }, []);
 
-  const handleScannerFile = useCallback(async (file: File) => {
-    try {
-      const ctx = new AudioContext();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.frequency.value = 800;
-      gain.gain.value = 0.3;
-      osc.start();
-      osc.stop(ctx.currentTime + 0.15);
-    } catch {}
-
-    toast.info(`📄 Ordonnance détectée : ${file.name}`);
-    setIsProcessingFile(true);
-    try {
-      let base64: string;
-      if (file.type === "application/pdf") {
-        base64 = await pdfToImageBase64(file);
-      } else {
-        base64 = await new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onload = (e) => resolve(e.target?.result as string);
-          reader.readAsDataURL(file);
-        });
-      }
-      onAnalyzeImage(base64);
-    } catch (err) {
-      console.error("Scanner file error:", err);
-      toast.error("Erreur lors du traitement du scan");
-    } finally {
-      setIsProcessingFile(false);
-    }
-  }, [onAnalyzeImage]);
-
-  const { isSupported: isFolderApiSupported, isWatching, folderName, startWatching, stopWatching } = useFolderWatcher({
-    onNewFile: handleScannerFile,
-  });
-
   const handleSubmit = () => {
     if (mode === "image" || mode === "scanner") {
       if (imagePreview) onAnalyzeImage(imagePreview);
