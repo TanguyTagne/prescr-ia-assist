@@ -89,7 +89,6 @@ const PrescriptionInput = ({ onAnalyze, onAnalyzeImage }: PrescriptionInputProps
     { id: "quick" as const, label: "Saisie", icon: Keyboard },
     { id: "text" as const, label: "Texte", icon: FileText },
     { id: "image" as const, label: "Photo", icon: Camera },
-    ...(isFolderApiSupported ? [{ id: "scanner" as const, label: "Scanner", icon: FolderSearch }] : []),
   ];
 
   return (
