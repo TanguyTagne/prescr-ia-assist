@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Pill, Loader2, BarChart3, LogOut, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import PrescriptionInput from "@/components/PrescriptionInput";
@@ -10,6 +10,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { ScannerStatus } from "@/components/ScannerStatus";
+import { pdfToImageBase64 } from "@/lib/pdfToImage";
+import { supabase } from "@/integrations/supabase/client";
 import type { ScanEvent } from "@/hooks/useScanQueue";
 
 interface BeforeInstallPromptEvent extends Event {
@@ -93,6 +95,98 @@ const Index = () => {
 
   const handleReset = () => setResult(null);
 
+  // Auto-detect scanned files from folder watcher
+  const handleNewFile = useCallback(async (file: File) => {
+    // Notification sound
+    try {
+      const ctx = new AudioContext();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = 800;
+      gain.gain.value = 0.3;
+      osc.start();
+      osc.stop(ctx.currentTime + 0.15);
+    } catch {}
+
+    toast.info(`📄 Ordonnance détectée : ${file.name} — analyse en cours...`);
+    
+    try {
+      let base64: string;
+      if (file.type === "application/pdf") {
+        base64 = await pdfToImageBase64(file);
+      } else {
+        base64 = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (e) => resolve(e.target?.result as string);
+          reader.readAsDataURL(file);
+        });
+      }
+      await handleAnalyzeImage(base64);
+    } catch (err) {
+      console.error("Scanner file error:", err);
+      toast.error("Erreur lors du traitement du scan");
+    }
+  }, []);
+
+  // HID barcode scanner: lookup CIP code directly
+  const handleBarcodeScan = useCallback(async (code: string) => {
+    toast.info(`🔍 Code scanné : ${code} — recherche...`);
+    
+    try {
+      const { data: med } = await supabase
+        .from("medicaments")
+        .select("id, nom_commercial, cip_code, molecule_id, atc_code")
+        .eq("cip_code", code)
+        .maybeSingle();
+
+      if (!med) {
+        toast.warning(`Aucun médicament trouvé pour le code CIP ${code}`);
+        return;
+      }
+
+      toast.success(`💊 ${med.nom_commercial} identifié`);
+
+      // Lookup pathologies and complementary products
+      const { data: pathLinks } = await supabase
+        .from("medicament_pathologie")
+        .select("pathologie_id")
+        .eq("medicament_id", med.id);
+
+      if (pathLinks && pathLinks.length > 0) {
+        const pathIds = pathLinks.map(p => p.pathologie_id);
+        const { data: produits } = await supabase
+          .from("produits_complementaires")
+          .select("produit, categorie, description")
+          .in("pathologie_id", pathIds)
+          .order("priorite", { ascending: false })
+          .limit(5);
+
+        if (produits && produits.length > 0) {
+          // Build a simple analysis result to display suggestions
+          setResult({
+            medicaments: [{
+              nom: med.nom_commercial,
+              indications: [],
+              effetsSecondaires: [],
+              posologie: "",
+              suggestions: produits.map(p => `${p.produit}${p.description ? ` — ${p.description}` : ""}`),
+            }],
+            interactions: [],
+            contextes: [],
+            conseil: `Produits complémentaires suggérés pour ${med.nom_commercial}`,
+            structuredData: true,
+            sources: [],
+          });
+        }
+      }
+    } catch (err) {
+      console.error("Barcode lookup error:", err);
+      toast.error("Erreur lors de la recherche du produit");
+    }
+  }, []);
+
   const handleScanResult = (scan: ScanEvent) => {
     if (scan.scan_type === "prescription" && scan.result) {
       setResult({
@@ -105,9 +199,9 @@ const Index = () => {
       });
     }
   };
+
   return (
     <div className="h-screen bg-background flex flex-col overflow-hidden">
-      {/* Fixed header */}
       <header className="pharmacy-gradient px-3 py-1.5 shrink-0 sticky top-0 z-10">
         <div className="container max-w-xl mx-auto flex items-center gap-2">
           <Pill className="h-4 w-4 text-primary-foreground" />
@@ -116,7 +210,11 @@ const Index = () => {
       </header>
 
       <main className="container max-w-xl mx-auto px-3 py-1 flex-1 overflow-y-auto">
-        <ScannerStatus onViewResult={handleScanResult} />
+        <ScannerStatus
+          onViewResult={handleScanResult}
+          onNewFile={handleNewFile}
+          onBarcodeScan={handleBarcodeScan}
+        />
         {isLoading ? (
           <div className="flex items-center justify-center py-10 gap-2 animate-fade-in">
             <Loader2 className="h-5 w-5 text-primary animate-spin" />
@@ -140,7 +238,6 @@ const Index = () => {
         )}
       </main>
 
-      {/* Footer actions */}
       <footer className="container max-w-xl mx-auto px-3 py-2 flex items-center justify-center gap-2 border-t border-border">
         <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")} className="text-muted-foreground h-7 text-xs gap-1">
           <BarChart3 className="h-3.5 w-3.5" />

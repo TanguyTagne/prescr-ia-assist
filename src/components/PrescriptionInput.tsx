@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { pdfToImageBase64 } from "@/lib/pdfToImage";
-import { useFolderWatcher } from "@/hooks/useFolderWatcher";
 import { toast } from "sonner";
 
 interface PrescriptionInputProps {
