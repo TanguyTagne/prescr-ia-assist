@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Pill, X, Loader2, Mail, Lock, Eye, EyeOff, LogOut, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,7 @@ import { analyzePrescription, analyzePrescriptionImage, type AnalysisResult } fr
 import { trackEvent } from "@/hooks/useAnalytics";
 import { useNavigate } from "react-router-dom";
 import { ScannerStatus } from "@/components/ScannerStatus";
+import { pdfToImageBase64 } from "@/lib/pdfToImage";
 
 const WidgetAuth = () => {
   const [isLogin, setIsLogin] = useState(true);
