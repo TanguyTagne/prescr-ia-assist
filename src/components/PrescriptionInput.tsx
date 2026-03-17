@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from "react";
-import { Search, FileText, Keyboard, Camera, X, ImageIcon, FolderSearch, Loader2, Volume2 } from "lucide-react";
+import { Search, FileText, Keyboard, Camera, X, ImageIcon, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
