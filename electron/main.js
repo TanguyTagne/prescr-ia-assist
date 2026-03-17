@@ -75,7 +75,14 @@ if (!gotTheLock) {
     }
   });
 
-  app.whenReady().then(() => {
+  app.whenReady().then(async () => {
+    // Clear cache to always load latest version
+    const { session } = require("electron");
+    await session.defaultSession.clearCache();
+    await session.defaultSession.clearStorageData({
+      storages: ["cachestorage", "serviceworkers"],
+    });
+
     createWindow();
 
     // Check for updates silently
