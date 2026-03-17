@@ -46,7 +46,7 @@ const PrescriptionInput = ({ onAnalyze, onAnalyzeImage }: PrescriptionInputProps
   }, []);
 
   const handleSubmit = () => {
-    if (mode === "image" || mode === "scanner") {
+    if (mode === "image") {
       if (imagePreview) onAnalyzeImage(imagePreview);
       return;
     }
