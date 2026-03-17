@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Pill, X, Loader2, Mail, Lock, Eye, EyeOff, LogOut, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,7 @@ import { analyzePrescription, analyzePrescriptionImage, type AnalysisResult } fr
 import { trackEvent } from "@/hooks/useAnalytics";
 import { useNavigate } from "react-router-dom";
 import { ScannerStatus } from "@/components/ScannerStatus";
+import { pdfToImageBase64 } from "@/lib/pdfToImage";
 
 const WidgetAuth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -126,9 +127,99 @@ const WidgetApp = () => {
     }
   };
 
+  const handleNewFile = useCallback(async (file: File) => {
+    try {
+      const ctx = new AudioContext();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = 800;
+      gain.gain.value = 0.3;
+      osc.start();
+      osc.stop(ctx.currentTime + 0.15);
+    } catch {}
+
+    toast.info(`📄 Ordonnance détectée : ${file.name} — analyse en cours...`);
+
+    try {
+      let base64: string;
+      if (file.type === "application/pdf") {
+        base64 = await pdfToImageBase64(file);
+      } else {
+        base64 = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (e) => resolve(e.target?.result as string);
+          reader.readAsDataURL(file);
+        });
+      }
+      await handleAnalyzeImage(base64);
+    } catch (err) {
+      console.error("Scanner file error:", err);
+      toast.error("Erreur lors du traitement du scan");
+    }
+  }, []);
+
+  const handleBarcodeScan = useCallback(async (code: string) => {
+    toast.info(`🔍 Code scanné : ${code} — recherche...`);
+
+    try {
+      const { data: med } = await supabase
+        .from("medicaments")
+        .select("id, nom_commercial, cip_code, molecule_id, atc_code")
+        .eq("cip_code", code)
+        .maybeSingle();
+
+      if (!med) {
+        toast.warning(`Aucun médicament trouvé pour le code CIP ${code}`);
+        return;
+      }
+
+      toast.success(`💊 ${med.nom_commercial} identifié`);
+
+      const { data: pathLinks } = await supabase
+        .from("medicament_pathologie")
+        .select("pathologie_id")
+        .eq("medicament_id", med.id);
+
+      if (pathLinks && pathLinks.length > 0) {
+        const pathIds = pathLinks.map((p) => p.pathologie_id);
+        const { data: produits } = await supabase
+          .from("produits_complementaires")
+          .select("produit, categorie, description")
+          .in("pathologie_id", pathIds)
+          .order("priorite", { ascending: false })
+          .limit(5);
+
+        if (produits && produits.length > 0) {
+          setResult({
+            medicaments: [{
+              nom: med.nom_commercial,
+              classe: "",
+              recommendations: produits.map((p) => ({
+                produit: p.produit,
+                categorie: p.categorie || "",
+                description: p.description || undefined,
+                priorite: 90,
+              })),
+            }],
+            interactions: [],
+            contextes: [],
+            conseil: `Produits complémentaires suggérés pour ${med.nom_commercial}`,
+            structuredData: true,
+            sources: [],
+          });
+        }
+      }
+    } catch (err) {
+      console.error("Barcode lookup error:", err);
+      toast.error("Erreur lors de la recherche du produit");
+    }
+  }, []);
+
   return (
     <div className="p-4 space-y-3 py-0">
-      <ScannerStatus onViewResult={handleScanResult} onNewFile={() => {}} onBarcodeScan={() => {}} />
+      <ScannerStatus onViewResult={handleScanResult} onNewFile={handleNewFile} onBarcodeScan={handleBarcodeScan} />
 
       {isLoading ?
       <div className="flex items-center justify-center py-6 gap-2">
