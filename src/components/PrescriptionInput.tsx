@@ -12,7 +12,7 @@ interface PrescriptionInputProps {
 }
 
 const PrescriptionInput = ({ onAnalyze, onAnalyzeImage }: PrescriptionInputProps) => {
-  const [mode, setMode] = useState<"quick" | "text" | "image" | "scanner">("quick");
+  const [mode, setMode] = useState<"quick" | "text" | "image">("quick");
   const [quickInput, setQuickInput] = useState("");
   const [textInput, setTextInput] = useState("");
   const [imagePreview, setImagePreview] = useState<string | null>(null);

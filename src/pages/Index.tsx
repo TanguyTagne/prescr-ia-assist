@@ -168,10 +168,13 @@ const Index = () => {
           setResult({
             medicaments: [{
               nom: med.nom_commercial,
-              indications: [],
-              effetsSecondaires: [],
-              posologie: "",
-              suggestions: produits.map(p => `${p.produit}${p.description ? ` — ${p.description}` : ""}`),
+              classe: "",
+              recommendations: produits.map(p => ({
+                produit: p.produit,
+                categorie: p.categorie || "",
+                description: p.description || undefined,
+                priorite: 90,
+              })),
             }],
             interactions: [],
             contextes: [],
