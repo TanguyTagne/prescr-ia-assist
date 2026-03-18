@@ -485,139 +485,149 @@ serve(async (req) => {
     }
 
     if (action === "enrich") {
-      // Step 6: Auto-enrich missing medications
-      // Get missing/incomplete entries
+      const limit = 30; // Process 30 at a time to avoid timeout
       const { data: auditEntries } = await supabase
         .from("medication_coverage_audit")
         .select("*, reference:reference_top_300(*)")
         .in("status", ["missing", "incomplete"])
-        .order("reference(rang)");
+        .order("completeness_score", { ascending: true })
+        .limit(limit);
 
       if (!auditEntries || auditEntries.length === 0) {
-        return new Response(JSON.stringify({ success: true, message: "Nothing to enrich", enriched: 0 }), {
+        return new Response(JSON.stringify({ success: true, message: "Rien à enrichir — base complète !", enriched: 0, remaining: 0 }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
+      // Count total remaining
+      const { count: totalRemaining } = await supabase
+        .from("medication_coverage_audit")
+        .select("id", { count: "exact", head: true })
+        .in("status", ["missing", "incomplete"]);
+
+      // Pre-load existing data to reduce queries
+      const { data: allMols } = await supabase.from("molecules").select("id, nom_molecule, atc_code");
+      const { data: allMeds } = await supabase.from("medicaments").select("id, nom_commercial, atc_code");
+      const { data: allAtc } = await supabase.from("classe_atc").select("atc_code");
+      const { data: allPatho } = await supabase.from("pathologies").select("id, nom_pathologie");
+
+      const molByName = new Map((allMols || []).map(m => [m.nom_molecule.toLowerCase(), m]));
+      const medByName = new Map((allMeds || []).map(m => [m.nom_commercial.toLowerCase(), m]));
+      const atcSet = new Set((allAtc || []).map(a => a.atc_code));
+      const pathoByName = new Map((allPatho || []).map(p => [p.nom_pathologie.toLowerCase(), p]));
+
       let enriched = 0;
       const errors: string[] = [];
+
+      // Batch inserts
+      const newMolecules: any[] = [];
+      const newMedicaments: any[] = [];
+      const newAtcClasses: any[] = [];
+      const newPathologies: any[] = [];
+
+      // First pass: identify what needs creating
+      for (const entry of auditEntries) {
+        const ref = (entry as any).reference;
+        if (!ref) continue;
+
+        const molName = ref.molecule?.toLowerCase();
+        const medName = ref.nom_commercial_ref?.toLowerCase();
+        const pathoName = `traitement par ${(ref.classe_therapeutique || ref.molecule).toLowerCase()}`;
+
+        if (molName && !molByName.has(molName)) {
+          const mol = { nom_molecule: ref.molecule, atc_code: ref.atc5_code, classe_therapeutique: ref.classe_therapeutique };
+          newMolecules.push(mol);
+          molByName.set(molName, mol); // prevent dupes in batch
+        }
+
+        if (!atcSet.has(ref.atc5_code)) {
+          newAtcClasses.push({ atc_code: ref.atc5_code, nom_classe: ref.classe_therapeutique || ref.molecule, niveau: 5 });
+          atcSet.add(ref.atc5_code);
+        }
+
+        if (!pathoByName.has(pathoName)) {
+          const p = { nom_pathologie: `Traitement par ${ref.classe_therapeutique || ref.molecule}`, categorie: ref.classe_therapeutique };
+          newPathologies.push(p);
+          pathoByName.set(pathoName, p);
+        }
+      }
+
+      // Batch insert molecules
+      if (newMolecules.length > 0) {
+        const { data: insertedMols } = await supabase.from("molecules").upsert(newMolecules, { onConflict: "nom_molecule", ignoreDuplicates: true }).select("id, nom_molecule, atc_code");
+        (insertedMols || []).forEach(m => molByName.set(m.nom_molecule.toLowerCase(), m));
+      }
+      // Refresh molecules map
+      const { data: freshMols } = await supabase.from("molecules").select("id, nom_molecule, atc_code");
+      const molMap = new Map((freshMols || []).map(m => [m.nom_molecule.toLowerCase(), m]));
+
+      // Batch insert ATC
+      if (newAtcClasses.length > 0) {
+        await supabase.from("classe_atc").upsert(newAtcClasses, { onConflict: "atc_code", ignoreDuplicates: true });
+      }
+
+      // Batch insert pathologies
+      if (newPathologies.length > 0) {
+        await supabase.from("pathologies").upsert(newPathologies, { onConflict: "nom_pathologie", ignoreDuplicates: true }).select();
+      }
+      const { data: freshPatho } = await supabase.from("pathologies").select("id, nom_pathologie");
+      const pathoMap = new Map((freshPatho || []).map(p => [p.nom_pathologie.toLowerCase(), p]));
+
+      // Second pass: create medicaments and links
+      const medInserts: any[] = [];
+      for (const entry of auditEntries) {
+        const ref = (entry as any).reference;
+        if (!ref) continue;
+        const medName = ref.nom_commercial_ref?.toLowerCase();
+        if (medName && !medByName.has(medName) && !entry.matched_medicament_id) {
+          const mol = molMap.get(ref.molecule?.toLowerCase());
+          medInserts.push({ nom_commercial: ref.nom_commercial_ref, atc_code: ref.atc5_code, molecule_id: mol?.id || null });
+          medByName.set(medName, {}); // prevent dupes
+        }
+      }
+      if (medInserts.length > 0) {
+        await supabase.from("medicaments").upsert(medInserts, { onConflict: "nom_commercial", ignoreDuplicates: true }).select();
+      }
+      const { data: freshMeds } = await supabase.from("medicaments").select("id, nom_commercial, atc_code");
+      const finalMedMap = new Map((freshMeds || []).map(m => [m.nom_commercial.toLowerCase(), m]));
+
+      // Third pass: create links
+      const medPathoLinks: any[] = [];
+      const molPathoLinks: any[] = [];
 
       for (const entry of auditEntries) {
         const ref = (entry as any).reference;
         if (!ref) continue;
 
-        try {
-          // Check if molecule exists
-          let moleculeId: string | null = null;
-          const { data: existingMol } = await supabase
-            .from("molecules")
-            .select("id")
-            .ilike("nom_molecule", ref.molecule)
-            .maybeSingle();
+        const pathoName = `traitement par ${(ref.classe_therapeutique || ref.molecule).toLowerCase()}`;
+        const patho = pathoMap.get(pathoName);
+        const med = finalMedMap.get(ref.nom_commercial_ref?.toLowerCase()) || null;
+        const mol = molMap.get(ref.molecule?.toLowerCase()) || null;
 
-          if (existingMol) {
-            moleculeId = existingMol.id;
-          } else {
-            const { data: newMol, error: molErr } = await supabase
-              .from("molecules")
-              .insert({ nom_molecule: ref.molecule, atc_code: ref.atc5_code, classe_therapeutique: ref.classe_therapeutique })
-              .select("id")
-              .single();
-            if (molErr) { errors.push(`Mol ${ref.molecule}: ${molErr.message}`); continue; }
-            moleculeId = newMol.id;
-          }
-
-          // Check if medicament exists
-          let medicamentId: string | null = entry.matched_medicament_id;
-          if (!medicamentId) {
-            const { data: existingMed } = await supabase
-              .from("medicaments")
-              .select("id")
-              .ilike("nom_commercial", ref.nom_commercial_ref)
-              .maybeSingle();
-
-            if (existingMed) {
-              medicamentId = existingMed.id;
-            } else {
-              const { data: newMed, error: medErr } = await supabase
-                .from("medicaments")
-                .insert({
-                  nom_commercial: ref.nom_commercial_ref,
-                  atc_code: ref.atc5_code,
-                  molecule_id: moleculeId,
-                })
-                .select("id")
-                .single();
-              if (medErr) { errors.push(`Med ${ref.nom_commercial_ref}: ${medErr.message}`); continue; }
-              medicamentId = newMed.id;
-            }
-          }
-
-          // Ensure ATC class exists
-          const { data: existingAtc } = await supabase
-            .from("classe_atc")
-            .select("atc_code")
-            .eq("atc_code", ref.atc5_code)
-            .maybeSingle();
-
-          if (!existingAtc) {
-            await supabase.from("classe_atc").insert({
-              atc_code: ref.atc5_code,
-              nom_classe: ref.classe_therapeutique || ref.molecule,
-              niveau: 5,
-            });
-          }
-
-          // Ensure pathologie link exists (find or create generic pathologie)
-          const pathologieName = `Traitement par ${ref.classe_therapeutique || ref.molecule}`;
-          let pathologieId: string | null = null;
-
-          const { data: existingPatho } = await supabase
-            .from("pathologies")
-            .select("id")
-            .ilike("nom_pathologie", pathologieName)
-            .maybeSingle();
-
-          if (existingPatho) {
-            pathologieId = existingPatho.id;
-          } else {
-            const { data: newPatho } = await supabase
-              .from("pathologies")
-              .insert({ nom_pathologie: pathologieName, categorie: ref.classe_therapeutique })
-              .select("id")
-              .single();
-            if (newPatho) pathologieId = newPatho.id;
-          }
-
-          // Link medicament to pathologie
-          if (medicamentId && pathologieId) {
-            await supabase.from("medicament_pathologie").upsert({
-              medicament_id: medicamentId,
-              pathologie_id: pathologieId,
-              source_mapping: "auto_coverage_audit",
-            }, { onConflict: "medicament_id,pathologie_id" }).select();
-          }
-
-          // Link molecule to pathologie
-          if (moleculeId && pathologieId) {
-            await supabase.from("molecule_pathologie").upsert({
-              molecule_id: moleculeId,
-              pathologie_id: pathologieId,
-              source_mapping: "auto_coverage_audit",
-            }, { onConflict: "molecule_id,pathologie_id" }).select();
-          }
-
-          enriched++;
-        } catch (e: any) {
-          errors.push(`${ref.molecule}: ${e.message}`);
+        if (med && patho) {
+          medPathoLinks.push({ medicament_id: med.id, pathologie_id: patho.id, source_mapping: "auto_coverage_audit" });
         }
+        if (mol && patho) {
+          molPathoLinks.push({ molecule_id: mol.id, pathologie_id: patho.id, source_mapping: "auto_coverage_audit" });
+        }
+        enriched++;
+      }
+
+      if (medPathoLinks.length > 0) {
+        const { error } = await supabase.from("medicament_pathologie").upsert(medPathoLinks, { onConflict: "medicament_id,pathologie_id", ignoreDuplicates: true });
+        if (error) errors.push("medPatho: " + error.message);
+      }
+      if (molPathoLinks.length > 0) {
+        const { error } = await supabase.from("molecule_pathologie").upsert(molPathoLinks, { onConflict: "molecule_id,pathologie_id", ignoreDuplicates: true });
+        if (error) errors.push("molPatho: " + error.message);
       }
 
       return new Response(JSON.stringify({
         success: true,
         enriched,
-        total: auditEntries.length,
-        errors: errors.length > 0 ? errors.slice(0, 20) : undefined,
+        remaining: (totalRemaining || 0) - enriched,
+        total: totalRemaining || 0,
+        errors: errors.length > 0 ? errors : undefined,
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
