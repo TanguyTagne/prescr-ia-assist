@@ -320,6 +320,71 @@ export type Database = {
           },
         ]
       }
+      medication_coverage_audit: {
+        Row: {
+          completeness_score: number | null
+          created_at: string
+          has_classe: boolean | null
+          has_contextes: boolean | null
+          has_pathologie_link: boolean | null
+          has_protocole: boolean | null
+          has_questions: boolean | null
+          has_suggestions_otc: boolean | null
+          has_symptomes: boolean | null
+          id: string
+          last_audit_at: string
+          matched_medicament_id: string | null
+          matched_molecule_id: string | null
+          notes: string | null
+          reference_id: string
+          status: string
+        }
+        Insert: {
+          completeness_score?: number | null
+          created_at?: string
+          has_classe?: boolean | null
+          has_contextes?: boolean | null
+          has_pathologie_link?: boolean | null
+          has_protocole?: boolean | null
+          has_questions?: boolean | null
+          has_suggestions_otc?: boolean | null
+          has_symptomes?: boolean | null
+          id?: string
+          last_audit_at?: string
+          matched_medicament_id?: string | null
+          matched_molecule_id?: string | null
+          notes?: string | null
+          reference_id: string
+          status?: string
+        }
+        Update: {
+          completeness_score?: number | null
+          created_at?: string
+          has_classe?: boolean | null
+          has_contextes?: boolean | null
+          has_pathologie_link?: boolean | null
+          has_protocole?: boolean | null
+          has_questions?: boolean | null
+          has_suggestions_otc?: boolean | null
+          has_symptomes?: boolean | null
+          id?: string
+          last_audit_at?: string
+          matched_medicament_id?: string | null
+          matched_molecule_id?: string | null
+          notes?: string | null
+          reference_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medication_coverage_audit_reference_id_fkey"
+            columns: ["reference_id"]
+            isOneToOne: false
+            referencedRelation: "reference_top_300"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       medications: {
         Row: {
           classe_therapeutique_id: string | null
@@ -1044,6 +1109,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      reference_top_300: {
+        Row: {
+          atc5_code: string
+          classe_therapeutique: string | null
+          created_at: string
+          id: string
+          molecule: string
+          nom_commercial_ref: string | null
+          rang: number
+          source: string | null
+          updated_at: string
+          volume_annuel: number | null
+        }
+        Insert: {
+          atc5_code: string
+          classe_therapeutique?: string | null
+          created_at?: string
+          id?: string
+          molecule: string
+          nom_commercial_ref?: string | null
+          rang: number
+          source?: string | null
+          updated_at?: string
+          volume_annuel?: number | null
+        }
+        Update: {
+          atc5_code?: string
+          classe_therapeutique?: string | null
+          created_at?: string
+          id?: string
+          molecule?: string
+          nom_commercial_ref?: string | null
+          rang?: number
+          source?: string | null
+          updated_at?: string
+          volume_annuel?: number | null
+        }
+        Relationships: []
       }
       regles_ranking: {
         Row: {
