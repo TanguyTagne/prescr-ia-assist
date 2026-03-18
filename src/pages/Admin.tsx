@@ -128,6 +128,10 @@ const Admin = () => {
             <Building2 className="h-3.5 w-3.5" />
             Pharmacies ({pharmacies.length})
           </Button>
+          <Button variant={tab === "coverage" ? "default" : "outline"} size="sm" onClick={() => setTab("coverage")} className="gap-1.5">
+            <ShieldCheck className="h-3.5 w-3.5" />
+            Couverture
+          </Button>
         </div>
 
         {tab === "kpis" && <PharmacyKPIs />}
