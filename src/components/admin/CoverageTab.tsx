@@ -97,7 +97,19 @@ const CoverageTab = () => {
         toast.success(`Audit terminé — Couverture : ${data.stats.coverage_rate}%`);
         setStats(data.stats);
       } else if (action === "enrich") {
-        toast.success(`Enrichi : ${data.enriched}/${data.total} médicaments`);
+        toast.success(`Enrichi : ${data.enriched} médicaments — ${data.remaining} restants`);
+        // If there are remaining, auto-continue
+        if (data.remaining > 0) {
+          toast.info(`Enrichissement en cours... ${data.remaining} restants. Relance automatique.`);
+          await loadAuditData();
+          // Re-run audit to refresh statuses, then continue enriching
+          await supabase.functions.invoke("audit-coverage", { body: { action: "audit" } });
+          await loadAuditData();
+          setRunning(null);
+          // Trigger next batch
+          setTimeout(() => runAction("enrich"), 500);
+          return;
+        }
       }
 
       await loadAuditData();
