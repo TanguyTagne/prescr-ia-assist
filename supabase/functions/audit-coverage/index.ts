@@ -633,7 +633,194 @@ serve(async (req) => {
       });
     }
 
-    return new Response(JSON.stringify({ error: "Invalid action. Use: seed, audit, enrich" }), {
+    if (action === "fill-products") {
+      // Find all pathologies without produits_complementaires
+      const { data: allPatho } = await supabase.from("pathologies").select("id, nom_pathologie, categorie");
+      const { data: existingProduits } = await supabase.from("produits_complementaires").select("pathologie_id");
+      const pathoWithProduits = new Set((existingProduits || []).map(p => p.pathologie_id));
+      
+      const orphans = (allPatho || []).filter(p => !pathoWithProduits.has(p.id));
+      
+      if (orphans.length === 0) {
+        return new Response(JSON.stringify({ success: true, message: "Toutes les pathologies ont des produits complémentaires.", filled: 0 }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Category-based product templates
+      const PRODUCT_TEMPLATES: Record<string, { produit: string; categorie: string; desc: string; type: string; prio: number }[]> = {
+        "Douleur": [
+          { produit: "Arnigel (gel arnica)", categorie: "Phytothérapie", desc: "Gel à l'arnica pour soulager douleurs musculaires", type: "produit_conseil", prio: 90 },
+          { produit: "Chaufferette réutilisable", categorie: "Confort", desc: "Chaleur locale pour détente musculaire", type: "dispositif_medical", prio: 70 },
+          { produit: "Magnésium marin B6", categorie: "Complément alimentaire", desc: "Réduit crampes et tensions musculaires", type: "complement", prio: 80 },
+        ],
+        "Infection": [
+          { produit: "Probiotiques Lactibiane", categorie: "Complément alimentaire", desc: "Restauration flore intestinale sous antibiothérapie", type: "complement", prio: 90 },
+          { produit: "Vitamine C 500mg", categorie: "Complément alimentaire", desc: "Soutien immunitaire", type: "complement", prio: 80 },
+          { produit: "Spray gorge propolis", categorie: "Phytothérapie", desc: "Apaise irritations ORL", type: "produit_conseil", prio: 70 },
+        ],
+        "Gastro": [
+          { produit: "Probiotiques Ultra-Levure", categorie: "Complément alimentaire", desc: "Protection de la flore digestive", type: "complement", prio: 90 },
+          { produit: "Tisane digestive bio", categorie: "Phytothérapie", desc: "Confort digestif quotidien", type: "produit_conseil", prio: 70 },
+          { produit: "Smecta sachets", categorie: "OTC", desc: "Pansement digestif protecteur", type: "produit_conseil", prio: 80 },
+        ],
+        "Cardio": [
+          { produit: "Oméga 3 EPA/DHA", categorie: "Complément alimentaire", desc: "Soutien cardiovasculaire", type: "complement", prio: 90 },
+          { produit: "Coenzyme Q10", categorie: "Complément alimentaire", desc: "Soutien énergie cellulaire cardiaque", type: "complement", prio: 80 },
+          { produit: "Tensiomètre bras Omron", categorie: "Dispositif médical", desc: "Auto-surveillance tension", type: "dispositif_medical", prio: 70 },
+        ],
+        "Psy": [
+          { produit: "Magnésium marin B6", categorie: "Complément alimentaire", desc: "Réduit stress et fatigue nerveuse", type: "complement", prio: 90 },
+          { produit: "Mélatonine 1mg", categorie: "Complément alimentaire", desc: "Améliore l'endormissement", type: "complement", prio: 80 },
+          { produit: "Spray relaxant lavande", categorie: "Aromathérapie", desc: "Favorise détente et sommeil", type: "produit_conseil", prio: 70 },
+        ],
+        "Dermato": [
+          { produit: "Crème émolliente Dexeryl", categorie: "Dermocosmétique", desc: "Hydratation peau sèche et irritée", type: "produit_conseil", prio: 90 },
+          { produit: "Cicatryl crème", categorie: "OTC", desc: "Aide à la cicatrisation", type: "produit_conseil", prio: 80 },
+          { produit: "Spray SPF50+", categorie: "Solaire", desc: "Protection solaire peau sensible", type: "produit_conseil", prio: 70 },
+        ],
+        "Respi": [
+          { produit: "Spray nasal eau de mer hypertonique", categorie: "Hygiène nasale", desc: "Décongestion nasale naturelle", type: "dispositif_medical", prio: 90 },
+          { produit: "Pastilles miel-propolis", categorie: "Phytothérapie", desc: "Adoucit gorge irritée", type: "produit_conseil", prio: 80 },
+          { produit: "Huile essentielle eucalyptus", categorie: "Aromathérapie", desc: "Dégagement voies respiratoires", type: "produit_conseil", prio: 70 },
+        ],
+        "Diabète": [
+          { produit: "Lecteur glycémie FreeStyle", categorie: "Dispositif médical", desc: "Auto-surveillance glycémique", type: "dispositif_medical", prio: 90 },
+          { produit: "Chrome + Cannelle", categorie: "Complément alimentaire", desc: "Aide au métabolisme glucidique", type: "complement", prio: 80 },
+          { produit: "Crème pieds diabétiques", categorie: "Soin", desc: "Protection cutanée pied diabétique", type: "produit_conseil", prio: 70 },
+        ],
+        "Ophtalmologie": [
+          { produit: "Larmes artificielles Hyabak", categorie: "Ophtalmologie", desc: "Hydratation oculaire sans conservateur", type: "dispositif_medical", prio: 90 },
+          { produit: "Compresses oculaires stériles", categorie: "Hygiène", desc: "Nettoyage et soins des yeux", type: "dispositif_medical", prio: 80 },
+          { produit: "Lutéine + Zéaxanthine", categorie: "Complément alimentaire", desc: "Protection rétine et vision", type: "complement", prio: 70 },
+        ],
+        "Urologie": [
+          { produit: "Cranberry extrait", categorie: "Complément alimentaire", desc: "Prévention infections urinaires", type: "complement", prio: 90 },
+          { produit: "Probiotiques flore intime", categorie: "Complément alimentaire", desc: "Équilibre microbiome urogénital", type: "complement", prio: 80 },
+          { produit: "D-Mannose sachets", categorie: "Complément alimentaire", desc: "Protection muqueuse urinaire", type: "complement", prio: 70 },
+        ],
+        "Hormones": [
+          { produit: "Vitamine D3 1000UI", categorie: "Complément alimentaire", desc: "Soutien osseux et immunitaire", type: "complement", prio: 90 },
+          { produit: "Calcium + Magnésium", categorie: "Complément alimentaire", desc: "Santé osseuse", type: "complement", prio: 80 },
+          { produit: "Sélénium + Zinc", categorie: "Complément alimentaire", desc: "Soutien thyroïdien et antioxydant", type: "complement", prio: 70 },
+        ],
+        "Default": [
+          { produit: "Vitamine D3 1000UI", categorie: "Complément alimentaire", desc: "Soutien immunitaire et osseux", type: "complement", prio: 90 },
+          { produit: "Magnésium marin B6", categorie: "Complément alimentaire", desc: "Réduit fatigue et stress", type: "complement", prio: 80 },
+          { produit: "Probiotiques quotidiens", categorie: "Complément alimentaire", desc: "Équilibre digestif et immunitaire", type: "complement", prio: 70 },
+        ],
+      };
+
+      function getCat(name: string, cat?: string): string {
+        const s = ((cat || "") + " " + name).toLowerCase();
+        if (/douleur|ains|antalgi|anti.inflamm|opioïd/.test(s)) return "Douleur";
+        if (/infect|antibio|pénicill|aminoside|céphalosporine|macrolide|quinolone|anti.infect/.test(s)) return "Infection";
+        if (/gastro|digest|ipp|anti.h2|intestin|antiseptique|laxat|antiémét/.test(s)) return "Gastro";
+        if (/cardio|hypertens|ara.ii|iec|bêta.bloqu|diurét|anticoagul|antiarythm|antiagrég|aod|avk|inhibiteur.calc|statine|hypolipé/.test(s)) return "Cardio";
+        if (/psy|dépres|anxiol|hypnot|antipsychot|antiépilept|anticholinest|antiparkinson|neurolept/.test(s)) return "Psy";
+        if (/dermat|cutané|fongique|acné|psoriasis|eczéma/.test(s)) return "Dermato";
+        if (/respi|asthme|bronch|antitussif|cortic.*inhalé|toux|pneumo|nasal|allergique/.test(s)) return "Respi";
+        if (/diabèt|antidiab|metform|insuline|glp.1|glinide|sulfamide/.test(s)) return "Diabète";
+        if (/ophtalmol|oculaire|glaucome|collyre/.test(s)) return "Ophtalmologie";
+        if (/urolog|vésic|prostat|alpha.bloqu/.test(s)) return "Urologie";
+        if (/hormon|thyroïd|estrogèn|androgèn|corticoïd|ostéopor/.test(s)) return "Hormones";
+        return "Default";
+      }
+
+      const produitsInserts: any[] = [];
+      const conseilsInserts: any[] = [];
+      const batchSize = 40;
+      const processed = orphans.slice(0, batchSize);
+
+      for (const patho of processed) {
+        const cat = getCat(patho.nom_pathologie, patho.categorie || undefined);
+        const templates = PRODUCT_TEMPLATES[cat] || PRODUCT_TEMPLATES["Default"];
+        
+        for (const t of templates) {
+          produitsInserts.push({
+            pathologie_id: patho.id,
+            produit: t.produit,
+            categorie: t.categorie,
+            description: t.desc,
+            type_produit: t.type,
+            priorite: t.prio,
+            est_otc: t.type === "produit_conseil",
+            est_complement: t.type === "complement",
+            est_dispositif_medical: t.type === "dispositif_medical",
+            est_eligible_cross_sell: true,
+          });
+        }
+
+        // Add 2 conseils per pathology
+        const catConseils: { code: string; label: string; desc: string }[] = [];
+        if (cat === "Douleur") {
+          catConseils.push({ code: "DOUL_01", label: "Éviter automédication prolongée", desc: "Ne pas dépasser les doses recommandées et consulter si douleur persiste > 3 jours" });
+          catConseils.push({ code: "DOUL_02", label: "Appliquer froid/chaud selon le cas", desc: "Froid pour inflammation aiguë, chaud pour contracture musculaire" });
+        } else if (cat === "Infection") {
+          catConseils.push({ code: "INF_01", label: "Prendre des probiotiques", desc: "Associer systématiquement des probiotiques à toute antibiothérapie" });
+          catConseils.push({ code: "INF_02", label: "Respecter la durée du traitement", desc: "Ne pas arrêter avant la fin même si amélioration" });
+        } else if (cat === "Cardio") {
+          catConseils.push({ code: "CARD_01", label: "Surveillance tensionnelle régulière", desc: "Auto-mesure 3 fois matin et soir pendant 3 jours" });
+          catConseils.push({ code: "CARD_02", label: "Alimentation pauvre en sel", desc: "Limiter apport sodé à 6g/jour pour optimiser le traitement" });
+        } else if (cat === "Psy") {
+          catConseils.push({ code: "PSY_01", label: "Ne pas arrêter brutalement", desc: "Diminution progressive obligatoire pour éviter syndrome de sevrage" });
+          catConseils.push({ code: "PSY_02", label: "Hygiène de sommeil", desc: "Horaires réguliers, éviter écrans le soir, activité physique régulière" });
+        } else if (cat === "Gastro") {
+          catConseils.push({ code: "GAST_01", label: "Prendre à jeun si IPP", desc: "IPP à prendre 30 min avant le repas pour efficacité optimale" });
+          catConseils.push({ code: "GAST_02", label: "Fractionner les repas", desc: "Petits repas fréquents pour réduire les troubles digestifs" });
+        } else if (cat === "Respi") {
+          catConseils.push({ code: "RESP_01", label: "Lavage nasal quotidien", desc: "Spray nasal eau de mer avant toute prise médicamenteuse nasale" });
+          catConseils.push({ code: "RESP_02", label: "Humidifier l'air ambiant", desc: "Maintenir 40-60% d'humidité pour confort respiratoire" });
+        } else if (cat === "Dermato") {
+          catConseils.push({ code: "DERM_01", label: "Hydrater quotidiennement", desc: "Appliquer émollient après la douche sur peau encore humide" });
+          catConseils.push({ code: "DERM_02", label: "Protection solaire", desc: "SPF50+ sur zones traitées pour éviter photosensibilisation" });
+        } else {
+          catConseils.push({ code: "GEN_01", label: "Bien s'hydrater", desc: "Boire 1.5L d'eau par jour pour bonne tolérance médicamenteuse" });
+          catConseils.push({ code: "GEN_02", label: "Observer les effets indésirables", desc: "Signaler tout effet inattendu au pharmacien ou médecin" });
+        }
+
+        for (const c of catConseils) {
+          conseilsInserts.push({
+            pathologie_id: patho.id,
+            conseil: c.label,
+            conseil_code: c.code,
+            description: c.desc,
+            priorite: 80,
+          });
+        }
+      }
+
+      const errors: string[] = [];
+
+      // Insert produits in batches
+      for (let i = 0; i < produitsInserts.length; i += 50) {
+        const batch = produitsInserts.slice(i, i + 50);
+        const { error } = await supabase.from("produits_complementaires").insert(batch);
+        if (error) errors.push("produits: " + error.message);
+      }
+
+      // Insert conseils in batches
+      for (let i = 0; i < conseilsInserts.length; i += 50) {
+        const batch = conseilsInserts.slice(i, i + 50);
+        const { error } = await supabase.from("conseils_associes").insert(batch);
+        if (error) errors.push("conseils: " + error.message);
+      }
+
+      const remaining = orphans.length - processed.length;
+
+      return new Response(JSON.stringify({
+        success: true,
+        filled: processed.length,
+        produits_created: produitsInserts.length,
+        conseils_created: conseilsInserts.length,
+        remaining,
+        errors: errors.length > 0 ? errors : undefined,
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    return new Response(JSON.stringify({ error: "Invalid action. Use: seed, audit, enrich, fill-products" }), {
       status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
 
