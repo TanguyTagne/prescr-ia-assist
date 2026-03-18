@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.scanner-webhook]
 verify_jwt = false
+
+[functions.audit-coverage]
+verify_jwt = false

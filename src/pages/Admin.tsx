@@ -3,11 +3,12 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { ArrowLeft, Loader2, Mail, Building2, BarChart3, RefreshCw, Download } from "lucide-react";
+import { ArrowLeft, Loader2, Mail, Building2, BarChart3, RefreshCw, Download, ShieldCheck } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import RequestsTab from "@/components/admin/RequestsTab";
 import PharmaciesTab from "@/components/admin/PharmaciesTab";
 import PharmacyKPIs from "@/components/admin/PharmacyKPIs";
+import CoverageTab from "@/components/admin/CoverageTab";
 
 interface AccessRequest {
   id: string;
@@ -41,7 +42,7 @@ const Admin = () => {
   const [requests, setRequests] = useState<AccessRequest[]>([]);
   const [pharmacies, setPharmacies] = useState<PharmacyWithLGO[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<"requests" | "pharmacies" | "kpis">("kpis");
+  const [tab, setTab] = useState<"requests" | "pharmacies" | "kpis" | "coverage">("kpis");
 
   useEffect(() => {
     loadData();
@@ -127,11 +128,16 @@ const Admin = () => {
             <Building2 className="h-3.5 w-3.5" />
             Pharmacies ({pharmacies.length})
           </Button>
+          <Button variant={tab === "coverage" ? "default" : "outline"} size="sm" onClick={() => setTab("coverage")} className="gap-1.5">
+            <ShieldCheck className="h-3.5 w-3.5" />
+            Couverture
+          </Button>
         </div>
 
         {tab === "kpis" && <PharmacyKPIs />}
         {tab === "requests" && <RequestsTab requests={requests} onRefresh={loadData} />}
         {tab === "pharmacies" && <PharmaciesTab pharmacies={pharmacies} onRefresh={loadData} />}
+        {tab === "coverage" && <CoverageTab />}
       </div>
     </div>
   );
