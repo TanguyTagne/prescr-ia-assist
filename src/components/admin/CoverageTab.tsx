@@ -171,6 +171,10 @@ const CoverageTab = () => {
           {running === "enrich" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
           3. Enrichir automatiquement
         </Button>
+        <Button size="sm" onClick={() => runAction("fill-products")} disabled={!!running} variant="secondary" className="gap-1.5">
+          {running === "fill-products" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
+          4. Remplir produits complémentaires
+        </Button>
         <Button size="sm" variant="ghost" onClick={loadAuditData} disabled={!!running} className="ml-auto">
           <RefreshCw className="h-3.5 w-3.5" />
         </Button>
