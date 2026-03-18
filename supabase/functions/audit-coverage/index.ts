@@ -461,8 +461,8 @@ serve(async (req) => {
         });
       }
 
-      // Insert audits in batches
-      for (let i = 0; i < audits.length; i += batchSize) {
+      const auditBatchSize = 50;
+      for (let i = 0; i < audits.length; i += auditBatchSize) {
         const batch = audits.slice(i, i + batchSize);
         await supabase.from("medication_coverage_audit").insert(batch);
       }
