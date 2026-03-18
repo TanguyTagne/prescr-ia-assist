@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 import RequestsTab from "@/components/admin/RequestsTab";
 import PharmaciesTab from "@/components/admin/PharmaciesTab";
 import PharmacyKPIs from "@/components/admin/PharmacyKPIs";
+import CoverageTab from "@/components/admin/CoverageTab";
 
 interface AccessRequest {
   id: string;
