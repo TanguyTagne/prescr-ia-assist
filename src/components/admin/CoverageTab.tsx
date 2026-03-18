@@ -82,7 +82,8 @@ const CoverageTab = () => {
       const labels: Record<string, string> = {
         seed: "Chargement du référentiel Top 300...",
         audit: "Audit de couverture en cours...",
-        enrich: "Enrichissement automatique..."
+        enrich: "Enrichissement automatique...",
+        "fill-products": "Remplissage produits complémentaires..."
       };
       toast.info(labels[action] || "En cours...");
 
@@ -108,6 +109,14 @@ const CoverageTab = () => {
           setRunning(null);
           // Trigger next batch
           setTimeout(() => runAction("enrich"), 500);
+          return;
+        }
+      } else if (action === "fill-products") {
+        toast.success(`${data.filled} pathologies enrichies — ${data.produits_created} produits créés`);
+        if (data.remaining > 0) {
+          toast.info(`${data.remaining} pathologies restantes. Relance automatique.`);
+          setRunning(null);
+          setTimeout(() => runAction("fill-products"), 500);
           return;
         }
       }
@@ -161,6 +170,10 @@ const CoverageTab = () => {
         <Button size="sm" onClick={() => runAction("enrich")} disabled={!!running} variant="secondary" className="gap-1.5">
           {running === "enrich" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
           3. Enrichir automatiquement
+        </Button>
+        <Button size="sm" onClick={() => runAction("fill-products")} disabled={!!running} variant="secondary" className="gap-1.5">
+          {running === "fill-products" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
+          4. Remplir produits complémentaires
         </Button>
         <Button size="sm" variant="ghost" onClick={loadAuditData} disabled={!!running} className="ml-auto">
           <RefreshCw className="h-3.5 w-3.5" />
