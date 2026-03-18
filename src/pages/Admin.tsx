@@ -137,6 +137,7 @@ const Admin = () => {
         {tab === "kpis" && <PharmacyKPIs />}
         {tab === "requests" && <RequestsTab requests={requests} onRefresh={loadData} />}
         {tab === "pharmacies" && <PharmaciesTab pharmacies={pharmacies} onRefresh={loadData} />}
+        {tab === "coverage" && <CoverageTab />}
       </div>
     </div>
   );
