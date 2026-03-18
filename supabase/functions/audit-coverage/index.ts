@@ -463,7 +463,7 @@ serve(async (req) => {
 
       const auditBatchSize = 50;
       for (let i = 0; i < audits.length; i += auditBatchSize) {
-        const batch = audits.slice(i, i + batchSize);
+        const batch = audits.slice(i, i + auditBatchSize);
         await supabase.from("medication_coverage_audit").insert(batch);
       }
 
