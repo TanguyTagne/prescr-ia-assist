@@ -111,6 +111,14 @@ const CoverageTab = () => {
           setTimeout(() => runAction("enrich"), 500);
           return;
         }
+      } else if (action === "fill-products") {
+        toast.success(`${data.filled} pathologies enrichies — ${data.produits_created} produits créés`);
+        if (data.remaining > 0) {
+          toast.info(`${data.remaining} pathologies restantes. Relance automatique.`);
+          setRunning(null);
+          setTimeout(() => runAction("fill-products"), 500);
+          return;
+        }
       }
 
       await loadAuditData();
