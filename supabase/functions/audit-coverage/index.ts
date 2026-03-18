@@ -636,8 +636,17 @@ serve(async (req) => {
     if (action === "fill-products") {
       // Find all pathologies without produits_complementaires
       const { data: allPatho } = await supabase.from("pathologies").select("id, nom_pathologie, categorie");
-      const { data: existingProduits } = await supabase.from("produits_complementaires").select("pathologie_id");
-      const pathoWithProduits = new Set((existingProduits || []).map(p => p.pathologie_id));
+      // Use a distinct query to avoid 1000-row limit issues
+      const pathoWithProduits = new Set<string>();
+      let offset = 0;
+      const pageSize = 1000;
+      while (true) {
+        const { data: batch } = await supabase.from("produits_complementaires").select("pathologie_id").range(offset, offset + pageSize - 1);
+        if (!batch || batch.length === 0) break;
+        batch.forEach(p => pathoWithProduits.add(p.pathologie_id));
+        if (batch.length < pageSize) break;
+        offset += pageSize;
+      }
       
       const orphans = (allPatho || []).filter(p => !pathoWithProduits.has(p.id));
       
