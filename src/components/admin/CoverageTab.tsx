@@ -82,7 +82,8 @@ const CoverageTab = () => {
       const labels: Record<string, string> = {
         seed: "Chargement du référentiel Top 300...",
         audit: "Audit de couverture en cours...",
-        enrich: "Enrichissement automatique..."
+        enrich: "Enrichissement automatique...",
+        "fill-products": "Remplissage produits complémentaires..."
       };
       toast.info(labels[action] || "En cours...");
 
