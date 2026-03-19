@@ -44,7 +44,6 @@ serve(async (req) => {
     const body = await req.json();
 
     // Determine scan type
-    // Types: "prescription" (image/text), "article" (CIP barcode), "barcode_batch" (multiple CIPs)
     const scanType = body.type || "prescription";
     const source = body.source || "api";
 
@@ -62,7 +61,6 @@ serve(async (req) => {
         });
       }
 
-      // Insert pending scan
       const { data: scan, error: insertErr } = await supabaseAdmin
         .from("scan_queue")
         .insert({
@@ -78,7 +76,6 @@ serve(async (req) => {
 
       if (insertErr) throw insertErr;
 
-      // Process immediately: call analyze-prescription
       try {
         const analyzeResp = await fetch(
           `${Deno.env.get("SUPABASE_URL")}/functions/v1/analyze-prescription`,
@@ -94,7 +91,6 @@ serve(async (req) => {
 
         const result = await analyzeResp.json();
 
-        // Update scan with result
         await supabaseAdmin
           .from("scan_queue")
           .update({
@@ -113,7 +109,6 @@ serve(async (req) => {
           .from("scan_queue")
           .update({ status: "error", result: { error: String(procErr) }, processed_at: new Date().toISOString() })
           .eq("id", scan.id);
-
         throw procErr;
       }
     } else if (scanType === "article" || scanType === "barcode_batch") {
@@ -129,16 +124,13 @@ serve(async (req) => {
         });
       }
 
-      // Lookup medications by CIP
       const { data: meds } = await supabaseAdmin
         .from("medicaments")
         .select("id, nom_commercial, atc_code, molecule_id, cip_code")
         .in("cip_code", cipCodes);
 
-      // Get pathologies for found medications
       const medIds = (meds || []).map((m) => m.id);
       let suggestions: unknown[] = [];
-      let pathologies: unknown[] = [];
 
       if (medIds.length > 0) {
         const { data: medPathos } = await supabaseAdmin
@@ -147,9 +139,7 @@ serve(async (req) => {
           .in("medicament_id", medIds);
 
         const pathoIds = [...new Set((medPathos || []).map((mp) => mp.pathologie_id))];
-        pathologies = (medPathos || []).map((mp) => mp.pathologies).filter(Boolean);
 
-        // Get complementary products via protocol
         if (pathoIds.length > 0) {
           const { data: protos } = await supabaseAdmin
             .from("protocole_pathologie")
@@ -165,7 +155,6 @@ serve(async (req) => {
             .in("pathologie_id", pathoIds)
             .eq("actif", true);
 
-          // Get product details
           const prodIds = (protos || []).flatMap((p) =>
             [p.produit_complementaire_1_id, p.produit_complementaire_2_id, p.produit_complementaire_3_id].filter(Boolean)
           );
@@ -192,7 +181,6 @@ serve(async (req) => {
         }
       }
 
-      // Insert scan record
       const { data: scan } = await supabaseAdmin
         .from("scan_queue")
         .insert({
@@ -218,6 +206,177 @@ serve(async (req) => {
           medicaments: meds || [],
           suggestions,
           unrecognized: cipCodes.filter((c) => !(meds || []).some((m) => m.cip_code === c)),
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+
+    } else if (scanType === "sale") {
+      // ===== SALE TRACKING =====
+      // The POS sends a completed sale with all items (CIP codes)
+      // We detect which items are prescription meds vs complementary products
+      const items = body.items || []; // [{cip_code, nom, quantity, prix}]
+      const transactionId = body.transaction_id || null;
+
+      if (!items.length) {
+        return new Response(JSON.stringify({ error: "Provide items array" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // 1. Record the sale transaction
+      const { data: sale, error: saleErr } = await supabaseAdmin
+        .from("sales_transactions")
+        .insert({
+          pharmacy_id: pharmacyId,
+          transaction_id: transactionId,
+          device_id: deviceId,
+          items,
+          total_items: items.length,
+          source,
+        })
+        .select()
+        .single();
+
+      if (saleErr) throw saleErr;
+
+      // 2. Extract all CIP codes from the sale
+      const cipCodes = items.map((i: any) => i.cip_code).filter(Boolean);
+      if (cipCodes.length === 0) {
+        return new Response(
+          JSON.stringify({ sale_id: sale.id, cross_sell_matches: 0 }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      // 3. Find which items are known medicaments
+      const { data: saleMeds } = await supabaseAdmin
+        .from("medicaments")
+        .select("id, nom_commercial, cip_code")
+        .in("cip_code", cipCodes);
+
+      const soldMedIds = (saleMeds || []).map(m => m.id);
+
+      if (soldMedIds.length === 0) {
+        return new Response(
+          JSON.stringify({ sale_id: sale.id, cross_sell_matches: 0, message: "No known medications in sale" }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      // 4. Get pathologies linked to those meds
+      const { data: medPathos } = await supabaseAdmin
+        .from("medicament_pathologie")
+        .select("medicament_id, pathologie_id, pathologies(nom_pathologie)")
+        .in("medicament_id", soldMedIds);
+
+      if (!medPathos || medPathos.length === 0) {
+        return new Response(
+          JSON.stringify({ sale_id: sale.id, cross_sell_matches: 0, message: "No pathology links found" }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      // 5. Get recommended complementary products for those pathologies
+      const pathoIds = [...new Set(medPathos.map(mp => mp.pathologie_id))];
+      const { data: protos } = await supabaseAdmin
+        .from("protocole_pathologie")
+        .select(`
+          pathologie_id, pathologies(nom_pathologie),
+          produit_complementaire_1_id, produit_complementaire_2_id, produit_complementaire_3_id
+        `)
+        .in("pathologie_id", pathoIds)
+        .eq("actif", true);
+
+      if (!protos || protos.length === 0) {
+        return new Response(
+          JSON.stringify({ sale_id: sale.id, cross_sell_matches: 0, message: "No protocols found" }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      // 6. Get all recommended product details
+      const recProdIds = protos.flatMap(p =>
+        [p.produit_complementaire_1_id, p.produit_complementaire_2_id, p.produit_complementaire_3_id].filter(Boolean)
+      );
+
+      const { data: recProducts } = await supabaseAdmin
+        .from("produits_complementaires")
+        .select("id, produit, categorie, type_produit")
+        .in("id", recProdIds);
+
+      // 7. Get medicaments that match complementary product names (fuzzy match by name)
+      // Also check if any sale item name matches a complementary product
+      const soldItemNames = items.map((i: any) => (i.nom || "").toLowerCase().trim());
+      const soldCipSet = new Set(cipCodes);
+
+      // Build cross-sell tracking records
+      const crossSellRecords: any[] = [];
+
+      for (const proto of protos) {
+        const pathoName = (proto.pathologies as any)?.nom_pathologie || "";
+        
+        // Find which med triggered this pathology
+        const triggerMedPatho = medPathos.find(mp => mp.pathologie_id === proto.pathologie_id);
+        const triggerMed = saleMeds?.find(m => m.id === triggerMedPatho?.medicament_id);
+
+        const complementaryIds = [
+          proto.produit_complementaire_1_id,
+          proto.produit_complementaire_2_id,
+          proto.produit_complementaire_3_id,
+        ].filter(Boolean);
+
+        for (const compId of complementaryIds) {
+          const compProduct = recProducts?.find(p => p.id === compId);
+          if (!compProduct) continue;
+
+          // Check if the complementary product was sold in this transaction
+          // Match by name similarity (case-insensitive partial match)
+          const compName = compProduct.produit.toLowerCase().trim();
+          const wasSold = soldItemNames.some((soldName: string) => {
+            if (!soldName) return false;
+            return soldName.includes(compName) || compName.includes(soldName) ||
+              // Also check partial word match (e.g. "Doliprane 1000mg" matches "Doliprane")
+              soldName.split(" ").some((w: string) => w.length > 3 && compName.includes(w)) ||
+              compName.split(" ").some((w: string) => w.length > 3 && soldName.includes(w));
+          });
+
+          crossSellRecords.push({
+            pharmacy_id: pharmacyId,
+            sale_id: sale.id,
+            medicament_id: triggerMed?.id || null,
+            medicament_nom: triggerMed?.nom_commercial || "Inconnu",
+            pathologie_id: proto.pathologie_id,
+            pathologie_nom: pathoName,
+            produit_complementaire_id: compId,
+            produit_complementaire_nom: compProduct.produit,
+            was_sold: wasSold,
+          });
+        }
+      }
+
+      // 8. Insert cross-sell tracking records
+      let inserted = 0;
+      if (crossSellRecords.length > 0) {
+        const { data: insertedData, error: csErr } = await supabaseAdmin
+          .from("cross_sell_tracking")
+          .insert(crossSellRecords)
+          .select("id");
+        if (csErr) console.error("cross_sell insert error:", csErr);
+        inserted = insertedData?.length || 0;
+      }
+
+      const soldCount = crossSellRecords.filter(r => r.was_sold).length;
+
+      return new Response(
+        JSON.stringify({
+          sale_id: sale.id,
+          cross_sell_matches: inserted,
+          products_sold: soldCount,
+          products_recommended: crossSellRecords.length,
+          cross_sell_rate: crossSellRecords.length > 0
+            ? Math.round((soldCount / crossSellRecords.length) * 100)
+            : 0,
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );

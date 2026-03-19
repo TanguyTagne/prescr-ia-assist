@@ -218,6 +218,84 @@ export type Database = {
           },
         ]
       }
+      cross_sell_tracking: {
+        Row: {
+          created_at: string
+          id: string
+          medicament_id: string | null
+          medicament_nom: string
+          pathologie_id: string | null
+          pathologie_nom: string | null
+          pharmacy_id: string
+          produit_complementaire_id: string | null
+          produit_complementaire_nom: string
+          sale_id: string
+          was_sold: boolean
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          medicament_id?: string | null
+          medicament_nom: string
+          pathologie_id?: string | null
+          pathologie_nom?: string | null
+          pharmacy_id: string
+          produit_complementaire_id?: string | null
+          produit_complementaire_nom: string
+          sale_id: string
+          was_sold?: boolean
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          medicament_id?: string | null
+          medicament_nom?: string
+          pathologie_id?: string | null
+          pathologie_nom?: string | null
+          pharmacy_id?: string
+          produit_complementaire_id?: string | null
+          produit_complementaire_nom?: string
+          sale_id?: string
+          was_sold?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cross_sell_tracking_medicament_id_fkey"
+            columns: ["medicament_id"]
+            isOneToOne: false
+            referencedRelation: "medicaments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cross_sell_tracking_pathologie_id_fkey"
+            columns: ["pathologie_id"]
+            isOneToOne: false
+            referencedRelation: "pathologies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cross_sell_tracking_pharmacy_id_fkey"
+            columns: ["pharmacy_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cross_sell_tracking_produit_complementaire_id_fkey"
+            columns: ["produit_complementaire_id"]
+            isOneToOne: false
+            referencedRelation: "produits_complementaires"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cross_sell_tracking_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales_transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       medicament_pathologie: {
         Row: {
           id: string
@@ -1205,6 +1283,47 @@ export type Database = {
             columns: ["produit_id"]
             isOneToOne: false
             referencedRelation: "produits_complementaires"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales_transactions: {
+        Row: {
+          created_at: string
+          device_id: string | null
+          id: string
+          items: Json
+          pharmacy_id: string
+          source: string
+          total_items: number
+          transaction_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          device_id?: string | null
+          id?: string
+          items?: Json
+          pharmacy_id: string
+          source?: string
+          total_items?: number
+          transaction_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          device_id?: string | null
+          id?: string
+          items?: Json
+          pharmacy_id?: string
+          source?: string
+          total_items?: number
+          transaction_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_transactions_pharmacy_id_fkey"
+            columns: ["pharmacy_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacies"
             referencedColumns: ["id"]
           },
         ]

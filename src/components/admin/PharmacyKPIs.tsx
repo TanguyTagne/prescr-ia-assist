@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Activity, AlertTriangle, ShoppingBag, TrendingUp, Users } from "lucide-react";
+import { Loader2, Activity, AlertTriangle, ShoppingBag, TrendingUp, Users, ShoppingCart } from "lucide-react";
 
 interface PharmacyKPI {
   pharmacy_id: string;
@@ -25,6 +25,8 @@ const PharmacyKPIs = () => {
     totalPharmacies: 0,
     totalPatients: 0,
     majorInteractions: 0,
+    crossSellRate: 0,
+    totalSales: 0,
   });
 
   useEffect(() => {
@@ -78,11 +80,33 @@ const PharmacyKPIs = () => {
       });
 
       setKpis(pharmacyKPIs.sort((a, b) => b.total_analyses - a.total_analyses));
+
+      // Cross-sell stats
+      let crossSellRate = 0;
+      let totalSales = 0;
+      try {
+        const { count: salesC } = await supabase
+          .from("sales_transactions" as any)
+          .select("id", { count: "exact", head: true });
+        totalSales = salesC || 0;
+
+        const { data: csData } = await supabase
+          .from("cross_sell_tracking" as any)
+          .select("was_sold")
+          .limit(1000);
+        if (csData && csData.length > 0) {
+          const sold = (csData as any[]).filter(r => r.was_sold).length;
+          crossSellRate = Math.round((sold / csData.length) * 100);
+        }
+      } catch { /* tables may not exist yet */ }
+
       setGlobalStats({
         totalAnalyses: historyItems.length,
         totalPharmacies: pharmacies.length,
         totalPatients: totalPatientSet.size,
         majorInteractions: historyItems.filter((h) => h.has_major_interaction).length,
+        crossSellRate,
+        totalSales,
       });
     } catch (err) {
       console.error("KPI load error:", err);
@@ -139,6 +163,20 @@ const PharmacyKPIs = () => {
             <p className="text-2xl font-bold">{globalStats.majorInteractions}</p>
           </CardContent>
         </Card>
+        {globalStats.totalSales > 0 && (
+          <Card className="border-border col-span-2 md:col-span-2">
+            <CardContent className="pt-4 pb-3 px-4">
+              <div className="flex items-center gap-2 mb-1">
+                <ShoppingCart className="h-4 w-4 text-primary" />
+                <span className="text-xs text-muted-foreground">Cross-sell</span>
+              </div>
+              <div className="flex items-baseline gap-3">
+                <p className="text-2xl font-bold">{globalStats.crossSellRate}%</p>
+                <span className="text-xs text-muted-foreground">{globalStats.totalSales} ventes tracées</span>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Per-pharmacy KPIs */}
