@@ -272,7 +272,7 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
             variant="ghost"
             size="sm"
             className="h-6 text-[10px] gap-1 text-muted-foreground hover:text-foreground px-1.5"
-            onClick={() => { setShowSetup(true); loadKeys(); }}
+            onClick={() => { setShowSetup(true); loadKeys(); loadLgoConfig(); }}
           >
             <Settings className="h-3 w-3" />
           </Button>
