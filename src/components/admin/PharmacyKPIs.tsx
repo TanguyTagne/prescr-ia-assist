@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Activity, AlertTriangle, ShoppingBag, TrendingUp, Users } from "lucide-react";
+import { Loader2, Activity, AlertTriangle, ShoppingBag, TrendingUp, Users, ShoppingCart } from "lucide-react";
 
 interface PharmacyKPI {
   pharmacy_id: string;
