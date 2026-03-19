@@ -133,6 +133,10 @@ const Admin = () => {
             <ShieldCheck className="h-3.5 w-3.5" />
             Couverture
           </Button>
+          <Button variant={tab === "sales" ? "default" : "outline"} size="sm" onClick={() => setTab("sales")} className="gap-1.5">
+            <ShoppingCart className="h-3.5 w-3.5" />
+            Ventes
+          </Button>
         </div>
 
         {tab === "kpis" && <PharmacyKPIs />}
