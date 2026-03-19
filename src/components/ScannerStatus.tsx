@@ -364,6 +364,75 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
               )}
             </div>
           </div>
+
+            {/* LGO Integration */}
+            <div className="space-y-2 border-t border-border pt-4">
+              <Label className="text-xs font-semibold flex items-center gap-1.5">
+                <Key className="h-3.5 w-3.5" />
+                Connexion LGO — Stocks
+              </Label>
+              <p className="text-[11px] text-muted-foreground">
+                Connectez votre Logiciel de Gestion d'Officine pour synchroniser les stocks et enrichir les suggestions.
+              </p>
+              {!pharmacyId ? (
+                <p className="text-[11px] text-destructive">Aucune pharmacie associée à votre compte.</p>
+              ) : (
+                <div className="space-y-2 rounded-md border border-border p-3 bg-muted/30">
+                  {lgoConnected && (
+                    <Badge className="bg-primary/20 text-primary text-[10px] mb-1">
+                      <Check className="h-2.5 w-2.5 mr-0.5" />
+                      LGO connecté
+                    </Badge>
+                  )}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-[10px] text-muted-foreground">Type de LGO</Label>
+                      <select
+                        value={lgoForm.lgo_type}
+                        onChange={e => setLgoForm(f => ({ ...f, lgo_type: e.target.value }))}
+                        className="w-full h-8 text-xs rounded-md border border-input bg-background px-2"
+                      >
+                        <option value="winpharma">Winpharma</option>
+                        <option value="lgpi">LGPI</option>
+                        <option value="pharmagest">Pharmagest</option>
+                        <option value="leo">Léo</option>
+                        <option value="smart_rx">Smart Rx</option>
+                        <option value="autre">Autre</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[10px] text-muted-foreground">URL API</Label>
+                      <Input
+                        placeholder="https://api.monlgo.fr/v1"
+                        value={lgoForm.api_base_url}
+                        onChange={e => setLgoForm(f => ({ ...f, api_base_url: e.target.value }))}
+                        className="h-8 text-xs"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[10px] text-muted-foreground">Clé API du LGO</Label>
+                    <Input
+                      type="password"
+                      placeholder={lgoConnected ? "••••••• (laisser vide pour ne pas changer)" : "Entrez votre clé API"}
+                      value={lgoForm.api_key}
+                      onChange={e => setLgoForm(f => ({ ...f, api_key: e.target.value }))}
+                      className="h-8 text-xs"
+                    />
+                  </div>
+                  <Button
+                    size="sm"
+                    className="w-full h-8 text-xs gap-1.5"
+                    onClick={handleSaveLgo}
+                    disabled={lgoSaving || !lgoForm.api_base_url}
+                  >
+                    {lgoSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                    {lgoConnected ? "Mettre à jour" : "Connecter le LGO"}
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
