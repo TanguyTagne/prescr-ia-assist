@@ -4,7 +4,7 @@ import { useFolderWatcher } from "@/hooks/useFolderWatcher";
 import { useBarcodeScanner } from "@/hooks/useBarcodeScanner";
 import {
   X, Wifi, WifiOff, ShoppingCart, FileText, Package,
-  Settings, Copy, Check, Plus, Trash2, Monitor, ScanBarcode,
+  Settings, Copy, Check, Plus, Trash2, Monitor, ScanBarcode, Key,
   FolderSearch, Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -92,6 +92,10 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
   const [newLabel, setNewLabel] = useState("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [creatingKey, setCreatingKey] = useState(false);
+  const [lgoForm, setLgoForm] = useState({ lgo_type: "winpharma", api_base_url: "", api_key: "" });
+  const [lgoSaving, setLgoSaving] = useState(false);
+  const [lgoLoaded, setLgoLoaded] = useState(false);
+  const [lgoConnected, setLgoConnected] = useState(false);
 
   const isFolderApiSupported = typeof window !== "undefined" && "showDirectoryPicker" in window;
 
@@ -164,6 +168,58 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  const loadLgoConfig = async () => {
+    if (!pharmacyId || lgoLoaded) return;
+    try {
+      const { data } = await supabase
+        .from("pharmacy_lgo_config")
+        .select("*")
+        .eq("pharmacy_id", pharmacyId)
+        .maybeSingle();
+      if (data) {
+        setLgoForm({ lgo_type: data.lgo_type || "winpharma", api_base_url: data.api_base_url || "", api_key: "" });
+        setLgoConnected(data.enabled);
+      }
+      setLgoLoaded(true);
+    } catch { /* ignore */ }
+  };
+
+  const handleSaveLgo = async () => {
+    if (!pharmacyId) return;
+    setLgoSaving(true);
+    try {
+      const { data: existing } = await supabase
+        .from("pharmacy_lgo_config")
+        .select("id")
+        .eq("pharmacy_id", pharmacyId)
+        .maybeSingle();
+
+      if (existing) {
+        const updateData: any = {
+          lgo_type: lgoForm.lgo_type,
+          api_base_url: lgoForm.api_base_url,
+          updated_at: new Date().toISOString(),
+        };
+        if (lgoForm.api_key) updateData.api_key_encrypted = lgoForm.api_key;
+        await supabase.from("pharmacy_lgo_config").update(updateData).eq("id", existing.id);
+      } else {
+        await supabase.from("pharmacy_lgo_config").insert({
+          pharmacy_id: pharmacyId,
+          lgo_type: lgoForm.lgo_type,
+          api_base_url: lgoForm.api_base_url,
+          api_key_encrypted: lgoForm.api_key || null,
+        });
+      }
+      setLgoConnected(true);
+      setLgoForm(f => ({ ...f, api_key: "" }));
+      toast.success("Configuration LGO enregistrée !");
+    } catch (err: any) {
+      toast.error(err.message || "Erreur lors de la sauvegarde");
+    } finally {
+      setLgoSaving(false);
+    }
+  };
+
   return (
     <div className="space-y-2">
       {/* Scanner status bar */}
@@ -216,7 +272,7 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
             variant="ghost"
             size="sm"
             className="h-6 text-[10px] gap-1 text-muted-foreground hover:text-foreground px-1.5"
-            onClick={() => { setShowSetup(true); loadKeys(); }}
+            onClick={() => { setShowSetup(true); loadKeys(); loadLgoConfig(); }}
           >
             <Settings className="h-3 w-3" />
           </Button>
@@ -305,6 +361,74 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
                     </div>
                   )}
                 </>
+              )}
+            </div>
+
+            {/* LGO Integration */}
+            <div className="space-y-2 border-t border-border pt-4">
+              <Label className="text-xs font-semibold flex items-center gap-1.5">
+                <Key className="h-3.5 w-3.5" />
+                Connexion LGO — Stocks
+              </Label>
+              <p className="text-[11px] text-muted-foreground">
+                Connectez votre Logiciel de Gestion d'Officine pour synchroniser les stocks et enrichir les suggestions.
+              </p>
+              {!pharmacyId ? (
+                <p className="text-[11px] text-destructive">Aucune pharmacie associée à votre compte.</p>
+              ) : (
+                <div className="space-y-2 rounded-md border border-border p-3 bg-muted/30">
+                  {lgoConnected && (
+                    <Badge className="bg-primary/20 text-primary text-[10px] mb-1">
+                      <Check className="h-2.5 w-2.5 mr-0.5" />
+                      LGO connecté
+                    </Badge>
+                  )}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-[10px] text-muted-foreground">Type de LGO</Label>
+                      <select
+                        value={lgoForm.lgo_type}
+                        onChange={e => setLgoForm(f => ({ ...f, lgo_type: e.target.value }))}
+                        className="w-full h-8 text-xs rounded-md border border-input bg-background px-2"
+                      >
+                        <option value="winpharma">Winpharma</option>
+                        <option value="lgpi">LGPI</option>
+                        <option value="pharmagest">Pharmagest</option>
+                        <option value="leo">Léo</option>
+                        <option value="smart_rx">Smart Rx</option>
+                        <option value="autre">Autre</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[10px] text-muted-foreground">URL API</Label>
+                      <Input
+                        placeholder="https://api.monlgo.fr/v1"
+                        value={lgoForm.api_base_url}
+                        onChange={e => setLgoForm(f => ({ ...f, api_base_url: e.target.value }))}
+                        className="h-8 text-xs"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[10px] text-muted-foreground">Clé API du LGO</Label>
+                    <Input
+                      type="password"
+                      placeholder={lgoConnected ? "••••••• (laisser vide pour ne pas changer)" : "Entrez votre clé API"}
+                      value={lgoForm.api_key}
+                      onChange={e => setLgoForm(f => ({ ...f, api_key: e.target.value }))}
+                      className="h-8 text-xs"
+                    />
+                  </div>
+                  <Button
+                    size="sm"
+                    className="w-full h-8 text-xs gap-1.5"
+                    onClick={handleSaveLgo}
+                    disabled={lgoSaving || !lgoForm.api_base_url}
+                  >
+                    {lgoSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                    {lgoConnected ? "Mettre à jour" : "Connecter le LGO"}
+                  </Button>
+                </div>
               )}
             </div>
           </div>
