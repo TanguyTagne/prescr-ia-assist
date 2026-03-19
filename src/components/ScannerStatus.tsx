@@ -92,6 +92,10 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
   const [newLabel, setNewLabel] = useState("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [creatingKey, setCreatingKey] = useState(false);
+  const [lgoForm, setLgoForm] = useState({ lgo_type: "winpharma", api_base_url: "", api_key: "" });
+  const [lgoSaving, setLgoSaving] = useState(false);
+  const [lgoLoaded, setLgoLoaded] = useState(false);
+  const [lgoConnected, setLgoConnected] = useState(false);
 
   const isFolderApiSupported = typeof window !== "undefined" && "showDirectoryPicker" in window;
 
