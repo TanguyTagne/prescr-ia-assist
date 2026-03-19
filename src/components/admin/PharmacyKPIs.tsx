@@ -163,6 +163,20 @@ const PharmacyKPIs = () => {
             <p className="text-2xl font-bold">{globalStats.majorInteractions}</p>
           </CardContent>
         </Card>
+        {globalStats.totalSales > 0 && (
+          <Card className="border-border col-span-2 md:col-span-2">
+            <CardContent className="pt-4 pb-3 px-4">
+              <div className="flex items-center gap-2 mb-1">
+                <ShoppingCart className="h-4 w-4 text-primary" />
+                <span className="text-xs text-muted-foreground">Cross-sell</span>
+              </div>
+              <div className="flex items-baseline gap-3">
+                <p className="text-2xl font-bold">{globalStats.crossSellRate}%</p>
+                <span className="text-xs text-muted-foreground">{globalStats.totalSales} ventes tracées</span>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Per-pharmacy KPIs */}
