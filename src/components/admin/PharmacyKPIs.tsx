@@ -80,11 +80,33 @@ const PharmacyKPIs = () => {
       });
 
       setKpis(pharmacyKPIs.sort((a, b) => b.total_analyses - a.total_analyses));
+
+      // Cross-sell stats
+      let crossSellRate = 0;
+      let totalSales = 0;
+      try {
+        const { count: salesC } = await supabase
+          .from("sales_transactions" as any)
+          .select("id", { count: "exact", head: true });
+        totalSales = salesC || 0;
+
+        const { data: csData } = await supabase
+          .from("cross_sell_tracking" as any)
+          .select("was_sold")
+          .limit(1000);
+        if (csData && csData.length > 0) {
+          const sold = (csData as any[]).filter(r => r.was_sold).length;
+          crossSellRate = Math.round((sold / csData.length) * 100);
+        }
+      } catch { /* tables may not exist yet */ }
+
       setGlobalStats({
         totalAnalyses: historyItems.length,
         totalPharmacies: pharmacies.length,
         totalPatients: totalPatientSet.size,
         majorInteractions: historyItems.filter((h) => h.has_major_interaction).length,
+        crossSellRate,
+        totalSales,
       });
     } catch (err) {
       console.error("KPI load error:", err);
