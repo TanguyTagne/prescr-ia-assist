@@ -143,6 +143,7 @@ const Admin = () => {
         {tab === "requests" && <RequestsTab requests={requests} onRefresh={loadData} />}
         {tab === "pharmacies" && <PharmaciesTab pharmacies={pharmacies} onRefresh={loadData} />}
         {tab === "coverage" && <CoverageTab />}
+        {tab === "sales" && <SalesTab />}
       </div>
     </div>
   );
