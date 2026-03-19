@@ -9,6 +9,7 @@ import RequestsTab from "@/components/admin/RequestsTab";
 import PharmaciesTab from "@/components/admin/PharmaciesTab";
 import PharmacyKPIs from "@/components/admin/PharmacyKPIs";
 import CoverageTab from "@/components/admin/CoverageTab";
+import SalesTab from "@/components/admin/SalesTab";
 
 interface AccessRequest {
   id: string;
