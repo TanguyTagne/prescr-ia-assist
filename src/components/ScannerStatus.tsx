@@ -363,7 +363,6 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
                 </>
               )}
             </div>
-          </div>
 
             {/* LGO Integration */}
             <div className="space-y-2 border-t border-border pt-4">
