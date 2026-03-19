@@ -168,6 +168,58 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  const loadLgoConfig = async () => {
+    if (!pharmacyId || lgoLoaded) return;
+    try {
+      const { data } = await supabase
+        .from("pharmacy_lgo_config")
+        .select("*")
+        .eq("pharmacy_id", pharmacyId)
+        .maybeSingle();
+      if (data) {
+        setLgoForm({ lgo_type: data.lgo_type || "winpharma", api_base_url: data.api_base_url || "", api_key: "" });
+        setLgoConnected(data.enabled);
+      }
+      setLgoLoaded(true);
+    } catch { /* ignore */ }
+  };
+
+  const handleSaveLgo = async () => {
+    if (!pharmacyId) return;
+    setLgoSaving(true);
+    try {
+      const { data: existing } = await supabase
+        .from("pharmacy_lgo_config")
+        .select("id")
+        .eq("pharmacy_id", pharmacyId)
+        .maybeSingle();
+
+      if (existing) {
+        const updateData: any = {
+          lgo_type: lgoForm.lgo_type,
+          api_base_url: lgoForm.api_base_url,
+          updated_at: new Date().toISOString(),
+        };
+        if (lgoForm.api_key) updateData.api_key_encrypted = lgoForm.api_key;
+        await supabase.from("pharmacy_lgo_config").update(updateData).eq("id", existing.id);
+      } else {
+        await supabase.from("pharmacy_lgo_config").insert({
+          pharmacy_id: pharmacyId,
+          lgo_type: lgoForm.lgo_type,
+          api_base_url: lgoForm.api_base_url,
+          api_key_encrypted: lgoForm.api_key || null,
+        });
+      }
+      setLgoConnected(true);
+      setLgoForm(f => ({ ...f, api_key: "" }));
+      toast.success("Configuration LGO enregistrée !");
+    } catch (err: any) {
+      toast.error(err.message || "Erreur lors de la sauvegarde");
+    } finally {
+      setLgoSaving(false);
+    }
+  };
+
   return (
     <div className="space-y-2">
       {/* Scanner status bar */}
