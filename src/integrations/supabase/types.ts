@@ -703,6 +703,69 @@ export type Database = {
           },
         ]
       }
+      patient_reminders: {
+        Row: {
+          analysis_id: string | null
+          created_at: string
+          id: string
+          message: string | null
+          patient_hash: string
+          patient_name: string | null
+          pharmacy_id: string
+          phone: string | null
+          reminder_date: string
+          reminder_type: string
+          sent_at: string | null
+          status: string
+          treatment_end_date: string
+        }
+        Insert: {
+          analysis_id?: string | null
+          created_at?: string
+          id?: string
+          message?: string | null
+          patient_hash: string
+          patient_name?: string | null
+          pharmacy_id: string
+          phone?: string | null
+          reminder_date: string
+          reminder_type?: string
+          sent_at?: string | null
+          status?: string
+          treatment_end_date: string
+        }
+        Update: {
+          analysis_id?: string | null
+          created_at?: string
+          id?: string
+          message?: string | null
+          patient_hash?: string
+          patient_name?: string | null
+          pharmacy_id?: string
+          phone?: string | null
+          reminder_date?: string
+          reminder_type?: string
+          sent_at?: string | null
+          status?: string
+          treatment_end_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_reminders_analysis_id_fkey"
+            columns: ["analysis_id"]
+            isOneToOne: false
+            referencedRelation: "analysis_history"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_reminders_pharmacy_id_fkey"
+            columns: ["pharmacy_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pharma_questions: {
         Row: {
           contexte_explication: string | null
