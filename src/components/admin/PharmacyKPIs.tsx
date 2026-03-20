@@ -180,6 +180,9 @@ const PharmacyKPIs = () => {
         )}
       </div>
 
+      {/* CRM / Patient History */}
+      <PatientCRM />
+
       {/* Per-pharmacy KPIs */}
       <div className="space-y-3">
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Par pharmacie</h3>
