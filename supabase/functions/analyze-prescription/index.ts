@@ -768,11 +768,27 @@ serve(async (req) => {
       }
     }
 
-    // Step 4: Build direct recommendations per medication (1 conseil + 2 produits max)
+    // Step 4: Build direct recommendations per medication
+    // Apply degressive rule based on total meds count
+    const maxPCPerMed = getMaxPCsPerMed(enrichedMeds.length);
     const allContexts: string[] = [];
     let hasStructuredData = clinicalResults.length > 0;
     const medRecommendations: Map<number, any[]> = new Map();
     const medMainAdvice: Map<number, string> = new Map();
+    const allProposedPCs: string[] = []; // track globally proposed PCs to avoid duplicates across meds
+
+    // Load pharmacy-specific product mappings
+    let productMappings: any[] = [];
+    const authHeader = req.headers.get("authorization");
+    const pharmacyIdForMapping = await getPharmacyIdFromAuth(supabase, authHeader);
+    if (pharmacyIdForMapping) {
+      const { data: mappings } = await supabase
+        .from("product_mapping")
+        .select("categorie, produit_selectionne, cip_code")
+        .eq("pharmacy_id", pharmacyIdForMapping)
+        .eq("active", true);
+      productMappings = mappings || [];
+    }
 
     // Load new protocole_pathologie with joined data
     const { data: protocoles } = await supabase
