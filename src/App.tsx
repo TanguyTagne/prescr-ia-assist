@@ -1,16 +1,18 @@
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
-import Landing from "./pages/Landing";
-import Auth from "./pages/Auth";
-import Admin from "./pages/Admin";
-import Dashboard from "./pages/Dashboard";
-import NotFound from "./pages/NotFound";
-import Widget from "./components/Widget";
 import { Loader2 } from "lucide-react";
+
+const Landing = lazy(() => import("./pages/Landing"));
+const Auth = lazy(() => import("./pages/Auth"));
+const Admin = lazy(() => import("./pages/Admin"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const Widget = lazy(() => import("./components/Widget"));
 
 const queryClient = new QueryClient();
 
@@ -37,20 +39,22 @@ const App = () => {
         <Toaster />
         <Sonner />
         <AuthProvider>
-          {isStandalone ? (
-            <Widget forceOpen />
-          ) : (
-            <>
-              <Routes>
-                <Route path="/" element={<Landing />} />
-                <Route path="/auth" element={<Auth />} />
-                <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
-                <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-              <Widget />
-            </>
-          )}
+          <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}>
+            {isStandalone ? (
+              <Widget forceOpen />
+            ) : (
+              <>
+                <Routes>
+                  <Route path="/" element={<Landing />} />
+                  <Route path="/auth" element={<Auth />} />
+                  <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+                  <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+                <Widget />
+              </>
+            )}
+          </Suspense>
         </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>
