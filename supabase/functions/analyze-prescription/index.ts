@@ -627,7 +627,7 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { prescriptionText, imageBase64 } = body;
+    const { prescriptionText, imageBase64, basketSessionId, blockedProducts } = body;
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
@@ -637,6 +637,11 @@ serve(async (req) => {
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) throw new Error("Missing Supabase config");
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    // Parse blocked products from basket context (anti-loop)
+    const blockedPCSet = new Set<string>(
+      (blockedProducts || []).map((p: string) => normalizeText(p))
+    );
 
     // Step 1: Extract medication names and patient name
     let medEntries: { nom_commercial: string; molecule_probable?: string; confiance?: string }[] = [];
