@@ -141,6 +141,53 @@ export type Database = {
           },
         ]
       }
+      basket_context: {
+        Row: {
+          active: boolean
+          blocked_pcs: Json
+          created_at: string
+          id: string
+          pharmacy_id: string
+          proposed_pcs: Json
+          scanned_medicaments: Json
+          selected_pcs: Json
+          session_id: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          blocked_pcs?: Json
+          created_at?: string
+          id?: string
+          pharmacy_id: string
+          proposed_pcs?: Json
+          scanned_medicaments?: Json
+          selected_pcs?: Json
+          session_id: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          blocked_pcs?: Json
+          created_at?: string
+          id?: string
+          pharmacy_id?: string
+          proposed_pcs?: Json
+          scanned_medicaments?: Json
+          selected_pcs?: Json
+          session_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "basket_context_pharmacy_id_fkey"
+            columns: ["pharmacy_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       classe_atc: {
         Row: {
           atc_code: string
@@ -948,6 +995,47 @@ export type Database = {
           },
         ]
       }
+      product_mapping: {
+        Row: {
+          active: boolean
+          categorie: string
+          cip_code: string | null
+          created_at: string
+          id: string
+          pharmacy_id: string
+          produit_selectionne: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          categorie: string
+          cip_code?: string | null
+          created_at?: string
+          id?: string
+          pharmacy_id: string
+          produit_selectionne: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          categorie?: string
+          cip_code?: string | null
+          created_at?: string
+          id?: string
+          pharmacy_id?: string
+          produit_selectionne?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_mapping_pharmacy_id_fkey"
+            columns: ["pharmacy_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       produit_complementaire_ranking: {
         Row: {
           created_at: string
@@ -1195,6 +1283,62 @@ export type Database = {
             columns: ["produit_complementaire_3_id"]
             isOneToOne: false
             referencedRelation: "produits_complementaires"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recommendation_metrics: {
+        Row: {
+          conversion_rate: number | null
+          created_at: string
+          id: string
+          medicament_source: string
+          pc_categorie: string | null
+          pc_proposed: string
+          pharmacy_id: string
+          times_clicked: number
+          times_displayed: number
+          times_proposed: number
+          times_scanned: number
+          times_sold: number
+          updated_at: string
+        }
+        Insert: {
+          conversion_rate?: number | null
+          created_at?: string
+          id?: string
+          medicament_source: string
+          pc_categorie?: string | null
+          pc_proposed: string
+          pharmacy_id: string
+          times_clicked?: number
+          times_displayed?: number
+          times_proposed?: number
+          times_scanned?: number
+          times_sold?: number
+          updated_at?: string
+        }
+        Update: {
+          conversion_rate?: number | null
+          created_at?: string
+          id?: string
+          medicament_source?: string
+          pc_categorie?: string | null
+          pc_proposed?: string
+          pharmacy_id?: string
+          times_clicked?: number
+          times_displayed?: number
+          times_proposed?: number
+          times_scanned?: number
+          times_sold?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recommendation_metrics_pharmacy_id_fkey"
+            columns: ["pharmacy_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacies"
             referencedColumns: ["id"]
           },
         ]
