@@ -78,9 +78,16 @@ export async function analyzePrescription(
   return normalizeResult(data);
 }
 
-export async function analyzePrescriptionImage(imageBase64: string): Promise<AnalysisResult> {
+export async function analyzePrescriptionImage(
+  imageBase64: string,
+  options?: { basketSessionId?: string; blockedProducts?: string[] }
+): Promise<AnalysisResult> {
   const { data, error } = await supabase.functions.invoke("analyze-prescription", {
-    body: { imageBase64 },
+    body: {
+      imageBase64,
+      basketSessionId: options?.basketSessionId,
+      blockedProducts: options?.blockedProducts,
+    },
   });
 
   if (error) {
@@ -89,6 +96,30 @@ export async function analyzePrescriptionImage(imageBase64: string): Promise<Ana
   }
   if (data?.error) throw new Error(data.error);
   return normalizeResult(data);
+}
+
+export async function trackRecommendationClick(
+  pharmacyId: string,
+  medicamentSource: string,
+  pcProposed: string
+): Promise<void> {
+  try {
+    const { data: existing } = await supabase
+      .from("recommendation_metrics")
+      .select("id, times_clicked")
+      .eq("pharmacy_id", pharmacyId)
+      .eq("medicament_source", medicamentSource)
+      .eq("pc_proposed", pcProposed)
+      .maybeSingle();
+
+    if (existing) {
+      await supabase.from("recommendation_metrics")
+        .update({ times_clicked: (existing.times_clicked || 0) + 1, updated_at: new Date().toISOString() })
+        .eq("id", existing.id);
+    }
+  } catch (e) {
+    console.error("Failed to track click:", e);
+  }
 }
 
 export async function trackRecommendationUsage(
