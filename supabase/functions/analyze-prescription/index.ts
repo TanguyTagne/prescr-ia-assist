@@ -995,7 +995,32 @@ serve(async (req) => {
       }
 
       if (advice) medMainAdvice.set(i, advice);
-      medRecommendations.set(i, recs.slice(0, MAX_RECOMMENDATIONS_PER_MED));
+
+      // Apply filters: blocked products (anti-loop), cross-med dedup, degressive cap
+      let filteredRecs = recs
+        .filter((r: any) => !blockedPCSet.has(normalizeText(r.produit)))
+        .filter((r: any) => !allProposedPCs.includes(normalizeText(r.produit)));
+
+      // Apply pharmacy product mapping (replace generic → specific)
+      filteredRecs = filteredRecs.map((r: any) => {
+        const mapping = productMappings.find(
+          (m: any) => normalizeText(m.categorie) === normalizeText(r.categorie)
+        );
+        if (mapping) {
+          return { ...r, produit: mapping.produit_selectionne, mapped: true };
+        }
+        return r;
+      });
+
+      // Cap to degressive limit
+      const finalRecs = filteredRecs.slice(0, maxPCPerMed);
+      
+      // Track proposed PCs globally
+      for (const r of finalRecs) {
+        allProposedPCs.push(normalizeText(r.produit));
+      }
+
+      medRecommendations.set(i, finalRecs);
     }
 
     // Step 5: Check interactions
