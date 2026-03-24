@@ -323,7 +323,14 @@ async function clinicalLookup(supabase: any, medName: string, moleculeName?: str
 
 // ====== CLINICAL FALLBACK HELPERS ======
 
-const MAX_RECOMMENDATIONS_PER_MED = 3;
+// Degressive rule: fewer PCs per med as total meds increase
+function getMaxPCsPerMed(totalMeds: number): number {
+  if (totalMeds <= 1) return 3;
+  if (totalMeds === 2) return 2;
+  return 1; // 3+ meds → 1 PC each
+}
+
+const MAX_RECOMMENDATIONS_PER_MED = 3; // absolute max, overridden by degressive rule
 const LOW_FRICTION_BLOCKLIST = [
   "inhalateur",
   "nébuliseur",
