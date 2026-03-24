@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { BarChart3, Activity, MousePointerClick, ShoppingBag, Clock, ArrowLeft, LogOut, Download, Monitor, Shield } from "lucide-react";
+import { BarChart3, Activity, MousePointerClick, ShoppingBag, Clock, ArrowLeft, LogOut, Download, Monitor, Shield, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
+import ProductMappingSettings from "@/components/ProductMappingSettings";
 
 interface KpiData {
   ordonnancesDetected: number;
@@ -145,6 +146,19 @@ const Dashboard = () => {
                 ))}
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Product Mapping Settings */}
+        <Card className="glass-card border-primary/20">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Package className="h-5 w-5 text-primary" />
+              Personnalisation des recommandations
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ProductMappingSettings />
           </CardContent>
         </Card>
 

@@ -323,7 +323,14 @@ async function clinicalLookup(supabase: any, medName: string, moleculeName?: str
 
 // ====== CLINICAL FALLBACK HELPERS ======
 
-const MAX_RECOMMENDATIONS_PER_MED = 3;
+// Degressive rule: fewer PCs per med as total meds increase
+function getMaxPCsPerMed(totalMeds: number): number {
+  if (totalMeds <= 1) return 3;
+  if (totalMeds === 2) return 2;
+  return 1; // 3+ meds → 1 PC each
+}
+
+const MAX_RECOMMENDATIONS_PER_MED = 3; // absolute max, overridden by degressive rule
 const LOW_FRICTION_BLOCKLIST = [
   "inhalateur",
   "nébuliseur",
@@ -620,7 +627,7 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { prescriptionText, imageBase64 } = body;
+    const { prescriptionText, imageBase64, basketSessionId, blockedProducts } = body;
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
@@ -630,6 +637,11 @@ serve(async (req) => {
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) throw new Error("Missing Supabase config");
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    // Parse blocked products from basket context (anti-loop)
+    const blockedPCSet = new Set<string>(
+      (blockedProducts || []).map((p: string) => normalizeText(p))
+    );
 
     // Step 1: Extract medication names and patient name
     let medEntries: { nom_commercial: string; molecule_probable?: string; confiance?: string }[] = [];
@@ -756,11 +768,27 @@ serve(async (req) => {
       }
     }
 
-    // Step 4: Build direct recommendations per medication (1 conseil + 2 produits max)
+    // Step 4: Build direct recommendations per medication
+    // Apply degressive rule based on total meds count
+    const maxPCPerMed = getMaxPCsPerMed(enrichedMeds.length);
     const allContexts: string[] = [];
     let hasStructuredData = clinicalResults.length > 0;
     const medRecommendations: Map<number, any[]> = new Map();
     const medMainAdvice: Map<number, string> = new Map();
+    const allProposedPCs: string[] = []; // track globally proposed PCs to avoid duplicates across meds
+
+    // Load pharmacy-specific product mappings
+    let productMappings: any[] = [];
+    const authHeader = req.headers.get("authorization");
+    const pharmacyIdForMapping = await getPharmacyIdFromAuth(supabase, authHeader);
+    if (pharmacyIdForMapping) {
+      const { data: mappings } = await supabase
+        .from("product_mapping")
+        .select("categorie, produit_selectionne, cip_code")
+        .eq("pharmacy_id", pharmacyIdForMapping)
+        .eq("active", true);
+      productMappings = mappings || [];
+    }
 
     // Load new protocole_pathologie with joined data
     const { data: protocoles } = await supabase
@@ -967,7 +995,32 @@ serve(async (req) => {
       }
 
       if (advice) medMainAdvice.set(i, advice);
-      medRecommendations.set(i, recs.slice(0, MAX_RECOMMENDATIONS_PER_MED));
+
+      // Apply filters: blocked products (anti-loop), cross-med dedup, degressive cap
+      let filteredRecs = recs
+        .filter((r: any) => !blockedPCSet.has(normalizeText(r.produit)))
+        .filter((r: any) => !allProposedPCs.includes(normalizeText(r.produit)));
+
+      // Apply pharmacy product mapping (replace generic → specific)
+      filteredRecs = filteredRecs.map((r: any) => {
+        const mapping = productMappings.find(
+          (m: any) => normalizeText(m.categorie) === normalizeText(r.categorie)
+        );
+        if (mapping) {
+          return { ...r, produit: mapping.produit_selectionne, mapped: true };
+        }
+        return r;
+      });
+
+      // Cap to degressive limit
+      const finalRecs = filteredRecs.slice(0, maxPCPerMed);
+      
+      // Track proposed PCs globally
+      for (const r of finalRecs) {
+        allProposedPCs.push(normalizeText(r.produit));
+      }
+
+      medRecommendations.set(i, finalRecs);
     }
 
     // Step 5: Check interactions
@@ -1058,10 +1111,10 @@ serve(async (req) => {
       questions: [],
     };
 
-    // Step 8: Save to analysis_history
+    // Step 8: Save to analysis_history + metrics + basket context
     try {
-      const authHeader = req.headers.get("authorization");
-      const pharmacyId = await getPharmacyIdFromAuth(supabase, authHeader);
+      const pharmacyId = pharmacyIdForMapping || await getPharmacyIdFromAuth(supabase, authHeader);
+      
       
       if (pharmacyId && authHeader) {
         const token = authHeader.replace("Bearer ", "");
@@ -1113,6 +1166,58 @@ serve(async (req) => {
             previous_analyses: patientHistory.length - 1,
             first_seen: patientHistory[patientHistory.length - 1]?.created_at,
           };
+        }
+
+        // Track recommendation metrics (upsert per PC)
+        for (const med of medicamentsResult) {
+          for (const rec of (med.recommendations || [])) {
+            await supabase.rpc("upsert_recommendation_metric_noop", {}).catch(() => {});
+            // Use upsert pattern
+            const { data: existing } = await supabase
+              .from("recommendation_metrics")
+              .select("id, times_proposed")
+              .eq("pharmacy_id", pharmacyId)
+              .eq("medicament_source", med.nom)
+              .eq("pc_proposed", rec.produit)
+              .maybeSingle();
+
+            if (existing) {
+              await supabase.from("recommendation_metrics")
+                .update({ times_proposed: existing.times_proposed + 1, times_displayed: existing.times_proposed + 1, updated_at: new Date().toISOString() })
+                .eq("id", existing.id);
+            } else {
+              await supabase.from("recommendation_metrics").insert({
+                pharmacy_id: pharmacyId,
+                medicament_source: med.nom,
+                pc_proposed: rec.produit,
+                pc_categorie: rec.categorie || null,
+                times_proposed: 1,
+                times_displayed: 1,
+              });
+            }
+          }
+        }
+
+        // Update/create basket context
+        if (basketSessionId) {
+          const proposedList = medicamentsResult.flatMap((m: any) => (m.recommendations || []).map((r: any) => r.produit));
+          await supabase.from("basket_context").upsert({
+            pharmacy_id: pharmacyId,
+            session_id: basketSessionId,
+            scanned_medicaments: medNames,
+            proposed_pcs: proposedList,
+            active: true,
+            updated_at: new Date().toISOString(),
+          }, { onConflict: "pharmacy_id,session_id" }).catch(() => {
+            // If no unique constraint on session_id, insert
+            supabase.from("basket_context").insert({
+              pharmacy_id: pharmacyId,
+              session_id: basketSessionId,
+              scanned_medicaments: medNames,
+              proposed_pcs: proposedList,
+              active: true,
+            });
+          });
         }
       }
     } catch (historyErr) {
