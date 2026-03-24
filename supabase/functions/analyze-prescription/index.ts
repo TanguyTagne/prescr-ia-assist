@@ -1111,10 +1111,10 @@ serve(async (req) => {
       questions: [],
     };
 
-    // Step 8: Save to analysis_history
+    // Step 8: Save to analysis_history + metrics + basket context
     try {
-      const authHeader = req.headers.get("authorization");
-      const pharmacyId = await getPharmacyIdFromAuth(supabase, authHeader);
+      const pharmacyId = pharmacyIdForMapping || await getPharmacyIdFromAuth(supabase, authHeader);
+      
       
       if (pharmacyId && authHeader) {
         const token = authHeader.replace("Bearer ", "");
