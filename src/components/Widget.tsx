@@ -288,6 +288,7 @@ const Widget = ({ forceOpen = false }: {forceOpen?: boolean;}) => {
     <>
       <button
         onClick={() => setOpen(!open)}
+        aria-label={open ? "Fermer le widget PrescrIA" : "Ouvrir le widget PrescrIA"}
         className="fixed bottom-4 right-4 z-[9999] h-12 w-12 rounded-full pharmacy-gradient shadow-lg flex items-center justify-center hover:scale-105 transition-transform">
         
         {open ? <X className="h-5 w-5 text-primary-foreground" /> : <Pill className="h-5 w-5 text-primary-foreground" />}
