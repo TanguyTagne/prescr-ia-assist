@@ -113,7 +113,7 @@ const Landing = () => {
         </div>
       </nav>
 
-      {/* Hero */}
+      <main>
       <section className="py-20 px-4">
         <div className="container max-w-3xl mx-auto text-center space-y-6">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent text-accent-foreground text-xs font-medium">
@@ -192,6 +192,7 @@ const Landing = () => {
       </section>
 
       {/* Footer */}
+      </main>
       <footer className="border-t border-border py-6 px-4">
         <div className="container max-w-5xl mx-auto flex items-center justify-between text-xs text-muted-foreground">
           <span>© {new Date().getFullYear()} PrescrIA</span>
