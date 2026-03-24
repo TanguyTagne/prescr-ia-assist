@@ -138,6 +138,10 @@ const Admin = () => {
             <ShoppingCart className="h-3.5 w-3.5" />
             Ventes
           </Button>
+          <Button variant={tab === "perf" ? "default" : "outline"} size="sm" onClick={() => setTab("perf")} className="gap-1.5">
+            <Target className="h-3.5 w-3.5" />
+            Perf. PC
+          </Button>
         </div>
 
         {tab === "kpis" && <PharmacyKPIs />}
@@ -145,6 +149,7 @@ const Admin = () => {
         {tab === "pharmacies" && <PharmaciesTab pharmacies={pharmacies} onRefresh={loadData} />}
         {tab === "coverage" && <CoverageTab />}
         {tab === "sales" && <SalesTab />}
+        {tab === "perf" && <RecommendationMetrics />}
       </div>
     </div>
   );
