@@ -85,11 +85,21 @@ const WidgetApp = () => {
   const { signOut } = useAuth();
   const navigate = useNavigate();
 
+  // Basket memory (anti-loop)
+  const [basketSessionId] = useState(() => crypto.randomUUID());
+  const [blockedProducts, setBlockedProducts] = useState<string[]>([]);
+  const [orderedProducts, setOrderedProducts] = useState<string[]>([]);
+
+  const basketOptions = { basketSessionId, blockedProducts };
+
   const handleAnalyze = async (text: string) => {
     setIsLoading(true);
     try {
-      const analysis = await analyzePrescription(text);
+      const analysis = await analyzePrescription(text, basketOptions);
       setResult(analysis);
+      // Track proposed PCs in blocked list
+      const proposed = analysis.medicaments.flatMap(m => (m.recommendations || []).map(r => r.produit));
+      setBlockedProducts(prev => [...new Set([...prev, ...proposed])]);
       trackEvent("ordonnance_analyzed", { input_type: "text", medicaments: analysis.medicaments.map((m) => m.nom) });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erreur lors de l'analyse");
@@ -101,8 +111,10 @@ const WidgetApp = () => {
   const handleAnalyzeImage = async (imageBase64: string) => {
     setIsLoading(true);
     try {
-      const analysis = await analyzePrescriptionImage(imageBase64);
+      const analysis = await analyzePrescriptionImage(imageBase64, basketOptions);
       setResult(analysis);
+      const proposed = analysis.medicaments.flatMap(m => (m.recommendations || []).map(r => r.produit));
+      setBlockedProducts(prev => [...new Set([...prev, ...proposed])]);
       trackEvent("ordonnance_analyzed", { input_type: "image", medicaments: analysis.medicaments.map((m) => m.nom) });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erreur lors de l'analyse OCR");
