@@ -58,9 +58,16 @@ export interface AnalysisResult {
   patient_name?: string;
 }
 
-export async function analyzePrescription(input: string): Promise<AnalysisResult> {
+export async function analyzePrescription(
+  input: string,
+  options?: { basketSessionId?: string; blockedProducts?: string[] }
+): Promise<AnalysisResult> {
   const { data, error } = await supabase.functions.invoke("analyze-prescription", {
-    body: { prescriptionText: input },
+    body: {
+      prescriptionText: input,
+      basketSessionId: options?.basketSessionId,
+      blockedProducts: options?.blockedProducts,
+    },
   });
 
   if (error) {
