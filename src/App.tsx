@@ -39,20 +39,22 @@ const App = () => {
         <Toaster />
         <Sonner />
         <AuthProvider>
-          {isStandalone ? (
-            <Widget forceOpen />
-          ) : (
-            <>
-              <Routes>
-                <Route path="/" element={<Landing />} />
-                <Route path="/auth" element={<Auth />} />
-                <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
-                <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-              <Widget />
-            </>
-          )}
+          <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}>
+            {isStandalone ? (
+              <Widget forceOpen />
+            ) : (
+              <>
+                <Routes>
+                  <Route path="/" element={<Landing />} />
+                  <Route path="/auth" element={<Auth />} />
+                  <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+                  <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+                <Widget />
+              </>
+            )}
+          </Suspense>
         </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>
