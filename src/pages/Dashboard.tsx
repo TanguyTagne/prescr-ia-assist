@@ -149,6 +149,19 @@ const Dashboard = () => {
           </CardContent>
         </Card>
 
+        {/* Product Mapping Settings */}
+        <Card className="glass-card border-primary/20">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Package className="h-5 w-5 text-primary" />
+              Personnalisation des recommandations
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ProductMappingSettings />
+          </CardContent>
+        </Card>
+
         {/* Download Section */}
         <Card className="glass-card border-primary/20">
           <CardHeader>
