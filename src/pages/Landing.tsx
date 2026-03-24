@@ -113,7 +113,7 @@ const Landing = () => {
         </div>
       </nav>
 
-      {/* Hero */}
+      <main>
       <section className="py-20 px-4">
         <div className="container max-w-3xl mx-auto text-center space-y-6">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent text-accent-foreground text-xs font-medium">
