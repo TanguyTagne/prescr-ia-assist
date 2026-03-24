@@ -192,6 +192,7 @@ const Landing = () => {
       </section>
 
       {/* Footer */}
+      </main>
       <footer className="border-t border-border py-6 px-4">
         <div className="container max-w-5xl mx-auto flex items-center justify-between text-xs text-muted-foreground">
           <span>© {new Date().getFullYear()} PrescrIA</span>
