@@ -1167,6 +1167,58 @@ serve(async (req) => {
             first_seen: patientHistory[patientHistory.length - 1]?.created_at,
           };
         }
+
+        // Track recommendation metrics (upsert per PC)
+        for (const med of medicamentsResult) {
+          for (const rec of (med.recommendations || [])) {
+            await supabase.rpc("upsert_recommendation_metric_noop", {}).catch(() => {});
+            // Use upsert pattern
+            const { data: existing } = await supabase
+              .from("recommendation_metrics")
+              .select("id, times_proposed")
+              .eq("pharmacy_id", pharmacyId)
+              .eq("medicament_source", med.nom)
+              .eq("pc_proposed", rec.produit)
+              .maybeSingle();
+
+            if (existing) {
+              await supabase.from("recommendation_metrics")
+                .update({ times_proposed: existing.times_proposed + 1, times_displayed: existing.times_proposed + 1, updated_at: new Date().toISOString() })
+                .eq("id", existing.id);
+            } else {
+              await supabase.from("recommendation_metrics").insert({
+                pharmacy_id: pharmacyId,
+                medicament_source: med.nom,
+                pc_proposed: rec.produit,
+                pc_categorie: rec.categorie || null,
+                times_proposed: 1,
+                times_displayed: 1,
+              });
+            }
+          }
+        }
+
+        // Update/create basket context
+        if (basketSessionId) {
+          const proposedList = medicamentsResult.flatMap((m: any) => (m.recommendations || []).map((r: any) => r.produit));
+          await supabase.from("basket_context").upsert({
+            pharmacy_id: pharmacyId,
+            session_id: basketSessionId,
+            scanned_medicaments: medNames,
+            proposed_pcs: proposedList,
+            active: true,
+            updated_at: new Date().toISOString(),
+          }, { onConflict: "pharmacy_id,session_id" }).catch(() => {
+            // If no unique constraint on session_id, insert
+            supabase.from("basket_context").insert({
+              pharmacy_id: pharmacyId,
+              session_id: basketSessionId,
+              scanned_medicaments: medNames,
+              proposed_pcs: proposedList,
+              active: true,
+            });
+          });
+        }
       }
     } catch (historyErr) {
       console.error("Failed to save analysis history:", historyErr);
