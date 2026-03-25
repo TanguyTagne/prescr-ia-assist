@@ -914,7 +914,6 @@ serve(async (req) => {
 
     // Load pharmacy-specific product mappings
     let productMappings: any[] = [];
-    const authHeader = req.headers.get("authorization");
     const pharmacyIdForMapping = await getPharmacyIdFromAuth(supabase, authHeader);
     if (pharmacyIdForMapping) {
       const { data: mappings } = await supabase
