@@ -898,6 +898,11 @@ serve(async (req) => {
       }
     }
 
+    // Step 3.5: Detect latent needs from medication combination
+    const latentNeeds = await detectLatentNeeds(supabase, medNames);
+    let latentNeedUsed = false;
+    let usedLatentNeed: LatentNeed | null = null;
+
     // Step 4: Build direct recommendations per medication
     // Apply degressive rule based on total meds count
     const maxPCPerMed = getMaxPCsPerMed(enrichedMeds.length);
