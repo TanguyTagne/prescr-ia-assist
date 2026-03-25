@@ -466,55 +466,239 @@ function normalizeAdviceSentence(text: string) {
   return (text || "").trim().replace(/[.\s]+$/g, "");
 }
 
-// Generate a natural, directly usable phrase for each complementary product
-// Format: [problem/context] + [simple explanation] + [patient benefit]
+// Medical phrase generator: [pathologie/conséquence] + [mécanisme produit] + [bénéfice précis]
+// Rules: 15-25 words, no "confort"/"bien-être"/"au quotidien", must contain medical mechanism
 function generatePhraseConseil(rec: any, med: any): string {
   const produit = rec.produit || "ce produit";
-  const pathologie = rec.pathologie || "";
+  const pathologie = (rec.pathologie || "").toLowerCase();
   const categorie = (rec.categorie || "").toLowerCase();
-  const description = rec.description || "";
+  const description = (rec.description || "").toLowerCase();
   const medName = med.nom_commercial || med.nom || "";
-  const latentNeed = rec.latent_need || "";
+  const classe = (med.classe || med.classe_therapeutique || "").toLowerCase();
+  const latentNeed = (rec.latent_need || "").toLowerCase();
 
-  // If the rec already has a phrase_patient from latent_needs, use it
-  if (rec.phrase_patient) return rec.phrase_patient;
+  // If rec already has a validated phrase_patient from latent_needs, use it
+  if (rec.phrase_patient && !containsForbiddenWords(rec.phrase_patient)) return rec.phrase_patient;
 
-  // Build context phrase based on available data
-  let context = "";
-  let explication = "";
-  let benefice = "";
+  // Try specific medical mechanism matching
+  const phrase = buildMedicalPhrase(produit, pathologie, categorie, description, medName, classe, latentNeed);
 
-  if (latentNeed) {
-    context = `Avec votre traitement par ${medName}`;
-    explication = `il est fréquent d'observer ${latentNeed.toLowerCase()}`;
-    benefice = `${produit} vous aidera à mieux le supporter`;
-  } else if (pathologie) {
-    context = `Dans le cadre de ${pathologie.toLowerCase()}`;
-    explication = `${produit} est souvent recommandé en complément`;
-    benefice = `pour améliorer votre confort au quotidien`;
-  } else if (categorie.includes("probiotique") || categorie.includes("flore")) {
-    context = `Avec ce type de traitement`;
-    explication = `${produit} aide à protéger votre flore intestinale`;
-    benefice = `et éviter les désagréments digestifs`;
-  } else if (categorie.includes("vitamine") || categorie.includes("immunité")) {
-    context = `Pour accompagner votre traitement`;
-    explication = `${produit} renforce vos défenses naturelles`;
-    benefice = `et vous aide à récupérer plus rapidement`;
-  } else if (categorie.includes("douleur") || categorie.includes("confort")) {
-    context = `En complément de ${medName}`;
-    explication = `${produit} peut soulager les effets secondaires`;
-    benefice = `et améliorer votre bien-être`;
-  } else if (description) {
-    context = `Avec ${medName}`;
-    explication = `${produit} est conseillé`;
-    benefice = `pour ${description.toLowerCase().replace(/\.$/g, "")}`;
-  } else {
-    context = `En complément de votre ordonnance`;
-    explication = `${produit} est souvent associé à ce traitement`;
-    benefice = `pour un meilleur accompagnement thérapeutique`;
+  // Validate: reject generic phrases
+  if (containsForbiddenWords(phrase)) {
+    return buildFallbackMedical(produit, medName, classe, description);
+  }
+  return phrase;
+}
+
+function containsForbiddenWords(phrase: string): boolean {
+  const forbidden = ["confort", "bien-être", "au quotidien", "bien être"];
+  const lower = phrase.toLowerCase();
+  return forbidden.some(w => lower.includes(w));
+}
+
+function buildMedicalPhrase(produit: string, pathologie: string, categorie: string, description: string, medName: string, classe: string, latentNeed: string): string {
+  const p = produit;
+  const cat = categorie;
+  const desc = description;
+
+  // === PROBIOTIQUES / FLORE ===
+  if (cat.includes("probiotique") || cat.includes("flore") || p.toLowerCase().includes("probiotique") || p.toLowerCase().includes("ultra levure") || p.toLowerCase().includes("saccharomyces")) {
+    if (classe.includes("antibiotique") || classe.includes("anti-infect") || medName.toLowerCase().includes("amoxicilline") || medName.toLowerCase().includes("augmentin")) {
+      return `Les antibiotiques perturbent la flore intestinale, ${p} aide à prévenir les troubles digestifs.`;
+    }
+    if (pathologie.includes("gastro") || pathologie.includes("diarrhée")) {
+      return `La diarrhée déséquilibre la flore intestinale, ${p} aide à restaurer le microbiote.`;
+    }
+    if (pathologie.includes("reflux") || classe.includes("ipp") || classe.includes("inhibiteur") || medName.toLowerCase().includes("oméprazole") || medName.toLowerCase().includes("pantoprazole")) {
+      return `Les troubles digestifs peuvent perturber l'équilibre intestinal, ${p} aide à stabiliser le microbiote.`;
+    }
+    return `Ce traitement peut altérer l'équilibre de la flore intestinale, ${p} aide à restaurer le microbiote.`;
   }
 
-  return `${context}, ${explication}, ${benefice}.`;
+  // === RÉHYDRATATION ===
+  if (cat.includes("réhydratation") || cat.includes("hydratation") || p.toLowerCase().includes("réhydratation") || p.toLowerCase().includes("sro")) {
+    if (pathologie.includes("gastro") || pathologie.includes("diarrhée")) {
+      return `La diarrhée entraîne une perte importante d'eau et de sels minéraux, ${p} aide à prévenir la déshydratation.`;
+    }
+    if (classe.includes("antibiotique") || pathologie.includes("infection")) {
+      return `Les infections digestives peuvent entraîner une déshydratation, ${p} aide à compenser les pertes hydriques.`;
+    }
+    if (classe.includes("opioïde") || classe.includes("opiacé") || medName.toLowerCase().includes("codéine")) {
+      return `Les traitements opioïdes peuvent favoriser la constipation, une bonne hydratation aide à maintenir un transit normal.`;
+    }
+    return `Ce traitement peut entraîner des pertes hydriques, ${p} aide à maintenir une hydratation correcte.`;
+  }
+
+  // === PANSEMENT GASTRIQUE / PROTECTEUR ===
+  if (cat.includes("pansement") || p.toLowerCase().includes("pansement") || p.toLowerCase().includes("gaviscon") || p.toLowerCase().includes("smecta")) {
+    if (cat.includes("intestin") || pathologie.includes("gastro") || pathologie.includes("diarrhée")) {
+      return `L'irritation intestinale peut persister après la diarrhée, ${p} protège la muqueuse digestive.`;
+    }
+    if (classe.includes("ains") || classe.includes("anti-inflamm") || medName.toLowerCase().includes("diclofénac") || medName.toLowerCase().includes("ibuprofène") || medName.toLowerCase().includes("kétoprofène")) {
+      return `Les AINS augmentent l'acidité gastrique, ${p} aide à limiter les brûlures d'estomac.`;
+    }
+    if (pathologie.includes("reflux") || classe.includes("ipp")) {
+      return `Le reflux acide irrite la muqueuse digestive, ${p} aide à protéger l'estomac et l'œsophage.`;
+    }
+    return `Ce traitement peut irriter la muqueuse gastrique, ${p} aide à protéger l'estomac.`;
+  }
+
+  // === IPP / PROTECTEUR GASTRIQUE ===
+  if (cat.includes("ipp") || cat.includes("protecteur gastrique") || p.toLowerCase().includes("oméprazole") || p.toLowerCase().includes("pantoprazole")) {
+    if (classe.includes("ains") || classe.includes("anti-inflamm") || medName.toLowerCase().includes("diclofénac") || medName.toLowerCase().includes("ibuprofène")) {
+      return `Les anti-inflammatoires peuvent irriter la muqueuse gastrique, ${p} aide à protéger l'estomac.`;
+    }
+    return `Ce traitement peut augmenter l'acidité gastrique, ${p} aide à protéger la muqueuse digestive.`;
+  }
+
+  // === CHARBON ACTIF ===
+  if (p.toLowerCase().includes("charbon")) {
+    if (pathologie.includes("gastro") || pathologie.includes("diarrhée")) {
+      return `La diarrhée peut s'accompagner de gaz et de toxines intestinales, ${p} aide à les adsorber et réduire les ballonnements.`;
+    }
+    return `Les troubles digestifs peuvent générer gaz et toxines, ${p} aide à les adsorber.`;
+  }
+
+  // === SPRAY NASAL / DÉCONGESTIONNANT ===
+  if (cat.includes("nasal") || cat.includes("spray") || p.toLowerCase().includes("spray nasal") || p.toLowerCase().includes("décongestionnant")) {
+    if (pathologie.includes("allergie") || classe.includes("antihistaminique")) {
+      return `L'allergie provoque une inflammation des voies nasales, ${p} aide à décongestionner et calmer l'irritation.`;
+    }
+    if (pathologie.includes("rhume") || pathologie.includes("rhinite")) {
+      return `L'inflammation nasale obstrue les voies respiratoires, ${p} aide à dégager le nez et faciliter la respiration.`;
+    }
+    return `L'irritation des voies nasales gêne la respiration, ${p} aide à décongestionner et apaiser l'inflammation.`;
+  }
+
+  // === SOLUTION SALINE / LAVAGE NASAL ===
+  if (p.toLowerCase().includes("saline") || p.toLowerCase().includes("lavage nasal") || p.toLowerCase().includes("sérum physiologique")) {
+    if (pathologie.includes("allergie")) {
+      return `Les allergènes irritent la muqueuse nasale, ${p} permet d'éliminer les particules et d'apaiser l'inflammation.`;
+    }
+    return `Les sécrétions nasales encombrent les voies respiratoires, ${p} aide à les éliminer et faciliter la respiration.`;
+  }
+
+  // === COLLYRE ===
+  if (cat.includes("collyre") || cat.includes("ophtalmique") || p.toLowerCase().includes("collyre")) {
+    if (pathologie.includes("allergie") || classe.includes("antihistaminique")) {
+      return `Les allergies peuvent irriter les yeux, ${p} aide à réduire les démangeaisons et rougeurs.`;
+    }
+    return `L'irritation oculaire peut accompagner ce traitement, ${p} aide à apaiser les yeux.`;
+  }
+
+  // === LAXATIF ===
+  if (cat.includes("laxatif") || p.toLowerCase().includes("laxatif")) {
+    if (classe.includes("opioïde") || classe.includes("opiacé") || medName.toLowerCase().includes("codéine") || medName.toLowerCase().includes("tramadol")) {
+      return `La codéine ralentit le transit intestinal, ${p} aide à prévenir la constipation.`;
+    }
+    return `Ce traitement peut ralentir le transit intestinal, ${p} aide à prévenir la constipation.`;
+  }
+
+  // === FIBRES / PSYLLIUM ===
+  if (p.toLowerCase().includes("fibre") || p.toLowerCase().includes("psyllium")) {
+    if (cat.includes("laxatif") || pathologie.includes("constipation")) {
+      return `Les laxatifs stimulants peuvent irriter le côlon, ${p} aide à réguler le transit plus naturellement.`;
+    }
+    return `Le transit peut être perturbé par ce traitement, ${p} aide à le réguler de manière physiologique.`;
+  }
+
+  // === MAGNÉSIUM ===
+  if (p.toLowerCase().includes("magnésium") || cat.includes("magnésium")) {
+    if (classe.includes("ains") || classe.includes("anti-inflamm") || pathologie.includes("douleur")) {
+      return `Les douleurs musculaires peuvent s'accompagner de tensions, ${p} aide à favoriser la détente musculaire.`;
+    }
+    if (classe.includes("diurétique") || pathologie.includes("hypertension")) {
+      return `Certains traitements augmentent les pertes en magnésium, ${p} aide à compenser ce déficit.`;
+    }
+    return `Ce traitement peut augmenter les besoins en magnésium, ${p} aide à prévenir les crampes et la fatigue.`;
+  }
+
+  // === COENZYME Q10 ===
+  if (p.toLowerCase().includes("coenzyme") || p.toLowerCase().includes("q10")) {
+    if (classe.includes("statine") || medName.toLowerCase().includes("atorvastatine") || medName.toLowerCase().includes("rosuvastatine") || medName.toLowerCase().includes("simvastatine")) {
+      return `Les statines peuvent diminuer la production de coenzyme Q10, ${p} aide à limiter les douleurs musculaires.`;
+    }
+    if (classe.includes("antihypertenseur") || classe.includes("cardiovasculaire") || medName.toLowerCase().includes("amlodipine")) {
+      return `Certains traitements cardiovasculaires peuvent impacter l'énergie cellulaire, ${p} soutient la fonction cardiaque.`;
+    }
+    return `Ce traitement peut réduire les niveaux de coenzyme Q10, ${p} aide à maintenir l'énergie cellulaire.`;
+  }
+
+  // === RINÇAGE BUCCAL / ANTISEPTIQUE BUCCAL ===
+  if (p.toLowerCase().includes("rinçage") || p.toLowerCase().includes("bain de bouche") || p.toLowerCase().includes("antiseptique buccal")) {
+    if (classe.includes("corticoïde") || medName.toLowerCase().includes("budésonide") || medName.toLowerCase().includes("béclométasone") || medName.toLowerCase().includes("fluticasone")) {
+      return `Les corticoïdes inhalés peuvent favoriser les infections buccales, ${p} aide à prévenir les mycoses.`;
+    }
+    return `Ce traitement peut fragiliser la muqueuse buccale, ${p} aide à prévenir les infections locales.`;
+  }
+
+  // === VITAMINE D / CALCIUM ===
+  if (p.toLowerCase().includes("vitamine d") || p.toLowerCase().includes("calcium")) {
+    if (classe.includes("corticoïde")) {
+      return `Les corticoïdes au long cours fragilisent les os, ${p} aide à prévenir la déminéralisation osseuse.`;
+    }
+    if (classe.includes("ipp") || medName.toLowerCase().includes("oméprazole")) {
+      return `Les traitements prolongés par IPP réduisent l'absorption du calcium, ${p} aide à maintenir la santé osseuse.`;
+    }
+    return `Ce traitement peut affecter le métabolisme osseux, ${p} aide à maintenir un apport suffisant.`;
+  }
+
+  // === FER ===
+  if (p.toLowerCase().includes("fer") || cat.includes("fer")) {
+    return `Ce traitement peut impacter l'absorption du fer, ${p} aide à prévenir les carences et la fatigue.`;
+  }
+
+  // === VITAMINE B ===
+  if (p.toLowerCase().includes("vitamine b") || p.toLowerCase().includes("b12") || p.toLowerCase().includes("acide folique")) {
+    if (classe.includes("metformine") || medName.toLowerCase().includes("metformine")) {
+      return `La metformine peut diminuer l'absorption de la vitamine B12, ${p} aide à prévenir les carences.`;
+    }
+    return `Ce traitement peut augmenter les besoins en vitamines du groupe B, ${p} aide à compenser les pertes.`;
+  }
+
+  // === ANTISEPTIQUE / CICATRISANT ===
+  if (cat.includes("antiseptique") || cat.includes("cicatrisant") || p.toLowerCase().includes("antiseptique")) {
+    return `Les lésions cutanées nécessitent une protection contre les infections, ${p} favorise la cicatrisation.`;
+  }
+
+  // === CRÈME / ÉMOLLIENT ===
+  if (cat.includes("émollient") || cat.includes("crème") || p.toLowerCase().includes("émollient")) {
+    if (classe.includes("corticoïde") || pathologie.includes("eczéma") || pathologie.includes("dermatite")) {
+      return `L'inflammation cutanée fragilise la barrière de la peau, ${p} aide à restaurer l'hydratation et la protection.`;
+    }
+    return `Ce traitement peut assécher la peau, ${p} aide à restaurer la barrière cutanée.`;
+  }
+
+  // === GENERIC FALLBACK using description ===
+  if (description && description.length > 10) {
+    // Use the description to build a medical phrase
+    const descClean = description.replace(/\.$/g, "").trim();
+    const result = `${medName ? `Avec ${medName}, ` : ""}${descClean}, ${p} aide à y remédier.`;
+    if (!containsForbiddenWords(result) && result.split(" ").length <= 30) return result;
+  }
+
+  // === PATHOLOGIE-BASED FALLBACK ===
+  if (pathologie) {
+    return `En cas de ${pathologie}, ${p} agit en complément pour limiter les effets secondaires du traitement.`;
+  }
+
+  // === CLASSE-BASED FALLBACK ===
+  if (classe) {
+    return `Les traitements de type ${classe} peuvent avoir des effets secondaires, ${p} aide à les atténuer.`;
+  }
+
+  // === ULTIMATE FALLBACK ===
+  return `Ce traitement peut nécessiter un accompagnement, ${p} aide à en limiter les effets indésirables.`;
+}
+
+function buildFallbackMedical(produit: string, medName: string, classe: string, description: string): string {
+  if (classe) {
+    return `Les traitements de type ${classe} peuvent avoir des effets secondaires, ${produit} aide à les atténuer.`;
+  }
+  if (medName) {
+    return `Ce traitement peut nécessiter un accompagnement, ${produit} aide à en limiter les effets indésirables.`;
+  }
+  return `${produit} est recommandé en accompagnement pour limiter les effets indésirables du traitement.`;
 }
 
 function pickDistinctProducts(products: any[], max = MAX_RECOMMENDATIONS_PER_MED) {
