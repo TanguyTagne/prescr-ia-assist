@@ -22,6 +22,7 @@ export interface Recommendation {
   priorite: number;
   pathologie?: string;
   ordered?: boolean;
+  phrase_conseil?: string;
 }
 
 export interface LGOProduct {
