@@ -1188,6 +1188,7 @@ export type Database = {
           id: string
           nom_produit: string | null
           pathologie_id: string
+          phrase_conseil: string | null
           priorite: number
           produit: string
           type_produit: string | null
@@ -1203,6 +1204,7 @@ export type Database = {
           id?: string
           nom_produit?: string | null
           pathologie_id: string
+          phrase_conseil?: string | null
           priorite?: number
           produit: string
           type_produit?: string | null
@@ -1218,6 +1220,7 @@ export type Database = {
           id?: string
           nom_produit?: string | null
           pathologie_id?: string
+          phrase_conseil?: string | null
           priorite?: number
           produit?: string
           type_produit?: string | null

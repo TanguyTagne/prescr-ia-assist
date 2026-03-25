@@ -1,0 +1,1 @@
+ALTER TABLE public.produits_complementaires ADD COLUMN IF NOT EXISTS phrase_conseil text;
