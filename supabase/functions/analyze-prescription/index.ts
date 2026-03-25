@@ -1344,6 +1344,37 @@ serve(async (req) => {
           }
         }
 
+        // Track latent need metrics
+        if (usedLatentNeed && pharmacyId) {
+          const boostedRec = medicamentsResult
+            .flatMap((m: any) => (m.recommendations || []))
+            .find((r: any) => r.latent_need);
+          
+          if (boostedRec) {
+            const { data: existingLN } = await supabase
+              .from("latent_need_metrics")
+              .select("id, times_proposed")
+              .eq("pharmacy_id", pharmacyId)
+              .eq("besoin", usedLatentNeed.besoin_infere)
+              .eq("pc_proposed", boostedRec.produit)
+              .maybeSingle();
+
+            if (existingLN) {
+              await supabase.from("latent_need_metrics")
+                .update({ times_proposed: existingLN.times_proposed + 1, updated_at: new Date().toISOString() })
+                .eq("id", existingLN.id);
+            } else {
+              await supabase.from("latent_need_metrics").insert({
+                pharmacy_id: pharmacyId,
+                besoin: usedLatentNeed.besoin_infere,
+                medicament_source: usedLatentNeed.medicament_source,
+                pc_proposed: boostedRec.produit,
+                times_proposed: 1,
+              });
+            }
+          }
+        }
+
         // Update/create basket context
         if (basketSessionId) {
           const proposedList = medicamentsResult.flatMap((m: any) => (m.recommendations || []).map((r: any) => r.produit));
