@@ -466,6 +466,57 @@ function normalizeAdviceSentence(text: string) {
   return (text || "").trim().replace(/[.\s]+$/g, "");
 }
 
+// Generate a natural, directly usable phrase for each complementary product
+// Format: [problem/context] + [simple explanation] + [patient benefit]
+function generatePhraseConseil(rec: any, med: any): string {
+  const produit = rec.produit || "ce produit";
+  const pathologie = rec.pathologie || "";
+  const categorie = (rec.categorie || "").toLowerCase();
+  const description = rec.description || "";
+  const medName = med.nom_commercial || med.nom || "";
+  const latentNeed = rec.latent_need || "";
+
+  // If the rec already has a phrase_patient from latent_needs, use it
+  if (rec.phrase_patient) return rec.phrase_patient;
+
+  // Build context phrase based on available data
+  let context = "";
+  let explication = "";
+  let benefice = "";
+
+  if (latentNeed) {
+    context = `Avec votre traitement par ${medName}`;
+    explication = `il est fréquent d'observer ${latentNeed.toLowerCase()}`;
+    benefice = `${produit} vous aidera à mieux le supporter`;
+  } else if (pathologie) {
+    context = `Dans le cadre de ${pathologie.toLowerCase()}`;
+    explication = `${produit} est souvent recommandé en complément`;
+    benefice = `pour améliorer votre confort au quotidien`;
+  } else if (categorie.includes("probiotique") || categorie.includes("flore")) {
+    context = `Avec ce type de traitement`;
+    explication = `${produit} aide à protéger votre flore intestinale`;
+    benefice = `et éviter les désagréments digestifs`;
+  } else if (categorie.includes("vitamine") || categorie.includes("immunité")) {
+    context = `Pour accompagner votre traitement`;
+    explication = `${produit} renforce vos défenses naturelles`;
+    benefice = `et vous aide à récupérer plus rapidement`;
+  } else if (categorie.includes("douleur") || categorie.includes("confort")) {
+    context = `En complément de ${medName}`;
+    explication = `${produit} peut soulager les effets secondaires`;
+    benefice = `et améliorer votre bien-être`;
+  } else if (description) {
+    context = `Avec ${medName}`;
+    explication = `${produit} est conseillé`;
+    benefice = `pour ${description.toLowerCase().replace(/\.$/g, "")}`;
+  } else {
+    context = `En complément de votre ordonnance`;
+    explication = `${produit} est souvent associé à ce traitement`;
+    benefice = `pour un meilleur accompagnement thérapeutique`;
+  }
+
+  return `${context}, ${explication}, ${benefice}.`;
+}
+
 function pickDistinctProducts(products: any[], max = MAX_RECOMMENDATIONS_PER_MED) {
   const selected: any[] = [];
   const seen = new Set<string>();

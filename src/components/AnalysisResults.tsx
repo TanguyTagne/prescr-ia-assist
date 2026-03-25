@@ -134,36 +134,43 @@ const AnalysisResults = ({ result, onReset }: AnalysisResultsProps) => {
               {med.recommendations.map((rec, j) => {
             const ordered = isOrdered(med.nom, rec.produit);
             return (
-              <div key={j} className="flex items-center gap-2 px-1.5 rounded-md bg-secondary/50 py-[3px]">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1">
-                        <span className="font-medium text-[11px]">{rec.produit}</span>
-                        {rec.priorite >= 80 &&
-                    <Badge className="bg-primary/20 text-primary text-[8px] px-1 py-0">prioritaire</Badge>
-                    }
+              <div key={j} className="px-1.5 rounded-md bg-secondary/50 py-[3px] space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1">
+                          <span className="font-medium text-[11px]">{rec.produit}</span>
+                          {rec.priorite >= 80 &&
+                      <Badge className="bg-primary/20 text-primary text-[8px] px-1 py-0">prioritaire</Badge>
+                      }
+                        </div>
                       </div>
-                    </div>
-                    <button
-                  onClick={() => handleOrder(med.nom, rec.produit)}
-                  disabled={ordered}
-                  className={`shrink-0 flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium transition-all ${
-                  ordered ?
-                  "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" :
-                  "bg-primary/10 hover:bg-primary/20 text-primary"}`
-                  }>
-                  
-                      {ordered ?
-                  <>
-                          <Check className="h-3 w-3" />
-                          Ajouté
-                        </> :
+                      <button
+                    onClick={() => handleOrder(med.nom, rec.produit)}
+                    disabled={ordered}
+                    className={`shrink-0 flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium transition-all ${
+                    ordered ?
+                    "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" :
+                    "bg-primary/10 hover:bg-primary/20 text-primary"}`
+                    }>
+                    
+                        {ordered ?
+                    <>
+                            <Check className="h-3 w-3" />
+                            Ajouté
+                          </> :
 
-                  <>
-                          <ShoppingCart className="h-3 w-3" />
-                          Commander
-                        </>
-                  }
-                    </button>
+                    <>
+                            <ShoppingCart className="h-3 w-3" />
+                            Commander
+                          </>
+                    }
+                      </button>
+                    </div>
+                    {rec.phrase_conseil &&
+                      <p className="text-[10px] text-muted-foreground italic leading-snug pl-0.5">
+                        💬 "{rec.phrase_conseil}"
+                      </p>
+                    }
                   </div>);
 
           })}
