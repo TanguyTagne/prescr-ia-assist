@@ -321,6 +321,114 @@ async function clinicalLookup(supabase: any, medName: string, moleculeName?: str
   };
 }
 
+// ====== LATENT NEED ENGINE ======
+
+interface LatentNeed {
+  id: string;
+  medicament_source: string;
+  besoin_infere: string;
+  categorie: string;
+  score: number;
+  description: string | null;
+  phrase_patient: string | null;
+  benefice: string | null;
+}
+
+async function detectLatentNeeds(
+  supabase: any,
+  medNames: string[],
+): Promise<LatentNeed[]> {
+  const normalized = medNames.map((n) => normalizeText(extractCoreDrugName(n)));
+  
+  // 1) Individual medication needs
+  const { data: allNeeds } = await supabase
+    .from("latent_needs")
+    .select("*")
+    .order("score", { ascending: false });
+
+  if (!allNeeds || allNeeds.length === 0) return [];
+
+  const matched: LatentNeed[] = [];
+  const seenBesoins = new Set<string>();
+
+  // Check combination keys first (higher priority)
+  const comboKey = normalized.sort().join("+");
+  for (const need of allNeeds) {
+    const needKey = normalizeText(need.medicament_source);
+    if (needKey.includes("+") && comboKey.includes(needKey.replace("+", "")) && !seenBesoins.has(need.besoin_infere)) {
+      matched.push(need);
+      seenBesoins.add(need.besoin_infere);
+    }
+  }
+
+  // Then individual medications
+  for (const medNorm of normalized) {
+    for (const need of allNeeds) {
+      if (seenBesoins.has(need.besoin_infere)) continue;
+      const needKey = normalizeText(need.medicament_source);
+      if (needKey.includes("+")) continue; // skip combos already checked
+      if (medNorm.includes(needKey) || needKey.includes(medNorm)) {
+        matched.push(need);
+        seenBesoins.add(need.besoin_infere);
+      }
+    }
+  }
+
+  return matched;
+}
+
+// Apply latent need boost to PC score: max 1 opportunity per basket
+function applyLatentNeedBoost(
+  recs: any[],
+  latentNeeds: LatentNeed[],
+  alreadyUsedLatentNeed: boolean,
+): { boostedRecs: any[]; usedNeed: LatentNeed | null } {
+  if (alreadyUsedLatentNeed || latentNeeds.length === 0) {
+    return { boostedRecs: recs, usedNeed: null };
+  }
+
+  // Find the best matching latent need for any rec's category
+  let bestNeed: LatentNeed | null = null;
+  let bestRecIdx = -1;
+
+  for (const need of latentNeeds) {
+    const needCat = normalizeText(need.categorie);
+    for (let i = 0; i < recs.length; i++) {
+      const recCat = normalizeText(recs[i].categorie || "");
+      if (recCat.includes(needCat) || needCat.includes(recCat)) {
+        if (!bestNeed || need.score > bestNeed.score) {
+          bestNeed = need;
+          bestRecIdx = i;
+        }
+      }
+    }
+  }
+
+  if (!bestNeed || bestRecIdx < 0) {
+    return { boostedRecs: recs, usedNeed: null };
+  }
+
+  // Boost the matched PC's priority with latent need score (weighted 0.2)
+  const boosted = recs.map((r, i) => {
+    if (i === bestRecIdx) {
+      const currentPrio = r.priorite || 50;
+      const boost = bestNeed!.score * 20; // 0-20 points boost
+      return {
+        ...r,
+        priorite: Math.min(100, currentPrio + boost),
+        latent_need: bestNeed!.besoin_infere,
+        latent_need_score: bestNeed!.score,
+      };
+    }
+    return r;
+  });
+
+  // Re-sort by priority
+  boosted.sort((a: any, b: any) => (b.priorite || 0) - (a.priorite || 0));
+
+  return { boostedRecs: boosted, usedNeed: bestNeed };
+}
+
 // ====== CLINICAL FALLBACK HELPERS ======
 
 // Degressive rule: fewer PCs per med as total meds increase
