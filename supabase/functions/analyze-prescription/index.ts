@@ -1159,9 +1159,12 @@ serve(async (req) => {
 
       // Cap to degressive limit
       const finalRecs = filteredRecs.slice(0, maxPCPerMed);
-      
-      // Track proposed PCs globally
+
+      // Generate phrase_conseil for each PC: [context/problem] + [simple explanation] + [patient benefit]
       for (const r of finalRecs) {
+        if (!r.phrase_conseil) {
+          r.phrase_conseil = generatePhraseConseil(r, med);
+        }
         allProposedPCs.push(normalizeText(r.produit));
       }
 
