@@ -200,22 +200,6 @@ const AnalysisResults = ({ result, onReset }: AnalysisResultsProps) => {
         </div>
       )}
 
-      {/* Conseil global - collapsible */}
-      <div className="rounded-lg border border-primary/20 animate-fade-in">
-        <button
-          onClick={() => setConseilGlobalOpen(!conseilGlobalOpen)}
-          className="flex items-center gap-1.5 w-full p-2.5 text-left hover:bg-primary/5 transition-colors rounded-lg">
-          
-          {conseilGlobalOpen ? <ChevronDown className="h-3 w-3 text-primary" /> : <ChevronRight className="h-3 w-3 text-primary" />}
-          <MessageSquare className="h-3 w-3 text-primary" />
-          <span className="font-semibold text-xs">Phrase conseil</span>
-        </button>
-        {conseilGlobalOpen &&
-        <p className="text-[11px] leading-relaxed italic text-foreground px-2.5 pb-2.5 animate-fade-in">
-            "{result.conseil || "Un accompagnement adapté peut aider à améliorer le confort au quotidien."}"
-          </p>
-        }
-      </div>
 
       {/* Reset + disclaimer */}
       <div className="flex items-center gap-2">
