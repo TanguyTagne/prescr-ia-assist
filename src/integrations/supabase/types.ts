@@ -343,6 +343,89 @@ export type Database = {
           },
         ]
       }
+      latent_need_metrics: {
+        Row: {
+          besoin: string
+          created_at: string
+          id: string
+          impact_score: number | null
+          medicament_source: string
+          pc_proposed: string
+          pharmacy_id: string
+          times_converted: number
+          times_proposed: number
+          updated_at: string
+        }
+        Insert: {
+          besoin: string
+          created_at?: string
+          id?: string
+          impact_score?: number | null
+          medicament_source: string
+          pc_proposed: string
+          pharmacy_id: string
+          times_converted?: number
+          times_proposed?: number
+          updated_at?: string
+        }
+        Update: {
+          besoin?: string
+          created_at?: string
+          id?: string
+          impact_score?: number | null
+          medicament_source?: string
+          pc_proposed?: string
+          pharmacy_id?: string
+          times_converted?: number
+          times_proposed?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "latent_need_metrics_pharmacy_id_fkey"
+            columns: ["pharmacy_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      latent_needs: {
+        Row: {
+          benefice: string | null
+          besoin_infere: string
+          categorie: string
+          created_at: string
+          description: string | null
+          id: string
+          medicament_source: string
+          phrase_patient: string | null
+          score: number
+        }
+        Insert: {
+          benefice?: string | null
+          besoin_infere: string
+          categorie: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          medicament_source: string
+          phrase_patient?: string | null
+          score?: number
+        }
+        Update: {
+          benefice?: string | null
+          besoin_infere?: string
+          categorie?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          medicament_source?: string
+          phrase_patient?: string | null
+          score?: number
+        }
+        Relationships: []
+      }
       medicament_pathologie: {
         Row: {
           id: string
