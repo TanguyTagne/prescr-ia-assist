@@ -167,10 +167,30 @@ const AnalysisResults = ({ result, onReset }: AnalysisResultsProps) => {
                     }
                       </button>
                     </div>
-                    {rec.phrase_conseil &&
-                      <p className="text-[10px] text-muted-foreground italic leading-snug pl-0.5">
-                        💬 "{rec.phrase_conseil}"
-                      </p>
+                    {rec.phrase_conseil && (() => {
+                      const pcKey = `${i}-${j}`;
+                      const isOpen = expandedPCConseils.has(pcKey);
+                      return (
+                        <>
+                          <button
+                            onClick={() => setExpandedPCConseils((prev) => {
+                              const next = new Set(prev);
+                              if (next.has(pcKey)) next.delete(pcKey); else next.add(pcKey);
+                              return next;
+                            })}
+                            className="text-[9px] text-primary/60 hover:text-primary transition-colors flex items-center gap-0.5 pl-0.5"
+                          >
+                            {isOpen ? <ChevronDown className="h-2.5 w-2.5" /> : <ChevronRight className="h-2.5 w-2.5" />}
+                            Conseil
+                          </button>
+                          {isOpen &&
+                            <p className="text-[10px] text-muted-foreground italic leading-snug pl-3 animate-fade-in">
+                              💬 "{rec.phrase_conseil}"
+                            </p>
+                          }
+                        </>
+                      );
+                    })()
                     }
                   </div>);
 
