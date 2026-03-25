@@ -1131,6 +1131,17 @@ serve(async (req) => {
 
       if (advice) medMainAdvice.set(i, advice);
 
+      // Apply latent need boost (max 1 per basket, invisible in UX)
+      if (!latentNeedUsed && latentNeeds.length > 0) {
+        const { boostedRecs, usedNeed } = applyLatentNeedBoost(recs, latentNeeds, latentNeedUsed);
+        if (usedNeed) {
+          recs.length = 0;
+          recs.push(...boostedRecs);
+          latentNeedUsed = true;
+          usedLatentNeed = usedNeed;
+        }
+      }
+
       // Apply filters: blocked products (anti-loop), cross-med dedup, degressive cap
       let filteredRecs = recs
         .filter((r: any) => !blockedPCSet.has(normalizeText(r.produit)))
