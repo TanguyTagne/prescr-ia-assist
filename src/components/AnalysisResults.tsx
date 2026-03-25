@@ -18,7 +18,6 @@ const AnalysisResults = ({ result, onReset }: AnalysisResultsProps) => {
   const [expandedConseils, setExpandedConseils] = useState<Set<number>>(new Set());
   const [expandedPCConseils, setExpandedPCConseils] = useState<Set<string>>(new Set());
   const [conseilGlobalOpen, setConseilGlobalOpen] = useState(false);
-  const [conseilGlobalOpen, setConseilGlobalOpen] = useState(false);
 
   const toggleConseil = (index: number) => {
     setExpandedConseils((prev) => {
