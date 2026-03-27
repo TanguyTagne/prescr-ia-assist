@@ -1263,6 +1263,7 @@ serve(async (req) => {
                 description: p.just || p.description || "",
                 priorite: p.prio || p.priorite || 50,
                 pathologie: matchedProtocol.pathologie_nom || matchedProtocol.pathologies?.nom_pathologie || "",
+                phrase_conseil: p.phrase_conseil || undefined,
               }));
 
             recs.push(...pickDistinctProducts(protocolProducts, MAX_RECOMMENDATIONS_PER_MED));
@@ -1281,6 +1282,7 @@ serve(async (req) => {
                   description: fromClinical?.description || "Produit pertinent",
                   priorite: fromClinical?.priorite || (matchedProtocol.priority || 80) - idx,
                   pathologie: fromClinical?.pathologies?.nom_pathologie || matchedProtocol.pathologie,
+                  phrase_conseil: fromClinical?.phrase_conseil || undefined,
                 };
               });
             recs.push(...pickDistinctProducts(protocolProducts, MAX_RECOMMENDATIONS_PER_MED));
@@ -1295,6 +1297,7 @@ serve(async (req) => {
             description: p.description || "",
             priorite: p.priorite || 50,
             pathologie: p.pathologies?.nom_pathologie || "",
+            phrase_conseil: p.phrase_conseil || undefined,
           }));
 
           recs.push(...pickDistinctProducts(mappedClinicalProducts, MAX_RECOMMENDATIONS_PER_MED));
@@ -1326,6 +1329,7 @@ serve(async (req) => {
             description: p.description || "",
             priorite: p.priorite || 50,
             pathologie: p.pathologies?.nom_pathologie || "",
+            phrase_conseil: p.phrase_conseil || undefined,
           }));
 
         recs.push(...pickDistinctProducts(pathProducts, MAX_RECOMMENDATIONS_PER_MED));
