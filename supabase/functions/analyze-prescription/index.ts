@@ -1282,6 +1282,7 @@ serve(async (req) => {
                   description: fromClinical?.description || "Produit pertinent",
                   priorite: fromClinical?.priorite || (matchedProtocol.priority || 80) - idx,
                   pathologie: fromClinical?.pathologies?.nom_pathologie || matchedProtocol.pathologie,
+                  phrase_conseil: fromClinical?.phrase_conseil || undefined,
                 };
               });
             recs.push(...pickDistinctProducts(protocolProducts, MAX_RECOMMENDATIONS_PER_MED));
