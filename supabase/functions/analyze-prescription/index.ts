@@ -1297,6 +1297,7 @@ serve(async (req) => {
             description: p.description || "",
             priorite: p.priorite || 50,
             pathologie: p.pathologies?.nom_pathologie || "",
+            phrase_conseil: p.phrase_conseil || undefined,
           }));
 
           recs.push(...pickDistinctProducts(mappedClinicalProducts, MAX_RECOMMENDATIONS_PER_MED));
