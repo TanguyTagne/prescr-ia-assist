@@ -282,9 +282,9 @@ async function clinicalLookup(supabase: any, medName: string, moleculeName?: str
           *, pathologies(nom_pathologie),
           conseil_1:conseils_associes!protocole_pathologie_conseil_1_id_fkey(conseil, description),
           conseil_2:conseils_associes!protocole_pathologie_conseil_2_id_fkey(conseil, description),
-          produit_1:produits_complementaires!protocole_pathologie_produit_complementaire_1_id_fkey(produit, categorie, description, priorite),
-          produit_2:produits_complementaires!protocole_pathologie_produit_complementaire_2_id_fkey(produit, categorie, description, priorite),
-          produit_3:produits_complementaires!protocole_pathologie_produit_complementaire_3_id_fkey(produit, categorie, description, priorite)
+          produit_1:produits_complementaires!protocole_pathologie_produit_complementaire_1_id_fkey(produit, categorie, description, priorite, phrase_conseil),
+          produit_2:produits_complementaires!protocole_pathologie_produit_complementaire_2_id_fkey(produit, categorie, description, priorite, phrase_conseil),
+          produit_3:produits_complementaires!protocole_pathologie_produit_complementaire_3_id_fkey(produit, categorie, description, priorite, phrase_conseil)
         `)
         .in("pathologie_id", pathologieIds)
         .eq("actif", true),
