@@ -1263,6 +1263,7 @@ serve(async (req) => {
                 description: p.just || p.description || "",
                 priorite: p.prio || p.priorite || 50,
                 pathologie: matchedProtocol.pathologie_nom || matchedProtocol.pathologies?.nom_pathologie || "",
+                phrase_conseil: p.phrase_conseil || undefined,
               }));
 
             recs.push(...pickDistinctProducts(protocolProducts, MAX_RECOMMENDATIONS_PER_MED));
