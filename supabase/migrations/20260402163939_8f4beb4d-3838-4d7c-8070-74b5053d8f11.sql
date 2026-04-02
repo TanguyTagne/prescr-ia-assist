@@ -1,0 +1,1 @@
+DROP POLICY IF EXISTS "Anon can insert scan_queue" ON public.scan_queue;
