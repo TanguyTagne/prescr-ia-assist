@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { ArrowLeft, Loader2, Mail, Building2, BarChart3, RefreshCw, Download, ShieldCheck, ShoppingCart, Target } from "lucide-react";
+import { ArrowLeft, Loader2, Mail, Building2, BarChart3, RefreshCw, ShieldCheck, ShoppingCart, Target } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import RequestsTab from "@/components/admin/RequestsTab";
 import PharmaciesTab from "@/components/admin/PharmaciesTab";
@@ -92,25 +92,6 @@ const Admin = () => {
           </Button>
           <h1 className="text-xl font-bold">Administration</h1>
           <div className="ml-auto flex gap-1">
-            <Button variant="ghost" size="icon" onClick={async () => {
-              try {
-                toast.info("Export en cours...");
-                const { data, error } = await supabase.functions.invoke("export-clinical-data");
-                if (error) throw error;
-                const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = `prescria-clinical-data-${new Date().toISOString().slice(0,10)}.json`;
-                a.click();
-                URL.revokeObjectURL(url);
-                toast.success("Base clinique exportée !");
-              } catch (e: any) {
-                toast.error("Erreur: " + e.message);
-              }
-            }} className="h-8 w-8" title="Exporter la base clinique">
-              <Download className="h-4 w-4" />
-            </Button>
             <Button variant="ghost" size="icon" onClick={loadData} className="h-8 w-8">
               <RefreshCw className="h-4 w-4" />
             </Button>

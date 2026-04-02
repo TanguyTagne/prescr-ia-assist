@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { Pill, FolderSearch, ShieldCheck, ArrowRight, Download, BarChart3, LogOut, Zap, Monitor, Send, Loader2, Settings } from "lucide-react";
+import { Pill, FolderSearch, ShieldCheck, ArrowRight, BarChart3, LogOut, Zap, Monitor, Send, Loader2, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-const DOWNLOAD_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/download-app`;
+
 
 const AccessRequestForm = () => {
   const [loading, setLoading] = useState(false);
@@ -94,12 +94,6 @@ const Landing = () => {
                 <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")} className="gap-1.5 text-xs">
                   <BarChart3 className="h-3.5 w-3.5" />
                   Dashboard
-                </Button>
-                <Button variant="ghost" size="sm" asChild className="gap-1.5 text-xs">
-                  <a href={DOWNLOAD_URL} target="_blank" rel="noopener noreferrer">
-                    <Download className="h-3.5 w-3.5" />
-                    Télécharger
-                  </a>
                 </Button>
                 <Button variant="ghost" size="icon" onClick={signOut} className="h-8 w-8">
                   <LogOut className="h-3.5 w-3.5" />
