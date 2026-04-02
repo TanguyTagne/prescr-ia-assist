@@ -11,6 +11,7 @@ const Landing = lazy(() => import("./pages/Landing"));
 const Auth = lazy(() => import("./pages/Auth"));
 const Admin = lazy(() => import("./pages/Admin"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Quiz = lazy(() => import("./pages/Quiz"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const Widget = lazy(() => import("./components/Widget"));
 
@@ -49,6 +50,7 @@ const App = () => {
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
                   <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+                  <Route path="/quiz" element={<ProtectedRoute><Quiz /></ProtectedRoute>} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
                 <Widget />

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BarChart3, Activity, MousePointerClick, ShoppingBag, Clock, ArrowLeft, LogOut, Download, Monitor, Shield, Package } from "lucide-react";
+import { BarChart3, Activity, MousePointerClick, ShoppingBag, Clock, ArrowLeft, LogOut, Download, Monitor, Shield, Package, Brain } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
@@ -159,6 +159,25 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <ProductMappingSettings />
+          </CardContent>
+        </Card>
+
+        {/* Quiz Section */}
+        <Card className="glass-card border-primary/20">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Brain className="h-5 w-5 text-primary" />
+              Quiz Formation
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Testez et renforcez vos connaissances en conseil officinal avec des quiz générés à partir de votre base clinique.
+            </p>
+            <Button onClick={() => navigate("/quiz")} className="w-full sm:w-auto pharmacy-gradient border-0 gap-2">
+              <Brain className="h-4 w-4" />
+              Lancer un quiz
+            </Button>
           </CardContent>
         </Card>
 
