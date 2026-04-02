@@ -85,10 +85,12 @@ const Landing = () => {
           <div className="flex items-center gap-2">
             {user ? (
               <>
-                <Button variant="ghost" size="sm" onClick={() => navigate("/admin")} className="gap-1.5 text-xs">
-                  <Settings className="h-3.5 w-3.5" />
-                  Admin
-                </Button>
+                {isAdmin && (
+                  <Button variant="ghost" size="sm" onClick={() => navigate("/admin")} className="gap-1.5 text-xs">
+                    <Settings className="h-3.5 w-3.5" />
+                    Admin
+                  </Button>
+                )}
                 <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")} className="gap-1.5 text-xs">
                   <BarChart3 className="h-3.5 w-3.5" />
                   Dashboard
