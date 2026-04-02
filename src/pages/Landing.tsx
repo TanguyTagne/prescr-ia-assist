@@ -95,12 +95,6 @@ const Landing = () => {
                   <BarChart3 className="h-3.5 w-3.5" />
                   Dashboard
                 </Button>
-                <Button variant="ghost" size="sm" asChild className="gap-1.5 text-xs">
-                  <a href={DOWNLOAD_URL} target="_blank" rel="noopener noreferrer">
-                    <Download className="h-3.5 w-3.5" />
-                    Télécharger
-                  </a>
-                </Button>
                 <Button variant="ghost" size="icon" onClick={signOut} className="h-8 w-8">
                   <LogOut className="h-3.5 w-3.5" />
                 </Button>
