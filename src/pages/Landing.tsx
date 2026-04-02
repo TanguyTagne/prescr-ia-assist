@@ -68,7 +68,7 @@ const AccessRequestForm = () => {
 };
 
 const Landing = () => {
-  const { user, signOut } = useAuth();
+  const { user, isAdmin, signOut } = useAuth();
   const navigate = useNavigate();
 
   return (
