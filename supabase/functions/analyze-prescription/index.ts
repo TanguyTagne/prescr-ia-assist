@@ -721,7 +721,7 @@ function buildFallbackMedical(produit: string, medName: string, classe: string, 
   if (medName) {
     return `Ce traitement peut nécessiter un accompagnement, ${p} aide à en limiter les effets indésirables.`;
   }
-  return `${produit} est recommandé en accompagnement pour limiter les effets indésirables du traitement.`;
+  return `${p} est recommandé en accompagnement pour limiter les effets indésirables du traitement.`;
 }
 
 function pickDistinctProducts(products: any[], max = MAX_RECOMMENDATIONS_PER_MED) {
