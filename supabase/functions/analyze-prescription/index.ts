@@ -466,6 +466,21 @@ function normalizeAdviceSentence(text: string) {
   return (text || "").trim().replace(/[.\s]+$/g, "");
 }
 
+// Adds correct French determinant before a product name
+function withDeterminant(produit: string): string {
+  const p = produit.trim();
+  const lower = p.toLowerCase();
+  // Already has a determinant
+  if (/^(le |la |les |l'|un |une |des |du |ce |cette |ces )/.test(lower)) return p;
+  // Starts with vowel or silent h
+  if (/^[aeéèêiîoôuûyhœæ]/i.test(lower)) return `l'${p}`;
+  // Plurals
+  if (lower.endsWith("s") && !lower.endsWith("ss") && !lower.endsWith("us") && !lower.endsWith("is")) return `les ${p}`;
+  // Common feminine patterns
+  if (/(crème|solution|vitamine|huile|pommade|lotion|gélule|capsule|compresse|bande|poudre|mousse|gelée)/i.test(lower)) return `la ${p}`;
+  return `le ${p}`;
+}
+
 // Medical phrase generator: [pathologie/conséquence] + [mécanisme produit] + [bénéfice précis]
 // Rules: 15-25 words, no "confort"/"bien-être"/"au quotidien", must contain medical mechanism
 function generatePhraseConseil(rec: any, med: any): string {
@@ -497,12 +512,12 @@ function containsForbiddenWords(phrase: string): boolean {
 }
 
 function buildMedicalPhrase(produit: string, pathologie: string, categorie: string, description: string, medName: string, classe: string, latentNeed: string): string {
-  const p = produit;
+  const p = withDeterminant(produit);
   const cat = categorie;
   const desc = description;
 
   // === PROBIOTIQUES / FLORE ===
-  if (cat.includes("probiotique") || cat.includes("flore") || p.toLowerCase().includes("probiotique") || p.toLowerCase().includes("ultra levure") || p.toLowerCase().includes("saccharomyces")) {
+  if (cat.includes("probiotique") || cat.includes("flore") || produit.toLowerCase().includes("probiotique") || produit.toLowerCase().includes("ultra levure") || produit.toLowerCase().includes("saccharomyces")) {
     if (classe.includes("antibiotique") || classe.includes("anti-infect") || medName.toLowerCase().includes("amoxicilline") || medName.toLowerCase().includes("augmentin")) {
       return `Les antibiotiques perturbent la flore intestinale, ${p} aide à prévenir les troubles digestifs.`;
     }
@@ -516,7 +531,7 @@ function buildMedicalPhrase(produit: string, pathologie: string, categorie: stri
   }
 
   // === RÉHYDRATATION ===
-  if (cat.includes("réhydratation") || cat.includes("hydratation") || p.toLowerCase().includes("réhydratation") || p.toLowerCase().includes("sro")) {
+  if (cat.includes("réhydratation") || cat.includes("hydratation") || produit.toLowerCase().includes("réhydratation") || produit.toLowerCase().includes("sro")) {
     if (pathologie.includes("gastro") || pathologie.includes("diarrhée")) {
       return `La diarrhée entraîne une perte importante d'eau et de sels minéraux, ${p} aide à prévenir la déshydratation.`;
     }
@@ -530,7 +545,7 @@ function buildMedicalPhrase(produit: string, pathologie: string, categorie: stri
   }
 
   // === PANSEMENT GASTRIQUE / PROTECTEUR ===
-  if (cat.includes("pansement") || p.toLowerCase().includes("pansement") || p.toLowerCase().includes("gaviscon") || p.toLowerCase().includes("smecta")) {
+  if (cat.includes("pansement") || produit.toLowerCase().includes("pansement") || produit.toLowerCase().includes("gaviscon") || produit.toLowerCase().includes("smecta")) {
     if (cat.includes("intestin") || pathologie.includes("gastro") || pathologie.includes("diarrhée")) {
       return `L'irritation intestinale peut persister après la diarrhée, ${p} protège la muqueuse digestive.`;
     }
@@ -544,7 +559,7 @@ function buildMedicalPhrase(produit: string, pathologie: string, categorie: stri
   }
 
   // === IPP / PROTECTEUR GASTRIQUE ===
-  if (cat.includes("ipp") || cat.includes("protecteur gastrique") || p.toLowerCase().includes("oméprazole") || p.toLowerCase().includes("pantoprazole")) {
+  if (cat.includes("ipp") || cat.includes("protecteur gastrique") || produit.toLowerCase().includes("oméprazole") || produit.toLowerCase().includes("pantoprazole")) {
     if (classe.includes("ains") || classe.includes("anti-inflamm") || medName.toLowerCase().includes("diclofénac") || medName.toLowerCase().includes("ibuprofène")) {
       return `Les anti-inflammatoires peuvent irriter la muqueuse gastrique, ${p} aide à protéger l'estomac.`;
     }
@@ -552,7 +567,7 @@ function buildMedicalPhrase(produit: string, pathologie: string, categorie: stri
   }
 
   // === CHARBON ACTIF ===
-  if (p.toLowerCase().includes("charbon")) {
+  if (produit.toLowerCase().includes("charbon")) {
     if (pathologie.includes("gastro") || pathologie.includes("diarrhée")) {
       return `La diarrhée peut s'accompagner de gaz et de toxines intestinales, ${p} aide à les adsorber et réduire les ballonnements.`;
     }
@@ -560,7 +575,7 @@ function buildMedicalPhrase(produit: string, pathologie: string, categorie: stri
   }
 
   // === SPRAY NASAL / DÉCONGESTIONNANT ===
-  if (cat.includes("nasal") || cat.includes("spray") || p.toLowerCase().includes("spray nasal") || p.toLowerCase().includes("décongestionnant")) {
+  if (cat.includes("nasal") || cat.includes("spray") || produit.toLowerCase().includes("spray nasal") || produit.toLowerCase().includes("décongestionnant")) {
     if (pathologie.includes("allergie") || classe.includes("antihistaminique")) {
       return `L'allergie provoque une inflammation des voies nasales, ${p} aide à décongestionner et calmer l'irritation.`;
     }
@@ -571,7 +586,7 @@ function buildMedicalPhrase(produit: string, pathologie: string, categorie: stri
   }
 
   // === SOLUTION SALINE / LAVAGE NASAL ===
-  if (p.toLowerCase().includes("saline") || p.toLowerCase().includes("lavage nasal") || p.toLowerCase().includes("sérum physiologique")) {
+  if (produit.toLowerCase().includes("saline") || produit.toLowerCase().includes("lavage nasal") || produit.toLowerCase().includes("sérum physiologique")) {
     if (pathologie.includes("allergie")) {
       return `Les allergènes irritent la muqueuse nasale, ${p} permet d'éliminer les particules et d'apaiser l'inflammation.`;
     }
@@ -579,15 +594,15 @@ function buildMedicalPhrase(produit: string, pathologie: string, categorie: stri
   }
 
   // === COLLYRE ===
-  if (cat.includes("collyre") || cat.includes("ophtalmique") || p.toLowerCase().includes("collyre")) {
+  if (cat.includes("collyre") || cat.includes("ophtalmique") || produit.toLowerCase().includes("collyre")) {
     if (pathologie.includes("allergie") || classe.includes("antihistaminique")) {
-      return `Les allergies peuvent irriter les yeux, ${p} aide à réduire les démangeaisons et rougeurs.`;
+      return `L'allergie saisonnière irrite les yeux et provoque des démangeaisons, ${p} stabilise les mastocytes pour soulager le prurit.`;
     }
-    return `L'irritation oculaire peut accompagner ce traitement, ${p} aide à apaiser les yeux.`;
+    return `L'irritation oculaire peut accompagner ce traitement, ${p} aide à apaiser et protéger les yeux.`;
   }
 
   // === LAXATIF ===
-  if (cat.includes("laxatif") || p.toLowerCase().includes("laxatif")) {
+  if (cat.includes("laxatif") || produit.toLowerCase().includes("laxatif")) {
     if (classe.includes("opioïde") || classe.includes("opiacé") || medName.toLowerCase().includes("codéine") || medName.toLowerCase().includes("tramadol")) {
       return `La codéine ralentit le transit intestinal, ${p} aide à prévenir la constipation.`;
     }
@@ -595,7 +610,7 @@ function buildMedicalPhrase(produit: string, pathologie: string, categorie: stri
   }
 
   // === FIBRES / PSYLLIUM ===
-  if (p.toLowerCase().includes("fibre") || p.toLowerCase().includes("psyllium")) {
+  if (produit.toLowerCase().includes("fibre") || produit.toLowerCase().includes("psyllium")) {
     if (cat.includes("laxatif") || pathologie.includes("constipation")) {
       return `Les laxatifs stimulants peuvent irriter le côlon, ${p} aide à réguler le transit plus naturellement.`;
     }
@@ -603,7 +618,7 @@ function buildMedicalPhrase(produit: string, pathologie: string, categorie: stri
   }
 
   // === MAGNÉSIUM ===
-  if (p.toLowerCase().includes("magnésium") || cat.includes("magnésium")) {
+  if (produit.toLowerCase().includes("magnésium") || cat.includes("magnésium")) {
     if (classe.includes("ains") || classe.includes("anti-inflamm") || pathologie.includes("douleur")) {
       return `Les douleurs musculaires peuvent s'accompagner de tensions, ${p} aide à favoriser la détente musculaire.`;
     }
@@ -614,7 +629,7 @@ function buildMedicalPhrase(produit: string, pathologie: string, categorie: stri
   }
 
   // === COENZYME Q10 ===
-  if (p.toLowerCase().includes("coenzyme") || p.toLowerCase().includes("q10")) {
+  if (produit.toLowerCase().includes("coenzyme") || produit.toLowerCase().includes("q10")) {
     if (classe.includes("statine") || medName.toLowerCase().includes("atorvastatine") || medName.toLowerCase().includes("rosuvastatine") || medName.toLowerCase().includes("simvastatine")) {
       return `Les statines peuvent diminuer la production de coenzyme Q10, ${p} aide à limiter les douleurs musculaires.`;
     }
@@ -625,7 +640,7 @@ function buildMedicalPhrase(produit: string, pathologie: string, categorie: stri
   }
 
   // === RINÇAGE BUCCAL / ANTISEPTIQUE BUCCAL ===
-  if (p.toLowerCase().includes("rinçage") || p.toLowerCase().includes("bain de bouche") || p.toLowerCase().includes("antiseptique buccal")) {
+  if (produit.toLowerCase().includes("rinçage") || produit.toLowerCase().includes("bain de bouche") || produit.toLowerCase().includes("antiseptique buccal")) {
     if (classe.includes("corticoïde") || medName.toLowerCase().includes("budésonide") || medName.toLowerCase().includes("béclométasone") || medName.toLowerCase().includes("fluticasone")) {
       return `Les corticoïdes inhalés peuvent favoriser les infections buccales, ${p} aide à prévenir les mycoses.`;
     }
@@ -633,7 +648,7 @@ function buildMedicalPhrase(produit: string, pathologie: string, categorie: stri
   }
 
   // === VITAMINE D / CALCIUM ===
-  if (p.toLowerCase().includes("vitamine d") || p.toLowerCase().includes("calcium")) {
+  if (produit.toLowerCase().includes("vitamine d") || produit.toLowerCase().includes("calcium")) {
     if (classe.includes("corticoïde")) {
       return `Les corticoïdes au long cours fragilisent les os, ${p} aide à prévenir la déminéralisation osseuse.`;
     }
@@ -644,12 +659,12 @@ function buildMedicalPhrase(produit: string, pathologie: string, categorie: stri
   }
 
   // === FER ===
-  if (p.toLowerCase().includes("fer") || cat.includes("fer")) {
+  if (produit.toLowerCase().includes("fer") || cat.includes("fer")) {
     return `Ce traitement peut impacter l'absorption du fer, ${p} aide à prévenir les carences et la fatigue.`;
   }
 
   // === VITAMINE B ===
-  if (p.toLowerCase().includes("vitamine b") || p.toLowerCase().includes("b12") || p.toLowerCase().includes("acide folique")) {
+  if (produit.toLowerCase().includes("vitamine b") || produit.toLowerCase().includes("b12") || produit.toLowerCase().includes("acide folique")) {
     if (classe.includes("metformine") || medName.toLowerCase().includes("metformine")) {
       return `La metformine peut diminuer l'absorption de la vitamine B12, ${p} aide à prévenir les carences.`;
     }
@@ -657,24 +672,31 @@ function buildMedicalPhrase(produit: string, pathologie: string, categorie: stri
   }
 
   // === ANTISEPTIQUE / CICATRISANT ===
-  if (cat.includes("antiseptique") || cat.includes("cicatrisant") || p.toLowerCase().includes("antiseptique")) {
+  if (cat.includes("antiseptique") || cat.includes("cicatrisant") || produit.toLowerCase().includes("antiseptique")) {
     return `Les lésions cutanées nécessitent une protection contre les infections, ${p} favorise la cicatrisation.`;
   }
 
   // === CRÈME / ÉMOLLIENT ===
-  if (cat.includes("émollient") || cat.includes("crème") || p.toLowerCase().includes("émollient")) {
+  if (cat.includes("émollient") || cat.includes("crème") || produit.toLowerCase().includes("émollient")) {
     if (classe.includes("corticoïde") || pathologie.includes("eczéma") || pathologie.includes("dermatite")) {
       return `L'inflammation cutanée fragilise la barrière de la peau, ${p} aide à restaurer l'hydratation et la protection.`;
     }
     return `Ce traitement peut assécher la peau, ${p} aide à restaurer la barrière cutanée.`;
   }
 
+  // === LARMES ARTIFICIELLES ===
+  if (produit.toLowerCase().includes("larmes artificielles") || produit.toLowerCase().includes("larme artificielle")) {
+    return `La sécheresse oculaire réduit le film lacrymal, ${p} à base d'hyaluronate hydratent intensément la surface oculaire.`;
+  }
+
   // === GENERIC FALLBACK using description ===
   if (description && description.length > 10) {
-    // Use the description to build a medical phrase
     const descClean = description.replace(/\.$/g, "").trim();
-    const result = `${medName ? `Avec ${medName}, ` : ""}${descClean}, ${p} aide à y remédier.`;
-    if (!containsForbiddenWords(result) && result.split(" ").length <= 30) return result;
+    // Build a proper phrase using description as context + product with determinant
+    if (pathologie) {
+      return `En cas de ${pathologie}, ${descClean}, ${p} aide à soulager les symptômes.`;
+    }
+    return `${descClean.charAt(0).toUpperCase() + descClean.slice(1)}, ${p} aide à soulager les symptômes associés.`;
   }
 
   // === PATHOLOGIE-BASED FALLBACK ===
@@ -692,13 +714,14 @@ function buildMedicalPhrase(produit: string, pathologie: string, categorie: stri
 }
 
 function buildFallbackMedical(produit: string, medName: string, classe: string, description: string): string {
+  const p = withDeterminant(produit);
   if (classe) {
-    return `Les traitements de type ${classe} peuvent avoir des effets secondaires, ${produit} aide à les atténuer.`;
+    return `Les traitements de type ${classe} peuvent avoir des effets secondaires, ${p} aide à les atténuer.`;
   }
   if (medName) {
-    return `Ce traitement peut nécessiter un accompagnement, ${produit} aide à en limiter les effets indésirables.`;
+    return `Ce traitement peut nécessiter un accompagnement, ${p} aide à en limiter les effets indésirables.`;
   }
-  return `${produit} est recommandé en accompagnement pour limiter les effets indésirables du traitement.`;
+  return `${p} est recommandé en accompagnement pour limiter les effets indésirables du traitement.`;
 }
 
 function pickDistinctProducts(products: any[], max = MAX_RECOMMENDATIONS_PER_MED) {
