@@ -154,7 +154,7 @@ const ProductMappingSettings = () => {
                     list={`cat-suggestions-${i}`}
                   />
                   <datalist id={`cat-suggestions-${i}`}>
-                    {COMMON_CATEGORIES.map(c => <option key={c} value={c} />)}
+                    {ALL_CATEGORIES.map(c => <option key={c} value={c} />)}
                   </datalist>
                 </div>
                 <div className="flex-1">
