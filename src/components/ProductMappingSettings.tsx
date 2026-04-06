@@ -115,11 +115,7 @@ const ProductMappingSettings = () => {
   if (loading) return <div className="text-xs text-muted-foreground p-4">Chargement...</div>;
   if (!pharmacyId) return <div className="text-xs text-muted-foreground p-4">Aucune pharmacie associée.</div>;
 
-  const COMMON_CATEGORIES = [
-    "Sirop toux", "Probiotique", "Spray nasal", "Collyre", "Crème hydratante",
-    "Complément vitaminique", "Antalgique OTC", "Pansement gastrique", "Bain de bouche",
-    "Huile essentielle", "Gel articulaire", "Solution antiseptique",
-  ];
+  const ALL_CATEGORIES = dbCategories;
 
   return (
     <div className="space-y-4">
