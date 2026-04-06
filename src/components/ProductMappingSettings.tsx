@@ -20,6 +20,7 @@ const ProductMappingSettings = () => {
   const [pharmacyId, setPharmacyId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [dbCategories, setDbCategories] = useState<string[]>([]);
 
   useEffect(() => {
     if (!user) return;
@@ -39,19 +40,31 @@ const ProductMappingSettings = () => {
     }
     setPharmacyId(profile.pharmacy_id);
 
-    const { data } = await supabase
-      .from("product_mapping")
-      .select("*")
-      .eq("pharmacy_id", profile.pharmacy_id)
-      .order("categorie");
+    // Fetch mappings and all DB categories in parallel
+    const [mappingsRes, categoriesRes] = await Promise.all([
+      supabase
+        .from("product_mapping")
+        .select("*")
+        .eq("pharmacy_id", profile.pharmacy_id)
+        .order("categorie"),
+      supabase
+        .from("produits_complementaires")
+        .select("categorie")
+        .not("categorie", "is", null),
+    ]);
 
-    setMappings((data || []).map((d: any) => ({
+    setMappings((mappingsRes.data || []).map((d: any) => ({
       id: d.id,
       categorie: d.categorie,
       produit_selectionne: d.produit_selectionne,
       cip_code: d.cip_code,
       active: d.active,
     })));
+
+    // Deduplicate and sort categories
+    const uniqueCats = [...new Set((categoriesRes.data || []).map((r: any) => r.categorie as string))].sort();
+    setDbCategories(uniqueCats);
+
     setLoading(false);
   };
 
