@@ -133,7 +133,7 @@ serve(async (req) => {
       headers: {
         ...corsHeaders,
         "Content-Type": "application/json",
-        "Content-Disposition": `attachment; filename="prescria-clinical-data-${new Date().toISOString().slice(0,10)}.json"`,
+        "Content-Disposition": `attachment; filename="asclion-clinical-data-${new Date().toISOString().slice(0,10)}.json"`,
       },
     });
   } catch (error) {
