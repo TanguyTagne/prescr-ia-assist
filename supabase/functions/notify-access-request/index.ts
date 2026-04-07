@@ -16,7 +16,7 @@ async function sendEmail(formData: Record<string, any>) {
 
   const htmlBody = `
     <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px">
-      <h2 style="color:#16a34a">Nouvelle demande d'accès PrescrIA</h2>
+      <h2 style="color:#16a34a">Nouvelle demande d'accès Asclion</h2>
       <table style="width:100%;border-collapse:collapse;margin-top:16px">
         <tr><td style="padding:8px;font-weight:bold;border-bottom:1px solid #eee">Pharmacie</td><td style="padding:8px;border-bottom:1px solid #eee">${pharmacy_name || "N/A"}</td></tr>
         <tr><td style="padding:8px;font-weight:bold;border-bottom:1px solid #eee">Contact</td><td style="padding:8px;border-bottom:1px solid #eee">${contact_name || "N/A"}</td></tr>
@@ -37,7 +37,7 @@ async function sendEmail(formData: Record<string, any>) {
       Authorization: `Bearer ${RESEND_API_KEY}`,
     },
     body: JSON.stringify({
-      from: "PrescrIA <onboarding@resend.dev>",
+      from: "Asclion <onboarding@resend.dev>",
       to: ADMIN_EMAIL,
       subject: `Nouvelle demande d'accès — ${pharmacy_name}`,
       html: htmlBody,

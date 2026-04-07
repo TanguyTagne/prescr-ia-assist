@@ -229,7 +229,7 @@ const CoverageTab = () => {
                 <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0" />
                 <div className="text-sm">
                   {stats.coverage_rate < 100 && (
-                    <p><strong>Couverture incomplète :</strong> {stats.missing} médicaments du Top 300 sont absents de la base PrescrIA.</p>
+                    <p><strong>Couverture incomplète :</strong> {stats.missing} médicaments du Top 300 sont absents de la base Asclion.</p>
                   )}
                   {stats.completeness_avg < 70 && (
                     <p><strong>Complétude faible :</strong> score moyen {stats.completeness_avg}/100. Lancez l'enrichissement automatique.</p>

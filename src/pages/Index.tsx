@@ -53,7 +53,7 @@ const Index = () => {
       if (outcome === "accepted") {
         setIsInstalled(true);
         setDeferredPrompt(null);
-        toast.success("PrescrIA installée !");
+        toast.success("Asclion installée !");
       }
     } else {
       window.open(PUBLISHED_URL, "_blank");

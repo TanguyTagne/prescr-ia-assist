@@ -1,9 +1,9 @@
 {
-  "name": "prescria-desktop",
+  "name": "asclion-desktop",
   "version": "1.0.0",
-  "description": "PrescrIA — Assistant Pharmacie intelligent",
+  "description": "Asclion — Assistant Pharmacie intelligent",
   "main": "main.js",
-  "author": "PrescrIA",
+  "author": "Asclion",
   "license": "UNLICENSED",
   "scripts": {
     "start": "electron .",
@@ -19,12 +19,12 @@
     "electron-builder": "^25.1.8"
   },
   "build": {
-    "appId": "com.prescria.desktop",
-    "productName": "PrescrIA",
+    "appId": "com.asclion.desktop",
+    "productName": "Asclion",
     "directories": {
       "output": "dist"
     },
-    "artifactName": "PrescrIA-Setup.${ext}",
+    "artifactName": "Asclion-Setup.${ext}",
     "win": {
       "target": [
         {
@@ -39,7 +39,7 @@
       "perMachine": false,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "PrescrIA",
+      "shortcutName": "Asclion",
       "runAfterFinish": true
     },
     "mac": {
