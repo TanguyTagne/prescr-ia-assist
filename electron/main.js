@@ -19,7 +19,7 @@ function createWindow() {
     maxWidth: 450,
     maxHeight: 700,
     resizable: true,
-    title: "PrescrIA",
+    title: "Asclion",
     icon: path.join(__dirname, "assets", "icon.ico"),
     autoHideMenuBar: true,
     show: false,

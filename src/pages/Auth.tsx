@@ -51,7 +51,7 @@ const Auth = () => {
             <Pill className="h-5 w-5 text-primary-foreground" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-primary-foreground tracking-tight">PrescrIA</h1>
+            <h1 className="text-xl font-bold text-primary-foreground tracking-tight">Asclion</h1>
             <p className="text-xs text-primary-foreground/70">Assistant pharmacie intelligent</p>
           </div>
         </div>
@@ -62,7 +62,7 @@ const Auth = () => {
           <div className="text-center space-y-2">
             <h2 className="text-2xl font-bold">{isLogin ? "Connexion" : "Créer un compte"}</h2>
             <p className="text-muted-foreground text-sm">
-              {isLogin ? "Accédez à votre espace PrescrIA" : "Rejoignez PrescrIA en quelques secondes"}
+              {isLogin ? "Accédez à votre espace Asclion" : "Rejoignez Asclion en quelques secondes"}
             </p>
           </div>
 

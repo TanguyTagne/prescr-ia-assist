@@ -79,7 +79,7 @@ async function openFDAGetInteractions(drug1: string, drug2: string): Promise<str
 
 // ====== PROMPTS ======
 
-const EXTRACTION_PROMPT = `Tu es PrescrIA, un copilote pour préparateurs en pharmacie.
+const EXTRACTION_PROMPT = `Tu es Asclion, un copilote pour préparateurs en pharmacie.
 Tu dois extraire les médicaments ET le nom du patient d'une ordonnance et les retourner en JSON.
 
 ATTENTION : Les ordonnances peuvent être MANUSCRITES (écriture de médecin, parfois difficile à lire).
@@ -103,7 +103,7 @@ RÈGLES :
 - Indique le niveau de confiance de lecture (haute si clair, basse si écriture illisible)
 - Ne retourne RIEN d'autre que ce JSON`;
 
-const ENRICHMENT_PROMPT = `Tu es PrescrIA, un copilote pharmacien. On te donne un médicament et ses données issues de bases publiques (RxNav ATC, OpenFDA).
+const ENRICHMENT_PROMPT = `Tu es Asclion, un copilote pharmacien. On te donne un médicament et ses données issues de bases publiques (RxNav ATC, OpenFDA).
 Utilise ces données OFFICIELLES pour structurer les informations pharmacologiques.
 
 ## DONNÉES PUBLIQUES FOURNIES (à utiliser en priorité)
@@ -1080,7 +1080,7 @@ serve(async (req) => {
         clinicalResults.push({ index: i, ...clinical });
         if (clinical.conseils) allDbConseils.push(...clinical.conseils);
         if (clinical.produits) allDbProduits.push(...clinical.produits);
-        if (!sources.includes("Base clinique PrescrIA")) sources.push("Base clinique PrescrIA");
+        if (!sources.includes("Base clinique Asclion")) sources.push("Base clinique Asclion");
       }
     }
 
@@ -1108,7 +1108,7 @@ serve(async (req) => {
 
       if (dbMed?.matched) {
         enrichedMeds.push({ ...dbMed, clinical_kb: false });
-        if (!sources.includes("Base PrescrIA (données structurées)")) sources.push("Base PrescrIA (données structurées)");
+        if (!sources.includes("Base Asclion (données structurées)")) sources.push("Base Asclion (données structurées)");
         continue;
       }
 
@@ -1227,14 +1227,14 @@ serve(async (req) => {
         const recs = await getAtcFallbackRecommendations(supabase, code);
         if (recs.length > 0) {
           atcFallbackMap.set(code, recs);
-          if (!sources.includes("Base clinique PrescrIA")) sources.push("Base clinique PrescrIA");
+          if (!sources.includes("Base clinique Asclion")) sources.push("Base clinique Asclion");
         }
       }),
       ...therapeuticClasses.map(async (therapeuticClass) => {
         const recs = await getClassFallbackRecommendations(supabase, therapeuticClass);
         if (recs.length > 0) {
           classFallbackMap.set(therapeuticClass, recs);
-          if (!sources.includes("Base clinique PrescrIA")) sources.push("Base clinique PrescrIA");
+          if (!sources.includes("Base clinique Asclion")) sources.push("Base clinique Asclion");
         }
       }),
     ]);

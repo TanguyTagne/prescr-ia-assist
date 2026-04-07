@@ -172,7 +172,7 @@ ${date}
 • Envoyés : ${p.sentReminders}
 ${p.lastAnalysis ? `\nDernière analyse : ${new Date(p.lastAnalysis).toLocaleDateString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}` : ""}
 
-— Généré par PrescrIA`;
+— Généré par Asclion`;
   };
 
   const handleCopyReport = (p: PharmacyCRMStats) => {

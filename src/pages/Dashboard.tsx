@@ -95,7 +95,7 @@ const Dashboard = () => {
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
-              <h1 className="text-xl font-bold text-primary-foreground tracking-tight">Dashboard PrescrIA</h1>
+              <h1 className="text-xl font-bold text-primary-foreground tracking-tight">Dashboard Asclion</h1>
               <p className="text-xs text-primary-foreground/70">KPIs pharmacie</p>
             </div>
           </div>
@@ -186,7 +186,7 @@ const Dashboard = () => {
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <Download className="h-5 w-5 text-primary" />
-              Installer PrescrIA sur vos postes
+              Installer Asclion sur vos postes
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -195,13 +195,13 @@ const Dashboard = () => {
             </p>
 
             <a
-              href="https://github.com/TanguyTagne/prescr-ia-assist/releases/latest/download/PrescrIA-Setup.exe"
+              href="https://github.com/TanguyTagne/prescr-ia-assist/releases/latest/download/Asclion-Setup.exe"
               target="_blank"
               rel="noopener noreferrer"
             >
               <Button className="w-full sm:w-auto h-12 text-base font-semibold pharmacy-gradient border-0 gap-2">
                 <Monitor className="h-5 w-5" />
-                Télécharger PrescrIA pour Windows
+                Télécharger Asclion pour Windows
               </Button>
             </a>
 

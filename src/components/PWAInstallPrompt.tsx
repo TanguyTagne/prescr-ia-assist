@@ -40,9 +40,9 @@ const PWAInstallPrompt = () => {
           <Download className="h-5 w-5 text-primary" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-sm">Installer PrescrIA</p>
+          <p className="font-semibold text-sm">Installer Asclion</p>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Ajoutez PrescrIA sur votre bureau pour y accéder en un clic chaque matin.
+            Ajoutez Asclion sur votre bureau pour y accéder en un clic chaque matin.
           </p>
           <Button onClick={handleInstall} size="sm" className="mt-2 h-8 text-xs pharmacy-gradient border-0">
             Installer l'application

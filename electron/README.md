@@ -1,6 +1,6 @@
-# PrescrIA Desktop
+# Asclion Desktop
 
-Application desktop pour Windows qui encapsule l'application web PrescrIA.
+Application desktop pour Windows qui encapsule l'application web Asclion.
 
 ## Prérequis
 

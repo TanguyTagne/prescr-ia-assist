@@ -56,7 +56,7 @@ const InstallPage = () => {
         <div className="rounded-xl border-2 border-primary/30 bg-accent/30 p-5 flex items-center gap-3">
           <CheckCircle2 className="h-6 w-6 text-primary shrink-0" />
           <div>
-            <p className="font-semibold text-sm">PrescrIA est installée !</p>
+            <p className="font-semibold text-sm">Asclion est installée !</p>
             <p className="text-xs text-muted-foreground mt-0.5">
               L'application est disponible sur votre bureau. Vous pouvez fermer cet onglet.
             </p>
@@ -69,13 +69,13 @@ const InstallPage = () => {
             <div>
               <p className="font-semibold text-sm">Prêt à installer</p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Cliquez pour ajouter PrescrIA sur votre bureau
+                Cliquez pour ajouter Asclion sur votre bureau
               </p>
             </div>
           </div>
           <Button onClick={handleInstall} className="w-full h-12 text-base font-semibold pharmacy-gradient border-0 gap-2">
             <Download className="h-5 w-5" />
-            Installer PrescrIA
+            Installer Asclion
           </Button>
         </div>
       ) : (
@@ -83,7 +83,7 @@ const InstallPage = () => {
           <div className="flex items-center gap-3">
             <Download className="h-6 w-6 text-primary shrink-0" />
             <div>
-              <p className="font-semibold text-sm">Installer PrescrIA sur votre poste</p>
+              <p className="font-semibold text-sm">Installer Asclion sur votre poste</p>
               <p className="text-xs text-muted-foreground mt-0.5">
                 Ouvrez le lien ci-dessous dans <strong>Chrome</strong> ou <strong>Edge</strong> pour installer l'application
               </p>
@@ -102,7 +102,7 @@ const InstallPage = () => {
           <a href={PUBLISHED_URL} target="_blank" rel="noopener noreferrer">
             <Button className="w-full h-12 text-base font-semibold pharmacy-gradient border-0 gap-2">
               <ExternalLink className="h-5 w-5" />
-              Ouvrir PrescrIA
+              Ouvrir Asclion
             </Button>
           </a>
         </div>
@@ -166,7 +166,7 @@ const InstallPage = () => {
             <div>
               <p className="font-semibold text-sm">C'est prêt !</p>
               <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                Une icône <strong>PrescrIA</strong> apparaît sur le bureau. Le préparateur l'ouvre une fois le matin — l'app reste active toute la journée en fenêtre dédiée, sans barre de navigateur.
+                Une icône <strong>Asclion</strong> apparaît sur le bureau. Le préparateur l'ouvre une fois le matin — l'app reste active toute la journée en fenêtre dédiée, sans barre de navigateur.
               </p>
             </div>
           </div>
