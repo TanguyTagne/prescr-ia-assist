@@ -208,7 +208,7 @@ const Index = () => {
       <header className="pharmacy-gradient px-3 py-1.5 shrink-0 sticky top-0 z-10">
         <div className="container max-w-xl mx-auto flex items-center gap-2">
           <Pill className="h-4 w-4 text-primary-foreground" />
-          <span className="text-sm font-bold text-primary-foreground tracking-tight">PrescrIA</span>
+          <span className="text-sm font-bold text-primary-foreground tracking-tight">Asclion</span>
         </div>
       </header>
 

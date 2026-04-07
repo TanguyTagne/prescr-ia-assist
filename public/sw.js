@@ -1,4 +1,4 @@
-const CACHE_NAME = "prescria-v5";
+const CACHE_NAME = "asclion-v1";
 const PRECACHE_URLS = ["/", "/index.html", "/manifest.json", "/favicon.ico"];
 
 const isBackendRequest = (url) =>
@@ -36,7 +36,6 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET") return;
 
   event.respondWith((async () => {
-    // Desktop app: network-only to avoid stale packaged experience
     if (await isDesktopClient(event)) {
       return fetch(request);
     }
@@ -45,7 +44,6 @@ self.addEventListener("fetch", (event) => {
       return fetch(request);
     }
 
-    // Always try network first for HTML/navigation so new deployments are visible immediately
     if (isNavigationRequest(request)) {
       try {
         const response = await fetch(request);
@@ -59,7 +57,6 @@ self.addEventListener("fetch", (event) => {
       }
     }
 
-    // Static assets: return cache fast, then refresh in background
     const cached = await caches.match(request);
     const fetched = fetch(request)
       .then((response) => {

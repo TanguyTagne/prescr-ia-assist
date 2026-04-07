@@ -81,7 +81,7 @@ const Landing = () => {
             <div className="h-8 w-8 rounded-lg pharmacy-gradient flex items-center justify-center">
               <Pill className="h-4 w-4 text-primary-foreground" />
             </div>
-            <span className="font-bold text-lg tracking-tight">PrescrIA</span>
+            <span className="font-bold text-lg tracking-tight">Asclion</span>
           </div>
           <div className="flex items-center gap-2">
             {user ? (
@@ -129,7 +129,7 @@ const Landing = () => {
             <span className="text-primary">en 3 secondes</span>
           </h1>
           <p className="text-lg text-muted-foreground max-w-xl mx-auto leading-relaxed">
-            PrescrIA détecte les interactions, génère les bonnes questions à poser au patient et suggère les produits complémentaires — directement au comptoir.
+            Asclion détecte les interactions, génère les bonnes questions à poser au patient et suggère les produits complémentaires — directement au comptoir.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
             <Button size="lg" asChild className="h-12 px-8 text-base font-semibold pharmacy-gradient border-0 gap-2">
@@ -151,7 +151,7 @@ const Landing = () => {
               {
                 icon: FolderSearch,
                 title: "Scannez ou tapez",
-                desc: "Connectez votre scanner ou l'IA se charge de lire les médicaments prescrits. PrescrIA détecte automatiquement les nouveaux fichiers.",
+                desc: "Connectez votre scanner ou l'IA se charge de lire les médicaments prescrits. Asclion détecte automatiquement les nouveaux fichiers.",
               },
               {
                 icon: Zap,
@@ -198,7 +198,7 @@ const Landing = () => {
       </main>
       <footer className="border-t border-border py-6 px-4">
         <div className="container max-w-5xl mx-auto flex items-center justify-between text-xs text-muted-foreground">
-          <span>© {new Date().getFullYear()} PrescrIA</span>
+          <span>© {new Date().getFullYear()} Asclion</span>
           <span>Outil d'aide — ne remplace pas le jugement professionnel</span>
         </div>
       </footer>

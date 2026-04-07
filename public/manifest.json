@@ -1,6 +1,6 @@
 {
-  "name": "PrescrIA — Copilote Pharmacie",
-  "short_name": "PrescrIA",
+  "name": "Asclion — Copilote Pharmacie",
+  "short_name": "Asclion",
   "description": "Assistant intelligent pour préparateurs en pharmacie. Analyse d'ordonnances, interactions, suggestions.",
   "start_url": "/",
   "display": "standalone",
