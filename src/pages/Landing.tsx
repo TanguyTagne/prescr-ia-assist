@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { FolderSearch, ShieldCheck, ArrowRight, Download, BarChart3, LogOut, Zap, Monitor, Send, Loader2, Settings } from "lucide-react";
-import asclionLogo from "@/assets/logo-asclion.png";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";

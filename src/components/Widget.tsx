@@ -1,6 +1,5 @@
 import { useState, useCallback } from "react";
 import { X, Loader2, Mail, Lock, Eye, EyeOff, LogOut, BarChart3 } from "lucide-react";
-import asclionLogo from "@/assets/logo-asclion.png";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
