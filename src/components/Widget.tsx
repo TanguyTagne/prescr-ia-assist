@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
-import { Pill, X, Loader2, Mail, Lock, Eye, EyeOff, LogOut, BarChart3 } from "lucide-react";
+import { X, Loader2, Mail, Lock, Eye, EyeOff, LogOut, BarChart3 } from "lucide-react";
+import asclionLogo from "@/assets/logo-asclion.png";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
@@ -266,7 +267,7 @@ const Widget = ({ forceOpen = false }: {forceOpen?: boolean;}) => {
     return (
       <div className="h-screen w-screen flex flex-col bg-background overflow-hidden">
         <div className="pharmacy-gradient px-4 py-2 flex items-center gap-2 shrink-0">
-          <Pill className="h-4 w-4 text-primary-foreground" />
+          <img src={asclionLogo} alt="Asclion" className="h-5 w-5 rounded object-contain" />
           <span className="text-sm font-bold text-primary-foreground tracking-tight">Asclion</span>
         </div>
         <div className="flex-1 overflow-y-auto">
@@ -291,13 +292,13 @@ const Widget = ({ forceOpen = false }: {forceOpen?: boolean;}) => {
         aria-label={open ? "Fermer le widget Asclion" : "Ouvrir le widget Asclion"}
         className="fixed bottom-4 right-4 z-[9999] h-12 w-12 rounded-full pharmacy-gradient shadow-lg flex items-center justify-center hover:scale-105 transition-transform">
         
-        {open ? <X className="h-5 w-5 text-primary-foreground" /> : <Pill className="h-5 w-5 text-primary-foreground" />}
+        {open ? <X className="h-5 w-5 text-primary-foreground" /> : <img src={asclionLogo} alt="Asclion" className="h-7 w-7 rounded-full object-contain" />}
       </button>
 
       {open &&
       <div className="fixed bottom-[4.5rem] right-4 z-[9998] w-[320px] max-h-[480px] overflow-y-auto rounded-xl border border-border bg-background shadow-2xl animate-in slide-in-from-bottom-2 fade-in duration-200 py-0">
           <div className="pharmacy-gradient px-3 py-1.5 rounded-t-xl flex items-center gap-1.5">
-            <Pill className="h-3 w-3 text-primary-foreground" />
+            <img src={asclionLogo} alt="Asclion" className="h-4 w-4 rounded object-contain" />
             <span className="text-[11px] font-bold text-primary-foreground tracking-tight">Asclion</span>
           </div>
           {loading ?
