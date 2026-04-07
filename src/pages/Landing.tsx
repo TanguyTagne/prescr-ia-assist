@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { Pill, FolderSearch, ShieldCheck, ArrowRight, Download, BarChart3, LogOut, Zap, Monitor, Send, Loader2, Settings } from "lucide-react";
+import { FolderSearch, ShieldCheck, ArrowRight, Download, BarChart3, LogOut, Zap, Monitor, Send, Loader2, Settings } from "lucide-react";
+import asclionLogo from "@/assets/logo-asclion.png";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
@@ -78,9 +79,7 @@ const Landing = () => {
       <nav className="border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-lg pharmacy-gradient flex items-center justify-center">
-              <Pill className="h-4 w-4 text-primary-foreground" />
-            </div>
+            <img src={asclionLogo} alt="Asclion" className="h-8 w-8 rounded-lg object-contain" />
             <span className="font-bold text-lg tracking-tight">Asclion</span>
           </div>
           <div className="flex items-center gap-2">
@@ -108,7 +107,6 @@ const Landing = () => {
               </>
             ) : (
               <Button variant="outline" size="sm" onClick={() => navigate("/auth")} className="gap-1.5">
-                <Pill className="h-3.5 w-3.5" />
                 Se connecter
               </Button>
             )}
