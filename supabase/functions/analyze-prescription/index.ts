@@ -948,20 +948,43 @@ async function callAI(apiKey: string, messages: any[], temperature = 0.1, model 
   const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ model, messages, temperature }),
+    body: JSON.stringify({
+      model,
+      messages,
+      temperature,
+      max_tokens: 4096,
+    }),
   });
   if (!response.ok) {
     if (response.status === 429) throw new Error("RATE_LIMIT");
     if (response.status === 402) throw new Error("CREDITS_EXHAUSTED");
+    const errText = await response.text();
+    console.error("AI response error:", response.status, errText);
     throw new Error(`AI error: ${response.status}`);
   }
   const data = await response.json();
   const content = data.choices?.[0]?.message?.content;
   if (!content) throw new Error("Empty AI response");
-  let jsonStr = content;
-  const match = content.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (match) jsonStr = match[1].trim();
-  return JSON.parse(jsonStr);
+  
+  // Extract JSON from response (handle markdown fences, mixed text, etc.)
+  let jsonStr = content.trim();
+  const fenceMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (fenceMatch) {
+    jsonStr = fenceMatch[1].trim();
+  } else {
+    // Try to find JSON object in the text
+    const jsonObjMatch = jsonStr.match(/\{[\s\S]*\}/);
+    if (jsonObjMatch) {
+      jsonStr = jsonObjMatch[0];
+    }
+  }
+  
+  try {
+    return JSON.parse(jsonStr);
+  } catch (parseErr) {
+    console.error("Failed to parse AI response as JSON:", content.substring(0, 200));
+    throw new Error("AI returned non-JSON response");
+  }
 }
 
 // ====== AUTH HELPER ======
