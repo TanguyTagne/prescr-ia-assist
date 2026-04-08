@@ -1570,10 +1570,12 @@ serve(async (req) => {
       questions: [],
     };
 
-    // Step 8: Save to analysis_history + metrics + basket context
+    // Step 8: Save history (fast reads for duplicate/patient info) then send response
+    // Background writes happen after response is sent
+    let backgroundWritesFn: (() => Promise<void>) | null = null;
+
     try {
-      const pharmacyId = pharmacyIdForMapping || await getPharmacyIdFromAuth(supabase, authHeader);
-      
+      const pharmacyId = pharmacyIdForMapping;
       
       if (pharmacyId && authHeader) {
         const token = authHeader.replace("Bearer ", "");
@@ -1592,131 +1594,148 @@ serve(async (req) => {
 
         const hasMajor = interactions.some((inter: any) => inter.niveau === "majeure");
 
-        await supabase.from("analysis_history").insert({
-          pharmacy_id: pharmacyId,
-          user_id: userId,
-          patient_hash: patientHash,
-          patient_name: null,
-          prescription_hash: prescriptionHash,
-          medicaments: result.medicaments,
-          interactions_count: interactions.length,
-          suggestions_count: totalRecs,
-          has_major_interaction: hasMajor,
-          metadata: { sources, contextes_count: allContexts.length, clinical_kb_matches: clinicalResults.length },
-        });
+        // Quick parallel reads for duplicate warning + patient history
+        const [dupRes, histRes] = await Promise.all([
+          supabase.from("analysis_history").select("id, created_at")
+            .eq("pharmacy_id", pharmacyId).eq("prescription_hash", prescriptionHash)
+            .order("created_at", { ascending: false }).limit(5),
+          supabase.from("analysis_history").select("id, created_at")
+            .eq("pharmacy_id", pharmacyId).eq("patient_hash", patientHash)
+            .order("created_at", { ascending: false }).limit(10),
+        ]);
 
-        const { data: duplicates } = await supabase
-          .from("analysis_history").select("id, created_at")
-          .eq("pharmacy_id", pharmacyId).eq("prescription_hash", prescriptionHash)
-          .neq("id", "placeholder")
-          .order("created_at", { ascending: false }).limit(5);
-
-        if (duplicates && duplicates.length > 1) {
-          result.duplicate_warning = { count: duplicates.length, last_seen: duplicates[1]?.created_at };
+        if (dupRes.data && dupRes.data.length > 0) {
+          result.duplicate_warning = { count: dupRes.data.length + 1, last_seen: dupRes.data[0]?.created_at };
         }
-
-        const { data: patientHistory } = await supabase
-          .from("analysis_history").select("id, created_at, medicaments")
-          .eq("pharmacy_id", pharmacyId).eq("patient_hash", patientHash)
-          .order("created_at", { ascending: false }).limit(10);
-
-        if (patientHistory && patientHistory.length > 1) {
+        if (histRes.data && histRes.data.length > 0) {
           result.patient_history = {
-            previous_analyses: patientHistory.length - 1,
-            first_seen: patientHistory[patientHistory.length - 1]?.created_at,
+            previous_analyses: histRes.data.length,
+            first_seen: histRes.data[histRes.data.length - 1]?.created_at,
           };
         }
 
-        // Track recommendation metrics (upsert per PC)
-        for (const med of medicamentsResult) {
-          for (const rec of (med.recommendations || [])) {
-            await supabase.rpc("upsert_recommendation_metric_noop", {}).catch(() => {});
-            // Use upsert pattern
-            const { data: existing } = await supabase
-              .from("recommendation_metrics")
-              .select("id, times_proposed")
-              .eq("pharmacy_id", pharmacyId)
-              .eq("medicament_source", med.nom)
-              .eq("pc_proposed", rec.produit)
-              .maybeSingle();
-
-            if (existing) {
-              await supabase.from("recommendation_metrics")
-                .update({ times_proposed: existing.times_proposed + 1, times_displayed: existing.times_proposed + 1, updated_at: new Date().toISOString() })
-                .eq("id", existing.id);
-            } else {
-              await supabase.from("recommendation_metrics").insert({
-                pharmacy_id: pharmacyId,
-                medicament_source: med.nom,
-                pc_proposed: rec.produit,
-                pc_categorie: rec.categorie || null,
-                times_proposed: 1,
-                times_displayed: 1,
-              });
-            }
-          }
-        }
-
-        // Track latent need metrics
-        if (usedLatentNeed && pharmacyId) {
-          const boostedRec = medicamentsResult
-            .flatMap((m: any) => (m.recommendations || []))
-            .find((r: any) => r.latent_need);
-          
-          if (boostedRec) {
-            const { data: existingLN } = await supabase
-              .from("latent_need_metrics")
-              .select("id, times_proposed")
-              .eq("pharmacy_id", pharmacyId)
-              .eq("besoin", usedLatentNeed.besoin_infere)
-              .eq("pc_proposed", boostedRec.produit)
-              .maybeSingle();
-
-            if (existingLN) {
-              await supabase.from("latent_need_metrics")
-                .update({ times_proposed: existingLN.times_proposed + 1, updated_at: new Date().toISOString() })
-                .eq("id", existingLN.id);
-            } else {
-              await supabase.from("latent_need_metrics").insert({
-                pharmacy_id: pharmacyId,
-                besoin: usedLatentNeed.besoin_infere,
-                medicament_source: usedLatentNeed.medicament_source,
-                pc_proposed: boostedRec.produit,
-                times_proposed: 1,
-              });
-            }
-          }
-        }
-
-        // Update/create basket context
-        if (basketSessionId) {
-          const proposedList = medicamentsResult.flatMap((m: any) => (m.recommendations || []).map((r: any) => r.produit));
-          await supabase.from("basket_context").upsert({
-            pharmacy_id: pharmacyId,
-            session_id: basketSessionId,
-            scanned_medicaments: medNames,
-            proposed_pcs: proposedList,
-            active: true,
-            updated_at: new Date().toISOString(),
-          }, { onConflict: "pharmacy_id,session_id" }).catch(() => {
-            // If no unique constraint on session_id, insert
-            supabase.from("basket_context").insert({
+        // Prepare background writes (fire-and-forget after response)
+        backgroundWritesFn = async () => {
+          try {
+            // Insert analysis history
+            await supabase.from("analysis_history").insert({
               pharmacy_id: pharmacyId,
-              session_id: basketSessionId,
-              scanned_medicaments: medNames,
-              proposed_pcs: proposedList,
-              active: true,
+              user_id: userId,
+              patient_hash: patientHash,
+              patient_name: null,
+              prescription_hash: prescriptionHash,
+              medicaments: result.medicaments,
+              interactions_count: interactions.length,
+              suggestions_count: totalRecs,
+              has_major_interaction: hasMajor,
+              metadata: { sources, contextes_count: allContexts.length, clinical_kb_matches: clinicalResults.length },
             });
-          });
-        }
+
+            // Track recommendation metrics in parallel
+            const metricOps = medicamentsResult.flatMap((med: any) =>
+              (med.recommendations || []).map(async (rec: any) => {
+                const { data: existing } = await supabase
+                  .from("recommendation_metrics")
+                  .select("id, times_proposed")
+                  .eq("pharmacy_id", pharmacyId)
+                  .eq("medicament_source", med.nom)
+                  .eq("pc_proposed", rec.produit)
+                  .maybeSingle();
+
+                if (existing) {
+                  await supabase.from("recommendation_metrics")
+                    .update({ times_proposed: existing.times_proposed + 1, times_displayed: existing.times_proposed + 1, updated_at: new Date().toISOString() })
+                    .eq("id", existing.id);
+                } else {
+                  await supabase.from("recommendation_metrics").insert({
+                    pharmacy_id: pharmacyId,
+                    medicament_source: med.nom,
+                    pc_proposed: rec.produit,
+                    pc_categorie: rec.categorie || null,
+                    times_proposed: 1,
+                    times_displayed: 1,
+                  });
+                }
+              })
+            );
+
+            // Track latent need metrics
+            if (usedLatentNeed) {
+              const boostedRec = medicamentsResult
+                .flatMap((m: any) => (m.recommendations || []))
+                .find((r: any) => r.latent_need);
+              
+              if (boostedRec) {
+                metricOps.push((async () => {
+                  const { data: existingLN } = await supabase
+                    .from("latent_need_metrics")
+                    .select("id, times_proposed")
+                    .eq("pharmacy_id", pharmacyId)
+                    .eq("besoin", usedLatentNeed!.besoin_infere)
+                    .eq("pc_proposed", boostedRec.produit)
+                    .maybeSingle();
+
+                  if (existingLN) {
+                    await supabase.from("latent_need_metrics")
+                      .update({ times_proposed: existingLN.times_proposed + 1, updated_at: new Date().toISOString() })
+                      .eq("id", existingLN.id);
+                  } else {
+                    await supabase.from("latent_need_metrics").insert({
+                      pharmacy_id: pharmacyId,
+                      besoin: usedLatentNeed!.besoin_infere,
+                      medicament_source: usedLatentNeed!.medicament_source,
+                      pc_proposed: boostedRec.produit,
+                      times_proposed: 1,
+                    });
+                  }
+                })());
+              }
+            }
+
+            // Basket context
+            if (basketSessionId) {
+              const proposedList = medicamentsResult.flatMap((m: any) => (m.recommendations || []).map((r: any) => r.produit));
+              metricOps.push(
+                supabase.from("basket_context").upsert({
+                  pharmacy_id: pharmacyId,
+                  session_id: basketSessionId,
+                  scanned_medicaments: medNames,
+                  proposed_pcs: proposedList,
+                  active: true,
+                  updated_at: new Date().toISOString(),
+                }, { onConflict: "pharmacy_id,session_id" }).then(() => {}).catch(() => {
+                  return supabase.from("basket_context").insert({
+                    pharmacy_id: pharmacyId,
+                    session_id: basketSessionId,
+                    scanned_medicaments: medNames,
+                    proposed_pcs: proposedList,
+                    active: true,
+                  }).then(() => {});
+                })
+              );
+            }
+
+            await Promise.all(metricOps);
+          } catch (bgErr) {
+            console.error("Background writes failed:", bgErr);
+          }
+        };
       }
     } catch (historyErr) {
-      console.error("Failed to save analysis history:", historyErr);
+      console.error("Failed to check analysis history:", historyErr);
     }
 
-    return new Response(JSON.stringify(result), {
+    // Send response IMMEDIATELY — don't wait for background writes
+    const response = new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
+
+    // Fire-and-forget background writes (Deno edge functions keep running after response)
+    if (backgroundWritesFn) {
+      backgroundWritesFn().catch((e) => console.error("Background writes error:", e));
+    }
+
+    return response;
   } catch (e) {
     console.error("analyze-prescription error:", e);
     const msg = e instanceof Error ? e.message : "Erreur inconnue";
