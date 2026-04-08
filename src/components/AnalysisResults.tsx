@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { Pill, RotateCcw, AlertTriangle, MessageSquare, Loader2, Sparkles, Database, ShoppingCart, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,18 @@ const AnalysisResults = ({ result, onReset }: AnalysisResultsProps) => {
   const [expandedConseils, setExpandedConseils] = useState<Set<number>>(new Set());
   const [expandedPCConseils, setExpandedPCConseils] = useState<Set<string>>(new Set());
   const [conseilGlobalOpen, setConseilGlobalOpen] = useState(false);
+
+  // Escape key resets to new prescription
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onReset();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onReset]);
 
   const toggleConseil = (index: number) => {
     setExpandedConseils((prev) => {

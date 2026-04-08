@@ -9,9 +9,10 @@ import { toast } from "sonner";
 interface PrescriptionInputProps {
   onAnalyze: (text: string) => void;
   onAnalyzeImage: (imageBase64: string) => void;
+  autoAnalyze?: boolean;
 }
 
-const PrescriptionInput = ({ onAnalyze, onAnalyzeImage }: PrescriptionInputProps) => {
+const PrescriptionInput = ({ onAnalyze, onAnalyzeImage, autoAnalyze = true }: PrescriptionInputProps) => {
   const [mode, setMode] = useState<"quick" | "text" | "image">("quick");
   const [quickInput, setQuickInput] = useState("");
   const [textInput, setTextInput] = useState("");
@@ -37,6 +38,9 @@ const PrescriptionInput = ({ onAnalyze, onAnalyzeImage }: PrescriptionInputProps
         return;
       }
       setImagePreview(base64);
+      if (autoAnalyze) {
+        onAnalyzeImage(base64);
+      }
     } catch (err) {
       console.error("File processing error:", err);
       toast.error("Erreur lors du traitement du fichier");
