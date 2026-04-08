@@ -1282,6 +1282,14 @@ serve(async (req) => {
       }),
     ]);
 
+    // Step 4: Build direct recommendations per medication
+    const maxPCPerMed = getMaxPCsPerMed(enrichedMeds.length);
+    const allContexts: string[] = [];
+    let hasStructuredData = clinicalResults.length > 0;
+    const medRecommendations: Map<number, any[]> = new Map();
+    const medMainAdvice: Map<number, string> = new Map();
+    const allProposedPCs: string[] = [];
+
     for (let i = 0; i < enrichedMeds.length; i++) {
       const med = enrichedMeds[i];
       const recs: any[] = [];
