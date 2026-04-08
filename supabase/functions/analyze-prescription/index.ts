@@ -1481,6 +1481,7 @@ serve(async (req) => {
     const interactions = checkLocalInteractions(matchedMeds);
 
     if (matchedMeds.length >= 2) {
+      const interactionChecks: Promise<void>[] = [];
       for (let i = 0; i < matchedMeds.length - 1; i++) {
         for (let j = i + 1; j < matchedMeds.length; j++) {
           const mol1 = matchedMeds[i].molecule_active;
@@ -1491,19 +1492,24 @@ serve(async (req) => {
               inter.medicaments.includes(matchedMeds[j].nom_commercial)
             );
             if (!alreadyFound) {
-              const fdaInteraction = await openFDAGetInteractions(mol1, mol2);
-              if (fdaInteraction) {
-                interactions.push({
-                  medicaments: [matchedMeds[i].nom_commercial, matchedMeds[j].nom_commercial],
-                  niveau: "modérée",
-                  description: `${fdaInteraction} (source: OpenFDA)`,
-                });
-                if (!sources.includes("OpenFDA (effets indésirables)")) sources.push("OpenFDA (effets indésirables)");
-              }
+              const med_i = matchedMeds[i];
+              const med_j = matchedMeds[j];
+              interactionChecks.push((async () => {
+                const fdaInteraction = await openFDAGetInteractions(mol1, mol2);
+                if (fdaInteraction) {
+                  interactions.push({
+                    medicaments: [med_i.nom_commercial, med_j.nom_commercial],
+                    niveau: "modérée",
+                    description: `${fdaInteraction} (source: OpenFDA)`,
+                  });
+                  if (!sources.includes("OpenFDA (effets indésirables)")) sources.push("OpenFDA (effets indésirables)");
+                }
+              })());
             }
           }
         }
       }
+      await Promise.all(interactionChecks);
     }
 
     // Step 6: Build global conseil (from per-med advice first)
