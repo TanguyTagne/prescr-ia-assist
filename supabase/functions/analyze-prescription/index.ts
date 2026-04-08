@@ -1245,8 +1245,7 @@ serve(async (req) => {
       productMappings = mappings || [];
     }
 
-    // Use preloaded protocols
-    const { data: legacyProtocolsData } = { data: legacyProtocols };
+    // Protocols already preloaded
 
     const allProtocols = [
       ...(protocoles || []).map((p: any) => ({
