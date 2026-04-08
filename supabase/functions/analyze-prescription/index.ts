@@ -1031,33 +1031,60 @@ serve(async (req) => {
       (blockedProducts || []).map((p: string) => normalizeText(p))
     );
 
-    // Step 1: Extract medication names and patient name
+    // ====== STEP 1 + PRELOADS IN PARALLEL ======
+    // Launch AI extraction AND global data preloads simultaneously
     let medEntries: { nom_commercial: string; molecule_probable?: string; confiance?: string }[] = [];
     let extractedPatientName: string | null = null;
 
+    // Build AI extraction promise
+    let aiExtractionPromise: Promise<any>;
     if (imageBase64) {
-      console.log("Using OCR model (gemini-2.5-pro) for handwritten prescription analysis");
-      const parsed = await callAI(LOVABLE_API_KEY, [
+      console.log("Using OCR model (gemini-2.5-flash) for handwritten prescription analysis");
+      aiExtractionPromise = callAI(LOVABLE_API_KEY, [
         { role: "system", content: EXTRACTION_PROMPT },
         { role: "user", content: [
           { type: "text", text: "Extrais les noms de médicaments et le nom du patient de cette ordonnance. L'écriture peut être manuscrite et difficile à lire — utilise le contexte médical pour interpréter." },
           { type: "image_url", image_url: { url: imageBase64 } },
         ]},
       ], 0.1, OCR_MODEL);
-      medEntries = parsed.medicaments_detectes || [];
-      extractedPatientName = parsed.patient_nom || null;
     } else if (prescriptionText) {
-      const parsed = await callAI(LOVABLE_API_KEY, [
+      aiExtractionPromise = callAI(LOVABLE_API_KEY, [
         { role: "system", content: EXTRACTION_PROMPT },
         { role: "user", content: `Extrais les médicaments et le nom du patient :\n\n${prescriptionText}` },
       ], 0.1, TEXT_MODEL);
-      medEntries = parsed.medicaments_detectes || [];
-      extractedPatientName = parsed.patient_nom || null;
     } else {
       return new Response(JSON.stringify({ error: "Aucune donnée d'ordonnance fournie" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // Preload global data in parallel with AI call
+    const [aiResult, protocolesRes, legacyProtocolsRes, latentNeedsPreload, pharmacyIdForMapping] = await Promise.all([
+      aiExtractionPromise,
+      supabase
+        .from("protocole_pathologie")
+        .select(`
+          id, pathologie_id, actif,
+          conseil_1:conseils_associes!protocole_pathologie_conseil_1_id_fkey(conseil, description),
+          conseil_2:conseils_associes!protocole_pathologie_conseil_2_id_fkey(conseil, description),
+          produit_1:produits_complementaires!protocole_pathologie_produit_complementaire_1_id_fkey(produit, categorie, description, priorite, phrase_conseil),
+          produit_2:produits_complementaires!protocole_pathologie_produit_complementaire_2_id_fkey(produit, categorie, description, priorite, phrase_conseil),
+          produit_3:produits_complementaires!protocole_pathologie_produit_complementaire_3_id_fkey(produit, categorie, description, priorite, phrase_conseil),
+          justification_1, justification_2, justification_3,
+          priorite_produit_1, priorite_produit_2, priorite_produit_3,
+          pathologies(nom_pathologie)
+        `)
+        .eq("actif", true),
+      supabase
+        .from("pathology_protocol")
+        .select("pathologie, conseil, produit_1, produit_2, priority")
+        .order("priority", { ascending: false }),
+      supabase.from("latent_needs").select("*").order("score", { ascending: false }),
+      getPharmacyIdFromAuth(supabase, authHeader),
+    ]);
+
+    medEntries = aiResult.medicaments_detectes || [];
+    extractedPatientName = aiResult.patient_nom || null;
 
     if (medEntries.length === 0) {
       return new Response(JSON.stringify({
@@ -1068,14 +1095,36 @@ serve(async (req) => {
     const medNames = medEntries.map((m: any) => typeof m === "string" ? m : m.nom_commercial);
     const medMolecules = medEntries.map((m: any) => typeof m === "string" ? null : m.molecule_probable);
 
-    // Step 2: Clinical Knowledge Base lookup (primary source)
-    const clinicalResults: any[] = [];
+    const protocoles = protocolesRes.data;
+    const legacyProtocols = legacyProtocolsRes.data;
+    const allLatentNeedsData = latentNeedsPreload.data || [];
+
+    // ====== STEP 2: Clinical + Legacy lookups in PARALLEL per med ======
+    const sources: string[] = [];
     const allDbConseils: any[] = [];
     const allDbProduits: any[] = [];
-    const sources: string[] = [];
 
-    for (let i = 0; i < medNames.length; i++) {
-      const clinical = await clinicalLookup(supabase, medNames[i], medMolecules[i]);
+    // Launch ALL clinical lookups + legacy lookups simultaneously
+    const [clinicalLookupResults, dbMeds] = await Promise.all([
+      Promise.all(medNames.map((name, i) => clinicalLookup(supabase, name, medMolecules[i]))),
+      Promise.all(medNames.map((name) => {
+        const n = name.trim().toLowerCase();
+        return (async () => {
+          let { data } = await supabase.from("medications").select("*, therapeutic_classes(*)").ilike("nom_commercial", n).limit(1);
+          if (data?.length > 0) return { ...data[0], matched: true };
+          ({ data } = await supabase.from("medications").select("*, therapeutic_classes(*)").ilike("molecule_active", `%${n}%`).limit(1));
+          if (data?.length > 0) return { ...data[0], matched: true };
+          ({ data } = await supabase.from("medications").select("*, therapeutic_classes(*)").ilike("nom_commercial", `%${n}%`).limit(1));
+          if (data?.length > 0) return { ...data[0], matched: true };
+          return { nom_commercial: name, matched: false };
+        })();
+      })),
+    ]);
+
+    // Process clinical results
+    const clinicalResults: any[] = [];
+    for (let i = 0; i < clinicalLookupResults.length; i++) {
+      const clinical = clinicalLookupResults[i];
       if (clinical) {
         clinicalResults.push({ index: i, ...clinical });
         if (clinical.conseils) allDbConseils.push(...clinical.conseils);
@@ -1084,16 +1133,17 @@ serve(async (req) => {
       }
     }
 
-    // Step 3: Fallback to old medications table + public APIs for unmatched meds
-    const dbMeds = await findMedicationsInDB(supabase, medNames);
-    const enrichedMeds: any[] = [];
+    // ====== STEP 3: Enrich unmatched meds with external APIs IN PARALLEL ======
+    const enrichedMeds: any[] = new Array(medNames.length);
 
+    // Separate meds into clinical-matched, db-matched, and need-enrichment
+    const needsEnrichment: number[] = [];
     for (let i = 0; i < medNames.length; i++) {
       const clinical = clinicalResults.find((c) => c.index === i);
       const dbMed = dbMeds[i];
 
       if (clinical?.found) {
-        enrichedMeds.push({
+        enrichedMeds[i] = {
           nom_commercial: clinical.medicament?.nom_commercial || medNames[i],
           molecule_active: clinical.molecule?.nom || null,
           code_atc: clinical.molecule?.atc_code || clinical.classe_atc?.code || null,
@@ -1102,16 +1152,18 @@ serve(async (req) => {
           matched: true,
           clinical_kb: true,
           pathologies: clinical.pathologies || [],
-        });
-        continue;
-      }
-
-      if (dbMed?.matched) {
-        enrichedMeds.push({ ...dbMed, clinical_kb: false });
+        };
+      } else if (dbMed?.matched) {
+        enrichedMeds[i] = { ...dbMed, clinical_kb: false };
         if (!sources.includes("Base Asclion (données structurées)")) sources.push("Base Asclion (données structurées)");
-        continue;
+      } else {
+        needsEnrichment.push(i);
       }
+    }
 
+    // Enrich all unmatched meds in parallel
+    await Promise.all(needsEnrichment.map(async (i) => {
+      const dbMed = dbMeds[i];
       const searchName = medMolecules[i] || medNames[i];
       const [atcData, fdaData] = await Promise.all([
         rxnavGetATC(searchName),
@@ -1139,7 +1191,7 @@ serve(async (req) => {
           { role: "system", content: prompt },
           { role: "user", content: `Médicament : ${medNames[i]}${medMolecules[i] ? ` (DCI probable: ${medMolecules[i]})` : ""}` },
         ]);
-        enrichedMeds.push({
+        enrichedMeds[i] = {
           ...dbMed,
           molecule_active: aiData.molecule_active,
           code_atc: aiData.code_atc,
@@ -1149,30 +1201,41 @@ serve(async (req) => {
           ai_enriched: true,
           ai_contexts: aiData.contextes_therapeutiques,
           public_data: publicData,
-        });
+        };
       } catch (e) {
         console.error("AI enrichment failed:", e);
-        enrichedMeds.push(dbMed);
+        enrichedMeds[i] = dbMed;
+      }
+    }));
+
+    // ====== STEP 3.5: Detect latent needs (already preloaded) ======
+    const normalized = medNames.map((n) => normalizeText(extractCoreDrugName(n)));
+    const latentNeeds: LatentNeed[] = [];
+    const seenBesoins = new Set<string>();
+    const comboKey = [...normalized].sort().join("+");
+    for (const need of allLatentNeedsData) {
+      const needKey = normalizeText(need.medicament_source);
+      if (needKey.includes("+") && comboKey.includes(needKey.replace("+", "")) && !seenBesoins.has(need.besoin_infere)) {
+        latentNeeds.push(need);
+        seenBesoins.add(need.besoin_infere);
       }
     }
-
-    // Step 3.5: Detect latent needs from medication combination
-    const latentNeeds = await detectLatentNeeds(supabase, medNames);
+    for (const medNorm of normalized) {
+      for (const need of allLatentNeedsData) {
+        if (seenBesoins.has(need.besoin_infere)) continue;
+        const needKey = normalizeText(need.medicament_source);
+        if (needKey.includes("+")) continue;
+        if (medNorm.includes(needKey) || needKey.includes(medNorm)) {
+          latentNeeds.push(need);
+          seenBesoins.add(need.besoin_infere);
+        }
+      }
+    }
     let latentNeedUsed = false;
     let usedLatentNeed: LatentNeed | null = null;
 
-    // Step 4: Build direct recommendations per medication
-    // Apply degressive rule based on total meds count
-    const maxPCPerMed = getMaxPCsPerMed(enrichedMeds.length);
-    const allContexts: string[] = [];
-    let hasStructuredData = clinicalResults.length > 0;
-    const medRecommendations: Map<number, any[]> = new Map();
-    const medMainAdvice: Map<number, string> = new Map();
-    const allProposedPCs: string[] = []; // track globally proposed PCs to avoid duplicates across meds
-
-    // Load pharmacy-specific product mappings
+    // Load pharmacy product mappings (already have pharmacyIdForMapping)
     let productMappings: any[] = [];
-    const pharmacyIdForMapping = await getPharmacyIdFromAuth(supabase, authHeader);
     if (pharmacyIdForMapping) {
       const { data: mappings } = await supabase
         .from("product_mapping")
@@ -1182,27 +1245,8 @@ serve(async (req) => {
       productMappings = mappings || [];
     }
 
-    // Load new protocole_pathologie with joined data
-    const { data: protocoles } = await supabase
-      .from("protocole_pathologie")
-      .select(`
-        id, pathologie_id, actif,
-        conseil_1:conseils_associes!protocole_pathologie_conseil_1_id_fkey(conseil, description),
-        conseil_2:conseils_associes!protocole_pathologie_conseil_2_id_fkey(conseil, description),
-        produit_1:produits_complementaires!protocole_pathologie_produit_complementaire_1_id_fkey(produit, categorie, description, priorite, phrase_conseil),
-        produit_2:produits_complementaires!protocole_pathologie_produit_complementaire_2_id_fkey(produit, categorie, description, priorite, phrase_conseil),
-        produit_3:produits_complementaires!protocole_pathologie_produit_complementaire_3_id_fkey(produit, categorie, description, priorite, phrase_conseil),
-        justification_1, justification_2, justification_3,
-        priorite_produit_1, priorite_produit_2, priorite_produit_3,
-        pathologies(nom_pathologie)
-      `)
-      .eq("actif", true);
-
-    // Also load legacy pathology_protocol as fallback
-    const { data: legacyProtocols } = await supabase
-      .from("pathology_protocol")
-      .select("pathologie, conseil, produit_1, produit_2, priority")
-      .order("priority", { ascending: false });
+    // Use preloaded protocols
+    const { data: legacyProtocolsData } = { data: legacyProtocols };
 
     const allProtocols = [
       ...(protocoles || []).map((p: any) => ({
