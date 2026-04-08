@@ -941,8 +941,8 @@ function checkLocalInteractions(medications: any[]): any[] {
 
 // ====== AI HELPERS ======
 
-const OCR_MODEL = "google/gemini-3.1-pro-preview";
-const TEXT_MODEL = "google/gemini-3-flash-preview";
+const OCR_MODEL = "google/gemini-2.5-flash";
+const TEXT_MODEL = "google/gemini-2.5-flash";
 
 async function callAI(apiKey: string, messages: any[], temperature = 0.1, model = TEXT_MODEL) {
   const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
