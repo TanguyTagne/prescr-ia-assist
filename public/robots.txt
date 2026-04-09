@@ -12,3 +12,8 @@ Allow: /
 
 User-agent: *
 Allow: /
+
+Sitemap: https://prescr-ia-assist.lovable.app/sitemap.xml
+
+# LLMs.txt - AI discovery
+# https://prescr-ia-assist.lovable.app/llms.txt
