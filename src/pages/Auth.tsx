@@ -82,77 +82,122 @@ const Auth = () => {
       <main className="flex-1 flex items-center justify-center px-4 py-8">
         <div className="w-full max-w-md space-y-6">
           <div className="text-center space-y-2">
-            <h2 className="text-2xl font-bold">{isLogin ? "Connexion" : "Créer un compte"}</h2>
+            <h2 className="text-2xl font-bold">
+              {isForgotPassword ? "Mot de passe oublié" : isLogin ? "Connexion" : "Créer un compte"}
+            </h2>
             <p className="text-muted-foreground text-sm">
-              {isLogin ? "Accédez à votre espace Asclion" : "Rejoignez Asclion en quelques secondes"}
+              {isForgotPassword
+                ? "Entrez votre email pour recevoir un lien de réinitialisation"
+                : isLogin ? "Accédez à votre espace Asclion" : "Rejoignez Asclion en quelques secondes"}
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="glass-card rounded-xl p-6 space-y-4">
-            {!isLogin && (
+          {isForgotPassword ? (
+            <form onSubmit={handleForgotPassword} className="glass-card rounded-xl p-6 space-y-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">Nom complet</label>
+                <label className="text-sm font-medium">Email</label>
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    placeholder="Dr. Martin Dupont"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="email@pharmacie.fr"
                     className="pl-10 h-12"
                     required
                   />
                 </div>
               </div>
-            )}
+              <Button type="submit" className="w-full h-12 text-base font-semibold pharmacy-gradient border-0" disabled={loading}>
+                {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Envoyer le lien"}
+              </Button>
+            </form>
+          ) : (
+            <form onSubmit={handleSubmit} className="glass-card rounded-xl p-6 space-y-4">
+              {!isLogin && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Nom complet</label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      placeholder="Dr. Martin Dupont"
+                      className="pl-10 h-12"
+                      required
+                    />
+                  </div>
+                </div>
+              )}
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Email</label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="email@pharmacie.fr"
-                  className="pl-10 h-12"
-                  required
-                />
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Email</label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="email@pharmacie.fr"
+                    className="pl-10 h-12"
+                    required
+                  />
+                </div>
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Mot de passe</label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="pl-10 pr-10 h-12"
-                  minLength={6}
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium">Mot de passe</label>
+                  {isLogin && (
+                    <button
+                      type="button"
+                      onClick={() => setIsForgotPassword(true)}
+                      className="text-xs text-primary hover:underline"
+                    >
+                      Mot de passe oublié ?
+                    </button>
+                  )}
+                </div>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="pl-10 pr-10 h-12"
+                    minLength={6}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
               </div>
-            </div>
 
-            <Button type="submit" className="w-full h-12 text-base font-semibold pharmacy-gradient border-0" disabled={loading}>
-              {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : isLogin ? "Se connecter" : "Créer mon compte"}
-            </Button>
-          </form>
+              <Button type="submit" className="w-full h-12 text-base font-semibold pharmacy-gradient border-0" disabled={loading}>
+                {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : isLogin ? "Se connecter" : "Créer mon compte"}
+              </Button>
+            </form>
+          )}
 
           <p className="text-center text-sm text-muted-foreground">
-            {isLogin ? "Pas encore de compte ?" : "Déjà un compte ?"}
-            <button onClick={() => setIsLogin(!isLogin)} className="ml-1 text-primary font-medium hover:underline">
-              {isLogin ? "S'inscrire" : "Se connecter"}
-            </button>
+            {isForgotPassword ? (
+              <button onClick={() => setIsForgotPassword(false)} className="text-primary font-medium hover:underline">
+                Retour à la connexion
+              </button>
+            ) : (
+              <>
+                {isLogin ? "Pas encore de compte ?" : "Déjà un compte ?"}
+                <button onClick={() => setIsLogin(!isLogin)} className="ml-1 text-primary font-medium hover:underline">
+                  {isLogin ? "S'inscrire" : "Se connecter"}
+                </button>
+              </>
+            )}
           </p>
         </div>
       </main>
