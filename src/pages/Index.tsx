@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Pill, Loader2, BarChart3, LogOut, Download } from "lucide-react";
+import { Pill, Loader2, BarChart3, LogOut, Download, ShieldX, PauseCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import PrescriptionInput from "@/components/PrescriptionInput";
 import AnalysisResults from "@/components/AnalysisResults";
