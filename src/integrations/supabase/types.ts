@@ -939,6 +939,7 @@ export type Database = {
           id: string
           name: string
           postal_code: string | null
+          status: string
         }
         Insert: {
           address?: string | null
@@ -947,6 +948,7 @@ export type Database = {
           id?: string
           name: string
           postal_code?: string | null
+          status?: string
         }
         Update: {
           address?: string | null
@@ -955,6 +957,7 @@ export type Database = {
           id?: string
           name?: string
           postal_code?: string | null
+          status?: string
         }
         Relationships: []
       }
