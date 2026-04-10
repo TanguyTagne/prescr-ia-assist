@@ -12,19 +12,36 @@ const ResetPassword = () => {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isValidSession, setIsValidSession] = useState(false);
+  const [checking, setChecking] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const hashParams = new URLSearchParams(window.location.hash.substring(1));
-    if (hashParams.get("type") === "recovery") {
-      setIsValidSession(true);
-    }
-
+    // Listen for PASSWORD_RECOVERY event from Supabase
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") {
         setIsValidSession(true);
+        setChecking(false);
       }
     });
+
+    // Also check current session + hash params
+    const checkSession = async () => {
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      if (hashParams.get("type") === "recovery") {
+        setIsValidSession(true);
+        setChecking(false);
+        return;
+      }
+      // Give Supabase time to process the token from the URL
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        setIsValidSession(true);
+      }
+      setChecking(false);
+    };
+
+    // Small delay to let onAuthStateChange fire first
+    setTimeout(checkSession, 1000);
 
     return () => subscription.unsubscribe();
   }, []);
