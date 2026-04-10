@@ -7,6 +7,7 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   isAdmin: boolean;
+  pharmacyStatus: string | null;
   signOut: () => Promise<void>;
 }
 
@@ -15,6 +16,7 @@ const AuthContext = createContext<AuthContextType>({
   session: null,
   loading: true,
   isAdmin: false,
+  pharmacyStatus: null,
   signOut: async () => {},
 });
 
@@ -25,6 +27,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [pharmacyStatus, setPharmacyStatus] = useState<string | null>(null);
 
   const fetchRole = async (userId: string) => {
     const { data } = await supabase
@@ -36,14 +39,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsAdmin(!!data);
   };
 
+  const fetchPharmacyStatus = async (userId: string) => {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("pharmacy_id")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (profile?.pharmacy_id) {
+      const { data: pharmacy } = await supabase
+        .from("pharmacies")
+        .select("status")
+        .eq("id", profile.pharmacy_id)
+        .maybeSingle();
+      setPharmacyStatus((pharmacy as any)?.status || "active");
+    } else {
+      setPharmacyStatus(null);
+    }
+  };
+
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
         fetchRole(session.user.id);
+        fetchPharmacyStatus(session.user.id);
       } else {
         setIsAdmin(false);
+        setPharmacyStatus(null);
       }
       setLoading(false);
     });
@@ -53,6 +77,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(session?.user ?? null);
       if (session?.user) {
         fetchRole(session.user.id);
+        fetchPharmacyStatus(session.user.id);
       }
       setLoading(false);
     });
@@ -65,7 +90,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, isAdmin, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, isAdmin, pharmacyStatus, signOut }}>
       {children}
     </AuthContext.Provider>
   );
