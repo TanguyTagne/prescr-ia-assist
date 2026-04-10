@@ -29,34 +29,6 @@ const Index = () => {
   const { user, signOut, isAdmin, pharmacyStatus } = useAuth();
   const navigate = useNavigate();
 
-  // Block access for paused/disabled pharmacies (admins bypass)
-  if (user && !isAdmin && (pharmacyStatus === "paused" || pharmacyStatus === "disabled")) {
-    const isPaused = pharmacyStatus === "paused";
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <div className="max-w-md text-center space-y-4">
-          {isPaused ? (
-            <PauseCircle className="h-16 w-16 text-yellow-500 mx-auto" />
-          ) : (
-            <ShieldX className="h-16 w-16 text-destructive mx-auto" />
-          )}
-          <h1 className="text-xl font-bold">
-            {isPaused ? "Accès temporairement suspendu" : "Accès désactivé"}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {isPaused
-              ? "L'accès de votre pharmacie a été mis en pause par l'administrateur. Contactez le support pour plus d'informations."
-              : "L'accès de votre pharmacie a été supprimé. Contactez le support si vous pensez qu'il s'agit d'une erreur."}
-          </p>
-          <Button variant="outline" onClick={signOut} className="gap-2">
-            <LogOut className="h-4 w-4" />
-            Se déconnecter
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
   useEffect(() => {
     if (window.matchMedia("(display-mode: standalone)").matches) {
       setIsInstalled(true);
