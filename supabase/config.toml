@@ -8,6 +8,3 @@ verify_jwt = false
 
 [functions.audit-coverage]
 verify_jwt = false
-
-[functions.force-logout]
-verify_jwt = false
