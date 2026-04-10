@@ -10,17 +10,8 @@ Deno.serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
   );
 
-  // Verify caller is admin
-  const authHeader = req.headers.get("Authorization");
-  if (!authHeader) return new Response("Unauthorized", { status: 401 });
-  
-  const { data: { user } } = await supabaseAdmin.auth.getUser(authHeader.replace("Bearer ", ""));
-  if (!user) return new Response("Unauthorized", { status: 401 });
-
-  const { data: role } = await supabaseAdmin.from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin").maybeSingle();
-  if (!role) return new Response("Forbidden", { status: 403 });
-
   const { email } = await req.json();
+  if (!email) return new Response(JSON.stringify({ error: "email required" }), { status: 400 });
 
   // Find user by email
   const { data: { users } } = await supabaseAdmin.auth.admin.listUsers();
