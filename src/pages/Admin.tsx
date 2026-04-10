@@ -28,6 +28,7 @@ interface PharmacyWithLGO {
   id: string;
   name: string;
   city: string | null;
+  status?: string;
   lgo_config?: {
     id: string;
     lgo_type: string;
