@@ -1,70 +1,29 @@
 
 
-# Plan : Optimiser la latence d'analyse (objectif < 2s)
+# PDF Asclion — Pricing & Prévisions
 
-## Diagnostic des bottlenecks actuels
+## Pricing
+- **0,15 €/ordonnance** analysée, sans abonnement, sans engagement
+- Justification : chaque analyse génère en moyenne **+1,50 € sur le panier**
 
-L'analyse actuelle suit un pipeline **séquentiel** avec 8 étapes bloquantes :
+## Prévisions (base : 200 ordonnances/jour, produit complémentaire moyen ~10 €)
 
-```text
-Requête
-  │
-  ├─ Step 1: Appel IA (extraction médicaments)     ~2-4s  ← GROS BOTTLENECK
-  ├─ Step 2: Clinical lookups (séquentiel/med)      ~0.5-1s
-  ├─ Step 3: Legacy DB + APIs externes (RxNav/FDA)  ~1-3s  ← BOTTLENECK
-  ├─ Step 3.5: Latent needs (fetch ALL rows)        ~0.2s
-  ├─ Step 4: Protocols + ATC/class fallbacks         ~0.5s
-  ├─ Step 5: Interactions OpenFDA (par paire)        ~0.5-2s ← BOTTLENECK
-  ├─ Step 8: Sauvegarde historique/métriques         ~0.5-1s ← BLOQUANT
-  │
-  └─ Réponse                                    TOTAL: 5-8s
-```
+| Scénario | Taux de ventes acceptées | Ventes additionnelles/jour | CA additionnel/mois | Coût Asclion/mois | ROI |
+|---|---|---|---|---|---|
+| **Prudent** | 10 % | 20 ventes | ~4 400 € | 780 € | x5,6 |
+| **Réaliste** | 15 % | 30 ventes | ~6 600 € | 780 € | x8,5 |
+| **Optimiste** | 20 % | 40 ventes | ~8 800 € | 780 € | x11,3 |
 
-## Optimisations (5 axes)
+## Structure du PDF (3 pages, A4, brandé Asclion)
 
-### 1. Modèle IA plus rapide
-- **OCR (image)** : remplacer `gemini-3.1-pro-preview` par `google/gemini-2.5-flash` — 3x plus rapide, multimodal, suffisant pour lire une ordonnance
-- **Texte** : garder `google/gemini-3-flash-preview` (déjà rapide)
-- Gain estimé : **~1.5-2s**
+**Page 1 — Couverture** : Logo Asclion, tagline, titre "Offre Commerciale"
 
-### 2. Paralléliser les lookups cliniques
-- Les recherches DB par médicament (`clinicalLookup`) sont dans une boucle `for` séquentielle → les lancer en `Promise.all`
-- Idem pour `findMedicationsInDB` (legacy) : boucle séquentielle → paralléliser
-- Gain estimé : **~0.5-1s** (pour 3+ médicaments)
+**Page 2 — Pricing** : 0,15 €/ordo, sans engagement, tableau des fonctionnalités incluses, argument ROI (0,15 € → +1,50 € panier)
 
-### 3. Paralléliser les appels API externes
-- `rxnavGetATC` + `openFDAGetDrugInfo` sont déjà en `Promise.all` par med, mais les meds sont traités séquentiellement → paralléliser les meds entre eux
-- Les appels `openFDAGetInteractions` en Step 5 (boucle imbriquée) → les lancer en `Promise.all`
-- Gain estimé : **~1-2s**
+**Page 3 — Prévisions** : Tableau 3 scénarios (10/15/20 %), exemple chiffré 200 ordos/jour, synthèse ROI, call-to-action
 
-### 4. Déplacer les écritures DB après la réponse
-- Step 8 (analysis_history, recommendation_metrics, latent_need_metrics, basket_context) bloque la réponse pour ~0.5-1s d'écritures
-- Utiliser le pattern fire-and-forget : envoyer la réponse HTTP **immédiatement**, puis écrire en arrière-plan
-- Gain estimé : **~0.5-1s**
-
-### 5. Pré-charger les données globales en parallèle avec l'IA
-- Lancer les chargements de `protocole_pathologie`, `pathology_protocol`, `latent_needs` **en parallèle** avec l'appel IA (Step 1), au lieu d'attendre après
-- Gain estimé : **~0.3s**
-
-## Résultat attendu
-
-```text
-Requête
-  │
-  ├─ [PARALLÈLE] Step 1: IA (gemini-2.5-flash)  ~1-1.5s
-  │              + Pré-chargement protocols/latent
-  │
-  ├─ [PARALLÈLE] Steps 2+3: Clinical + Legacy    ~0.3-0.5s
-  │              lookups (tous meds en //​)
-  │
-  ├─ [PARALLÈLE] Steps 4+5: Fallbacks +          ~0.3-0.5s
-  │              Interactions (en //​)
-  │
-  └─ Réponse HTTP                          TOTAL: ~1.5-2.5s
-  │
-  └─ [ARRIÈRE-PLAN] Step 8: Historique/métriques
-```
-
-## Fichier modifié
-- `supabase/functions/analyze-prescription/index.ts` — restructuration du pipeline
+## Technique
+- Python ReportLab, palette Asclion (`#3D9B8F`, `#1A3A35`, `#F7FAF9`)
+- QA visuelle via pdftoppm
+- Output : `/mnt/documents/asclion_pricing.pdf`
 
