@@ -94,12 +94,13 @@ const WidgetApp = () => {
 
   const handleAnalyze = async (text: string) => {
     setIsLoading(true);
+    // Reset anti-loop for each new prescription
+    setBlockedProducts([]);
     try {
-      const analysis = await analyzePrescription(text, basketOptions);
+      const analysis = await analyzePrescription(text, { basketSessionId, blockedProducts: [] });
       setResult(analysis);
-      // Track proposed PCs in blocked list
       const proposed = analysis.medicaments.flatMap(m => (m.recommendations || []).map(r => r.produit));
-      setBlockedProducts(prev => [...new Set([...prev, ...proposed])]);
+      setBlockedProducts(proposed);
       trackEvent("ordonnance_analyzed", { input_type: "text", medicaments: analysis.medicaments.map((m) => m.nom) });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erreur lors de l'analyse");
@@ -110,11 +111,12 @@ const WidgetApp = () => {
 
   const handleAnalyzeImage = async (imageBase64: string) => {
     setIsLoading(true);
+    setBlockedProducts([]);
     try {
-      const analysis = await analyzePrescriptionImage(imageBase64, basketOptions);
+      const analysis = await analyzePrescriptionImage(imageBase64, { basketSessionId, blockedProducts: [] });
       setResult(analysis);
       const proposed = analysis.medicaments.flatMap(m => (m.recommendations || []).map(r => r.produit));
-      setBlockedProducts(prev => [...new Set([...prev, ...proposed])]);
+      setBlockedProducts(proposed);
       trackEvent("ordonnance_analyzed", { input_type: "image", medicaments: analysis.medicaments.map((m) => m.nom) });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erreur lors de l'analyse OCR");
