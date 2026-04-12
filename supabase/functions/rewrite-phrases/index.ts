@@ -31,14 +31,20 @@ serve(async (req) => {
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
   try {
-    const { offset = 0, batch_size = 40 } = await req.json();
+    const { offset = 0, batch_size = 40, ids } = await req.json();
+
+    let query = supabase
+      .from("produits_complementaires")
+      .select("id, produit, phrase_conseil, pathologies:pathologie_id(nom_pathologie)");
+
+    if (ids && Array.isArray(ids) && ids.length > 0) {
+      query = query.in("id", ids);
+    } else {
+      query = query.order("id").range(offset, offset + batch_size - 1);
+    }
 
     // Fetch batch
-    const { data: items, error: fetchErr } = await supabase
-      .from("produits_complementaires")
-      .select("id, produit, phrase_conseil, pathologies:pathologie_id(nom_pathologie)")
-      .order("id")
-      .range(offset, offset + batch_size - 1);
+    const { data: items, error: fetchErr } = await query;
 
     if (fetchErr) throw new Error(`Fetch error: ${fetchErr.message}`);
     if (!items || items.length === 0) {
