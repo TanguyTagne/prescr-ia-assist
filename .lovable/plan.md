@@ -1,29 +1,39 @@
 
 
-# PDF Asclion — Pricing & Prévisions
+# Réécriture des phrases conseils — mi-commercial / mi-technique
 
-## Pricing
-- **0,15 €/ordonnance** analysée, sans abonnement, sans engagement
-- Justification : chaque analyse génère en moyenne **+1,50 € sur le panier**
+## Constat
 
-## Prévisions (base : 200 ordonnances/jour, produit complémentaire moyen ~10 €)
+Les phrases actuelles sont trop cliniques (ex: "les Oméga 3 EPA/DHA réduisent la production de médiateurs inflammatoires et protègent le cartilage"). Un pharmacien ne peut pas dire ça naturellement à un client. Le taux d'acceptation baisse quand le discours est trop médical.
 
-| Scénario | Taux de ventes acceptées | Ventes additionnelles/jour | CA additionnel/mois | Coût Asclion/mois | ROI |
-|---|---|---|---|---|---|
-| **Prudent** | 10 % | 20 ventes | ~4 400 € | 780 € | x5,6 |
-| **Réaliste** | 15 % | 30 ventes | ~6 600 € | 780 € | x8,5 |
-| **Optimiste** | 20 % | 40 ventes | ~8 800 € | 780 € | x11,3 |
+## Objectif
 
-## Structure du PDF (3 pages, A4, brandé Asclion)
+Réécrire les 2 041 phrases pour qu'elles soient :
+- **Naturelles** : comme si le pharmacien parlait au client
+- **Persuasives** : orientées bénéfice ressenti (pas mécanisme d'action)
+- **Crédibles** : un ancrage technique léger pour asseoir la légitimité
+- **Courtes** : 15-25 mots, une seule phrase
 
-**Page 1 — Couverture** : Logo Asclion, tagline, titre "Offre Commerciale"
+**Avant** : "Les opioïdes peuvent entraîner une constipation sévère, l'Arnigel améliore la microcirculation locale et diminue la douleur musculaire des contractures."
 
-**Page 2 — Pricing** : 0,15 €/ordo, sans engagement, tableau des fonctionnalités incluses, argument ROI (0,15 € → +1,50 € panier)
+**Après** : "Ce traitement peut provoquer des tensions musculaires, l'Arnigel soulage rapidement et vous aide à rester à l'aise au quotidien."
 
-**Page 3 — Prévisions** : Tableau 3 scénarios (10/15/20 %), exemple chiffré 200 ordos/jour, synthèse ROI, call-to-action
+## Structure cible
 
-## Technique
-- Python ReportLab, palette Asclion (`#3D9B8F`, `#1A3A35`, `#F7FAF9`)
-- QA visuelle via pdftoppm
-- Output : `/mnt/documents/asclion_pricing.pdf`
+`[Effet ressenti du traitement] + [ce que le produit apporte concrètement]`
+
+Pas de jargon type "médiateurs inflammatoires", "neuromusculaire", "kératine unguéale". On garde des termes comme "flore intestinale", "vitamine D", "magnésium" qui sont compris par le grand public.
+
+## Plan technique
+
+1. **Extraire** les 2 041 phrases actuelles (id + phrase_conseil + produit + contexte pathologie)
+2. **Réécrire par batch** via l'AI Gateway (Gemini), avec un prompt système strict :
+   - Ton : pharmacien bienveillant qui conseille, pas qui prescrit
+   - Interdit : "médiateurs", "pharmacocinétique", "unguéal", "adsorbe", etc.
+   - Autorisé : "flore", "articulations", "circulation", "défenses", "énergie"
+   - Format : max 25 mots, une phrase, tutoiement interdit
+3. **Mettre à jour** en base via l'edge function `batch-update-phrases` existante
+4. **Vérifier** un échantillon de 20 phrases post-update pour contrôle qualité
+
+Estimation : ~10 appels batch AI + 1 migration update.
 
