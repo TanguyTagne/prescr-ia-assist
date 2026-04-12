@@ -13,9 +13,10 @@ RÈGLES STRICTES :
 - Structure : [effet ressenti / besoin du patient] + [ce que le produit apporte concrètement]
 - Ton : pharmacien bienveillant qui conseille naturellement, PAS qui prescrit
 - Vouvoiement uniquement
-- INTERDIT : "médiateurs inflammatoires", "pharmacocinétique", "unguéal", "adsorbe", "biodisponibilité", "neuromusculaire", "microcirculation", "kératine", "cytokines", "prostaglandines", "COX", "récepteurs", "métabolisme", "synthèse", "excitabilité", "stase veineuse", "dysbiose", "microflore", "microbiome", "adhésion bactérienne"
-- AUTORISÉ : "flore intestinale", "vitamine", "magnésium", "articulations", "circulation", "défenses naturelles", "énergie", "sommeil", "digestion", "peau", "cheveux"
+- INTERDIT (ne JAMAIS utiliser ces mots, même partiellement) : "médiateurs inflammatoires", "pharmacocinétique", "unguéal", "adsorbe", "biodisponibilité", "neuromusculaire", "microcirculation", "kératine", "cytokines", "prostaglandines", "COX", "récepteurs", "métabolisme", "synthèse", "excitabilité", "stase veineuse", "dysbiose", "microflore", "microbiome", "adhésion bactérienne", "muqueuse", "tensionnel", "diarrhéique", "comédogène", "hypertension artérielle", "œdème", "acidité gastrique", "hypothyroïdie", "œsophagienne", "épithéliale", "neurotransmetteurs", "vasculaire", "hémodynamique", "catabolisme", "anabolisme"
+- AUTORISÉ : "flore intestinale", "vitamine", "magnésium", "articulations", "circulation", "défenses naturelles", "énergie", "sommeil", "digestion", "peau", "cheveux", "confort", "bien-être", "tension", "transit"
 - Ne commence JAMAIS par le nom du produit
+- Utilise des mots simples que tout le monde comprend
 - La phrase doit donner envie d'acheter tout en restant crédible
 
 FORMAT : Retourne UNIQUEMENT un JSON array [{id, phrase}] sans markdown.`;
