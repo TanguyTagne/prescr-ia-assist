@@ -205,7 +205,7 @@ const PharmacyKPIs = () => {
           </CardContent>
         </Card>
         {globalStats.totalSales > 0 && (
-          <Card className="border-border col-span-2 md:col-span-2">
+          <Card className="border-border">
             <CardContent className="pt-4 pb-3 px-4">
               <div className="flex items-center gap-2 mb-1">
                 <ShoppingCart className="h-4 w-4 text-primary" />
@@ -218,6 +218,33 @@ const PharmacyKPIs = () => {
             </CardContent>
           </Card>
         )}
+        <Card className="border-border col-span-2 md:col-span-2">
+          <CardContent className="pt-4 pb-3 px-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Database className="h-4 w-4 text-primary" />
+              <span className="text-xs text-muted-foreground">Couverture médicaments</span>
+            </div>
+            <div className="flex items-baseline gap-3 mb-2">
+              <p className="text-2xl font-bold">
+                {globalStats.uniqueMedsAnalyzed > 0 
+                  ? Math.round(((globalStats.uniqueMedsAnalyzed - globalStats.unmatchedCount) / globalStats.uniqueMedsAnalyzed) * 100)
+                  : 100}%
+              </p>
+              <span className="text-xs text-muted-foreground">
+                {globalStats.medsInDB} en base · {globalStats.uniqueMedsAnalyzed} analysés
+                {globalStats.unmatchedCount > 0 && (
+                  <span className="text-destructive font-medium"> · {globalStats.unmatchedCount} manquants</span>
+                )}
+              </span>
+            </div>
+            <Progress 
+              value={globalStats.uniqueMedsAnalyzed > 0 
+                ? ((globalStats.uniqueMedsAnalyzed - globalStats.unmatchedCount) / globalStats.uniqueMedsAnalyzed) * 100
+                : 100} 
+              className="h-1.5"
+            />
+          </CardContent>
+        </Card>
       </div>
 
       {/* CRM / Patient History */}
