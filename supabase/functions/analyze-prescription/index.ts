@@ -1648,6 +1648,37 @@ serve(async (req) => {
         // Prepare background writes (fire-and-forget after response)
         backgroundWritesFn = async () => {
           try {
+            // Log unmatched medications for manual integration
+            if (needsEnrichment.length > 0) {
+              for (const idx of needsEnrichment) {
+                const rawName = medNames[idx];
+                const normName = normalizeText(extractCoreDrugName(rawName));
+                if (!normName || normName.length < 2) continue;
+                try {
+                  const { data: existing } = await supabase
+                    .from("unmatched_medicaments")
+                    .select("id, occurrence_count")
+                    .eq("nom_normalise", normName)
+                    .maybeSingle();
+                  if (existing) {
+                    await supabase.from("unmatched_medicaments")
+                      .update({ occurrence_count: existing.occurrence_count + 1, last_seen_at: new Date().toISOString() })
+                      .eq("id", existing.id);
+                  } else {
+                    await supabase.from("unmatched_medicaments").insert({
+                      nom_saisi: rawName,
+                      nom_normalise: normName,
+                      occurrence_count: 1,
+                      pharmacy_id: pharmacyId,
+                      status: "pending",
+                    });
+                  }
+                } catch (unmatchedErr) {
+                  console.error("Failed to log unmatched med:", unmatchedErr);
+                }
+              }
+            }
+
             // Insert analysis history
             await supabase.from("analysis_history").insert({
               pharmacy_id: pharmacyId,

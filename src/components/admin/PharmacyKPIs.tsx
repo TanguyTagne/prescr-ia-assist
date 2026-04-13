@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Activity, AlertTriangle, ShoppingBag, TrendingUp, Users, ShoppingCart } from "lucide-react";
+import { Loader2, Activity, AlertTriangle, ShoppingBag, TrendingUp, Users, ShoppingCart, Database } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 import PatientCRM from "./PatientCRM";
 
 interface PharmacyKPI {
@@ -28,6 +29,9 @@ const PharmacyKPIs = () => {
     majorInteractions: 0,
     crossSellRate: 0,
     totalSales: 0,
+    medsInDB: 0,
+    uniqueMedsAnalyzed: 0,
+    unmatchedCount: 0,
   });
 
   useEffect(() => {
@@ -85,6 +89,10 @@ const PharmacyKPIs = () => {
       // Cross-sell stats
       let crossSellRate = 0;
       let totalSales = 0;
+      let medsInDB = 0;
+      let uniqueMedsAnalyzed = 0;
+      let unmatchedCount = 0;
+
       try {
         const { count: salesC } = await supabase
           .from("sales_transactions" as any)
@@ -101,6 +109,35 @@ const PharmacyKPIs = () => {
         }
       } catch { /* tables may not exist yet */ }
 
+      // Coverage ratio: meds in DB vs unique meds analyzed
+      try {
+        const { count: medsCount } = await supabase
+          .from("medicaments")
+          .select("id", { count: "exact", head: true });
+        medsInDB = medsCount || 0;
+
+        // Count unique medication names from analysis history
+        const uniqueMedNames = new Set<string>();
+        for (const h of historyItems) {
+          const meds = h.medicaments as any[];
+          if (Array.isArray(meds)) {
+            for (const m of meds) {
+              const name = (m.nom || m.nom_commercial || "").trim().toLowerCase()
+                .replace(/\d+\s*(mg|g|ml|ui|µg|mcg|%)/gi, "")
+                .replace(/\s+/g, " ").trim();
+              if (name.length >= 3) uniqueMedNames.add(name);
+            }
+          }
+        }
+        uniqueMedsAnalyzed = uniqueMedNames.size;
+
+        const { count: unmatchedC } = await supabase
+          .from("unmatched_medicaments" as any)
+          .select("id", { count: "exact", head: true })
+          .eq("status", "pending");
+        unmatchedCount = unmatchedC || 0;
+      } catch { /* table may not exist yet */ }
+
       setGlobalStats({
         totalAnalyses: historyItems.length,
         totalPharmacies: pharmacies.length,
@@ -108,6 +145,9 @@ const PharmacyKPIs = () => {
         majorInteractions: historyItems.filter((h) => h.has_major_interaction).length,
         crossSellRate,
         totalSales,
+        medsInDB,
+        uniqueMedsAnalyzed,
+        unmatchedCount,
       });
     } catch (err) {
       console.error("KPI load error:", err);
@@ -165,7 +205,7 @@ const PharmacyKPIs = () => {
           </CardContent>
         </Card>
         {globalStats.totalSales > 0 && (
-          <Card className="border-border col-span-2 md:col-span-2">
+          <Card className="border-border">
             <CardContent className="pt-4 pb-3 px-4">
               <div className="flex items-center gap-2 mb-1">
                 <ShoppingCart className="h-4 w-4 text-primary" />
@@ -178,6 +218,33 @@ const PharmacyKPIs = () => {
             </CardContent>
           </Card>
         )}
+        <Card className="border-border col-span-2 md:col-span-2">
+          <CardContent className="pt-4 pb-3 px-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Database className="h-4 w-4 text-primary" />
+              <span className="text-xs text-muted-foreground">Couverture médicaments</span>
+            </div>
+            <div className="flex items-baseline gap-3 mb-2">
+              <p className="text-2xl font-bold">
+                {globalStats.uniqueMedsAnalyzed > 0 
+                  ? Math.round(((globalStats.uniqueMedsAnalyzed - globalStats.unmatchedCount) / globalStats.uniqueMedsAnalyzed) * 100)
+                  : 100}%
+              </p>
+              <span className="text-xs text-muted-foreground">
+                {globalStats.medsInDB} en base · {globalStats.uniqueMedsAnalyzed} analysés
+                {globalStats.unmatchedCount > 0 && (
+                  <span className="text-destructive font-medium"> · {globalStats.unmatchedCount} manquants</span>
+                )}
+              </span>
+            </div>
+            <Progress 
+              value={globalStats.uniqueMedsAnalyzed > 0 
+                ? ((globalStats.uniqueMedsAnalyzed - globalStats.unmatchedCount) / globalStats.uniqueMedsAnalyzed) * 100
+                : 100} 
+              className="h-1.5"
+            />
+          </CardContent>
+        </Card>
       </div>
 
       {/* CRM / Patient History */}
