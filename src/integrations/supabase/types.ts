@@ -1826,6 +1826,50 @@ export type Database = {
           },
         ]
       }
+      unmatched_medicaments: {
+        Row: {
+          first_seen_at: string
+          id: string
+          last_seen_at: string
+          nom_normalise: string
+          nom_saisi: string
+          notes: string | null
+          occurrence_count: number
+          pharmacy_id: string | null
+          status: string
+        }
+        Insert: {
+          first_seen_at?: string
+          id?: string
+          last_seen_at?: string
+          nom_normalise: string
+          nom_saisi: string
+          notes?: string | null
+          occurrence_count?: number
+          pharmacy_id?: string | null
+          status?: string
+        }
+        Update: {
+          first_seen_at?: string
+          id?: string
+          last_seen_at?: string
+          nom_normalise?: string
+          nom_saisi?: string
+          notes?: string | null
+          occurrence_count?: number
+          pharmacy_id?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "unmatched_medicaments_pharmacy_id_fkey"
+            columns: ["pharmacy_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           id: string
