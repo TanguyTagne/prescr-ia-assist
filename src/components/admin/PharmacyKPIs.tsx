@@ -29,6 +29,9 @@ const PharmacyKPIs = () => {
     majorInteractions: 0,
     crossSellRate: 0,
     totalSales: 0,
+    medsInDB: 0,
+    uniqueMedsAnalyzed: 0,
+    unmatchedCount: 0,
   });
 
   useEffect(() => {
