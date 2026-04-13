@@ -89,6 +89,10 @@ const PharmacyKPIs = () => {
       // Cross-sell stats
       let crossSellRate = 0;
       let totalSales = 0;
+      let medsInDB = 0;
+      let uniqueMedsAnalyzed = 0;
+      let unmatchedCount = 0;
+
       try {
         const { count: salesC } = await supabase
           .from("sales_transactions" as any)
@@ -105,6 +109,35 @@ const PharmacyKPIs = () => {
         }
       } catch { /* tables may not exist yet */ }
 
+      // Coverage ratio: meds in DB vs unique meds analyzed
+      try {
+        const { count: medsCount } = await supabase
+          .from("medicaments")
+          .select("id", { count: "exact", head: true });
+        medsInDB = medsCount || 0;
+
+        // Count unique medication names from analysis history
+        const uniqueMedNames = new Set<string>();
+        for (const h of historyItems) {
+          const meds = h.medicaments as any[];
+          if (Array.isArray(meds)) {
+            for (const m of meds) {
+              const name = (m.nom || m.nom_commercial || "").trim().toLowerCase()
+                .replace(/\d+\s*(mg|g|ml|ui|µg|mcg|%)/gi, "")
+                .replace(/\s+/g, " ").trim();
+              if (name.length >= 3) uniqueMedNames.add(name);
+            }
+          }
+        }
+        uniqueMedsAnalyzed = uniqueMedNames.size;
+
+        const { count: unmatchedC } = await supabase
+          .from("unmatched_medicaments" as any)
+          .select("id", { count: "exact", head: true })
+          .eq("status", "pending");
+        unmatchedCount = unmatchedC || 0;
+      } catch { /* table may not exist yet */ }
+
       setGlobalStats({
         totalAnalyses: historyItems.length,
         totalPharmacies: pharmacies.length,
@@ -112,6 +145,9 @@ const PharmacyKPIs = () => {
         majorInteractions: historyItems.filter((h) => h.has_major_interaction).length,
         crossSellRate,
         totalSales,
+        medsInDB,
+        uniqueMedsAnalyzed,
+        unmatchedCount,
       });
     } catch (err) {
       console.error("KPI load error:", err);
