@@ -1,5 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 
+const STORAGE_KEY = "asclion_register_id";
+
 export const trackEvent = async (
   eventType: string,
   metadata: Record<string, any> = {}
@@ -8,16 +10,18 @@ export const trackEvent = async (
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    // Get user's pharmacy_id from profile
     const { data: profile } = await supabase
       .from("profiles")
       .select("pharmacy_id")
       .eq("id", user.id)
       .single();
 
+    const registerId = localStorage.getItem(STORAGE_KEY) || null;
+
     await supabase.from("analytics_events").insert({
       user_id: user.id,
       pharmacy_id: profile?.pharmacy_id || null,
+      register_id: registerId,
       event_type: eventType,
       metadata,
     });
