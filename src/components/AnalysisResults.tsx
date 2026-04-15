@@ -6,7 +6,9 @@ import { Badge } from "@/components/ui/badge";
 import type { AnalysisResult } from "@/lib/prescriptionAnalyzer";
 import LegalDisclaimer from "./LegalDisclaimer";
 import { trackEvent } from "@/hooks/useAnalytics";
+import { usePcFeedback } from "@/hooks/usePcFeedback";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface AnalysisResultsProps {
   result: AnalysisResult;
