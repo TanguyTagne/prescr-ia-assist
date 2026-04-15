@@ -65,6 +65,7 @@ export type Database = {
           patient_name: string | null
           pharmacy_id: string
           prescription_hash: string
+          register_id: string | null
           suggestions_count: number
           user_id: string
         }
@@ -79,6 +80,7 @@ export type Database = {
           patient_name?: string | null
           pharmacy_id: string
           prescription_hash: string
+          register_id?: string | null
           suggestions_count?: number
           user_id: string
         }
@@ -93,6 +95,7 @@ export type Database = {
           patient_name?: string | null
           pharmacy_id?: string
           prescription_hash?: string
+          register_id?: string | null
           suggestions_count?: number
           user_id?: string
         }
@@ -104,6 +107,13 @@ export type Database = {
             referencedRelation: "pharmacies"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "analysis_history_register_id_fkey"
+            columns: ["register_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacy_registers"
+            referencedColumns: ["id"]
+          },
         ]
       }
       analytics_events: {
@@ -113,6 +123,7 @@ export type Database = {
           id: string
           metadata: Json | null
           pharmacy_id: string | null
+          register_id: string | null
           user_id: string | null
         }
         Insert: {
@@ -121,6 +132,7 @@ export type Database = {
           id?: string
           metadata?: Json | null
           pharmacy_id?: string | null
+          register_id?: string | null
           user_id?: string | null
         }
         Update: {
@@ -129,6 +141,7 @@ export type Database = {
           id?: string
           metadata?: Json | null
           pharmacy_id?: string | null
+          register_id?: string | null
           user_id?: string | null
         }
         Relationships: [
@@ -137,6 +150,13 @@ export type Database = {
             columns: ["pharmacy_id"]
             isOneToOne: false
             referencedRelation: "pharmacies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "analytics_events_register_id_fkey"
+            columns: ["register_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacy_registers"
             referencedColumns: ["id"]
           },
         ]
@@ -896,6 +916,70 @@ export type Database = {
           },
         ]
       }
+      pc_feedback: {
+        Row: {
+          action: string
+          analysis_id: string | null
+          created_at: string
+          id: string
+          medicament_nom: string
+          pc_categorie: string | null
+          pc_nom: string
+          pharmacy_id: string
+          reason: string | null
+          register_id: string | null
+          user_id: string
+        }
+        Insert: {
+          action?: string
+          analysis_id?: string | null
+          created_at?: string
+          id?: string
+          medicament_nom: string
+          pc_categorie?: string | null
+          pc_nom: string
+          pharmacy_id: string
+          reason?: string | null
+          register_id?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          analysis_id?: string | null
+          created_at?: string
+          id?: string
+          medicament_nom?: string
+          pc_categorie?: string | null
+          pc_nom?: string
+          pharmacy_id?: string
+          reason?: string | null
+          register_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pc_feedback_analysis_id_fkey"
+            columns: ["analysis_id"]
+            isOneToOne: false
+            referencedRelation: "analysis_history"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pc_feedback_pharmacy_id_fkey"
+            columns: ["pharmacy_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pc_feedback_register_id_fkey"
+            columns: ["register_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacy_registers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pharma_questions: {
         Row: {
           contexte_explication: string | null
@@ -960,6 +1044,62 @@ export type Database = {
           status?: string
         }
         Relationships: []
+      }
+      pharmacy_benchmark: {
+        Row: {
+          avg_analyses_per_day: number
+          avg_pc_per_analysis: number
+          conversion_rate: number
+          created_at: string
+          id: string
+          period: string
+          period_start: string
+          pharmacy_id: string
+          top_categories: Json
+          total_analyses: number
+          total_pc_proposed: number
+          total_pc_sold: number
+          updated_at: string
+        }
+        Insert: {
+          avg_analyses_per_day?: number
+          avg_pc_per_analysis?: number
+          conversion_rate?: number
+          created_at?: string
+          id?: string
+          period?: string
+          period_start: string
+          pharmacy_id: string
+          top_categories?: Json
+          total_analyses?: number
+          total_pc_proposed?: number
+          total_pc_sold?: number
+          updated_at?: string
+        }
+        Update: {
+          avg_analyses_per_day?: number
+          avg_pc_per_analysis?: number
+          conversion_rate?: number
+          created_at?: string
+          id?: string
+          period?: string
+          period_start?: string
+          pharmacy_id?: string
+          top_categories?: Json
+          total_analyses?: number
+          total_pc_proposed?: number
+          total_pc_sold?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pharmacy_benchmark_pharmacy_id_fkey"
+            columns: ["pharmacy_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       pharmacy_lgo_config: {
         Row: {
@@ -1041,6 +1181,47 @@ export type Database = {
             foreignKeyName: "pharmacy_preferences_pharmacy_id_fkey"
             columns: ["pharmacy_id"]
             isOneToOne: true
+            referencedRelation: "pharmacies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pharmacy_registers: {
+        Row: {
+          active: boolean
+          created_at: string
+          created_by: string | null
+          device_id: string | null
+          id: string
+          label: string
+          pharmacy_id: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          device_id?: string | null
+          id?: string
+          label?: string
+          pharmacy_id: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          device_id?: string | null
+          id?: string
+          label?: string
+          pharmacy_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pharmacy_registers_pharmacy_id_fkey"
+            columns: ["pharmacy_id"]
+            isOneToOne: false
             referencedRelation: "pharmacies"
             referencedColumns: ["id"]
           },
@@ -1385,6 +1566,7 @@ export type Database = {
           pc_categorie: string | null
           pc_proposed: string
           pharmacy_id: string
+          register_id: string | null
           times_clicked: number
           times_displayed: number
           times_proposed: number
@@ -1400,6 +1582,7 @@ export type Database = {
           pc_categorie?: string | null
           pc_proposed: string
           pharmacy_id: string
+          register_id?: string | null
           times_clicked?: number
           times_displayed?: number
           times_proposed?: number
@@ -1415,6 +1598,7 @@ export type Database = {
           pc_categorie?: string | null
           pc_proposed?: string
           pharmacy_id?: string
+          register_id?: string | null
           times_clicked?: number
           times_displayed?: number
           times_proposed?: number
@@ -1428,6 +1612,13 @@ export type Database = {
             columns: ["pharmacy_id"]
             isOneToOne: false
             referencedRelation: "pharmacies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recommendation_metrics_register_id_fkey"
+            columns: ["register_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacy_registers"
             referencedColumns: ["id"]
           },
         ]
