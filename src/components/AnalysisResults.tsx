@@ -6,7 +6,9 @@ import { Badge } from "@/components/ui/badge";
 import type { AnalysisResult } from "@/lib/prescriptionAnalyzer";
 import LegalDisclaimer from "./LegalDisclaimer";
 import { trackEvent } from "@/hooks/useAnalytics";
+import { usePcFeedback } from "@/hooks/usePcFeedback";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface AnalysisResultsProps {
   result: AnalysisResult;
@@ -18,6 +20,7 @@ const AnalysisResults = ({ result, onReset }: AnalysisResultsProps) => {
   const [expandedConseils, setExpandedConseils] = useState<Set<number>>(new Set());
   const [expandedPCConseils, setExpandedPCConseils] = useState<Set<string>>(new Set());
   const [conseilGlobalOpen, setConseilGlobalOpen] = useState(false);
+  const { recordFeedback } = usePcFeedback();
 
   // Escape key resets to new prescription
   useEffect(() => {
@@ -60,10 +63,17 @@ const AnalysisResults = ({ result, onReset }: AnalysisResultsProps) => {
     }
   };
 
-  const handleOrder = (medNom: string, produit: string) => {
+  const handleOrder = (medNom: string, produit: string, categorie?: string) => {
     const key = `${medNom}::${produit}`;
     setOrderedItems((prev) => new Set(prev).add(key));
     trackEvent("product_ordered", { medicament: medNom, produit });
+    recordFeedback(medNom, produit, "accepted", categorie);
+
+    // Try to push to LGO
+    supabase.functions.invoke("lgo-push-cart", {
+      body: { products: [{ name: produit, category: categorie }] },
+    }).catch(() => {});
+
     toast.success(`${produit} ajouté à la commande`);
   };
 
@@ -158,7 +168,7 @@ const AnalysisResults = ({ result, onReset }: AnalysisResultsProps) => {
                         </div>
                       </div>
                       <button
-                    onClick={() => handleOrder(med.nom, rec.produit)}
+                    onClick={() => handleOrder(med.nom, rec.produit, rec.categorie)}
                     disabled={ordered}
                     className={`shrink-0 flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium transition-all ${
                     ordered ?
