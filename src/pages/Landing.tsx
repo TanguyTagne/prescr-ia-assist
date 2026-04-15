@@ -117,15 +117,15 @@ const Landing = () => {
         <div className="container max-w-3xl mx-auto text-center space-y-6">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent text-accent-foreground text-xs font-medium">
             <Zap className="h-3 w-3" />
-            Copilote IA pour préparateurs en pharmacie
+            Copilote IA pour l'équipe officinale
           </div>
           <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight leading-tight">
-            Analysez chaque ordonnance
+            Le conseil associé,
             <br />
-            <span className="text-primary">en 3 secondes</span>
+            <span className="text-primary">automatisé et intelligent</span>
           </h1>
           <p className="text-lg text-muted-foreground max-w-xl mx-auto leading-relaxed">
-            Asclion détecte les médicament, puise dans sa base de données en alliant: accompagnement du traitement et réduction des effets secondaires, et suggère les produits complémentaires — directement au comptoir.
+            Asclion analyse chaque ordonnance en quelques secondes, identifie les besoins du patient et suggère les produits complémentaires les plus pertinents — accompagnement du traitement, réduction des effets secondaires — directement au comptoir.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
             <Button size="lg" asChild className="h-12 px-8 text-base font-semibold pharmacy-gradient border-0 gap-2">
