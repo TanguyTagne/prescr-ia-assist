@@ -125,7 +125,7 @@ const Landing = () => {
             <span className="text-primary">en 3 secondes</span>
           </h1>
           <p className="text-lg text-muted-foreground max-w-xl mx-auto leading-relaxed">
-            Asclion détecte les interactions, génère les bonnes questions à poser au patient et suggère les produits complémentaires — directement au comptoir.
+            Asclion détecte les médicament, puise dans sa base de données en alliant: accompagnement du traitement et réduction des effets secondaires, et suggère les produits complémentaires — directement au comptoir.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
             <Button size="lg" asChild className="h-12 px-8 text-base font-semibold pharmacy-gradient border-0 gap-2">
