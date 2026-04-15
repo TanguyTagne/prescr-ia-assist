@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
+import { RegisterProvider } from "@/hooks/useRegister";
 import { Loader2 } from "lucide-react";
 
 const Landing = lazy(() => import("./pages/Landing"));
@@ -52,6 +53,7 @@ const App = () => {
         <Toaster />
         <Sonner />
         <AuthProvider>
+          <RegisterProvider>
           <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}>
             {isStandalone ? (
               <Widget forceOpen />
@@ -70,6 +72,7 @@ const App = () => {
               </>
             )}
           </Suspense>
+          </RegisterProvider>
         </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>
