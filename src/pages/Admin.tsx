@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { ArrowLeft, Loader2, Mail, Building2, BarChart3, RefreshCw, ShieldCheck, ShoppingCart, Target } from "lucide-react";
+import { ArrowLeft, Loader2, Mail, Building2, BarChart3, RefreshCw, ShieldCheck, ShoppingCart, Target, Monitor, Trophy } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import RequestsTab from "@/components/admin/RequestsTab";
 import PharmaciesTab from "@/components/admin/PharmaciesTab";
@@ -11,6 +11,8 @@ import PharmacyKPIs from "@/components/admin/PharmacyKPIs";
 import CoverageTab from "@/components/admin/CoverageTab";
 import SalesTab from "@/components/admin/SalesTab";
 import RecommendationMetrics from "@/components/admin/RecommendationMetrics";
+import BenchmarkTab from "@/components/admin/BenchmarkTab";
+import RegistersTab from "@/components/admin/RegistersTab";
 
 interface AccessRequest {
   id: string;
@@ -45,7 +47,7 @@ const Admin = () => {
   const [requests, setRequests] = useState<AccessRequest[]>([]);
   const [pharmacies, setPharmacies] = useState<PharmacyWithLGO[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<"requests" | "pharmacies" | "kpis" | "coverage" | "sales" | "perf">("kpis");
+  const [tab, setTab] = useState<"requests" | "pharmacies" | "kpis" | "coverage" | "sales" | "perf" | "benchmark" | "registers">("kpis");
 
   useEffect(() => {
     loadData();
@@ -124,6 +126,14 @@ const Admin = () => {
             <Target className="h-3.5 w-3.5" />
             Perf. PC
           </Button>
+          <Button variant={tab === "registers" ? "default" : "outline"} size="sm" onClick={() => setTab("registers")} className="gap-1.5">
+            <Monitor className="h-3.5 w-3.5" />
+            Caisses
+          </Button>
+          <Button variant={tab === "benchmark" ? "default" : "outline"} size="sm" onClick={() => setTab("benchmark")} className="gap-1.5">
+            <Trophy className="h-3.5 w-3.5" />
+            Benchmark
+          </Button>
         </div>
 
         {tab === "kpis" && <PharmacyKPIs />}
@@ -132,6 +142,8 @@ const Admin = () => {
         {tab === "coverage" && <CoverageTab />}
         {tab === "sales" && <SalesTab />}
         {tab === "perf" && <RecommendationMetrics />}
+        {tab === "registers" && <RegistersTab />}
+        {tab === "benchmark" && <BenchmarkTab />}
       </div>
     </div>
   );
