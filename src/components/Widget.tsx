@@ -13,6 +13,7 @@ import { trackEvent } from "@/hooks/useAnalytics";
 import { useNavigate } from "react-router-dom";
 import { ScannerStatus } from "@/components/ScannerStatus";
 import { pdfToImageBase64 } from "@/lib/pdfToImage";
+import RegisterSelector from "@/components/RegisterSelector";
 
 const WidgetAuth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -269,6 +270,8 @@ const Widget = ({ forceOpen = false }: {forceOpen?: boolean;}) => {
       <div className="h-screen w-screen flex flex-col bg-background overflow-hidden">
         <div className="pharmacy-gradient px-4 py-2 flex items-center gap-2 shrink-0">
           <span className="text-sm font-bold text-primary-foreground tracking-tight">Asclion</span>
+          <div className="flex-1" />
+          <RegisterSelector />
         </div>
         <div className="flex-1 overflow-y-auto">
           {loading ?
@@ -299,6 +302,8 @@ const Widget = ({ forceOpen = false }: {forceOpen?: boolean;}) => {
       <div className="fixed bottom-[4.5rem] right-4 z-[9998] w-[320px] max-h-[480px] overflow-y-auto rounded-xl border border-border bg-background shadow-2xl animate-in slide-in-from-bottom-2 fade-in duration-200 py-0">
           <div className="pharmacy-gradient px-3 py-1.5 rounded-t-xl flex items-center gap-1.5">
             <span className="text-[11px] font-bold text-primary-foreground tracking-tight">Asclion</span>
+            <div className="flex-1" />
+            <RegisterSelector />
           </div>
           {loading ?
         <div className="flex items-center justify-center py-6">

@@ -13,6 +13,7 @@ import { ScannerStatus } from "@/components/ScannerStatus";
 import { pdfToImageBase64 } from "@/lib/pdfToImage";
 import { supabase } from "@/integrations/supabase/client";
 import type { ScanEvent } from "@/hooks/useScanQueue";
+import RegisterSelector from "@/components/RegisterSelector";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -237,6 +238,8 @@ const Index = () => {
         <div className="container max-w-xl mx-auto flex items-center gap-2">
           <Pill className="h-4 w-4 text-primary-foreground" />
           <span className="text-sm font-bold text-primary-foreground tracking-tight">Asclion</span>
+          <div className="flex-1" />
+          <RegisterSelector />
         </div>
       </header>
 
