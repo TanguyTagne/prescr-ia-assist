@@ -168,7 +168,7 @@ const AnalysisResults = ({ result, onReset }: AnalysisResultsProps) => {
                         </div>
                       </div>
                       <button
-                    onClick={() => handleOrder(med.nom, rec.produit)}
+                    onClick={() => handleOrder(med.nom, rec.produit, rec.categorie)}
                     disabled={ordered}
                     className={`shrink-0 flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium transition-all ${
                     ordered ?
