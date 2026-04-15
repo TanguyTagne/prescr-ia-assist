@@ -20,6 +20,7 @@ const AnalysisResults = ({ result, onReset }: AnalysisResultsProps) => {
   const [expandedConseils, setExpandedConseils] = useState<Set<number>>(new Set());
   const [expandedPCConseils, setExpandedPCConseils] = useState<Set<string>>(new Set());
   const [conseilGlobalOpen, setConseilGlobalOpen] = useState(false);
+  const { recordFeedback } = usePcFeedback();
 
   // Escape key resets to new prescription
   useEffect(() => {
@@ -62,10 +63,17 @@ const AnalysisResults = ({ result, onReset }: AnalysisResultsProps) => {
     }
   };
 
-  const handleOrder = (medNom: string, produit: string) => {
+  const handleOrder = (medNom: string, produit: string, categorie?: string) => {
     const key = `${medNom}::${produit}`;
     setOrderedItems((prev) => new Set(prev).add(key));
     trackEvent("product_ordered", { medicament: medNom, produit });
+    recordFeedback(medNom, produit, "accepted", categorie);
+
+    // Try to push to LGO
+    supabase.functions.invoke("lgo-push-cart", {
+      body: { products: [{ name: produit, category: categorie }] },
+    }).catch(() => {});
+
     toast.success(`${produit} ajouté à la commande`);
   };
 
