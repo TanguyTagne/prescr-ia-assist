@@ -16,9 +16,16 @@ serve(async (req) => {
 
   try {
     // Fetch the latest GitHub release
+    const githubToken = Deno.env.get("GITHUB_TOKEN");
+    const ghHeaders: Record<string, string> = {
+      Accept: "application/vnd.github+json",
+    };
+    if (githubToken) {
+      ghHeaders.Authorization = `Bearer ${githubToken}`;
+    }
     const ghRes = await fetch(
       `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest`,
-      { headers: { Accept: "application/vnd.github+json" } },
+      { headers: ghHeaders },
     );
 
     if (!ghRes.ok) {
