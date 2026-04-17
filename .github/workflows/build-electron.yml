@@ -1,4 +1,4 @@
-name: Build PrescrIA Desktop
+name: Build Asclion Desktop
 
 on:
   push:
@@ -54,14 +54,14 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: PrescrIA-Windows-Installer
+          name: Asclion-Windows-Installer
           path: electron/dist/*.exe
 
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ github.run_number }}
-          name: PrescrIA v${{ github.run_number }}
+          name: Asclion v${{ github.run_number }}
           files: electron/dist/*.exe
           generate_release_notes: true
         env:
