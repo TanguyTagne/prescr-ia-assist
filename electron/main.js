@@ -83,12 +83,26 @@ if (!gotTheLock) {
   });
 
   app.whenReady().then(async () => {
-    // Clear cache to always load latest version
+    // Aggressively clear all caches to always load the latest version
+    // (prevents stale UI from old PrescrIA builds being served by the service worker)
     const { session } = require("electron");
-    await session.defaultSession.clearCache();
-    await session.defaultSession.clearStorageData({
-      storages: ["cachestorage", "serviceworkers"],
-    });
+    try {
+      await session.defaultSession.clearCache();
+      await session.defaultSession.clearStorageData({
+        storages: [
+          "cachestorage",
+          "serviceworkers",
+          "shadercache",
+          "websql",
+        ],
+      });
+      // Unregister any leftover service workers from previous versions
+      await session.defaultSession.clearData({
+        dataTypes: ["serviceWorkerRegistrations", "cache"],
+      }).catch(() => {});
+    } catch (e) {
+      console.error("Cache clear failed:", e);
+    }
 
     createWindow();
 
