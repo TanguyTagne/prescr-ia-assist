@@ -33,6 +33,13 @@ function createWindow() {
   // Remove the menu bar entirely
   mainWindow.setMenuBarVisibility(false);
 
+  // Force the window title to "Asclion" and prevent the loaded page from changing it
+  mainWindow.setTitle("Asclion");
+  mainWindow.on("page-title-updated", (event) => {
+    event.preventDefault();
+    mainWindow.setTitle("Asclion");
+  });
+
   // Always load remote URL with desktop flag
   mainWindow.loadURL(APP_URL + "?desktop=1");
 
