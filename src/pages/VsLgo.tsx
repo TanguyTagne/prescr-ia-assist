@@ -69,31 +69,50 @@ const comparisonRows = [
 
 export default function VsLgo() {
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-40">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
-            <ArrowLeft className="h-4 w-4" />
-            Retour à l'accueil
-          </Link>
-          <span className="text-lg font-bold tracking-tight">Asclion</span>
-        </div>
-      </header>
+    <div className="min-h-screen bg-background relative overflow-hidden">
+      {/* Decorative background blobs */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -top-40 -right-40 h-[500px] w-[500px] rounded-full bg-primary/10 blur-3xl" />
+        <div className="absolute top-[40%] -left-40 h-[400px] w-[400px] rounded-full bg-pharmacy-teal/10 blur-3xl" />
+        <div className="absolute bottom-0 right-1/4 h-[450px] w-[450px] rounded-full bg-pharmacy-warm/10 blur-3xl" />
+      </div>
 
-      {/* Hero */}
-      <section className="max-w-4xl mx-auto px-4 sm:px-6 py-16 sm:py-24 text-center">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold mb-6">
-          Comparatif
-        </div>
-        <h1 className="text-4xl sm:text-6xl font-bold tracking-tight mb-6">
-          Asclion vs LGO
-        </h1>
-        <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-          Winpharma, LGPI, Pharmagest, Smart Rx proposent déjà du conseil associé.
-          Voici pourquoi Asclion change la donne.
-        </p>
-      </section>
+      {/* Subtle grid overlay */}
+      <div
+        className="pointer-events-none absolute inset-0 opacity-[0.025]"
+        style={{
+          backgroundImage:
+            "linear-gradient(hsl(var(--foreground)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--foreground)) 1px, transparent 1px)",
+          backgroundSize: "48px 48px",
+        }}
+      />
+
+      <div className="relative z-10">
+        {/* Header */}
+        <header className="border-b border-border/50 bg-background/70 backdrop-blur-md sticky top-0 z-40">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+            <Link to="/" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+              <ArrowLeft className="h-4 w-4" />
+              Retour à l'accueil
+            </Link>
+            <span className="text-lg font-bold tracking-tight">Asclion</span>
+          </div>
+        </header>
+
+        {/* Hero */}
+        <section className="max-w-4xl mx-auto px-4 sm:px-6 py-16 sm:py-24 text-center">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold mb-6 border border-primary/20">
+            Comparatif
+          </div>
+          <h1 className="text-4xl sm:text-6xl font-bold tracking-tight mb-6">
+            Asclion <span className="text-muted-foreground/60">vs</span>{" "}
+            <span className="bg-gradient-to-r from-primary to-pharmacy-teal bg-clip-text text-transparent">LGO</span>
+          </h1>
+          <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+            Winpharma, LGPI, Pharmagest, Smart Rx proposent déjà du conseil associé.
+            Voici pourquoi Asclion change la donne.
+          </p>
+        </section>
 
       {/* One-liner pitch */}
       <section className="max-w-4xl mx-auto px-4 sm:px-6 mb-16">
