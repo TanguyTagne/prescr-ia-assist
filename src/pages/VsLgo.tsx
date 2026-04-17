@@ -69,21 +69,31 @@ const comparisonRows = [
 
 export default function VsLgo() {
   return (
-    <div className="min-h-screen bg-background relative overflow-hidden">
-      {/* Decorative background blobs */}
+    <div className="min-h-screen bg-gradient-to-br from-background via-accent/30 to-background relative overflow-hidden">
+      {/* Decorative background blobs - more pronounced */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 h-[500px] w-[500px] rounded-full bg-primary/10 blur-3xl" />
-        <div className="absolute top-[40%] -left-40 h-[400px] w-[400px] rounded-full bg-pharmacy-teal/10 blur-3xl" />
-        <div className="absolute bottom-0 right-1/4 h-[450px] w-[450px] rounded-full bg-pharmacy-warm/10 blur-3xl" />
+        <div className="absolute -top-40 -right-40 h-[600px] w-[600px] rounded-full bg-primary/25 blur-3xl animate-pulse" style={{ animationDuration: "8s" }} />
+        <div className="absolute top-[35%] -left-40 h-[500px] w-[500px] rounded-full bg-pharmacy-teal/25 blur-3xl animate-pulse" style={{ animationDuration: "10s" }} />
+        <div className="absolute bottom-0 right-1/4 h-[550px] w-[550px] rounded-full bg-pharmacy-warm/20 blur-3xl animate-pulse" style={{ animationDuration: "12s" }} />
+        <div className="absolute top-[60%] right-[10%] h-[350px] w-[350px] rounded-full bg-primary/15 blur-3xl" />
       </div>
 
-      {/* Subtle grid overlay */}
+      {/* Grid overlay - more visible */}
       <div
-        className="pointer-events-none absolute inset-0 opacity-[0.025]"
+        className="pointer-events-none absolute inset-0 opacity-[0.06]"
         style={{
           backgroundImage:
             "linear-gradient(hsl(var(--foreground)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--foreground)) 1px, transparent 1px)",
-          backgroundSize: "48px 48px",
+          backgroundSize: "40px 40px",
+        }}
+      />
+
+      {/* Radial spotlight */}
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(ellipse 80% 50% at 50% 0%, hsl(var(--primary) / 0.15), transparent 70%)",
         }}
       />
 
