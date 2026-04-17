@@ -134,6 +134,12 @@ const Landing = () => {
                 Demander un accès
               </a>
             </Button>
+            <Button size="lg" variant="outline" asChild className="h-12 px-6 text-base font-semibold gap-2">
+              <a href="/vs-lgo">
+                Asclion vs LGO
+                <ArrowRight className="h-4 w-4" />
+              </a>
+            </Button>
           </div>
         </div>
       </section>
