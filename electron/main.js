@@ -40,8 +40,8 @@ function createWindow() {
     mainWindow.setTitle("Asclion");
   });
 
-  // Always load remote URL with desktop flag
-  mainWindow.loadURL(APP_URL + "?desktop=1");
+  // Always load remote URL with desktop flag + cache-buster to bypass any stale SW
+  mainWindow.loadURL(`${APP_URL}?desktop=1&v=${Date.now()}`);
 
   // Handle load failures — retry after a delay
   mainWindow.webContents.on("did-fail-load", (_event, _code, _desc, url) => {
