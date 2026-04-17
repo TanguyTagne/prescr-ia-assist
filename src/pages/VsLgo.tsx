@@ -138,10 +138,10 @@ export default function VsLgo() {
           {differentiators.map((d, i) => {
             const Icon = d.icon;
             return (
-              <Card key={i} className="p-6 hover:shadow-lg transition-shadow">
+              <Card key={i} className="p-6 bg-card/70 backdrop-blur-sm border-border/60 hover:shadow-xl hover:border-primary/30 hover:-translate-y-0.5 transition-all duration-300">
                 <div className="flex items-start gap-4 mb-4">
-                  <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                    <Icon className="h-5 w-5 text-primary" />
+                  <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-primary to-pharmacy-teal flex items-center justify-center shrink-0 shadow-md shadow-primary/20">
+                    <Icon className="h-5 w-5 text-primary-foreground" />
                   </div>
                   <div className="flex-1">
                     <div className="text-xs font-semibold text-primary uppercase tracking-wider mb-1">
@@ -187,10 +187,10 @@ export default function VsLgo() {
           Les critères qui comptent vraiment au comptoir.
         </p>
 
-        <Card className="overflow-hidden">
+        <Card className="overflow-hidden bg-card/70 backdrop-blur-sm border-border/60 shadow-xl">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-muted/50 border-b border-border">
+              <thead className="bg-gradient-to-r from-muted/60 to-muted/30 border-b border-border">
                 <tr>
                   <th className="text-left p-4 font-semibold">Critère</th>
                   <th className="text-left p-4 font-semibold text-muted-foreground">LGO (Winpharma / LGPI)</th>
@@ -199,7 +199,7 @@ export default function VsLgo() {
               </thead>
               <tbody>
                 {comparisonRows.map((row, i) => (
-                  <tr key={i} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
+                  <tr key={i} className="border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors">
                     <td className="p-4 font-medium">{row.criteria}</td>
                     <td className="p-4 text-muted-foreground">
                       {typeof row.lgo === "boolean" ? (
@@ -223,26 +223,29 @@ export default function VsLgo() {
         </Card>
       </section>
 
-      {/* CTA */}
-      <section className="max-w-3xl mx-auto px-4 sm:px-6 py-20 text-center">
-        <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-          Voir Asclion en action
-        </h2>
-        <p className="text-muted-foreground mb-8 text-lg">
-          10 minutes de démo suffisent pour comprendre la différence.
-        </p>
-        <Link to="/">
-          <Button size="lg" className="pharmacy-gradient border-0">
-            Demander une démo
-            <ArrowLeft className="h-4 w-4 ml-2 rotate-180" />
-          </Button>
-        </Link>
-      </section>
+        {/* CTA */}
+        <section className="max-w-3xl mx-auto px-4 sm:px-6 py-20 text-center">
+          <Card className="p-12 bg-gradient-to-br from-primary/10 via-pharmacy-teal/5 to-pharmacy-warm/10 border-primary/20 backdrop-blur-sm shadow-xl">
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4">
+              Voir Asclion en action
+            </h2>
+            <p className="text-muted-foreground mb-8 text-lg">
+              10 minutes de démo suffisent pour comprendre la différence.
+            </p>
+            <Link to="/">
+              <Button size="lg" className="pharmacy-gradient border-0 shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-shadow">
+                Demander une démo
+                <ArrowLeft className="h-4 w-4 ml-2 rotate-180" />
+              </Button>
+            </Link>
+          </Card>
+        </section>
 
-      {/* Footer */}
-      <footer className="border-t border-border py-8 text-center text-xs text-muted-foreground">
-        <p>© Asclion — Le copilote IA des pharmaciens</p>
-      </footer>
+        {/* Footer */}
+        <footer className="border-t border-border/50 py-8 text-center text-xs text-muted-foreground">
+          <p>© Asclion — Le copilote IA des pharmaciens</p>
+        </footer>
+      </div>
     </div>
   );
 }
