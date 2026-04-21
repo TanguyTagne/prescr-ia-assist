@@ -13,7 +13,7 @@ Allow: /
 User-agent: *
 Allow: /
 
-Sitemap: https://prescr-ia-assist.lovable.app/sitemap.xml
+Sitemap: https://asclion.com/sitemap.xml
 
 # LLMs.txt - AI discovery
-# https://prescr-ia-assist.lovable.app/llms.txt
+# https://asclion.com/llms.txt

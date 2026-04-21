@@ -1,5 +1,7 @@
-import { useState, useCallback } from "react";
-import { X, Loader2, Mail, Lock, Eye, EyeOff, LogOut, BarChart3, Monitor } from "lucide-react";
+import { useState, useCallback, useRef, useEffect } from "react";
+import { X, Loader2, Mail, Lock, Eye, EyeOff, LogOut, BarChart3, Monitor, HelpCircle } from "lucide-react";
+import OnboardingTour from "@/components/OnboardingTour";
+import AnalysisSkeleton from "@/components/AnalysisSkeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
@@ -247,22 +249,22 @@ const WidgetApp = () => {
       <ScannerStatus onViewResult={handleScanResult} onNewFile={handleNewFile} onBarcodeScan={handleBarcodeScan} />
 
       {isLoading ?
-      <div className="flex items-center justify-center py-6 gap-2">
-          <Loader2 className="h-4 w-4 text-primary animate-spin" />
-          <p className="text-xs text-muted-foreground">Analyse...</p>
-        </div> :
+      <AnalysisSkeleton /> :
       !result ?
       <div className="space-y-3">
           <PrescriptionInput onAnalyze={handleAnalyze} onAnalyzeImage={handleAnalyzeImage} />
           <LegalDisclaimer />
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Essayer :</span>
+            <span className="text-[10px] text-foreground/70 font-medium uppercase tracking-wider">Essayer :</span>
             {["Amoxicilline, Doliprane", "Ibuprofène, Oméprazole"].map((ex) =>
-          <button key={ex} onClick={() => handleAnalyze(ex)} className="text-xs px-2 py-1 rounded bg-secondary text-secondary-foreground hover:bg-accent transition-colors">
+          <button key={ex} onClick={() => handleAnalyze(ex)} className="text-xs px-2 py-1 rounded bg-secondary text-secondary-foreground hover:bg-accent transition-colors focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none">
                 {ex}
               </button>
           )}
           </div>
+          <p className="text-[10px] text-foreground/60 text-center pt-1">
+            <kbd className="px-1 py-0.5 rounded bg-secondary font-mono">Échap</kbd> · <kbd className="px-1 py-0.5 rounded bg-secondary font-mono">Entrée</kbd> · <kbd className="px-1 py-0.5 rounded bg-secondary font-mono">?</kbd> aide
+          </p>
         </div> :
 
       <AnalysisResults result={result} onReset={() => setResult(null)} />
@@ -327,13 +329,42 @@ const LgoPreviewPicker = ({
 
 const Widget = ({ forceOpen = false }: {forceOpen?: boolean;}) => {
   const [open, setOpen] = useState(forceOpen);
-  const { user, loading } = useAuth();
+  const { user, loading, onboardingCompleted, refreshOnboarding } = useAuth();
   const { preset: pharmacyPreset, lgoType: pharmacyLgoType } = useLgoPreset();
   const [previewLgo, setPreviewLgo] = useState<LgoType | null>(null);
+  const [showTour, setShowTour] = useState(false);
+  const navigateRef = useNavigate();
 
   const lgoType: LgoType = previewLgo ?? pharmacyLgoType;
   const preset = previewLgo ? LGO_PRESETS[previewLgo] : pharmacyPreset;
   const isPreview = previewLgo !== null;
+
+  // Trigger onboarding on first login
+  useEffect(() => {
+    if (user && !loading && !onboardingCompleted) {
+      const t = setTimeout(() => setShowTour(true), 600);
+      return () => clearTimeout(t);
+    }
+  }, [user, loading, onboardingCompleted]);
+
+  // Global "?" shortcut to open help
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || (target as any)?.isContentEditable) return;
+      if (e.key === "?" || (e.shiftKey && e.key === "/")) {
+        e.preventDefault();
+        window.open("/aide", "_blank", "noopener");
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
+
+  const tourClose = () => {
+    setShowTour(false);
+    refreshOnboarding();
+  };
 
   if (forceOpen) {
     // Electron full-window mode: position the panel in the LGO preset corner,
@@ -387,6 +418,13 @@ const Widget = ({ forceOpen = false }: {forceOpen?: boolean;}) => {
             <span className="text-[11px] font-bold text-primary-foreground tracking-tight">Asclion</span>
             <LgoPreviewPicker current={lgoType} onChange={setPreviewLgo} isOverride={isPreview} />
             <div className="flex-1" />
+            <button
+              onClick={() => window.open("/aide", "_blank", "noopener")}
+              aria-label="Ouvrir l'aide"
+              className="text-primary-foreground/80 hover:text-primary-foreground transition-colors p-0.5 focus-visible:ring-2 focus-visible:ring-primary-foreground/50 rounded"
+            >
+              <HelpCircle className="h-3.5 w-3.5" />
+            </button>
             <RegisterSelector />
           </div>
           {loading ?
@@ -401,6 +439,7 @@ const Widget = ({ forceOpen = false }: {forceOpen?: boolean;}) => {
           </div>
         </div>
       }
+      <OnboardingTour open={showTour} onClose={tourClose} />
     </>);
 
 };

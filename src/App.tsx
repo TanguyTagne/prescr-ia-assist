@@ -17,6 +17,7 @@ const Quiz = lazy(() => import("./pages/Quiz"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const VsLgo = lazy(() => import("./pages/VsLgo"));
+const Aide = lazy(() => import("./pages/Aide"));
 const Widget = lazy(() => import("./components/Widget"));
 const MentionsLegales = lazy(() => import("./pages/legal/MentionsLegales"));
 const Confidentialite = lazy(() => import("./pages/legal/Confidentialite"));
@@ -70,6 +71,7 @@ const App = () => {
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/reset-password" element={<ResetPassword />} />
                   <Route path="/vs-lgo" element={<VsLgo />} />
+                  <Route path="/aide" element={<Aide />} />
                   <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
                   <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                   <Route path="/quiz" element={<ProtectedRoute><Quiz /></ProtectedRoute>} />

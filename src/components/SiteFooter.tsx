@@ -5,6 +5,7 @@ const SiteFooter = () => (
     <div className="container max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-muted-foreground">
       <span>© {new Date().getFullYear()} Asclion — Outil d'aide, ne remplace pas le jugement professionnel</span>
       <nav className="flex items-center gap-4 flex-wrap justify-center">
+        <Link to="/aide" className="hover:text-foreground transition-colors">Aide</Link>
         <Link to="/mentions-legales" className="hover:text-foreground transition-colors">Mentions légales</Link>
         <Link to="/confidentialite" className="hover:text-foreground transition-colors">Confidentialité</Link>
         <Link to="/cookies" className="hover:text-foreground transition-colors">Cookies</Link>
