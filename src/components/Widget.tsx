@@ -329,13 +329,42 @@ const LgoPreviewPicker = ({
 
 const Widget = ({ forceOpen = false }: {forceOpen?: boolean;}) => {
   const [open, setOpen] = useState(forceOpen);
-  const { user, loading } = useAuth();
+  const { user, loading, onboardingCompleted, refreshOnboarding } = useAuth();
   const { preset: pharmacyPreset, lgoType: pharmacyLgoType } = useLgoPreset();
   const [previewLgo, setPreviewLgo] = useState<LgoType | null>(null);
+  const [showTour, setShowTour] = useState(false);
+  const navigateRef = useNavigate();
 
   const lgoType: LgoType = previewLgo ?? pharmacyLgoType;
   const preset = previewLgo ? LGO_PRESETS[previewLgo] : pharmacyPreset;
   const isPreview = previewLgo !== null;
+
+  // Trigger onboarding on first login
+  useEffect(() => {
+    if (user && !loading && !onboardingCompleted) {
+      const t = setTimeout(() => setShowTour(true), 600);
+      return () => clearTimeout(t);
+    }
+  }, [user, loading, onboardingCompleted]);
+
+  // Global "?" shortcut to open help
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || (target as any)?.isContentEditable) return;
+      if (e.key === "?" || (e.shiftKey && e.key === "/")) {
+        e.preventDefault();
+        window.open("/aide", "_blank", "noopener");
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
+
+  const tourClose = () => {
+    setShowTour(false);
+    refreshOnboarding();
+  };
 
   if (forceOpen) {
     // Electron full-window mode: position the panel in the LGO preset corner,
