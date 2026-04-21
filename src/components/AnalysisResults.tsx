@@ -89,9 +89,9 @@ const AnalysisResults = ({ result, onReset }: AnalysisResultsProps) => {
             <span className="font-semibold text-xs text-destructive">Interactions</span>
           </div>
           {result.interactions.map((inter, i) =>
-        <div key={i} className="flex items-start gap-1.5 py-0.5 text-[11px]">
-              <Badge className={`${niveauColor(inter.niveau)} text-[9px] px-1 py-0 shrink-0`}>{inter.niveau}</Badge>
-              <span className="text-muted-foreground">{inter.medicaments.join(" + ")} — {inter.description}</span>
+        <div key={i} className="flex items-start gap-1.5 py-0.5 text-xs">
+              <Badge className={`${niveauColor(inter.niveau)} text-[10px] px-1 py-0 shrink-0`}>{inter.niveau}</Badge>
+              <span className="text-foreground/80">{inter.medicaments.join(" + ")} — {inter.description}</span>
             </div>
         )}
         </div>
@@ -103,20 +103,22 @@ const AnalysisResults = ({ result, onReset }: AnalysisResultsProps) => {
           <div className="flex items-center gap-1.5">
             <Pill className="h-3 w-3 text-primary shrink-0" />
             <span className="font-semibold text-xs">{med.nom}</span>
-            {med.code_atc && <span className="text-[8px] text-muted-foreground/60">[{med.code_atc}]</span>}
+            {med.code_atc && <span className="text-[10px] text-muted-foreground">[{med.code_atc}]</span>}
           </div>
 
           {med.conseil_associe &&
         <button
           onClick={() => toggleConseil(i)}
-          className="flex items-center gap-1 text-[10px] text-primary/80 hover:text-primary transition-colors w-full text-left">
+          aria-expanded={expandedConseils.has(i)}
+          aria-label={`${expandedConseils.has(i) ? "Masquer" : "Afficher"} le conseil pour ${med.nom}`}
+          className="flex items-center gap-1 text-xs text-primary/90 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded transition-colors w-full text-left">
           
               {expandedConseils.has(i) ? <ChevronDown className="h-3 w-3 shrink-0" /> : <ChevronRight className="h-3 w-3 shrink-0" />}
               <span className="font-semibold">Conseil</span>
             </button>
         }
           {med.conseil_associe && expandedConseils.has(i) &&
-        <p className="text-[10px] text-foreground/90 leading-relaxed pl-4 animate-fade-in">
+        <p className="text-xs text-foreground leading-relaxed pl-4 animate-fade-in">
               {med.conseil_associe}
             </p>
         }
@@ -124,7 +126,7 @@ const AnalysisResults = ({ result, onReset }: AnalysisResultsProps) => {
           {/* Recommendations for this medication */}
           {med.recommendations && med.recommendations.length > 0 &&
         <div className="space-y-1 pt-1 border-t border-border/50">
-              <div className="flex items-center gap-1 text-[9px] text-primary font-semibold uppercase tracking-wider">
+              <div className="flex items-center gap-1 text-[10px] text-primary font-semibold uppercase tracking-wider">
                 <Sparkles className="h-2.5 w-2.5" />
                 Produits complémentaires
               </div>
@@ -135,16 +137,17 @@ const AnalysisResults = ({ result, onReset }: AnalysisResultsProps) => {
                     <div className="flex items-center gap-2">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1">
-                          <span className="font-medium text-[11px]">{rec.produit}</span>
+                          <span className="font-medium text-xs">{rec.produit}</span>
                           {rec.priorite >= 80 &&
-                      <Badge className="bg-primary/20 text-primary text-[8px] px-1 py-0">prioritaire</Badge>
+                      <Badge className="bg-primary/20 text-primary text-[10px] px-1 py-0">prioritaire</Badge>
                       }
                         </div>
                       </div>
                       <button
                     onClick={() => handleOrder(med.nom, rec.produit, rec.categorie)}
                     disabled={ordered}
-                    className={`shrink-0 flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium transition-all ${
+                    aria-label={ordered ? `${rec.produit} ajouté à la commande` : `Commander ${rec.produit}`}
+                    className={`shrink-0 flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                     ordered ?
                     "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" :
                     "bg-primary/10 hover:bg-primary/20 text-primary"}`
@@ -174,13 +177,15 @@ const AnalysisResults = ({ result, onReset }: AnalysisResultsProps) => {
                               if (next.has(pcKey)) next.delete(pcKey); else next.add(pcKey);
                               return next;
                             })}
-                            className="text-[9px] text-primary/60 hover:text-primary transition-colors flex items-center gap-0.5 pl-0.5"
+                            aria-expanded={isOpen}
+                            aria-label={`${isOpen ? "Masquer" : "Afficher"} le conseil patient pour ${rec.produit}`}
+                            className="text-[11px] text-primary/80 hover:text-primary transition-colors flex items-center gap-0.5 pl-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
                           >
                             {isOpen ? <ChevronDown className="h-2.5 w-2.5" /> : <ChevronRight className="h-2.5 w-2.5" />}
                             Conseil
                           </button>
                           {isOpen &&
-                            <p className="text-[10px] text-muted-foreground italic leading-snug pl-3 animate-fade-in">
+                            <p className="text-xs text-foreground/80 italic leading-snug pl-3 animate-fade-in">
                               💬 "{rec.phrase_conseil}"
                             </p>
                           }
