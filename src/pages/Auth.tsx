@@ -185,7 +185,19 @@ const Auth = () => {
                 </div>
               </div>
 
-              <Button type="submit" className="w-full h-12 text-base font-semibold pharmacy-gradient border-0" disabled={loading}>
+
+              {!isLogin && (
+                <label className="flex items-start gap-2 text-xs text-muted-foreground leading-relaxed">
+                  <Checkbox checked={accepted} onCheckedChange={(v) => setAccepted(v === true)} className="mt-0.5" />
+                  <span>
+                    J'accepte les{" "}
+                    <Link to="/cgu" className="text-primary underline">CGU</Link> et la{" "}
+                    <Link to="/confidentialite" className="text-primary underline">politique de confidentialité</Link>.
+                  </span>
+                </label>
+              )}
+
+              <Button type="submit" className="w-full h-12 text-base font-semibold pharmacy-gradient border-0" disabled={loading || (!isLogin && !accepted)}>
                 {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : isLogin ? "Se connecter" : "Créer mon compte"}
               </Button>
             </form>
