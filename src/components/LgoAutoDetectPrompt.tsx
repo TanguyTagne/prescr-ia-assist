@@ -77,7 +77,7 @@ export const LgoAutoDetectPrompt = () => {
           api_base_url: "",
         });
       }
-      toast.success(`${LGO_PRESETS[detected].name} configuré`);
+      toast.success(`${LGO_PRESETS[detected].label} configuré`);
       setOpen(false);
     } catch (err: any) {
       toast.error(err?.message || "Erreur lors de la configuration");
@@ -102,7 +102,7 @@ export const LgoAutoDetectPrompt = () => {
             LGO détecté
           </DialogTitle>
           <DialogDescription className="text-sm leading-relaxed">
-            Nous avons détecté <strong>{LGO_PRESETS[detected].name}</strong> sur votre poste. Voulez-vous le configurer automatiquement ?
+            Nous avons détecté <strong>{LGO_PRESETS[detected].label}</strong> sur votre poste. Voulez-vous le configurer automatiquement ?
           </DialogDescription>
         </DialogHeader>
         <DialogFooter className="gap-2 sm:gap-2">
