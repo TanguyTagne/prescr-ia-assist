@@ -14,6 +14,8 @@ import { useNavigate } from "react-router-dom";
 import { ScannerStatus } from "@/components/ScannerStatus";
 import { pdfToImageBase64 } from "@/lib/pdfToImage";
 import RegisterSelector from "@/components/RegisterSelector";
+import { useLgoPreset } from "@/hooks/useLgoPreset";
+import { getPresetClasses, getPresetClassesElectron } from "@/lib/lgoPresets";
 
 const WidgetAuth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -264,29 +266,44 @@ const WidgetApp = () => {
 const Widget = ({ forceOpen = false }: {forceOpen?: boolean;}) => {
   const [open, setOpen] = useState(forceOpen);
   const { user, loading } = useAuth();
+  const { preset, lgoType } = useLgoPreset();
 
   if (forceOpen) {
+    // Electron full-window mode: position the panel in the LGO preset corner,
+    // leaving the rest of the window empty (transparent overlay zone).
+    const electronPos = getPresetClassesElectron(preset.position);
     return (
-      <div className="h-screen w-screen flex flex-col bg-background overflow-hidden">
-        <div className="pharmacy-gradient px-4 py-2 flex items-center gap-2 shrink-0">
-          <span className="text-sm font-bold text-primary-foreground tracking-tight">Asclion</span>
-          <div className="flex-1" />
-          <RegisterSelector />
-        </div>
-        <div className="flex-1 overflow-y-auto">
-          {loading ?
-          <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-5 w-5 animate-spin text-primary" />
-            </div> :
-          !user ?
-          <WidgetAuth /> :
+      <div className="h-screen w-screen bg-transparent overflow-hidden relative">
+        <div
+          className={`fixed ${electronPos} flex flex-col bg-background border border-border rounded-xl shadow-2xl overflow-hidden transition-all duration-300`}
+          style={{ width: `${preset.width}px`, height: `${preset.height}px` }}>
+          <div className="pharmacy-gradient px-3 py-1.5 flex items-center gap-2 shrink-0">
+            <span className="text-sm font-bold text-primary-foreground tracking-tight">Asclion</span>
+            {lgoType !== "autre" &&
+            <span className="text-[9px] font-medium text-primary-foreground/80 uppercase tracking-wider">
+                {preset.label}
+              </span>
+            }
+            <div className="flex-1" />
+            <RegisterSelector />
+          </div>
+          <div className="flex-1 overflow-y-auto">
+            {loading ?
+            <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-5 w-5 animate-spin text-primary" />
+              </div> :
+            !user ?
+            <WidgetAuth /> :
 
-          <WidgetApp />
-          }
+            <WidgetApp />
+            }
+          </div>
         </div>
       </div>);
 
   }
+
+  const panelPos = getPresetClasses(preset.position);
 
   return (
     <>
@@ -299,9 +316,16 @@ const Widget = ({ forceOpen = false }: {forceOpen?: boolean;}) => {
       </button>
 
       {open &&
-      <div className="fixed bottom-[4.5rem] right-4 z-[9998] w-[320px] max-h-[480px] overflow-y-auto rounded-xl border border-border bg-background shadow-2xl animate-in slide-in-from-bottom-2 fade-in duration-200 py-0">
+      <div
+        className={`fixed ${panelPos} z-[9998] overflow-y-auto rounded-xl border border-border bg-background shadow-2xl animate-in fade-in duration-300 py-0 transition-all`}
+        style={{ width: `${preset.width}px`, maxHeight: `${preset.height}px` }}>
           <div className="pharmacy-gradient px-3 py-1.5 rounded-t-xl flex items-center gap-1.5">
             <span className="text-[11px] font-bold text-primary-foreground tracking-tight">Asclion</span>
+            {lgoType !== "autre" &&
+            <span className="text-[9px] font-medium text-primary-foreground/80 uppercase tracking-wider">
+                {preset.label}
+              </span>
+            }
             <div className="flex-1" />
             <RegisterSelector />
           </div>
