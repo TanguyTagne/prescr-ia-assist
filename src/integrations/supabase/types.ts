@@ -1425,6 +1425,7 @@ export type Database = {
           email: string | null
           full_name: string | null
           id: string
+          onboarding_completed: boolean
           pharmacy_id: string | null
           role: string
         }
@@ -1433,6 +1434,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id: string
+          onboarding_completed?: boolean
           pharmacy_id?: string | null
           role?: string
         }
@@ -1441,6 +1443,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          onboarding_completed?: boolean
           pharmacy_id?: string | null
           role?: string
         }
@@ -2075,6 +2078,27 @@ export type Database = {
         Update: {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_shortcuts: {
+        Row: {
+          created_at: string
+          shortcuts: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          shortcuts?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          shortcuts?: Json
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
