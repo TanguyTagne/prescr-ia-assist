@@ -1,11 +1,13 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { FolderSearch, ShieldCheck, ArrowRight, Download, BarChart3, LogOut, Zap, Monitor, Send, Loader2, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import SiteFooter from "@/components/SiteFooter";
 
 const DOWNLOAD_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/download-app`;
 
@@ -13,6 +15,7 @@ const DOWNLOAD_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/download
 const AccessRequestForm = () => {
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [accepted, setAccepted] = useState(false);
   const [form, setForm] = useState({
     pharmacy_name: "",
     contact_name: "",
@@ -24,6 +27,10 @@ const AccessRequestForm = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!accepted) {
+      toast.error("Veuillez accepter la politique de confidentialité.");
+      return;
+    }
     setLoading(true);
     try {
       const { error } = await supabase.from("access_requests" as any).insert(form as any);
