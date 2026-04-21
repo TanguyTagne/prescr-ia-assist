@@ -418,6 +418,13 @@ const Widget = ({ forceOpen = false }: {forceOpen?: boolean;}) => {
             <span className="text-[11px] font-bold text-primary-foreground tracking-tight">Asclion</span>
             <LgoPreviewPicker current={lgoType} onChange={setPreviewLgo} isOverride={isPreview} />
             <div className="flex-1" />
+            <button
+              onClick={() => window.open("/aide", "_blank", "noopener")}
+              aria-label="Ouvrir l'aide"
+              className="text-primary-foreground/80 hover:text-primary-foreground transition-colors p-0.5 focus-visible:ring-2 focus-visible:ring-primary-foreground/50 rounded"
+            >
+              <HelpCircle className="h-3.5 w-3.5" />
+            </button>
             <RegisterSelector />
           </div>
           {loading ?
@@ -432,6 +439,7 @@ const Widget = ({ forceOpen = false }: {forceOpen?: boolean;}) => {
           </div>
         </div>
       }
+      <OnboardingTour open={showTour} onClose={tourClose} />
     </>);
 
 };
