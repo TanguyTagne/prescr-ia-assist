@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { X, Loader2, Mail, Lock, Eye, EyeOff, LogOut, BarChart3 } from "lucide-react";
+import { X, Loader2, Mail, Lock, Eye, EyeOff, LogOut, BarChart3, Monitor } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
@@ -15,7 +15,15 @@ import { ScannerStatus } from "@/components/ScannerStatus";
 import { pdfToImageBase64 } from "@/lib/pdfToImage";
 import RegisterSelector from "@/components/RegisterSelector";
 import { useLgoPreset } from "@/hooks/useLgoPreset";
-import { getPresetClasses, getPresetClassesElectron } from "@/lib/lgoPresets";
+import { getPresetClasses, getPresetClassesElectron, LGO_PRESETS, type LgoType } from "@/lib/lgoPresets";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 
 const WidgetAuth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -263,10 +271,69 @@ const WidgetApp = () => {
 
 };
 
+const LgoPreviewPicker = ({
+  current,
+  onChange,
+  isOverride,
+}: {
+  current: LgoType;
+  onChange: (t: LgoType | null) => void;
+  isOverride: boolean;
+}) => (
+  <DropdownMenu>
+    <DropdownMenuTrigger asChild>
+      <button
+        type="button"
+        className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium text-primary-foreground/90 hover:bg-primary-foreground/10 transition-colors"
+        title="Aperçu LGO"
+      >
+        <Monitor className="h-2.5 w-2.5" />
+        <span className="uppercase tracking-wider">{LGO_PRESETS[current].label}</span>
+        {isOverride && <span className="text-[8px] opacity-70">(aperçu)</span>}
+      </button>
+    </DropdownMenuTrigger>
+    <DropdownMenuContent align="end" className="w-56 z-[10000]">
+      <DropdownMenuLabel className="text-xs">Aperçu d'intégration LGO</DropdownMenuLabel>
+      <DropdownMenuSeparator />
+      {(Object.keys(LGO_PRESETS) as LgoType[]).map((key) => {
+        const p = LGO_PRESETS[key];
+        return (
+          <DropdownMenuItem
+            key={key}
+            onClick={() => onChange(key)}
+            className="text-xs flex flex-col items-start gap-0.5 cursor-pointer"
+          >
+            <span className="font-semibold">{p.label}</span>
+            <span className="text-[10px] text-muted-foreground">
+              {p.position} · {p.width}×{p.height}px
+            </span>
+          </DropdownMenuItem>
+        );
+      })}
+      {isOverride && (
+        <>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            onClick={() => onChange(null)}
+            className="text-xs text-muted-foreground cursor-pointer"
+          >
+            Revenir au LGO de la pharmacie
+          </DropdownMenuItem>
+        </>
+      )}
+    </DropdownMenuContent>
+  </DropdownMenu>
+);
+
 const Widget = ({ forceOpen = false }: {forceOpen?: boolean;}) => {
   const [open, setOpen] = useState(forceOpen);
   const { user, loading } = useAuth();
-  const { preset, lgoType } = useLgoPreset();
+  const { preset: pharmacyPreset, lgoType: pharmacyLgoType } = useLgoPreset();
+  const [previewLgo, setPreviewLgo] = useState<LgoType | null>(null);
+
+  const lgoType: LgoType = previewLgo ?? pharmacyLgoType;
+  const preset = previewLgo ? LGO_PRESETS[previewLgo] : pharmacyPreset;
+  const isPreview = previewLgo !== null;
 
   if (forceOpen) {
     // Electron full-window mode: position the panel in the LGO preset corner,
@@ -279,11 +346,7 @@ const Widget = ({ forceOpen = false }: {forceOpen?: boolean;}) => {
           style={{ width: `${preset.width}px`, height: `${preset.height}px` }}>
           <div className="pharmacy-gradient px-3 py-1.5 flex items-center gap-2 shrink-0">
             <span className="text-sm font-bold text-primary-foreground tracking-tight">Asclion</span>
-            {lgoType !== "autre" &&
-            <span className="text-[9px] font-medium text-primary-foreground/80 uppercase tracking-wider">
-                {preset.label}
-              </span>
-            }
+            <LgoPreviewPicker current={lgoType} onChange={setPreviewLgo} isOverride={isPreview} />
             <div className="flex-1" />
             <RegisterSelector />
           </div>
@@ -321,11 +384,7 @@ const Widget = ({ forceOpen = false }: {forceOpen?: boolean;}) => {
         style={{ width: `${preset.width}px`, maxHeight: `${preset.height}px` }}>
           <div className="pharmacy-gradient px-3 py-1.5 rounded-t-xl flex items-center gap-1.5">
             <span className="text-[11px] font-bold text-primary-foreground tracking-tight">Asclion</span>
-            {lgoType !== "autre" &&
-            <span className="text-[9px] font-medium text-primary-foreground/80 uppercase tracking-wider">
-                {preset.label}
-              </span>
-            }
+            <LgoPreviewPicker current={lgoType} onChange={setPreviewLgo} isOverride={isPreview} />
             <div className="flex-1" />
             <RegisterSelector />
           </div>
