@@ -1477,10 +1477,31 @@ serve(async (req) => {
         }
       }
 
-      // Apply filters: blocked products (anti-loop), cross-med dedup, degressive cap
+      // Build set of all meds already on the prescription (names + molecules)
+      // to avoid recommending a product that the patient is already getting.
+      const prescribedSet = new Set<string>();
+      for (let k = 0; k < medNames.length; k++) {
+        const nm = normalizeText(extractCoreDrugName(medNames[k]));
+        if (nm) prescribedSet.add(nm);
+        const mol = enrichedMeds[k]?.molecule_active || enrichedMeds[k]?.molecules?.nom_molecule;
+        if (mol) prescribedSet.add(normalizeText(mol));
+      }
+
+      const isAlreadyPrescribed = (productName: string): boolean => {
+        const norm = normalizeText(productName);
+        if (!norm) return false;
+        for (const p of prescribedSet) {
+          if (!p) continue;
+          if (norm === p || norm.includes(p) || p.includes(norm)) return true;
+        }
+        return false;
+      };
+
+      // Apply filters: blocked products (anti-loop), cross-med dedup, anti-redundancy with prescription, degressive cap
       let filteredRecs = recs
         .filter((r: any) => !blockedPCSet.has(normalizeText(r.produit)))
-        .filter((r: any) => !allProposedPCs.includes(normalizeText(r.produit)));
+        .filter((r: any) => !allProposedPCs.includes(normalizeText(r.produit)))
+        .filter((r: any) => !isAlreadyPrescribed(r.produit));
 
       // Apply pharmacy product mapping (replace generic → specific)
       filteredRecs = filteredRecs.map((r: any) => {
