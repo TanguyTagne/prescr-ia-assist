@@ -7,6 +7,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { RegisterProvider } from "@/hooks/useRegister";
 import { Loader2 } from "lucide-react";
+import CookieBanner from "@/components/CookieBanner";
 
 const Landing = lazy(() => import("./pages/Landing"));
 const Auth = lazy(() => import("./pages/Auth"));
@@ -17,6 +18,10 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const VsLgo = lazy(() => import("./pages/VsLgo"));
 const Widget = lazy(() => import("./components/Widget"));
+const MentionsLegales = lazy(() => import("./pages/legal/MentionsLegales"));
+const Confidentialite = lazy(() => import("./pages/legal/Confidentialite"));
+const CookiesPage = lazy(() => import("./pages/legal/Cookies"));
+const CGU = lazy(() => import("./pages/legal/CGU"));
 
 const queryClient = new QueryClient();
 
@@ -68,9 +73,14 @@ const App = () => {
                   <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
                   <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                   <Route path="/quiz" element={<ProtectedRoute><Quiz /></ProtectedRoute>} />
+                  <Route path="/mentions-legales" element={<MentionsLegales />} />
+                  <Route path="/confidentialite" element={<Confidentialite />} />
+                  <Route path="/cookies" element={<CookiesPage />} />
+                  <Route path="/cgu" element={<CGU />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
                 <Widget />
+                <CookieBanner />
               </>
             )}
           </Suspense>

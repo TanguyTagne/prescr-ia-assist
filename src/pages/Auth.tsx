@@ -2,9 +2,10 @@ import { useState } from "react";
 import { Pill, Loader2, Mail, Lock, User, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -14,6 +15,7 @@ const Auth = () => {
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [accepted, setAccepted] = useState(false);
   const navigate = useNavigate();
 
   const handleForgotPassword = async (e: React.FormEvent) => {
@@ -39,6 +41,10 @@ const Auth = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isLogin && !accepted) {
+      toast.error("Veuillez accepter les CGU et la politique de confidentialité.");
+      return;
+    }
     setLoading(true);
 
     try {
@@ -179,7 +185,19 @@ const Auth = () => {
                 </div>
               </div>
 
-              <Button type="submit" className="w-full h-12 text-base font-semibold pharmacy-gradient border-0" disabled={loading}>
+
+              {!isLogin && (
+                <label className="flex items-start gap-2 text-xs text-muted-foreground leading-relaxed">
+                  <Checkbox checked={accepted} onCheckedChange={(v) => setAccepted(v === true)} className="mt-0.5" />
+                  <span>
+                    J'accepte les{" "}
+                    <Link to="/cgu" className="text-primary underline">CGU</Link> et la{" "}
+                    <Link to="/confidentialite" className="text-primary underline">politique de confidentialité</Link>.
+                  </span>
+                </label>
+              )}
+
+              <Button type="submit" className="w-full h-12 text-base font-semibold pharmacy-gradient border-0" disabled={loading || (!isLogin && !accepted)}>
                 {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : isLogin ? "Se connecter" : "Créer mon compte"}
               </Button>
             </form>

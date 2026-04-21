@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { hasAnalyticsConsent } from "@/lib/cookieConsent";
 
 const STORAGE_KEY = "asclion_register_id";
 
@@ -9,6 +10,9 @@ export const trackEvent = async (
   try {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
+
+    // Respect cookie consent: only track when user opted-in for analytics
+    if (!hasAnalyticsConsent()) return;
 
     const { data: profile } = await supabase
       .from("profiles")

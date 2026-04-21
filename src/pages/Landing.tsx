@@ -1,11 +1,13 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { FolderSearch, ShieldCheck, ArrowRight, Download, BarChart3, LogOut, Zap, Monitor, Send, Loader2, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import SiteFooter from "@/components/SiteFooter";
 
 const DOWNLOAD_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/download-app`;
 
@@ -13,6 +15,7 @@ const DOWNLOAD_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/download
 const AccessRequestForm = () => {
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [accepted, setAccepted] = useState(false);
   const [form, setForm] = useState({
     pharmacy_name: "",
     contact_name: "",
@@ -24,6 +27,10 @@ const AccessRequestForm = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!accepted) {
+      toast.error("Veuillez accepter la politique de confidentialité.");
+      return;
+    }
     setLoading(true);
     try {
       const { error } = await supabase.from("access_requests" as any).insert(form as any);
@@ -61,7 +68,15 @@ const AccessRequestForm = () => {
         <Input placeholder="Ville" value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} />
         <Input placeholder="LGO utilisé (ex: Winpharma, LGPI...)" value={form.lgo_type} onChange={e => setForm(f => ({ ...f, lgo_type: e.target.value }))} />
       </div>
-      <Button type="submit" className="w-full h-11 text-sm font-semibold pharmacy-gradient border-0 gap-2" disabled={loading}>
+      <label className="flex items-start gap-2 text-xs text-muted-foreground leading-relaxed">
+        <Checkbox checked={accepted} onCheckedChange={(v) => setAccepted(v === true)} className="mt-0.5" />
+        <span>
+          J'accepte que mes données soient traitées pour répondre à ma demande, conformément à la{" "}
+          <Link to="/confidentialite" className="text-primary underline">politique de confidentialité</Link> et aux{" "}
+          <Link to="/cgu" className="text-primary underline">CGU</Link>.
+        </span>
+      </label>
+      <Button type="submit" className="w-full h-11 text-sm font-semibold pharmacy-gradient border-0 gap-2" disabled={loading || !accepted}>
         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Send className="h-4 w-4" /> Envoyer ma demande d'accès</>}
       </Button>
     </form>
@@ -198,12 +213,7 @@ const Landing = () => {
 
       {/* Footer */}
       </main>
-      <footer className="border-t border-border py-6 px-4">
-        <div className="container max-w-5xl mx-auto flex items-center justify-between text-xs text-muted-foreground">
-          <span>© {new Date().getFullYear()} Asclion</span>
-          <span>Outil d'aide — ne remplace pas le jugement professionnel</span>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 };
