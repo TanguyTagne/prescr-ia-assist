@@ -8,6 +8,7 @@ import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { RegisterProvider } from "@/hooks/useRegister";
 import { Loader2 } from "lucide-react";
 import CookieBanner from "@/components/CookieBanner";
+import LgoAutoDetectPrompt from "@/components/LgoAutoDetectPrompt";
 
 const Landing = lazy(() => import("./pages/Landing"));
 const Auth = lazy(() => import("./pages/Auth"));
@@ -63,7 +64,10 @@ const App = () => {
           <RegisterProvider>
           <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}>
             {isStandalone ? (
-              <Widget forceOpen />
+              <>
+                <Widget forceOpen />
+                <LgoAutoDetectPrompt />
+              </>
             ) : (
               <>
                 <Routes>
@@ -83,6 +87,7 @@ const App = () => {
                 </Routes>
                 <Widget />
                 <CookieBanner />
+                <LgoAutoDetectPrompt />
               </>
             )}
           </Suspense>
