@@ -343,7 +343,7 @@ const Widget = ({ forceOpen = false }: {forceOpen?: boolean;}) => {
       <div className="h-screen w-screen bg-transparent overflow-hidden relative">
         <div
           className={`fixed ${electronPos} flex flex-col bg-background border border-border rounded-xl shadow-2xl overflow-hidden transition-all duration-300`}
-          style={{ width: `${preset.width}px`, height: `${preset.height}px` }}>
+          style={{ width: `${preset.width}px`, maxHeight: `calc(100vh - 1rem)` }}>
           <div className="pharmacy-gradient px-3 py-1.5 flex items-center gap-2 shrink-0">
             <span className="text-sm font-bold text-primary-foreground tracking-tight">Asclion</span>
             <LgoPreviewPicker current={lgoType} onChange={setPreviewLgo} isOverride={isPreview} />
@@ -380,9 +380,10 @@ const Widget = ({ forceOpen = false }: {forceOpen?: boolean;}) => {
 
       {open &&
       <div
-        className={`fixed ${panelPos} z-[9998] overflow-y-auto rounded-xl border border-border bg-background shadow-2xl animate-in fade-in duration-300 py-0 transition-all`}
-        style={{ width: `${preset.width}px`, maxHeight: `${preset.height}px` }}>
-          <div className="pharmacy-gradient px-3 py-1.5 rounded-t-xl flex items-center gap-1.5">
+        className={`fixed ${panelPos} z-[9998] rounded-xl border border-border bg-background shadow-2xl animate-in fade-in duration-300 py-0 transition-all overflow-visible`}
+        style={{ width: `${preset.width}px`, maxHeight: `calc(100vh - 6rem)` }}>
+          <div className="overflow-y-auto max-h-[inherit] rounded-xl">
+          <div className="pharmacy-gradient px-3 py-1.5 rounded-t-xl flex items-center gap-1.5 sticky top-0 z-10">
             <span className="text-[11px] font-bold text-primary-foreground tracking-tight">Asclion</span>
             <LgoPreviewPicker current={lgoType} onChange={setPreviewLgo} isOverride={isPreview} />
             <div className="flex-1" />
@@ -397,6 +398,7 @@ const Widget = ({ forceOpen = false }: {forceOpen?: boolean;}) => {
 
         <WidgetApp />
         }
+          </div>
         </div>
       }
     </>);
