@@ -380,9 +380,10 @@ const Widget = ({ forceOpen = false }: {forceOpen?: boolean;}) => {
 
       {open &&
       <div
-        className={`fixed ${panelPos} z-[9998] overflow-y-auto rounded-xl border border-border bg-background shadow-2xl animate-in fade-in duration-300 py-0 transition-all`}
-        style={{ width: `${preset.width}px`, maxHeight: `${preset.height}px` }}>
-          <div className="pharmacy-gradient px-3 py-1.5 rounded-t-xl flex items-center gap-1.5">
+        className={`fixed ${panelPos} z-[9998] rounded-xl border border-border bg-background shadow-2xl animate-in fade-in duration-300 py-0 transition-all overflow-visible`}
+        style={{ width: `${preset.width}px`, maxHeight: `calc(100vh - 6rem)` }}>
+          <div className="overflow-y-auto max-h-[inherit] rounded-xl">
+          <div className="pharmacy-gradient px-3 py-1.5 rounded-t-xl flex items-center gap-1.5 sticky top-0 z-10">
             <span className="text-[11px] font-bold text-primary-foreground tracking-tight">Asclion</span>
             <LgoPreviewPicker current={lgoType} onChange={setPreviewLgo} isOverride={isPreview} />
             <div className="flex-1" />
