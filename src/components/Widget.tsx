@@ -398,6 +398,7 @@ const Widget = ({ forceOpen = false }: {forceOpen?: boolean;}) => {
 
         <WidgetApp />
         }
+          </div>
         </div>
       }
     </>);
