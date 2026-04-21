@@ -2,9 +2,10 @@ import { useState } from "react";
 import { Pill, Loader2, Mail, Lock, User, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -14,6 +15,7 @@ const Auth = () => {
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [accepted, setAccepted] = useState(false);
   const navigate = useNavigate();
 
   const handleForgotPassword = async (e: React.FormEvent) => {
@@ -39,6 +41,10 @@ const Auth = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isLogin && !accepted) {
+      toast.error("Veuillez accepter les CGU et la politique de confidentialité.");
+      return;
+    }
     setLoading(true);
 
     try {

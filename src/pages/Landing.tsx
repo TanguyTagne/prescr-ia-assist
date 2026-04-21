@@ -68,7 +68,15 @@ const AccessRequestForm = () => {
         <Input placeholder="Ville" value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} />
         <Input placeholder="LGO utilisé (ex: Winpharma, LGPI...)" value={form.lgo_type} onChange={e => setForm(f => ({ ...f, lgo_type: e.target.value }))} />
       </div>
-      <Button type="submit" className="w-full h-11 text-sm font-semibold pharmacy-gradient border-0 gap-2" disabled={loading}>
+      <label className="flex items-start gap-2 text-xs text-muted-foreground leading-relaxed">
+        <Checkbox checked={accepted} onCheckedChange={(v) => setAccepted(v === true)} className="mt-0.5" />
+        <span>
+          J'accepte que mes données soient traitées pour répondre à ma demande, conformément à la{" "}
+          <Link to="/confidentialite" className="text-primary underline">politique de confidentialité</Link> et aux{" "}
+          <Link to="/cgu" className="text-primary underline">CGU</Link>.
+        </span>
+      </label>
+      <Button type="submit" className="w-full h-11 text-sm font-semibold pharmacy-gradient border-0 gap-2" disabled={loading || !accepted}>
         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Send className="h-4 w-4" /> Envoyer ma demande d'accès</>}
       </Button>
     </form>
