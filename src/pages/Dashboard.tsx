@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import { BarChart3, Activity, MousePointerClick, ShoppingBag, Clock, ArrowLeft, LogOut, Download, Monitor, Shield, Package, Brain } from "lucide-react";
+import { BarChart3, Activity, MousePointerClick, ShoppingBag, Clock, ArrowLeft, LogOut, Download, Monitor, Shield, Package, Brain, Keyboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import ProductMappingSettings from "@/components/ProductMappingSettings";
+import ShortcutsSettings from "@/components/ShortcutsSettings";
 
 interface KpiData {
   ordonnancesDetected: number;
@@ -159,6 +160,19 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <ProductMappingSettings />
+          </CardContent>
+        </Card>
+
+        {/* Shortcuts Section */}
+        <Card className="glass-card border-primary/20">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Keyboard className="h-5 w-5 text-primary" />
+              Raccourcis clavier
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ShortcutsSettings />
           </CardContent>
         </Card>
 

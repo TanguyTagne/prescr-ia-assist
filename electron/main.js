@@ -1,6 +1,7 @@
-const { app, BrowserWindow, shell } = require("electron");
+const { app, BrowserWindow, shell, ipcMain, Notification } = require("electron");
 const { autoUpdater } = require("electron-updater");
 const path = require("path");
+const { exec } = require("child_process");
 
 // Disable hardware acceleration for compatibility
 app.disableHardwareAcceleration();
@@ -84,19 +85,12 @@ if (!gotTheLock) {
 
   app.whenReady().then(async () => {
     // Aggressively clear all caches to always load the latest version
-    // (prevents stale UI from old PrescrIA builds being served by the service worker)
     const { session } = require("electron");
     try {
       await session.defaultSession.clearCache();
       await session.defaultSession.clearStorageData({
-        storages: [
-          "cachestorage",
-          "serviceworkers",
-          "shadercache",
-          "websql",
-        ],
+        storages: ["cachestorage", "serviceworkers", "shadercache", "websql"],
       });
-      // Unregister any leftover service workers from previous versions
       await session.defaultSession.clearData({
         dataTypes: ["serviceWorkerRegistrations", "cache"],
       }).catch(() => {});
@@ -105,6 +99,9 @@ if (!gotTheLock) {
     }
 
     createWindow();
+
+    // Detect installed LGO (Windows only) and forward to renderer when ready
+    detectLgoAndNotify();
 
     // Check for updates silently
     autoUpdater.checkForUpdatesAndNotify();
@@ -120,6 +117,61 @@ app.on("activate", () => {
     createWindow();
   }
 });
+
+// ────────────────────────────────────────────────────────────
+// IPC: Native notification (called from renderer via preload)
+// ────────────────────────────────────────────────────────────
+ipcMain.handle("notify", (_event, { title, body }) => {
+  if (!Notification.isSupported()) return false;
+  const notif = new Notification({
+    title: title || "Asclion",
+    body: body || "",
+    icon: path.join(__dirname, "assets", "icon.ico"),
+    silent: false,
+  });
+  notif.on("click", () => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.show();
+      mainWindow.focus();
+      mainWindow.webContents.send("notification-clicked");
+    }
+  });
+  notif.show();
+  return true;
+});
+
+// ────────────────────────────────────────────────────────────
+// LGO auto-detection (Windows only — silent fallback elsewhere)
+// ────────────────────────────────────────────────────────────
+function detectLgoAndNotify() {
+  if (process.platform !== "win32") return;
+
+  exec("tasklist /FO CSV /NH", { timeout: 5000 }, (err, stdout) => {
+    if (err || !stdout) return;
+    const lower = stdout.toLowerCase();
+
+    let detected = null;
+    if (/winpharma|wp\.exe|wpgest/.test(lower)) detected = "winpharma";
+    else if (/lgpi/.test(lower)) detected = "lgpi";
+    else if (/pharmagest|leo\.exe|leo_/.test(lower)) detected = "pharmagest";
+    else if (/smartrx|smart_rx/.test(lower)) detected = "smart_rx";
+    else if (/leopharm/.test(lower)) detected = "leo";
+
+    if (!detected || !mainWindow) return;
+
+    const send = () => {
+      try {
+        mainWindow.webContents.send("lgo-detected", { lgo: detected });
+      } catch (_) { /* ignore */ }
+    };
+    if (mainWindow.webContents.isLoading()) {
+      mainWindow.webContents.once("did-finish-load", send);
+    } else {
+      send();
+    }
+  });
+}
 
 // Auto-updater events
 autoUpdater.on("update-available", () => {

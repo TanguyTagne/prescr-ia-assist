@@ -42,7 +42,11 @@ const ScanNotification = ({ scan, onDismiss, onViewResult }: ScanNotificationPro
             {scan.source === "api" ? "Caisse" : scan.source === "folder_watcher" ? "Scanner" : scan.source}
           </Badge>
         </div>
-        <button onClick={onDismiss} className="text-muted-foreground hover:text-foreground">
+        <button
+          onClick={onDismiss}
+          aria-label="Fermer la notification de scan"
+          className="text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
+        >
           <X className="h-3.5 w-3.5" />
         </button>
       </div>
@@ -236,8 +240,9 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-5 px-1.5 text-[9px] text-muted-foreground"
+                className="h-5 px-1.5 text-[11px] text-muted-foreground"
                 onClick={stopWatching}
+                aria-label="Arrêter la surveillance du dossier scanner"
               >
                 Stop
               </Button>
@@ -273,6 +278,7 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
             size="sm"
             className="h-6 text-[10px] gap-1 text-muted-foreground hover:text-foreground px-1.5"
             onClick={() => { setShowSetup(true); loadKeys(); loadLgoConfig(); }}
+            aria-label="Configuration avancée du scanner et du LGO"
           >
             <Settings className="h-3 w-3" />
           </Button>
@@ -342,17 +348,17 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
                           <div className="flex items-center justify-between">
                             <span className="text-xs font-medium">{key.label || "Sans nom"}</span>
                             <div className="flex items-center gap-1">
-                              <Badge variant={key.active ? "default" : "secondary"} className="text-[9px] h-4">
+                              <Badge variant={key.active ? "default" : "secondary"} className="text-[10px] h-4">
                                 {key.active ? "Actif" : "Inactif"}
                               </Badge>
-                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-destructive" onClick={() => handleDeleteKey(key.id)}>
+                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-destructive" onClick={() => handleDeleteKey(key.id)} aria-label={`Supprimer la clé ${key.label || "sans nom"}`}>
                                 <Trash2 className="h-3 w-3" />
                               </Button>
                             </div>
                           </div>
                           <div className="flex gap-1">
-                            <Input readOnly value={key.api_key} className="text-[10px] font-mono h-7 bg-muted" />
-                            <Button variant="outline" size="sm" className="h-7 px-2 shrink-0" onClick={() => handleCopy(key.api_key, key.id)}>
+                            <Input readOnly value={key.api_key} className="text-[11px] font-mono h-7 bg-muted" />
+                            <Button variant="outline" size="sm" className="h-7 px-2 shrink-0" onClick={() => handleCopy(key.api_key, key.id)} aria-label="Copier la clé API">
                               {copiedId === key.id ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
                             </Button>
                           </div>

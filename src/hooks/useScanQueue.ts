@@ -57,17 +57,24 @@ export function useScanQueue() {
           setScanHistory((prev) => [scan, ...prev].slice(0, 50));
 
           if (scan.status === "completed") {
-            if (scan.scan_type === "prescription") {
-              toast.success("📋 Ordonnance scannée analysée !", {
-                description: "Les résultats sont disponibles.",
-                duration: 8000,
-              });
-            } else {
-              const count = scan.result?.suggestions?.length || 0;
-              toast.success(`🛒 Article scanné — ${count} suggestion(s)`, {
-                description: "Produits complémentaires disponibles.",
-                duration: 8000,
-              });
+            const isPrescription = scan.scan_type === "prescription";
+            const count = scan.result?.suggestions?.length || 0;
+            const title = isPrescription
+              ? "📋 Ordonnance scannée analysée !"
+              : `🛒 Article scanné — ${count} suggestion(s)`;
+            const description = isPrescription
+              ? "Les résultats sont disponibles."
+              : "Produits complémentaires disponibles.";
+
+            toast.success(title, { description, duration: 8000 });
+
+            // Native OS notification when Electron app is in background
+            if (
+              typeof window !== "undefined" &&
+              window.electronAPI?.isDesktop &&
+              document.hidden
+            ) {
+              window.electronAPI.notify({ title, body: description }).catch(() => {});
             }
           }
         },
