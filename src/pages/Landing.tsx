@@ -198,12 +198,7 @@ const Landing = () => {
 
       {/* Footer */}
       </main>
-      <footer className="border-t border-border py-6 px-4">
-        <div className="container max-w-5xl mx-auto flex items-center justify-between text-xs text-muted-foreground">
-          <span>© {new Date().getFullYear()} Asclion</span>
-          <span>Outil d'aide — ne remplace pas le jugement professionnel</span>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 };
