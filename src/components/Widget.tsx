@@ -343,7 +343,7 @@ const Widget = ({ forceOpen = false }: {forceOpen?: boolean;}) => {
       <div className="h-screen w-screen bg-transparent overflow-hidden relative">
         <div
           className={`fixed ${electronPos} flex flex-col bg-background border border-border rounded-xl shadow-2xl overflow-hidden transition-all duration-300`}
-          style={{ width: `${preset.width}px`, height: `${preset.height}px` }}>
+          style={{ width: `${preset.width}px`, maxHeight: `calc(100vh - 1rem)` }}>
           <div className="pharmacy-gradient px-3 py-1.5 flex items-center gap-2 shrink-0">
             <span className="text-sm font-bold text-primary-foreground tracking-tight">Asclion</span>
             <LgoPreviewPicker current={lgoType} onChange={setPreviewLgo} isOverride={isPreview} />
