@@ -99,7 +99,7 @@ const App = () => {
           <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}>
             {isStandalone ? (
               <>
-                <DeferredWidget forceOpen />
+                <DeferredWidget mountImmediately />
                 <LgoAutoDetectPrompt />
               </>
             ) : (
@@ -119,7 +119,7 @@ const App = () => {
                   <Route path="/cgu" element={<CGU />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
-                <DeferredWidget forceOpen />
+                <DeferredWidget mountImmediately />
                 <CookieBanner />
                 <LgoAutoDetectPrompt />
               </>
