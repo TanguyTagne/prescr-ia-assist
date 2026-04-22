@@ -118,7 +118,7 @@ const App = () => {
                   <Route path="/cgu" element={<CGU />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
-                <DeferredWidget />
+                <DeferredWidget forceOpen />
                 <CookieBanner />
                 <LgoAutoDetectPrompt />
               </>
