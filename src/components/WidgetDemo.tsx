@@ -118,7 +118,7 @@ const WidgetDemo = () => {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-xs font-semibold leading-tight">{demo.label}</div>
-                <div className="text-[10px] text-muted-foreground leading-snug mt-0.5 truncate">
+                <div className="text-[10px] text-muted-foreground leading-snug mt-0.5 break-words whitespace-normal">
                   {demo.description}
                 </div>
               </div>
