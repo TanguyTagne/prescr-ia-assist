@@ -13,9 +13,10 @@ import { supabase } from "@/integrations/supabase/client";
 interface AnalysisResultsProps {
   result: AnalysisResult;
   onReset: () => void;
+  demoMode?: boolean;
 }
 
-const AnalysisResults = ({ result, onReset }: AnalysisResultsProps) => {
+const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsProps) => {
   const [orderedItems, setOrderedItems] = useState<Set<string>>(new Set());
   const [expandedConseils, setExpandedConseils] = useState<Set<number>>(new Set());
   const [expandedPCConseils, setExpandedPCConseils] = useState<Set<string>>(new Set());
@@ -66,6 +67,12 @@ const AnalysisResults = ({ result, onReset }: AnalysisResultsProps) => {
   const handleOrder = (medNom: string, produit: string, categorie?: string) => {
     const key = `${medNom}::${produit}`;
     setOrderedItems((prev) => new Set(prev).add(key));
+
+    if (demoMode) {
+      toast.info("Démonstration — connectez-vous pour activer la commande LGO.");
+      return;
+    }
+
     trackEvent("product_ordered", { medicament: medNom, produit });
     recordFeedback(medNom, produit, "accepted", categorie);
 
@@ -213,6 +220,12 @@ const AnalysisResults = ({ result, onReset }: AnalysisResultsProps) => {
           </Badge>
         }
       </div>
+      {demoMode &&
+        <div className="rounded-md border border-primary/30 bg-primary/5 px-2 py-1.5 text-[11px] text-foreground/80 leading-snug">
+          <span className="font-semibold text-primary">Démonstration · </span>
+          activez votre officine pour analyser vos vraies ordonnances et bénéficier du mapping LGO personnalisé.
+        </div>
+      }
       <LegalDisclaimer />
     </div>);
 

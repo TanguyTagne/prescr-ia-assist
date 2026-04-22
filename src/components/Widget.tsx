@@ -11,6 +11,8 @@ import PrescriptionInput from "@/components/PrescriptionInput";
 import AnalysisResults from "@/components/AnalysisResults";
 import LegalDisclaimer from "@/components/LegalDisclaimer";
 import { analyzePrescription, analyzePrescriptionImage, type AnalysisResult } from "@/lib/prescriptionAnalyzer";
+import DemoPrescriptionCards from "@/components/DemoPrescriptionCards";
+import { DEMO_PRESCRIPTIONS } from "@/lib/demoPrescriptions";
 import { trackEvent } from "@/hooks/useAnalytics";
 import { useNavigate } from "react-router-dom";
 import { ScannerStatus } from "@/components/ScannerStatus";
@@ -34,6 +36,20 @@ const WidgetAuth = () => {
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [demoResult, setDemoResult] = useState<AnalysisResult | null>(null);
+  const [demoLoading, setDemoLoading] = useState(false);
+
+  const handleDemoSelect = (id: string) => {
+    const demo = DEMO_PRESCRIPTIONS.find((d) => d.id === id);
+    if (!demo) return;
+    setDemoLoading(true);
+    setDemoResult(null);
+    trackEvent("demo_analyzed", { ordonnance: id });
+    setTimeout(() => {
+      setDemoResult(demo.result);
+      setDemoLoading(false);
+    }, 2500);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,6 +72,22 @@ const WidgetAuth = () => {
       setLoading(false);
     }
   };
+
+  if (demoLoading) {
+    return (
+      <div className="p-4">
+        <AnalysisSkeleton />
+      </div>
+    );
+  }
+
+  if (demoResult) {
+    return (
+      <div className="p-4">
+        <AnalysisResults result={demoResult} demoMode onReset={() => setDemoResult(null)} />
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 space-y-3">
@@ -88,6 +120,9 @@ const WidgetAuth = () => {
           {isLogin ? "S'inscrire" : "Se connecter"}
         </button>
       </p>
+      <div className="pt-2 border-t border-border">
+        <DemoPrescriptionCards onSelect={handleDemoSelect} />
+      </div>
     </div>);
 
 };
@@ -95,6 +130,7 @@ const WidgetAuth = () => {
 const WidgetApp = () => {
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isDemo, setIsDemo] = useState(false);
   const { signOut } = useAuth();
   const navigate = useNavigate();
 
@@ -104,6 +140,24 @@ const WidgetApp = () => {
   const [orderedProducts, setOrderedProducts] = useState<string[]>([]);
 
   const basketOptions = { basketSessionId, blockedProducts };
+
+  const handleDemoSelect = (id: string) => {
+    const demo = DEMO_PRESCRIPTIONS.find((d) => d.id === id);
+    if (!demo) return;
+    setIsLoading(true);
+    setIsDemo(true);
+    setResult(null);
+    trackEvent("demo_analyzed", { ordonnance: id });
+    setTimeout(() => {
+      setResult(demo.result);
+      setIsLoading(false);
+    }, 2500);
+  };
+
+  const handleReset = () => {
+    setResult(null);
+    setIsDemo(false);
+  };
 
   const handleAnalyze = async (text: string) => {
     setIsLoading(true);
@@ -254,20 +308,13 @@ const WidgetApp = () => {
       <div className="space-y-3">
           <PrescriptionInput onAnalyze={handleAnalyze} onAnalyzeImage={handleAnalyzeImage} />
           <LegalDisclaimer />
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-[10px] text-foreground/70 font-medium uppercase tracking-wider">Essayer :</span>
-            {["Amoxicilline, Doliprane", "Ibuprofène, Oméprazole"].map((ex) =>
-          <button key={ex} onClick={() => handleAnalyze(ex)} className="text-xs px-2 py-1 rounded bg-secondary text-secondary-foreground hover:bg-accent transition-colors focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none">
-                {ex}
-              </button>
-          )}
-          </div>
+          <DemoPrescriptionCards onSelect={handleDemoSelect} />
           <p className="text-[10px] text-foreground/60 text-center pt-1">
             <kbd className="px-1 py-0.5 rounded bg-secondary font-mono">Échap</kbd> · <kbd className="px-1 py-0.5 rounded bg-secondary font-mono">Entrée</kbd> · <kbd className="px-1 py-0.5 rounded bg-secondary font-mono">?</kbd> aide
           </p>
         </div> :
 
-      <AnalysisResults result={result} onReset={() => setResult(null)} />
+      <AnalysisResults result={result} demoMode={isDemo} onReset={handleReset} />
       }
     </div>);
 
