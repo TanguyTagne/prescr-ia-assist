@@ -56,7 +56,7 @@ export const DEMO_PRESCRIPTIONS: DemoPrescription[] = [
               categorie: "Probiotique",
               priorite: 95,
               phrase_conseil:
-                "À prendre dès le début de l'antibiotique : il protège la flore intestinale et limite ballonnements et diarrhées.",
+                "Afin de protéger votre flore intestinale et éviter des gênes comme les ballonnements, je vous conseille de prendre un probiotique avec votre antibiotique.",
             },
           ],
         },
