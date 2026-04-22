@@ -72,7 +72,7 @@ export const DEMO_PRESCRIPTIONS: DemoPrescription[] = [
               categorie: "Voies respiratoires",
               priorite: 80,
               phrase_conseil:
-                "Apaise localement et complète l'action de la pastille pour soulager plus vite les irritations.",
+                "Apaise localement la gorge irritée et complète l'action de la pastille pour un soulagement plus rapide.",
             },
           ],
         },
