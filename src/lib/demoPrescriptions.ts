@@ -127,7 +127,7 @@ export const DEMO_PRESCRIPTIONS: DemoPrescription[] = [
               categorie: "Antiseptique",
               priorite: 75,
               phrase_conseil:
-                "Utile en cas de salissure inattendue avant le prochain passage soignant.",
+                "Utile à la maison pour nettoyer la zone en cas de salissure avant le passage de l'infirmier.",
             },
           ],
         },
