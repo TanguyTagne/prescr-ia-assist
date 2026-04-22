@@ -36,6 +36,20 @@ const WidgetAuth = () => {
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [demoResult, setDemoResult] = useState<AnalysisResult | null>(null);
+  const [demoLoading, setDemoLoading] = useState(false);
+
+  const handleDemoSelect = (id: string) => {
+    const demo = DEMO_PRESCRIPTIONS.find((d) => d.id === id);
+    if (!demo) return;
+    setDemoLoading(true);
+    setDemoResult(null);
+    trackEvent("demo_analyzed", { ordonnance: id });
+    setTimeout(() => {
+      setDemoResult(demo.result);
+      setDemoLoading(false);
+    }, 2500);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
