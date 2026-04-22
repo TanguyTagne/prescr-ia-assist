@@ -39,7 +39,7 @@ export const DEMO_PRESCRIPTIONS: DemoPrescription[] = [
               categorie: "Complément alimentaire",
               priorite: 85,
               phrase_conseil:
-                "Aide à récupérer après l'épisode fébrile et à retrouver du tonus sur quelques jours.",
+                "Un coup de pouce pour récupérer après la fièvre : le magnésium aide à retrouver de l'énergie en quelques jours.",
             },
           ],
         },
@@ -56,7 +56,7 @@ export const DEMO_PRESCRIPTIONS: DemoPrescription[] = [
               categorie: "Probiotique",
               priorite: 95,
               phrase_conseil:
-                "Protège la flore intestinale pendant la cure d'antibiotique et limite ballonnements et diarrhées.",
+                "À prendre dès le début de l'antibiotique : il protège la flore intestinale et limite ballonnements et diarrhées.",
             },
           ],
         },
@@ -72,7 +72,7 @@ export const DEMO_PRESCRIPTIONS: DemoPrescription[] = [
               categorie: "Voies respiratoires",
               priorite: 80,
               phrase_conseil:
-                "Apaise localement la gorge irritée et complète l'action de la pastille pour un soulagement plus rapide.",
+                "En complément des pastilles : le spray cible la zone irritée et soulage la gorge plus rapidement dans la journée.",
             },
           ],
         },
@@ -113,21 +113,21 @@ export const DEMO_PRESCRIPTIONS: DemoPrescription[] = [
               categorie: "Cicatrisation",
               priorite: 90,
               phrase_conseil:
-                "Favorise la régénération de la peau une fois la plaie refermée et atténue les marques au fil des semaines.",
+                "À appliquer une fois la plaie refermée : la crème aide la peau à se régénérer et atténue la cicatrice au fil des semaines.",
             },
             {
               produit: "Pansement hydrocolloïde de secours",
               categorie: "Dispositif médical",
               priorite: 80,
               phrase_conseil:
-                "Dépanne le patient si le pansement se décolle entre deux passages de l'infirmier.",
+                "Pratique à garder à la maison : il prend le relais si le pansement se décolle entre deux passages de l'infirmier.",
             },
             {
               produit: "Solution antiseptique douce (chlorhexidine)",
               categorie: "Antiseptique",
               priorite: 75,
               phrase_conseil:
-                "Utile à la maison pour nettoyer la zone en cas de salissure avant le passage de l'infirmier.",
+                "Utile à la maison pour nettoyer la zone en douceur si elle se salit avant le prochain passage de l'infirmier.",
             },
           ],
         },
@@ -179,7 +179,7 @@ export const DEMO_PRESCRIPTIONS: DemoPrescription[] = [
               categorie: "Auto-mesure",
               priorite: 90,
               phrase_conseil:
-                "Permet au patient de suivre sa tension à domicile et rassure entre deux consultations.",
+                "Idéal pour suivre sa tension à la maison : un geste simple qui rassure et facilite le dialogue avec le cardiologue.",
             },
           ],
         },
@@ -196,7 +196,7 @@ export const DEMO_PRESCRIPTIONS: DemoPrescription[] = [
               categorie: "Complément alimentaire",
               priorite: 85,
               phrase_conseil:
-                "Soutient le tonus musculaire, souvent apprécié des patients sous statine au long cours.",
+                "Souvent recommandé avec les statines au long cours : il aide à préserver le confort et le tonus musculaire.",
             },
           ],
         },
@@ -213,7 +213,7 @@ export const DEMO_PRESCRIPTIONS: DemoPrescription[] = [
               categorie: "Minéraux",
               priorite: 88,
               phrase_conseil:
-                "Compense les pertes en magnésium liées au diurétique et limite les crampes nocturnes.",
+                "Le diurétique fait perdre du magnésium : un apport quotidien aide à limiter les crampes nocturnes et la fatigue.",
             },
           ],
         },
