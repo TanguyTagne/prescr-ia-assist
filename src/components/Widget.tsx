@@ -130,6 +130,7 @@ const WidgetAuth = () => {
 const WidgetApp = () => {
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isDemo, setIsDemo] = useState(false);
   const { signOut } = useAuth();
   const navigate = useNavigate();
 
@@ -139,6 +140,24 @@ const WidgetApp = () => {
   const [orderedProducts, setOrderedProducts] = useState<string[]>([]);
 
   const basketOptions = { basketSessionId, blockedProducts };
+
+  const handleDemoSelect = (id: string) => {
+    const demo = DEMO_PRESCRIPTIONS.find((d) => d.id === id);
+    if (!demo) return;
+    setIsLoading(true);
+    setIsDemo(true);
+    setResult(null);
+    trackEvent("demo_analyzed", { ordonnance: id });
+    setTimeout(() => {
+      setResult(demo.result);
+      setIsLoading(false);
+    }, 2500);
+  };
+
+  const handleReset = () => {
+    setResult(null);
+    setIsDemo(false);
+  };
 
   const handleAnalyze = async (text: string) => {
     setIsLoading(true);
