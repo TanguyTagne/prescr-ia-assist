@@ -73,6 +73,22 @@ const WidgetAuth = () => {
     }
   };
 
+  if (demoLoading) {
+    return (
+      <div className="p-4">
+        <AnalysisSkeleton />
+      </div>
+    );
+  }
+
+  if (demoResult) {
+    return (
+      <div className="p-4">
+        <AnalysisResults result={demoResult} demoMode onReset={() => setDemoResult(null)} />
+      </div>
+    );
+  }
+
   return (
     <div className="p-4 space-y-3">
       <p className="text-sm font-semibold text-center">{isLogin ? "Connexion" : "Inscription"}</p>
@@ -104,6 +120,9 @@ const WidgetAuth = () => {
           {isLogin ? "S'inscrire" : "Se connecter"}
         </button>
       </p>
+      <div className="pt-2 border-t border-border">
+        <DemoPrescriptionCards onSelect={handleDemoSelect} />
+      </div>
     </div>);
 
 };
