@@ -113,7 +113,7 @@ export const DEMO_PRESCRIPTIONS: DemoPrescription[] = [
               categorie: "Cicatrisation",
               priorite: 90,
               phrase_conseil:
-                "Accélère la régénération cutanée après la cicatrisation initiale et limite les marques.",
+                "Favorise la régénération de la peau une fois la plaie refermée et atténue les marques au fil des semaines.",
             },
             {
               produit: "Pansement hydrocolloïde de secours",
