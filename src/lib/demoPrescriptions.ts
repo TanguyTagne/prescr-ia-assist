@@ -39,7 +39,7 @@ export const DEMO_PRESCRIPTIONS: DemoPrescription[] = [
               categorie: "Complément alimentaire",
               priorite: 85,
               phrase_conseil:
-                "Aide à la récupération après l'épisode fébrile et soutient le tonus général sur quelques jours.",
+                "Aide à récupérer après l'épisode fébrile et à retrouver du tonus sur quelques jours.",
             },
           ],
         },
