@@ -475,7 +475,7 @@ const Widget = ({ forceOpen = false }: {forceOpen?: boolean;}) => {
             </button>
             <RegisterSelector />
           </div>
-          <WidgetApp />
+          <WidgetDemo />
 
           </div>
         </div>
