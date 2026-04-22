@@ -39,7 +39,7 @@ export const DEMO_PRESCRIPTIONS: DemoPrescription[] = [
               categorie: "Complément alimentaire",
               priorite: 85,
               phrase_conseil:
-                "Un coup de pouce pour récupérer après la fièvre : le magnésium aide à retrouver de l'énergie en quelques jours.",
+                "Pour retrouver toute votre énergie après un épisode de fièvre, le magnésium vous aidera à combattre la fatigue et retrouver votre vitalité.",
             },
           ],
         },
@@ -56,7 +56,7 @@ export const DEMO_PRESCRIPTIONS: DemoPrescription[] = [
               categorie: "Probiotique",
               priorite: 95,
               phrase_conseil:
-                "À prendre dès le début de l'antibiotique : il protège la flore intestinale et limite ballonnements et diarrhées.",
+                "Afin de protéger votre flore intestinale et éviter des gênes comme les ballonnements, je vous conseille de prendre un probiotique avec votre antibiotique.",
             },
           ],
         },
@@ -72,7 +72,7 @@ export const DEMO_PRESCRIPTIONS: DemoPrescription[] = [
               categorie: "Voies respiratoires",
               priorite: 80,
               phrase_conseil:
-                "En complément des pastilles : le spray cible la zone irritée et soulage la gorge plus rapidement dans la journée.",
+                "Pour soulager rapidement cette irritation, un spray à la propolis agira directement sur votre gorge et apaisera la douleur.",
             },
           ],
         },
@@ -113,21 +113,21 @@ export const DEMO_PRESCRIPTIONS: DemoPrescription[] = [
               categorie: "Cicatrisation",
               priorite: 90,
               phrase_conseil:
-                "À appliquer une fois la plaie refermée : la crème aide la peau à se régénérer et atténue la cicatrice au fil des semaines.",
+                "Pour une belle cicatrisation, cette crème favorisera la régénération de votre peau et atténuera l'aspect de la cicatrice au fil du temps.",
             },
             {
               produit: "Pansement hydrocolloïde de secours",
               categorie: "Dispositif médical",
               priorite: 80,
               phrase_conseil:
-                "Pratique à garder à la maison : il prend le relais si le pansement se décolle entre deux passages de l'infirmier.",
+                "Si par hasard votre pansement se décolle, ce pansement de secours vous permet de protéger votre plaie en attendant le passage de l'infirmier.",
             },
             {
               produit: "Solution antiseptique douce (chlorhexidine)",
               categorie: "Antiseptique",
               priorite: 75,
               phrase_conseil:
-                "Utile à la maison pour nettoyer la zone en douceur si elle se salit avant le prochain passage de l'infirmier.",
+                "Pour nettoyer votre cicatrice en douceur si elle se salit, cette solution antiseptique douce est parfaite en attendant votre prochain soin.",
             },
           ],
         },
@@ -179,7 +179,7 @@ export const DEMO_PRESCRIPTIONS: DemoPrescription[] = [
               categorie: "Auto-mesure",
               priorite: 90,
               phrase_conseil:
-                "Idéal pour suivre sa tension à la maison : un geste simple qui rassure et facilite le dialogue avec le cardiologue.",
+                "Pour mieux suivre votre tension à la maison, ce tensiomètre de poignet vous permettra de mesurer et de noter vos chiffres facilement.",
             },
           ],
         },
@@ -196,7 +196,7 @@ export const DEMO_PRESCRIPTIONS: DemoPrescription[] = [
               categorie: "Complément alimentaire",
               priorite: 85,
               phrase_conseil:
-                "Souvent recommandé avec les statines au long cours : il aide à préserver le confort et le tonus musculaire.",
+                "Pour votre confort musculaire, ce complément est souvent recommandé avec les statines pour vous aider à préserver votre tonus au quotidien.",
             },
           ],
         },
@@ -213,7 +213,7 @@ export const DEMO_PRESCRIPTIONS: DemoPrescription[] = [
               categorie: "Minéraux",
               priorite: 88,
               phrase_conseil:
-                "Le diurétique fait perdre du magnésium : un apport quotidien aide à limiter les crampes nocturnes et la fatigue.",
+                "Pour compenser la perte de minéraux causée par votre diurétique, cet apport en magnésium et potassium vous aidera à éviter la fatigue et les crampes.",
             },
           ],
         },
