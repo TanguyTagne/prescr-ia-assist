@@ -196,7 +196,7 @@ export const DEMO_PRESCRIPTIONS: DemoPrescription[] = [
               categorie: "Complément alimentaire",
               priorite: 85,
               phrase_conseil:
-                "Souvent recommandé avec les statines au long cours : il aide à préserver le confort et le tonus musculaire.",
+                "Pour votre confort musculaire, ce complément est souvent recommandé avec les statines pour vous aider à préserver votre tonus au quotidien.",
             },
           ],
         },
