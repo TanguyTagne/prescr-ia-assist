@@ -13,9 +13,10 @@ import { supabase } from "@/integrations/supabase/client";
 interface AnalysisResultsProps {
   result: AnalysisResult;
   onReset: () => void;
+  demoMode?: boolean;
 }
 
-const AnalysisResults = ({ result, onReset }: AnalysisResultsProps) => {
+const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsProps) => {
   const [orderedItems, setOrderedItems] = useState<Set<string>>(new Set());
   const [expandedConseils, setExpandedConseils] = useState<Set<number>>(new Set());
   const [expandedPCConseils, setExpandedPCConseils] = useState<Set<string>>(new Set());
