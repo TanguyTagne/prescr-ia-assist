@@ -179,7 +179,7 @@ export const DEMO_PRESCRIPTIONS: DemoPrescription[] = [
               categorie: "Auto-mesure",
               priorite: 90,
               phrase_conseil:
-                "Idéal pour suivre sa tension à la maison : un geste simple qui rassure et facilite le dialogue avec le cardiologue.",
+                "Pour mieux suivre votre tension à la maison, ce tensiomètre de poignet vous permettra de mesurer et de noter vos chiffres facilement.",
             },
           ],
         },
