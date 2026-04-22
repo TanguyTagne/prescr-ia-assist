@@ -308,20 +308,13 @@ const WidgetApp = () => {
       <div className="space-y-3">
           <PrescriptionInput onAnalyze={handleAnalyze} onAnalyzeImage={handleAnalyzeImage} />
           <LegalDisclaimer />
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-[10px] text-foreground/70 font-medium uppercase tracking-wider">Essayer :</span>
-            {["Amoxicilline, Doliprane", "Ibuprofène, Oméprazole"].map((ex) =>
-          <button key={ex} onClick={() => handleAnalyze(ex)} className="text-xs px-2 py-1 rounded bg-secondary text-secondary-foreground hover:bg-accent transition-colors focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none">
-                {ex}
-              </button>
-          )}
-          </div>
+          <DemoPrescriptionCards onSelect={handleDemoSelect} />
           <p className="text-[10px] text-foreground/60 text-center pt-1">
             <kbd className="px-1 py-0.5 rounded bg-secondary font-mono">Échap</kbd> · <kbd className="px-1 py-0.5 rounded bg-secondary font-mono">Entrée</kbd> · <kbd className="px-1 py-0.5 rounded bg-secondary font-mono">?</kbd> aide
           </p>
         </div> :
 
-      <AnalysisResults result={result} onReset={() => setResult(null)} />
+      <AnalysisResults result={result} demoMode={isDemo} onReset={handleReset} />
       }
     </div>);
 
