@@ -179,7 +179,7 @@ export const DEMO_PRESCRIPTIONS: DemoPrescription[] = [
               categorie: "Auto-mesure",
               priorite: 90,
               phrase_conseil:
-                "Permet au patient de suivre sa tension à domicile et rassure entre deux consultations.",
+                "Idéal pour suivre sa tension à la maison : un geste simple qui rassure et facilite le dialogue avec le cardiologue.",
             },
           ],
         },
