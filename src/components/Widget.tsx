@@ -308,7 +308,7 @@ const WidgetApp = () => {
       <div className="space-y-3">
           <PrescriptionInput onAnalyze={handleAnalyze} onAnalyzeImage={handleAnalyzeImage} />
           <LegalDisclaimer />
-          <DemoPrescriptionCards onSelect={handleDemoSelect} />
+          <DemoPrescriptionCards onSelect={handleDemoSelect} compact />
           <p className="text-[10px] text-foreground/60 text-center pt-1">
             <kbd className="px-1 py-0.5 rounded bg-secondary font-mono">Échap</kbd> · <kbd className="px-1 py-0.5 rounded bg-secondary font-mono">Entrée</kbd> · <kbd className="px-1 py-0.5 rounded bg-secondary font-mono">?</kbd> aide
           </p>
