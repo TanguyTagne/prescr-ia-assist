@@ -474,15 +474,8 @@ const Widget = ({ forceOpen = false }: {forceOpen?: boolean;}) => {
             </button>
             <RegisterSelector />
           </div>
-          {loading ?
-        <div className="flex items-center justify-center py-6">
-              <Loader2 className="h-4 w-4 animate-spin text-primary" />
-            </div> :
-        !user ?
-        <WidgetAuth /> :
+          <WidgetApp />
 
-        <WidgetApp />
-        }
           </div>
         </div>
       }
