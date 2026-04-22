@@ -196,7 +196,7 @@ export const DEMO_PRESCRIPTIONS: DemoPrescription[] = [
               categorie: "Complément alimentaire",
               priorite: 85,
               phrase_conseil:
-                "Soutient le tonus musculaire, souvent recherché par les patients sous statine sur le long terme.",
+                "Soutient le tonus musculaire, souvent apprécié des patients sous statine au long cours.",
             },
           ],
         },
