@@ -376,7 +376,8 @@ const LgoPreviewPicker = ({
 );
 
 const Widget = ({ forceOpen = false }: {forceOpen?: boolean;}) => {
-  const [open, setOpen] = useState(forceOpen);
+  // Web: always open so visitors can naturally try the demo. Electron: forceOpen.
+  const [open, setOpen] = useState(true);
   const { user, loading, onboardingCompleted, refreshOnboarding } = useAuth();
   const { preset: pharmacyPreset, lgoType: pharmacyLgoType } = useLgoPreset();
   const [previewLgo, setPreviewLgo] = useState<LgoType | null>(null);
