@@ -145,6 +145,16 @@ export const DEMO_PRESCRIPTIONS: DemoPrescription[] = [
     label: "Cardiologie",
     description: "Kardegic + Bisoprolol + Crestor + Lasilix",
     icon: HeartPulse,
+    prescriptionPreview: [
+      "Dr. P. Lemoine — Cardiologue",
+      "Patient : M. T., 71 ans",
+      "",
+      "• Kardegic 75 mg — 1 sachet/jour, le midi",
+      "• Bisoprolol 2,5 mg — 1 cp le matin",
+      "• Crestor 10 mg — 1 cp le soir",
+      "• Lasilix 40 mg — 1 cp le matin",
+      "• Renouvellement 3 mois",
+    ],
     result: {
       medicaments: [
         {
