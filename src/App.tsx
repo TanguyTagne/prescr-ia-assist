@@ -54,8 +54,8 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-const DeferredWidget = ({ forceOpen }: { forceOpen?: boolean }) => {
-  const [shouldMount, setShouldMount] = useState(!!forceOpen);
+const DeferredWidget = ({ forceOpen, mountImmediately }: { forceOpen?: boolean; mountImmediately?: boolean }) => {
+  const [shouldMount, setShouldMount] = useState(!!forceOpen || !!mountImmediately);
 
   useEffect(() => {
     if (shouldMount) return;
@@ -86,6 +86,7 @@ const DeferredWidget = ({ forceOpen }: { forceOpen?: boolean }) => {
   if (!shouldMount) return null;
   return <Widget forceOpen={forceOpen} />;
 };
+
 
 const App = () => {
   return (
