@@ -6,6 +6,7 @@ export interface DemoPrescription {
   label: string;
   description: string;
   icon: LucideIcon;
+  prescriptionPreview: string[];
   result: AnalysisResult;
 }
 
