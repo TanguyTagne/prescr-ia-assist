@@ -67,6 +67,12 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
   const handleOrder = (medNom: string, produit: string, categorie?: string) => {
     const key = `${medNom}::${produit}`;
     setOrderedItems((prev) => new Set(prev).add(key));
+
+    if (demoMode) {
+      toast.info("Démonstration — connectez-vous pour activer la commande LGO.");
+      return;
+    }
+
     trackEvent("product_ordered", { medicament: medNom, produit });
     recordFeedback(medNom, produit, "accepted", categorie);
 
