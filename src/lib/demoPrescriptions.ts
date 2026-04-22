@@ -213,7 +213,7 @@ export const DEMO_PRESCRIPTIONS: DemoPrescription[] = [
               categorie: "Minéraux",
               priorite: 88,
               phrase_conseil:
-                "Le diurétique fait perdre du magnésium : un apport quotidien aide à limiter les crampes nocturnes et la fatigue.",
+                "Pour compenser la perte de minéraux causée par votre diurétique, cet apport en magnésium et potassium vous aidera à éviter la fatigue et les crampes.",
             },
           ],
         },
