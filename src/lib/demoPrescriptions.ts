@@ -56,7 +56,7 @@ export const DEMO_PRESCRIPTIONS: DemoPrescription[] = [
               categorie: "Probiotique",
               priorite: 95,
               phrase_conseil:
-                "Préserve le confort digestif pendant l'antibiotique en limitant ballonnements et diarrhées passagères.",
+                "Protège la flore intestinale pendant la cure d'antibiotique et limite ballonnements et diarrhées.",
             },
           ],
         },
