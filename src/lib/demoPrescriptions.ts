@@ -39,7 +39,7 @@ export const DEMO_PRESCRIPTIONS: DemoPrescription[] = [
               categorie: "Complément alimentaire",
               priorite: 85,
               phrase_conseil:
-                "Aide à la récupération après l'épisode fébrile et soutient le tonus général sur quelques jours.",
+                "Aide à récupérer après l'épisode fébrile et à retrouver du tonus sur quelques jours.",
             },
           ],
         },
@@ -56,7 +56,7 @@ export const DEMO_PRESCRIPTIONS: DemoPrescription[] = [
               categorie: "Probiotique",
               priorite: 95,
               phrase_conseil:
-                "Préserve le confort digestif pendant l'antibiotique en limitant ballonnements et diarrhées passagères.",
+                "Protège la flore intestinale pendant la cure d'antibiotique et limite ballonnements et diarrhées.",
             },
           ],
         },
@@ -72,7 +72,7 @@ export const DEMO_PRESCRIPTIONS: DemoPrescription[] = [
               categorie: "Voies respiratoires",
               priorite: 80,
               phrase_conseil:
-                "Apaise localement et complète l'action de la pastille pour soulager plus vite les irritations.",
+                "Apaise localement la gorge irritée et complète l'action de la pastille pour un soulagement plus rapide.",
             },
           ],
         },
@@ -113,21 +113,21 @@ export const DEMO_PRESCRIPTIONS: DemoPrescription[] = [
               categorie: "Cicatrisation",
               priorite: 90,
               phrase_conseil:
-                "Accélère la régénération cutanée après la cicatrisation initiale et limite les marques.",
+                "Favorise la régénération de la peau une fois la plaie refermée et atténue les marques au fil des semaines.",
             },
             {
               produit: "Pansement hydrocolloïde de secours",
               categorie: "Dispositif médical",
               priorite: 80,
               phrase_conseil:
-                "Pratique en remplacement si le pansement se décolle entre deux passages infirmier.",
+                "Dépanne le patient si le pansement se décolle entre deux passages de l'infirmier.",
             },
             {
               produit: "Solution antiseptique douce (chlorhexidine)",
               categorie: "Antiseptique",
               priorite: 75,
               phrase_conseil:
-                "Utile en cas de salissure inattendue avant le prochain passage soignant.",
+                "Utile à la maison pour nettoyer la zone en cas de salissure avant le passage de l'infirmier.",
             },
           ],
         },
@@ -179,7 +179,7 @@ export const DEMO_PRESCRIPTIONS: DemoPrescription[] = [
               categorie: "Auto-mesure",
               priorite: 90,
               phrase_conseil:
-                "Permet un suivi régulier de l'efficacité du traitement et rassure le patient au quotidien.",
+                "Permet au patient de suivre sa tension à domicile et rassure entre deux consultations.",
             },
           ],
         },
@@ -196,7 +196,7 @@ export const DEMO_PRESCRIPTIONS: DemoPrescription[] = [
               categorie: "Complément alimentaire",
               priorite: 85,
               phrase_conseil:
-                "Soutient le tonus musculaire, souvent recherché par les patients sous statine sur le long terme.",
+                "Soutient le tonus musculaire, souvent apprécié des patients sous statine au long cours.",
             },
           ],
         },
@@ -213,7 +213,7 @@ export const DEMO_PRESCRIPTIONS: DemoPrescription[] = [
               categorie: "Minéraux",
               priorite: 88,
               phrase_conseil:
-                "Compense les pertes minérales liées au diurétique et limite les crampes nocturnes.",
+                "Compense les pertes en magnésium liées au diurétique et limite les crampes nocturnes.",
             },
           ],
         },
