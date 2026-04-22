@@ -213,7 +213,7 @@ export const DEMO_PRESCRIPTIONS: DemoPrescription[] = [
               categorie: "Minéraux",
               priorite: 88,
               phrase_conseil:
-                "Compense les pertes minérales liées au diurétique et limite les crampes nocturnes.",
+                "Compense les pertes en magnésium liées au diurétique et limite les crampes nocturnes.",
             },
           ],
         },
