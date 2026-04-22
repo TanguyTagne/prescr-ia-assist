@@ -39,7 +39,7 @@ export const DEMO_PRESCRIPTIONS: DemoPrescription[] = [
               categorie: "Complément alimentaire",
               priorite: 85,
               phrase_conseil:
-                "Un coup de pouce pour récupérer après la fièvre : le magnésium aide à retrouver de l'énergie en quelques jours.",
+                "Pour retrouver toute votre énergie après un épisode de fièvre, le magnésium vous aidera à combattre la fatigue et retrouver votre vitalité.",
             },
           ],
         },
