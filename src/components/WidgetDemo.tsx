@@ -75,18 +75,12 @@ const WidgetDemo = () => {
           <div className="h-8 w-8 rounded-md bg-accent flex items-center justify-center shrink-0">
             <Icon className="h-4 w-4 text-primary" />
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <div className="text-sm font-semibold leading-tight">{selected.label}</div>
-            <div className="text-[10px] text-muted-foreground">Aperçu de l'ordonnance</div>
-          </div>
-        </div>
-
-        <div className="rounded-md border border-border bg-card/50 p-3 text-[11px] leading-relaxed font-mono text-foreground/90 space-y-0.5">
-          {selected.prescriptionPreview.map((line, i) => (
-            <div key={i} className={line === "" ? "h-1" : ""}>
-              {line}
+            <div className="text-[10px] text-muted-foreground leading-snug mt-0.5 break-words whitespace-normal">
+              {selected.description}
             </div>
-          ))}
+          </div>
         </div>
 
         <button
