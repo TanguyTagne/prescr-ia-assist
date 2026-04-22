@@ -6,6 +6,7 @@ export interface DemoPrescription {
   label: string;
   description: string;
   icon: LucideIcon;
+  prescriptionPreview: string[];
   result: AnalysisResult;
 }
 
@@ -15,6 +16,14 @@ export const DEMO_PRESCRIPTIONS: DemoPrescription[] = [
     label: "Médecine générale",
     description: "Doliprane + Amoxicilline + Drill",
     icon: Stethoscope,
+    prescriptionPreview: [
+      "Dr. M. Durand — Médecin généraliste",
+      "Patient : Mme L., 42 ans",
+      "",
+      "• Doliprane 1000 mg — 1 cp x 3/jour, 5 jours",
+      "• Amoxicilline 1 g — 1 cp x 3/jour, 7 jours",
+      "• Drill Miel Citron — 1 pastille x 4/jour si besoin",
+    ],
     result: {
       medicaments: [
         {
@@ -81,6 +90,16 @@ export const DEMO_PRESCRIPTIONS: DemoPrescription[] = [
     label: "Soins infirmiers",
     description: "Compresses + Set pansement + Sparadrap + Sérum physio",
     icon: Syringe,
+    prescriptionPreview: [
+      "Dr. C. Bernard — Chirurgien",
+      "Patient : M. R., 67 ans",
+      "",
+      "• Compresses stériles 7,5 x 7,5 cm — 1 boîte",
+      "• Set de pansement post-opératoire — 1 boîte",
+      "• Sparadrap hypoallergénique — 1 rouleau",
+      "• Sérum physiologique 10 ml — 20 unidoses",
+      "• Passage IDE matin et soir, 10 jours",
+    ],
     result: {
       medicaments: [
         {
@@ -126,6 +145,16 @@ export const DEMO_PRESCRIPTIONS: DemoPrescription[] = [
     label: "Cardiologie",
     description: "Kardegic + Bisoprolol + Crestor + Lasilix",
     icon: HeartPulse,
+    prescriptionPreview: [
+      "Dr. P. Lemoine — Cardiologue",
+      "Patient : M. T., 71 ans",
+      "",
+      "• Kardegic 75 mg — 1 sachet/jour, le midi",
+      "• Bisoprolol 2,5 mg — 1 cp le matin",
+      "• Crestor 10 mg — 1 cp le soir",
+      "• Lasilix 40 mg — 1 cp le matin",
+      "• Renouvellement 3 mois",
+    ],
     result: {
       medicaments: [
         {

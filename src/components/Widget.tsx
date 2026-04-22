@@ -12,6 +12,7 @@ import AnalysisResults from "@/components/AnalysisResults";
 import LegalDisclaimer from "@/components/LegalDisclaimer";
 import { analyzePrescription, analyzePrescriptionImage, type AnalysisResult } from "@/lib/prescriptionAnalyzer";
 import DemoPrescriptionCards from "@/components/DemoPrescriptionCards";
+import WidgetDemo from "@/components/WidgetDemo";
 import { DEMO_PRESCRIPTIONS } from "@/lib/demoPrescriptions";
 import { trackEvent } from "@/hooks/useAnalytics";
 import { useNavigate } from "react-router-dom";
@@ -474,7 +475,7 @@ const Widget = ({ forceOpen = false }: {forceOpen?: boolean;}) => {
             </button>
             <RegisterSelector />
           </div>
-          <WidgetApp />
+          <WidgetDemo />
 
           </div>
         </div>
