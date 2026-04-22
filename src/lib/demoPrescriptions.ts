@@ -90,6 +90,16 @@ export const DEMO_PRESCRIPTIONS: DemoPrescription[] = [
     label: "Soins infirmiers",
     description: "Compresses + Set pansement + Sparadrap + Sérum physio",
     icon: Syringe,
+    prescriptionPreview: [
+      "Dr. C. Bernard — Chirurgien",
+      "Patient : M. R., 67 ans",
+      "",
+      "• Compresses stériles 7,5 x 7,5 cm — 1 boîte",
+      "• Set de pansement post-opératoire — 1 boîte",
+      "• Sparadrap hypoallergénique — 1 rouleau",
+      "• Sérum physiologique 10 ml — 20 unidoses",
+      "• Passage IDE matin et soir, 10 jours",
+    ],
     result: {
       medicaments: [
         {
