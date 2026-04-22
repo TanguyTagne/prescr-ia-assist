@@ -56,7 +56,7 @@ export const DEMO_PRESCRIPTIONS: DemoPrescription[] = [
               categorie: "Probiotique",
               priorite: 95,
               phrase_conseil:
-                "Protège la flore intestinale pendant la cure d'antibiotique et limite ballonnements et diarrhées.",
+                "À prendre dès le début de l'antibiotique : il protège la flore intestinale et limite ballonnements et diarrhées.",
             },
           ],
         },
