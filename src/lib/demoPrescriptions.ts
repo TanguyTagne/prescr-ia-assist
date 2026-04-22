@@ -72,7 +72,7 @@ export const DEMO_PRESCRIPTIONS: DemoPrescription[] = [
               categorie: "Voies respiratoires",
               priorite: 80,
               phrase_conseil:
-                "En complément des pastilles : le spray cible la zone irritée et soulage la gorge plus rapidement dans la journée.",
+                "Pour soulager rapidement cette irritation, un spray à la propolis agira directement sur votre gorge et apaisera la douleur.",
             },
           ],
         },
