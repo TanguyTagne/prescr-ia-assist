@@ -220,6 +220,12 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
           </Badge>
         }
       </div>
+      {demoMode &&
+        <div className="rounded-md border border-primary/30 bg-primary/5 px-2 py-1.5 text-[11px] text-foreground/80 leading-snug">
+          <span className="font-semibold text-primary">Démonstration · </span>
+          activez votre officine pour analyser vos vraies ordonnances et bénéficier du mapping LGO personnalisé.
+        </div>
+      }
       <LegalDisclaimer />
     </div>);
 
