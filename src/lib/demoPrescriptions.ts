@@ -179,7 +179,7 @@ export const DEMO_PRESCRIPTIONS: DemoPrescription[] = [
               categorie: "Auto-mesure",
               priorite: 90,
               phrase_conseil:
-                "Permet un suivi régulier de l'efficacité du traitement et rassure le patient au quotidien.",
+                "Permet au patient de suivre sa tension à domicile et rassure entre deux consultations.",
             },
           ],
         },
