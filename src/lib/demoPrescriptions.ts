@@ -127,7 +127,7 @@ export const DEMO_PRESCRIPTIONS: DemoPrescription[] = [
               categorie: "Antiseptique",
               priorite: 75,
               phrase_conseil:
-                "Utile à la maison pour nettoyer la zone en douceur si elle se salit avant le prochain passage de l'infirmier.",
+                "Pour nettoyer votre cicatrice en douceur si elle se salit, cette solution antiseptique douce est parfaite en attendant votre prochain soin.",
             },
           ],
         },
