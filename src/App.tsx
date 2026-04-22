@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -54,6 +54,39 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+const DeferredWidget = ({ forceOpen }: { forceOpen?: boolean }) => {
+  const [shouldMount, setShouldMount] = useState(!!forceOpen);
+
+  useEffect(() => {
+    if (shouldMount) return;
+    let mounted = true;
+    const trigger = () => mounted && setShouldMount(true);
+
+    const ric = (window as any).requestIdleCallback as
+      | ((cb: () => void, opts?: { timeout: number }) => number)
+      | undefined;
+    const idleId = ric
+      ? ric(trigger, { timeout: 3500 })
+      : window.setTimeout(trigger, 2500);
+
+    const events = ["pointerdown", "keydown", "touchstart", "scroll"] as const;
+    events.forEach((e) => window.addEventListener(e, trigger, { once: true, passive: true }));
+
+    return () => {
+      mounted = false;
+      if (ric && (window as any).cancelIdleCallback) {
+        (window as any).cancelIdleCallback(idleId);
+      } else {
+        clearTimeout(idleId as number);
+      }
+      events.forEach((e) => window.removeEventListener(e, trigger));
+    };
+  }, [shouldMount]);
+
+  if (!shouldMount) return null;
+  return <Widget forceOpen={forceOpen} />;
+};
+
 const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
@@ -65,7 +98,7 @@ const App = () => {
           <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}>
             {isStandalone ? (
               <>
-                <Widget forceOpen />
+                <DeferredWidget forceOpen />
                 <LgoAutoDetectPrompt />
               </>
             ) : (
@@ -85,7 +118,7 @@ const App = () => {
                   <Route path="/cgu" element={<CGU />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
-                <Widget />
+                <DeferredWidget />
                 <CookieBanner />
                 <LgoAutoDetectPrompt />
               </>
