@@ -16,6 +16,14 @@ export const DEMO_PRESCRIPTIONS: DemoPrescription[] = [
     label: "Médecine générale",
     description: "Doliprane + Amoxicilline + Drill",
     icon: Stethoscope,
+    prescriptionPreview: [
+      "Dr. M. Durand — Médecin généraliste",
+      "Patient : Mme L., 42 ans",
+      "",
+      "• Doliprane 1000 mg — 1 cp x 3/jour, 5 jours",
+      "• Amoxicilline 1 g — 1 cp x 3/jour, 7 jours",
+      "• Drill Miel Citron — 1 pastille x 4/jour si besoin",
+    ],
     result: {
       medicaments: [
         {
