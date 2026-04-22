@@ -113,7 +113,7 @@ export const DEMO_PRESCRIPTIONS: DemoPrescription[] = [
               categorie: "Cicatrisation",
               priorite: 90,
               phrase_conseil:
-                "Favorise la régénération de la peau une fois la plaie refermée et atténue les marques au fil des semaines.",
+                "À appliquer une fois la plaie refermée : la crème aide la peau à se régénérer et atténue la cicatrice au fil des semaines.",
             },
             {
               produit: "Pansement hydrocolloïde de secours",
