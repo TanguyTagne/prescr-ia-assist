@@ -120,7 +120,7 @@ export const DEMO_PRESCRIPTIONS: DemoPrescription[] = [
               categorie: "Dispositif médical",
               priorite: 80,
               phrase_conseil:
-                "Pratique en remplacement si le pansement se décolle entre deux passages infirmier.",
+                "Dépanne le patient si le pansement se décolle entre deux passages de l'infirmier.",
             },
             {
               produit: "Solution antiseptique douce (chlorhexidine)",
