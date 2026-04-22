@@ -3,9 +3,35 @@ import { Sparkles } from "lucide-react";
 
 interface DemoPrescriptionCardsProps {
   onSelect: (id: string) => void;
+  compact?: boolean;
 }
 
-const DemoPrescriptionCards = ({ onSelect }: DemoPrescriptionCardsProps) => {
+const DemoPrescriptionCards = ({ onSelect, compact = false }: DemoPrescriptionCardsProps) => {
+  if (compact) {
+    return (
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span className="text-[10px] text-foreground/70 font-medium uppercase tracking-wider flex items-center gap-1">
+          <Sparkles className="h-2.5 w-2.5 text-primary" />
+          Démo :
+        </span>
+        {DEMO_PRESCRIPTIONS.map((demo) => {
+          const Icon = demo.icon;
+          return (
+            <button
+              key={demo.id}
+              onClick={() => onSelect(demo.id)}
+              title={demo.description}
+              className="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded bg-secondary text-secondary-foreground hover:bg-accent transition-colors focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none"
+            >
+              <Icon className="h-2.5 w-2.5 text-primary" />
+              {demo.label}
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-1.5">
