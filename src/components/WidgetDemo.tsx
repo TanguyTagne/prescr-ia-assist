@@ -6,6 +6,8 @@ import AnalysisResults from "@/components/AnalysisResults";
 import LegalDisclaimer from "@/components/LegalDisclaimer";
 import type { AnalysisResult } from "@/lib/prescriptionAnalyzer";
 import { trackEvent } from "@/hooks/useAnalytics";
+import { trackDemoSession } from "@/lib/demoTracking";
+import DemoLeadForm from "@/components/DemoLeadForm";
 
 type Phase = "list" | "preview" | "analyzing" | "result";
 
@@ -33,6 +35,7 @@ const WidgetDemo = () => {
   const handleAnalyze = () => {
     if (!selected) return;
     trackEvent("demo_analyzed", { ordonnance: selected.id });
+    trackDemoSession(selected.id);
     setResult(null);
     setPhase("analyzing");
   };
@@ -55,6 +58,7 @@ const WidgetDemo = () => {
     return (
       <div className="p-4">
         <AnalysisResults result={result} demoMode onReset={handleReset} />
+        <DemoLeadForm />
       </div>
     );
   }
