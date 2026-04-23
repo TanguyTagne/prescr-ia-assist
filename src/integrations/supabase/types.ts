@@ -363,6 +363,81 @@ export type Database = {
           },
         ]
       }
+      demo_leads: {
+        Row: {
+          contacted_at: string | null
+          created_at: string
+          email: string
+          id: string
+          nom: string
+          notes: string | null
+          officine: string
+          session_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          contacted_at?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          nom: string
+          notes?: string | null
+          officine: string
+          session_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          contacted_at?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          nom?: string
+          notes?: string | null
+          officine?: string
+          session_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      demo_sessions: {
+        Row: {
+          converted_to_lead: boolean
+          created_at: string
+          id: string
+          ip_city: string | null
+          ip_country: string | null
+          ordonnance_id: string
+          referrer: string | null
+          session_id: string
+          user_agent: string | null
+        }
+        Insert: {
+          converted_to_lead?: boolean
+          created_at?: string
+          id?: string
+          ip_city?: string | null
+          ip_country?: string | null
+          ordonnance_id: string
+          referrer?: string | null
+          session_id: string
+          user_agent?: string | null
+        }
+        Update: {
+          converted_to_lead?: boolean
+          created_at?: string
+          id?: string
+          ip_city?: string | null
+          ip_country?: string | null
+          ordonnance_id?: string
+          referrer?: string | null
+          session_id?: string
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       latent_need_metrics: {
         Row: {
           besoin: string
