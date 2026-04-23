@@ -19,6 +19,15 @@ interface PharmacyKPI {
   last_analysis: string | null;
 }
 
+interface UnmatchedMed {
+  id: string;
+  nom_saisi: string;
+  nom_normalise: string;
+  occurrence_count: number;
+  last_seen_at: string;
+  status: string;
+}
+
 const PharmacyKPIs = () => {
   const [kpis, setKpis] = useState<PharmacyKPI[]>([]);
   const [loading, setLoading] = useState(true);
