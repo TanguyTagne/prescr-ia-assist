@@ -31,6 +31,7 @@ interface UnmatchedMed {
 const PharmacyKPIs = () => {
   const [kpis, setKpis] = useState<PharmacyKPI[]>([]);
   const [loading, setLoading] = useState(true);
+  const [unmatched, setUnmatched] = useState<UnmatchedMed[]>([]);
   const [globalStats, setGlobalStats] = useState({
     totalAnalyses: 0,
     totalPharmacies: 0,
