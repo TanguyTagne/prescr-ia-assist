@@ -138,11 +138,21 @@ const DemoLeadsTab = () => {
                 return (
                   <tr key={l.id} className="border-t border-border hover:bg-muted/20 align-top">
                     <td className="px-3 py-2 whitespace-nowrap">
-                      {new Date(l.created_at).toLocaleDateString("fr-FR", {
-                        day: "2-digit",
-                        month: "2-digit",
-                        year: "2-digit",
-                      })}
+                      <div className="flex flex-col leading-tight">
+                        <span>
+                          {new Date(l.created_at).toLocaleDateString("fr-FR", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "2-digit",
+                          })}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground">
+                          {new Date(l.created_at).toLocaleTimeString("fr-FR", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                      </div>
                     </td>
                     <td className="px-3 py-2 font-medium">{l.nom}</td>
                     <td className="px-3 py-2">{l.officine}</td>
