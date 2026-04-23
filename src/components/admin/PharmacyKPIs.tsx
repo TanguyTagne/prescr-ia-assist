@@ -266,6 +266,56 @@ const PharmacyKPIs = () => {
         </Card>
       </div>
 
+      {/* Unmatched medications list */}
+      {unmatched.length > 0 && (
+        <Card className="border-destructive/30">
+          <CardHeader className="pb-2 pt-4 px-4">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-destructive" />
+                <CardTitle className="text-sm font-semibold">
+                  Médicaments analysés mais manquants en base
+                </CardTitle>
+              </div>
+              <Badge variant="destructive" className="text-[10px]">
+                {unmatched.length} à enrichir
+              </Badge>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Détectés dans des ordonnances mais introuvables dans la base clinique. À ajouter en priorité.
+            </p>
+          </CardHeader>
+          <CardContent className="px-4 pb-4">
+            <div className="max-h-[280px] overflow-auto rounded-md border border-border">
+              <table className="w-full text-xs">
+                <thead className="bg-secondary sticky top-0">
+                  <tr>
+                    <th className="text-left px-3 py-2 font-semibold">Nom détecté</th>
+                    <th className="text-left px-3 py-2 font-semibold">Forme normalisée</th>
+                    <th className="text-right px-3 py-2 font-semibold">Occurrences</th>
+                    <th className="text-right px-3 py-2 font-semibold">Dernière analyse</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {unmatched.map((m) => (
+                    <tr key={m.id} className="border-t border-border hover:bg-secondary/50">
+                      <td className="px-3 py-2 font-medium">{m.nom_saisi}</td>
+                      <td className="px-3 py-2 text-muted-foreground font-mono">{m.nom_normalise}</td>
+                      <td className="px-3 py-2 text-right">
+                        <Badge variant="secondary" className="text-[10px]">{m.occurrence_count}×</Badge>
+                      </td>
+                      <td className="px-3 py-2 text-right text-muted-foreground">
+                        {new Date(m.last_seen_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "2-digit" })}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* CRM / Patient History */}
       <PatientCRM />
 
