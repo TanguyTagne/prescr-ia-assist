@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { ArrowLeft, Loader2, Mail, Building2, BarChart3, RefreshCw, ShieldCheck, ShoppingCart, Target, Monitor, Trophy } from "lucide-react";
+import { ArrowLeft, Loader2, Mail, Building2, BarChart3, RefreshCw, ShieldCheck, ShoppingCart, Target, Monitor, Trophy, Sparkles, UserPlus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import RequestsTab from "@/components/admin/RequestsTab";
 import PharmaciesTab from "@/components/admin/PharmaciesTab";
@@ -13,6 +13,8 @@ import SalesTab from "@/components/admin/SalesTab";
 import RecommendationMetrics from "@/components/admin/RecommendationMetrics";
 import BenchmarkTab from "@/components/admin/BenchmarkTab";
 import RegistersTab from "@/components/admin/RegistersTab";
+import DemoSessionsTab from "@/components/admin/DemoSessionsTab";
+import DemoLeadsTab from "@/components/admin/DemoLeadsTab";
 
 interface AccessRequest {
   id: string;
@@ -47,7 +49,7 @@ const Admin = () => {
   const [requests, setRequests] = useState<AccessRequest[]>([]);
   const [pharmacies, setPharmacies] = useState<PharmacyWithLGO[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<"requests" | "pharmacies" | "kpis" | "coverage" | "sales" | "perf" | "benchmark" | "registers">("kpis");
+  const [tab, setTab] = useState<"requests" | "pharmacies" | "kpis" | "coverage" | "sales" | "perf" | "benchmark" | "registers" | "demo-sessions" | "demo-leads">("kpis");
 
   useEffect(() => {
     loadData();
@@ -101,10 +103,18 @@ const Admin = () => {
           </div>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button variant={tab === "kpis" ? "default" : "outline"} size="sm" onClick={() => setTab("kpis")} className="gap-1.5">
             <BarChart3 className="h-3.5 w-3.5" />
             KPIs
+          </Button>
+          <Button variant={tab === "demo-leads" ? "default" : "outline"} size="sm" onClick={() => setTab("demo-leads")} className="gap-1.5">
+            <UserPlus className="h-3.5 w-3.5" />
+            Leads démo
+          </Button>
+          <Button variant={tab === "demo-sessions" ? "default" : "outline"} size="sm" onClick={() => setTab("demo-sessions")} className="gap-1.5">
+            <Sparkles className="h-3.5 w-3.5" />
+            Sessions démo
           </Button>
           <Button variant={tab === "requests" ? "default" : "outline"} size="sm" onClick={() => setTab("requests")} className="gap-1.5">
             <Mail className="h-3.5 w-3.5" />
@@ -137,6 +147,8 @@ const Admin = () => {
         </div>
 
         {tab === "kpis" && <PharmacyKPIs />}
+        {tab === "demo-leads" && <DemoLeadsTab />}
+        {tab === "demo-sessions" && <DemoSessionsTab />}
         {tab === "requests" && <RequestsTab requests={requests} onRefresh={loadData} />}
         {tab === "pharmacies" && <PharmaciesTab pharmacies={pharmacies} onRefresh={loadData} />}
         {tab === "coverage" && <CoverageTab />}
