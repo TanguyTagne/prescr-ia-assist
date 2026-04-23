@@ -13,7 +13,7 @@ const LeadSchema = z.object({
   email: z.string().trim().email().max(255),
 });
 
-const NOTIFY_EMAIL = "contact@asclion.com";
+const NOTIFY_EMAIL = "tanguytubert@gmail.com";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
