@@ -15,6 +15,8 @@ import DemoPrescriptionCards from "@/components/DemoPrescriptionCards";
 import WidgetDemo from "@/components/WidgetDemo";
 import { DEMO_PRESCRIPTIONS } from "@/lib/demoPrescriptions";
 import { trackEvent } from "@/hooks/useAnalytics";
+import { trackDemoSession } from "@/lib/demoTracking";
+import DemoLeadForm from "@/components/DemoLeadForm";
 import { useNavigate } from "react-router-dom";
 import { ScannerStatus } from "@/components/ScannerStatus";
 import { pdfToImageBase64 } from "@/lib/pdfToImage";
@@ -46,6 +48,7 @@ const WidgetAuth = () => {
     setDemoLoading(true);
     setDemoResult(null);
     trackEvent("demo_analyzed", { ordonnance: id });
+    trackDemoSession(id);
     setTimeout(() => {
       setDemoResult(demo.result);
       setDemoLoading(false);
@@ -86,6 +89,7 @@ const WidgetAuth = () => {
     return (
       <div className="p-4">
         <AnalysisResults result={demoResult} demoMode onReset={() => setDemoResult(null)} />
+        <DemoLeadForm />
       </div>
     );
   }
@@ -149,6 +153,7 @@ const WidgetApp = () => {
     setIsDemo(true);
     setResult(null);
     trackEvent("demo_analyzed", { ordonnance: id });
+    trackDemoSession(id);
     setTimeout(() => {
       setResult(demo.result);
       setIsLoading(false);
@@ -315,7 +320,10 @@ const WidgetApp = () => {
           </p>
         </div> :
 
-      <AnalysisResults result={result} demoMode={isDemo} onReset={handleReset} />
+      <>
+        <AnalysisResults result={result} demoMode={isDemo} onReset={handleReset} />
+        {isDemo && <DemoLeadForm />}
+      </>
       }
     </div>);
 
