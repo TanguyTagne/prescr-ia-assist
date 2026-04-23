@@ -146,6 +146,15 @@ const PharmacyKPIs = () => {
           .select("id", { count: "exact", head: true })
           .eq("status", "pending");
         unmatchedCount = unmatchedC || 0;
+
+        // Load detailed unmatched list (top 50 by recency)
+        const { data: unmatchedList } = await supabase
+          .from("unmatched_medicaments" as any)
+          .select("id, nom_saisi, nom_normalise, occurrence_count, last_seen_at, status")
+          .eq("status", "pending")
+          .order("last_seen_at", { ascending: false })
+          .limit(50);
+        setUnmatched((unmatchedList as any[] as UnmatchedMed[]) || []);
       } catch { /* table may not exist yet */ }
 
       setGlobalStats({
