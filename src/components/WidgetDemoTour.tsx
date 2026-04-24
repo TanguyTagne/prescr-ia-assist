@@ -145,9 +145,9 @@ const WidgetDemoTour = ({ enabled }: WidgetDemoTourProps) => {
             }}
             aria-hidden="true"
           />
-          {/* Highlight ring around the widget (purely decorative) */}
+          {/* Crisp rectangular highlight border matching the widget exactly */}
           <div
-            className="absolute pointer-events-none rounded-2xl ring-2 ring-primary/70 shadow-[0_0_0_4px_hsl(var(--primary)/0.15)]"
+            className="absolute pointer-events-none rounded-xl border-2 border-primary"
             style={{
               top: rect!.top,
               left: rect!.left,
