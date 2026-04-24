@@ -200,9 +200,9 @@ const Landing = () => {
             <div className="h-14 w-14 rounded-2xl bg-accent flex items-center justify-center mx-auto">
               <Send className="h-7 w-7 text-accent-foreground" />
             </div>
-            <h2 className="text-2xl font-bold">Demander un accès</h2>
+            <h2 className="text-2xl font-bold">Demande de renseignements</h2>
             <p className="text-muted-foreground leading-relaxed">
-              Remplissez le formulaire ci-dessous, notre équipe vous créera un accès personnalisé lié à votre pharmacie et votre LGO.
+              Remplissez le formulaire ci-dessous, notre équipe vous recontactera dans les plus brefs délais.
             </p>
           </div>
           <div className="rounded-xl border border-border p-6 bg-card">
