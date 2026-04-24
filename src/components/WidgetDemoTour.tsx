@@ -102,8 +102,8 @@ const WidgetDemoTour = ({ enabled }: WidgetDemoTourProps) => {
   const isFirst = step === 0;
   const showSpotlight = !isFirst && rect !== null;
 
-  // Backdrop opacity reduced for less contrast
-  const backdropClass = "absolute bg-foreground/40 backdrop-blur-[2px] pointer-events-none";
+  // Crisp rectangular backdrop — no blur, no soft edges
+  const backdropClass = "absolute bg-foreground/35 pointer-events-none";
 
   return (
     <div className="fixed inset-0 z-[10000] animate-in fade-in duration-300 pointer-events-none">
