@@ -468,6 +468,7 @@ const Widget = ({ forceOpen = false }: {forceOpen?: boolean;}) => {
 
       {open &&
       <div
+        data-tour-target="widget"
         className={`fixed ${panelPos} z-[9998] rounded-xl border border-border bg-background shadow-2xl animate-in fade-in duration-300 py-0 transition-all overflow-visible`}
         style={{ width: `${preset.width}px`, maxHeight: `calc(100vh - 6rem)` }}>
           <div className="overflow-y-auto max-h-[inherit] rounded-xl">
