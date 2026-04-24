@@ -3,12 +3,13 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { RegisterProvider } from "@/hooks/useRegister";
 import { Loader2 } from "lucide-react";
 import CookieBanner from "@/components/CookieBanner";
 import LgoAutoDetectPrompt from "@/components/LgoAutoDetectPrompt";
+import WidgetDemoTour from "@/components/WidgetDemoTour";
 
 const Landing = lazy(() => import("./pages/Landing"));
 const Auth = lazy(() => import("./pages/Auth"));
@@ -87,6 +88,14 @@ const DeferredWidget = ({ forceOpen, mountImmediately }: { forceOpen?: boolean; 
   return <Widget forceOpen={forceOpen} />;
 };
 
+const VisitorTour = () => {
+  const { user, loading } = useAuth();
+  const location = useLocation();
+  // Only on the public landing page, for non-authenticated visitors
+  const enabled = !loading && !user && location.pathname === "/";
+  return <WidgetDemoTour enabled={enabled} />;
+};
+
 
 const App = () => {
   return (
@@ -120,6 +129,7 @@ const App = () => {
                   <Route path="*" element={<NotFound />} />
                 </Routes>
                 <DeferredWidget mountImmediately />
+                <VisitorTour />
                 <CookieBanner />
                 <LgoAutoDetectPrompt />
               </>
