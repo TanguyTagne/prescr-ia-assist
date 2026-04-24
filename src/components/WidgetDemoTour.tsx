@@ -102,8 +102,8 @@ const WidgetDemoTour = ({ enabled }: WidgetDemoTourProps) => {
   const isFirst = step === 0;
   const showSpotlight = !isFirst && rect !== null;
 
-  // Backdrop opacity reduced for less contrast
-  const backdropClass = "absolute bg-foreground/40 backdrop-blur-[2px] pointer-events-none";
+  // Crisp rectangular backdrop — no blur, no soft edges
+  const backdropClass = "absolute bg-foreground/35 pointer-events-none";
 
   return (
     <div className="fixed inset-0 z-[10000] animate-in fade-in duration-300 pointer-events-none">
@@ -145,9 +145,9 @@ const WidgetDemoTour = ({ enabled }: WidgetDemoTourProps) => {
             }}
             aria-hidden="true"
           />
-          {/* Highlight ring around the widget (purely decorative) */}
+          {/* Crisp rectangular highlight border matching the widget exactly */}
           <div
-            className="absolute pointer-events-none rounded-2xl ring-2 ring-primary/70 shadow-[0_0_0_4px_hsl(var(--primary)/0.15)]"
+            className="absolute pointer-events-none rounded-xl border-2 border-primary"
             style={{
               top: rect!.top,
               left: rect!.left,
