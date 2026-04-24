@@ -23,7 +23,7 @@ const STEPS = [
   {
     title: "3. Découvrez les recommandations",
     body: "Asclion propose les produits complémentaires les plus pertinents avec une phrase conseil prête à être dite au patient. C'est cela qui augmente votre panier moyen de +6 %.",
-    cta: "Essayer maintenant",
+    cta: "Terminer la visite",
   },
 ] as const;
 
@@ -31,9 +31,19 @@ interface WidgetDemoTourProps {
   enabled: boolean;
 }
 
+interface Rect {
+  top: number;
+  left: number;
+  width: number;
+  height: number;
+}
+
+const PADDING = 8;
+
 const WidgetDemoTour = ({ enabled }: WidgetDemoTourProps) => {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(0);
+  const [rect, setRect] = useState<Rect | null>(null);
 
   useEffect(() => {
     if (!enabled) return;
@@ -42,6 +52,34 @@ const WidgetDemoTour = ({ enabled }: WidgetDemoTourProps) => {
     const t = setTimeout(() => setOpen(true), 1200);
     return () => clearTimeout(t);
   }, [enabled]);
+
+  // Track widget rect across resizes / content changes
+  useEffect(() => {
+    if (!open) return;
+    const measure = () => {
+      const el = document.querySelector<HTMLElement>('[data-tour-target="widget"]');
+      if (!el) {
+        setRect(null);
+        return;
+      }
+      const r = el.getBoundingClientRect();
+      setRect({
+        top: r.top - PADDING,
+        left: r.left - PADDING,
+        width: r.width + PADDING * 2,
+        height: r.height + PADDING * 2,
+      });
+    };
+    measure();
+    const id = window.setInterval(measure, 250);
+    window.addEventListener("resize", measure);
+    window.addEventListener("scroll", measure, true);
+    return () => {
+      window.clearInterval(id);
+      window.removeEventListener("resize", measure);
+      window.removeEventListener("scroll", measure, true);
+    };
+  }, [open]);
 
   const close = () => {
     setOpen(false);
@@ -62,47 +100,73 @@ const WidgetDemoTour = ({ enabled }: WidgetDemoTourProps) => {
 
   const current = STEPS[step];
   const isFirst = step === 0;
+  const showSpotlight = !isFirst && rect !== null;
+
+  // Backdrop opacity reduced for less contrast
+  const backdropClass = "absolute bg-foreground/40 backdrop-blur-[2px] pointer-events-none";
 
   return (
-    <div className="fixed inset-0 z-[10000] animate-in fade-in duration-300">
-      {/* Dark backdrop with spotlight cutout in bottom-right (where widget sits) */}
-      <div
-        className="absolute inset-0 bg-foreground/70 backdrop-blur-sm pointer-events-auto"
-        onClick={close}
-        aria-hidden="true"
-        style={{
-          // Radial spotlight on the widget (bottom-right area, ~440px wide)
-          maskImage: !isFirst
-            ? "radial-gradient(ellipse 280px 380px at calc(100% - 220px) calc(100% - 240px), transparent 60%, black 80%)"
-            : undefined,
-          WebkitMaskImage: !isFirst
-            ? "radial-gradient(ellipse 280px 380px at calc(100% - 220px) calc(100% - 240px), transparent 60%, black 80%)"
-            : undefined,
-        }}
-      />
-
-      {/* Animated ring around widget area (steps 1+) */}
-      {!isFirst && (
-        <div
-          className="absolute pointer-events-none rounded-2xl border-2 border-primary shadow-[0_0_0_4px_hsl(var(--primary)/0.25)] animate-pulse"
-          style={{
-            right: "12px",
-            bottom: "12px",
-            width: "440px",
-            height: "520px",
-            maxWidth: "calc(100vw - 24px)",
-            maxHeight: "calc(100vh - 24px)",
-          }}
-          aria-hidden="true"
-        />
+    <div className="fixed inset-0 z-[10000] animate-in fade-in duration-300 pointer-events-none">
+      {showSpotlight ? (
+        <>
+          {/* 4-piece backdrop creating an exact rectangular spotlight on the widget */}
+          <div
+            className={backdropClass}
+            style={{ top: 0, left: 0, right: 0, height: rect!.top }}
+            aria-hidden="true"
+          />
+          <div
+            className={backdropClass}
+            style={{
+              top: rect!.top + rect!.height,
+              left: 0,
+              right: 0,
+              bottom: 0,
+            }}
+            aria-hidden="true"
+          />
+          <div
+            className={backdropClass}
+            style={{
+              top: rect!.top,
+              left: 0,
+              width: rect!.left,
+              height: rect!.height,
+            }}
+            aria-hidden="true"
+          />
+          <div
+            className={backdropClass}
+            style={{
+              top: rect!.top,
+              left: rect!.left + rect!.width,
+              right: 0,
+              height: rect!.height,
+            }}
+            aria-hidden="true"
+          />
+          {/* Highlight ring around the widget (purely decorative) */}
+          <div
+            className="absolute pointer-events-none rounded-2xl ring-2 ring-primary/70 shadow-[0_0_0_4px_hsl(var(--primary)/0.15)]"
+            style={{
+              top: rect!.top,
+              left: rect!.left,
+              width: rect!.width,
+              height: rect!.height,
+            }}
+            aria-hidden="true"
+          />
+        </>
+      ) : (
+        <div className={`${backdropClass} inset-0`} aria-hidden="true" />
       )}
 
-      {/* Caption card */}
+      {/* Caption card — pointer events re-enabled here */}
       <div
-        className={`absolute z-10 max-w-sm rounded-xl border border-border bg-card text-card-foreground shadow-2xl p-5 animate-in slide-in-from-bottom-4 duration-300 ${
+        className={`absolute z-10 max-w-sm w-[calc(100vw-2rem)] sm:w-auto rounded-xl border border-border bg-card text-card-foreground shadow-2xl p-5 pointer-events-auto animate-in slide-in-from-bottom-4 duration-300 ${
           isFirst
             ? "left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
-            : "left-1/2 -translate-x-1/2 bottom-8 sm:left-8 sm:translate-x-0 sm:bottom-auto sm:top-1/2 sm:-translate-y-1/2"
+            : "left-4 sm:left-8 top-1/2 -translate-y-1/2"
         }`}
       >
         <div className="flex items-start gap-3">
