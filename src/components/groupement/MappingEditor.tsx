@@ -91,7 +91,6 @@ const MappingEditor = ({ groupementId }: Props) => {
 
   const selectSource = (item: SourceItem) => {
     setNewCat(item.categorie || item.produit);
-    if (!newProd) setNewProd(item.produit);
     setSrcOpen(false);
     setSrcSearch("");
   };
@@ -160,25 +159,25 @@ const MappingEditor = ({ groupementId }: Props) => {
           <div className="border rounded-lg p-4 mb-4 space-y-3 bg-muted/30">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1 block">Catégorie ou produit source</label>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">1. Quand Asclion détecte…</label>
                 <Popover open={srcOpen} onOpenChange={setSrcOpen}>
                   <PopoverTrigger asChild>
                     <Button variant="outline" role="combobox" className="w-full justify-between h-9 font-normal">
-                      <span className={cn("truncate", !newCat && "text-muted-foreground")}>{newCat || "Rechercher catégorie ou produit..."}</span>
+                      <span className={cn("truncate", !newCat && "text-muted-foreground")}>{newCat || "Rechercher un produit ou une catégorie…"}</span>
                       <ChevronsUpDown className="h-3 w-3 opacity-50 shrink-0" />
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-[420px] p-0" align="start">
                     <Command shouldFilter={false}>
                       <CommandInput
-                        placeholder="Tapez 2+ lettres (ex: magnésium, doliprane...)"
+                        placeholder="ex: magnésium, doliprane, vitamine D…"
                         value={srcSearch}
                         onValueChange={setSrcSearch}
                       />
                       <CommandList>
                         <CommandEmpty>
                           {searching ? (
-                            <div className="text-xs text-muted-foreground py-2">Recherche...</div>
+                            <div className="text-xs text-muted-foreground py-2">Recherche…</div>
                           ) : srcSearch ? (
                             <Button
                               variant="ghost"
@@ -190,7 +189,7 @@ const MappingEditor = ({ groupementId }: Props) => {
                                 setSrcSearch("");
                               }}
                             >
-                              <Plus className="h-3 w-3 mr-2" /> Utiliser « {srcSearch} » comme catégorie
+                              <Plus className="h-3 w-3 mr-2" /> Utiliser « {srcSearch} »
                             </Button>
                           ) : (
                             <div className="text-xs text-muted-foreground py-2">Aucun résultat</div>
@@ -218,10 +217,9 @@ const MappingEditor = ({ groupementId }: Props) => {
                     </Command>
                   </PopoverContent>
                 </Popover>
-                <p className="text-[10px] text-muted-foreground mt-1">{rows.length === 0 ? "Asclion proposera votre produit à la place de cette catégorie/produit générique." : ""}</p>
               </div>
               <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1 block">Nom à proposer au comptoir</label>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">2. Proposer à la place…</label>
                 <Input value={newProd} onChange={(e) => setNewProd(e.target.value)} placeholder="ex: Magnésium Avène" className="h-9" />
               </div>
               <div>
@@ -249,8 +247,8 @@ const MappingEditor = ({ groupementId }: Props) => {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Catégorie</TableHead>
-              <TableHead>Produit proposé</TableHead>
+              <TableHead>Détecté par Asclion</TableHead>
+              <TableHead>Proposé à la place</TableHead>
               <TableHead>Laboratoire</TableHead>
               <TableHead className="w-12"></TableHead>
             </TableRow>
