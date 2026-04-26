@@ -45,12 +45,6 @@ const Groupement = () => {
   }, [isAdmin, isGroupManager, managedGroupementId]);
 
   const loadKpis = async (gid: string) => {
-    const { data: res, error } = await supabase.functions.invoke("group-kpis", {
-      body: {},
-      method: "POST",
-      headers: {},
-    } as any);
-    // fallback : use direct fetch with query string
     const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/group-kpis?groupement_id=${gid}`;
     const session = (await supabase.auth.getSession()).data.session;
     const r = await fetch(url, { headers: { Authorization: `Bearer ${session?.access_token}` } });
