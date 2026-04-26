@@ -11,29 +11,41 @@ import CookieBanner from "@/components/CookieBanner";
 import LgoAutoDetectPrompt from "@/components/LgoAutoDetectPrompt";
 import WidgetDemoTour from "@/components/WidgetDemoTour";
 
-const Landing = lazy(() => import("./pages/Landing"));
-const Auth = lazy(() => import("./pages/Auth"));
-const Admin = lazy(() => import("./pages/Admin"));
-const Dashboard = lazy(() => import("./pages/Dashboard"));
-const Quiz = lazy(() => import("./pages/Quiz"));
-const NotFound = lazy(() => import("./pages/NotFound"));
-const ResetPassword = lazy(() => import("./pages/ResetPassword"));
-const VsLgo = lazy(() => import("./pages/VsLgo"));
-const Aide = lazy(() => import("./pages/Aide"));
-// Retry dynamic import once on failure (handles stale Vite chunks / transient network)
+// Retry dynamic import on failure (handles stale Vite chunks / transient network).
+// On second failure, force a hard reload to fetch the latest asset manifest.
 const lazyWithRetry = <T,>(factory: () => Promise<T>) =>
   lazy(() =>
     (factory() as Promise<any>).catch(async (err) => {
       console.warn("Dynamic import failed, retrying...", err);
       await new Promise((r) => setTimeout(r, 500));
-      return factory();
+      return (factory() as Promise<any>).catch((err2) => {
+        console.error("Dynamic import failed twice, reloading...", err2);
+        const key = "__chunk_reload_at";
+        const last = Number(sessionStorage.getItem(key) || 0);
+        // Avoid infinite reload loops: only reload once per 10s
+        if (Date.now() - last > 10_000) {
+          sessionStorage.setItem(key, String(Date.now()));
+          window.location.reload();
+        }
+        throw err2;
+      });
     })
   );
+
+const Landing = lazyWithRetry(() => import("./pages/Landing"));
+const Auth = lazyWithRetry(() => import("./pages/Auth"));
+const Admin = lazyWithRetry(() => import("./pages/Admin"));
+const Dashboard = lazyWithRetry(() => import("./pages/Dashboard"));
+const Quiz = lazyWithRetry(() => import("./pages/Quiz"));
+const NotFound = lazyWithRetry(() => import("./pages/NotFound"));
+const ResetPassword = lazyWithRetry(() => import("./pages/ResetPassword"));
+const VsLgo = lazyWithRetry(() => import("./pages/VsLgo"));
+const Aide = lazyWithRetry(() => import("./pages/Aide"));
 const Widget = lazyWithRetry(() => import("./components/Widget"));
-const MentionsLegales = lazy(() => import("./pages/legal/MentionsLegales"));
-const Confidentialite = lazy(() => import("./pages/legal/Confidentialite"));
-const CookiesPage = lazy(() => import("./pages/legal/Cookies"));
-const CGU = lazy(() => import("./pages/legal/CGU"));
+const MentionsLegales = lazyWithRetry(() => import("./pages/legal/MentionsLegales"));
+const Confidentialite = lazyWithRetry(() => import("./pages/legal/Confidentialite"));
+const CookiesPage = lazyWithRetry(() => import("./pages/legal/Cookies"));
+const CGU = lazyWithRetry(() => import("./pages/legal/CGU"));
 
 const queryClient = new QueryClient();
 
