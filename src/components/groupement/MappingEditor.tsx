@@ -4,11 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, ChevronsUpDown, Sparkles } from "lucide-react";
+import { Plus, Trash2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+import DetectedProductCombobox from "./DetectedProductCombobox";
 
 interface Props {
   groupementId: string;
@@ -24,12 +23,6 @@ interface MappingRow {
   active: boolean;
 }
 
-interface SourceItem {
-  produit: string;
-  categorie: string | null;
-  laboratoire: string | null;
-}
-
 const MappingEditor = ({ groupementId }: Props) => {
   const [rows, setRows] = useState<MappingRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,10 +30,6 @@ const MappingEditor = ({ groupementId }: Props) => {
   const [newCat, setNewCat] = useState("");
   const [newProd, setNewProd] = useState("");
   const [newLab, setNewLab] = useState("");
-  const [srcOpen, setSrcOpen] = useState(false);
-  const [srcSearch, setSrcSearch] = useState("");
-  const [srcResults, setSrcResults] = useState<SourceItem[]>([]);
-  const [searching, setSearching] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -56,60 +45,6 @@ const MappingEditor = ({ groupementId }: Props) => {
   useEffect(() => {
     load();
   }, [groupementId]);
-
-  // Server-side search on produits_complementaires (categorie OR produit)
-  useEffect(() => {
-    const term = srcSearch.trim();
-    if (!term) {
-      setSrcResults([]);
-      setSearching(false);
-      return;
-    }
-    setSearching(true);
-    const t = setTimeout(async () => {
-      // Recherche en parallèle sur produits_complementaires ET medicaments
-      const [pcRes, medRes] = await Promise.all([
-        supabase
-          .from("produits_complementaires")
-          .select("produit, categorie")
-          .or(`produit.ilike.${term}%,categorie.ilike.${term}%`)
-          .order("produit")
-          .limit(50),
-        supabase
-          .from("medicaments")
-          .select("nom_commercial, laboratoire")
-          .ilike("nom_commercial", `${term}%`)
-          .order("nom_commercial")
-          .limit(50),
-      ]);
-      const seen = new Set<string>();
-      const items: SourceItem[] = [];
-      (pcRes.data || []).forEach((r: any) => {
-        const key = `${r.categorie || ""}::${r.produit}`;
-        if (!seen.has(key)) {
-          seen.add(key);
-          items.push({ produit: r.produit, categorie: r.categorie, laboratoire: null });
-        }
-      });
-      (medRes.data || []).forEach((r: any) => {
-        const key = `med::${r.nom_commercial}`;
-        if (!seen.has(key)) {
-          seen.add(key);
-          items.push({ produit: r.nom_commercial, categorie: "Médicament", laboratoire: r.laboratoire });
-        }
-      });
-      setSrcResults(items.slice(0, 80));
-      setSearching(false);
-    }, 180);
-    return () => clearTimeout(t);
-  }, [srcSearch]);
-
-  const selectSource = (item: SourceItem) => {
-    // Stocke le produit choisi (clé de matching côté moteur)
-    setNewCat(item.produit);
-    setSrcOpen(false);
-    setSrcSearch("");
-  };
 
   const addRow = async () => {
     if (!newCat.trim() || !newProd.trim()) {
