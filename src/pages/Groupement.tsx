@@ -234,29 +234,7 @@ const Groupement = () => {
 
         {tab === "mapping" && (
           <div className="space-y-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-sm">Mapping centralisé groupement</CardTitle>
-                <Button size="sm" onClick={addMapping} className="gap-1.5"><Plus className="h-3 w-3" />Ajouter</Button>
-              </CardHeader>
-              <CardContent>
-                <p className="text-xs text-muted-foreground mb-3">Les marques prioritaires définies ici remontent en premier dans les recommandations de toutes les officines du réseau.</p>
-                <Table>
-                  <TableHeader><TableRow><TableHead>Catégorie</TableHead><TableHead>Produit prioritaire</TableHead><TableHead>Labo partenaire</TableHead><TableHead className="w-12"></TableHead></TableRow></TableHeader>
-                  <TableBody>
-                    {mapping.map((m: any) => (
-                      <TableRow key={m.id}>
-                        <TableCell><Input defaultValue={m.categorie} onBlur={(e) => updateMapping(m.id, "categorie", e.target.value)} className="h-8" /></TableCell>
-                        <TableCell><Input defaultValue={m.produit_prioritaire} onBlur={(e) => updateMapping(m.id, "produit_prioritaire", e.target.value)} className="h-8" /></TableCell>
-                        <TableCell><Input defaultValue={m.laboratoire_partenaire || ""} onBlur={(e) => updateMapping(m.id, "laboratoire_partenaire", e.target.value)} className="h-8" /></TableCell>
-                        <TableCell><Button size="icon" variant="ghost" onClick={() => deleteMapping(m.id)} className="h-7 w-7"><Trash2 className="h-3 w-3 text-destructive" /></Button></TableCell>
-                      </TableRow>
-                    ))}
-                    {mapping.length === 0 && <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground text-sm">Aucun mapping. Cliquez sur Ajouter.</TableCell></TableRow>}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
+            <MappingEditor groupementId={selectedGroupId} />
 
             {labReport && labReport.labs.length > 0 && (
               <Card>
