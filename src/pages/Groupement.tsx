@@ -97,31 +97,6 @@ const Groupement = () => {
     a.click();
   };
 
-  const addMapping = async () => {
-    if (!selectedGroupId) return;
-    const { error } = await supabase.from("group_product_mapping" as any).insert({
-      groupement_id: selectedGroupId,
-      categorie: "Nouvelle catégorie",
-      produit_prioritaire: "Nouveau produit",
-      laboratoire_partenaire: "Labo",
-      niveau_priorite: 90,
-    });
-    if (error) toast.error(error.message);
-    else {
-      toast.success("Ligne ajoutée");
-      loadMapping(selectedGroupId);
-    }
-  };
-
-  const updateMapping = async (id: string, field: string, value: any) => {
-    await supabase.from("group_product_mapping" as any).update({ [field]: value }).eq("id", id);
-  };
-
-  const deleteMapping = async (id: string) => {
-    await supabase.from("group_product_mapping" as any).delete().eq("id", id);
-    if (selectedGroupId) loadMapping(selectedGroupId);
-  };
-
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
