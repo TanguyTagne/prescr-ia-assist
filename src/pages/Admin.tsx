@@ -145,6 +145,14 @@ const Admin = () => {
             <Trophy className="h-3.5 w-3.5" />
             Benchmark
           </Button>
+          <Button variant={tab === "groupements" ? "default" : "outline"} size="sm" onClick={() => setTab("groupements")} className="gap-1.5">
+            <Network className="h-3.5 w-3.5" />
+            Groupements
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => navigate("/groupement")} className="gap-1.5">
+            <Network className="h-3.5 w-3.5" />
+            Ouvrir dashboard groupement →
+          </Button>
         </div>
 
         {tab === "kpis" && <PharmacyKPIs />}
