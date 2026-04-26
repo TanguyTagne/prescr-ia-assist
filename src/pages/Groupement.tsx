@@ -9,8 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, BarChart3, Building2, TrendingUp, Loader2, AlertTriangle, Trophy, Plus, Trash2, Download } from "lucide-react";
+import { ArrowLeft, BarChart3, Building2, TrendingUp, Loader2, AlertTriangle, Trophy, Download } from "lucide-react";
 import { toast } from "sonner";
+import MappingEditor from "@/components/groupement/MappingEditor";
 
 type Tab = "kpis" | "mapping" | "insights";
 
