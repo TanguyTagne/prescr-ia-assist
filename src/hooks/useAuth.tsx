@@ -91,6 +91,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         fetchPharmacyStatus(session.user.id);
       } else {
         setIsAdmin(false);
+        setIsGroupManager(false);
+        setManagedGroupementId(null);
         setPharmacyStatus(null);
         setOnboardingCompleted(true);
       }
