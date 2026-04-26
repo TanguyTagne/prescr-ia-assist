@@ -165,6 +165,7 @@ const Admin = () => {
         {tab === "perf" && <RecommendationMetrics />}
         {tab === "registers" && <RegistersTab />}
         {tab === "benchmark" && <BenchmarkTab />}
+        {tab === "groupements" && <GroupementsTab />}
       </div>
     </div>
   );
