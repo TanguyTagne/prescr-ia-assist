@@ -160,47 +160,57 @@ const MappingEditor = ({ groupementId }: Props) => {
           <div className="border rounded-lg p-4 mb-4 space-y-3 bg-muted/30">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1 block">Catégorie générique</label>
-                <Popover open={catOpen} onOpenChange={setCatOpen}>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">Catégorie ou produit source</label>
+                <Popover open={srcOpen} onOpenChange={setSrcOpen}>
                   <PopoverTrigger asChild>
                     <Button variant="outline" role="combobox" className="w-full justify-between h-9 font-normal">
-                      <span className={cn(!newCat && "text-muted-foreground")}>{newCat || "Choisir une catégorie..."}</span>
-                      <ChevronsUpDown className="h-3 w-3 opacity-50" />
+                      <span className={cn("truncate", !newCat && "text-muted-foreground")}>{newCat || "Rechercher catégorie ou produit..."}</span>
+                      <ChevronsUpDown className="h-3 w-3 opacity-50 shrink-0" />
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-[300px] p-0" align="start">
+                  <PopoverContent className="w-[420px] p-0" align="start">
                     <Command shouldFilter={false}>
-                      <CommandInput placeholder="Rechercher ou taper une nouvelle..." value={catSearch} onValueChange={setCatSearch} />
+                      <CommandInput
+                        placeholder="Tapez 2+ lettres (ex: magnésium, doliprane...)"
+                        value={srcSearch}
+                        onValueChange={setSrcSearch}
+                      />
                       <CommandList>
                         <CommandEmpty>
-                          {catSearch && (
+                          {searching ? (
+                            <div className="text-xs text-muted-foreground py-2">Recherche...</div>
+                          ) : srcSearch ? (
                             <Button
                               variant="ghost"
                               size="sm"
                               className="w-full justify-start"
                               onClick={() => {
-                                setNewCat(catSearch);
-                                setCatOpen(false);
-                                setCatSearch("");
+                                setNewCat(srcSearch);
+                                setSrcOpen(false);
+                                setSrcSearch("");
                               }}
                             >
-                              <Plus className="h-3 w-3 mr-2" /> Créer « {catSearch} »
+                              <Plus className="h-3 w-3 mr-2" /> Utiliser « {srcSearch} » comme catégorie
                             </Button>
+                          ) : (
+                            <div className="text-xs text-muted-foreground py-2">Aucun résultat</div>
                           )}
                         </CommandEmpty>
                         <CommandGroup>
-                          {filteredCats.map((c) => (
+                          {srcResults.map((item, idx) => (
                             <CommandItem
-                              key={c}
-                              value={c}
-                              onSelect={() => {
-                                setNewCat(c);
-                                setCatOpen(false);
-                                setCatSearch("");
-                              }}
+                              key={`${item.categorie}-${item.produit}-${idx}`}
+                              value={`${item.produit}-${idx}`}
+                              onSelect={() => selectSource(item)}
+                              className="flex flex-col items-start gap-0.5 py-2"
                             >
-                              <Check className={cn("mr-2 h-3 w-3", newCat === c ? "opacity-100" : "opacity-0")} />
-                              {c}
+                              <div className="flex items-center gap-2 w-full">
+                                <Check className={cn("h-3 w-3 shrink-0", newCat === (item.categorie || item.produit) ? "opacity-100" : "opacity-0")} />
+                                <span className="font-medium text-sm truncate">{item.produit}</span>
+                              </div>
+                              {item.categorie && (
+                                <Badge variant="secondary" className="text-[10px] ml-5 font-normal">{item.categorie}</Badge>
+                              )}
                             </CommandItem>
                           ))}
                         </CommandGroup>
@@ -208,6 +218,7 @@ const MappingEditor = ({ groupementId }: Props) => {
                     </Command>
                   </PopoverContent>
                 </Popover>
+                <p className="text-[10px] text-muted-foreground mt-1">{rows.length === 0 ? "Asclion proposera votre produit à la place de cette catégorie/produit générique." : ""}</p>
               </div>
               <div>
                 <label className="text-xs font-medium text-muted-foreground mb-1 block">Nom à proposer au comptoir</label>
