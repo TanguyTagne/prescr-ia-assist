@@ -91,7 +91,6 @@ const MappingEditor = ({ groupementId }: Props) => {
 
   const selectSource = (item: SourceItem) => {
     setNewCat(item.categorie || item.produit);
-    if (!newProd) setNewProd(item.produit);
     setSrcOpen(false);
     setSrcSearch("");
   };
