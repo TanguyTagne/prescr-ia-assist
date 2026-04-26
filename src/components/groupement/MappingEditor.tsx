@@ -67,22 +67,38 @@ const MappingEditor = ({ groupementId }: Props) => {
     }
     setSearching(true);
     const t = setTimeout(async () => {
-      const { data } = await supabase
-        .from("produits_complementaires")
-        .select("produit, categorie")
-        .or(`produit.ilike.${term}%,categorie.ilike.${term}%`)
-        .order("produit")
-        .limit(80);
+      // Recherche en parallèle sur produits_complementaires ET medicaments
+      const [pcRes, medRes] = await Promise.all([
+        supabase
+          .from("produits_complementaires")
+          .select("produit, categorie")
+          .or(`produit.ilike.${term}%,categorie.ilike.${term}%`)
+          .order("produit")
+          .limit(50),
+        supabase
+          .from("medicaments")
+          .select("nom_commercial, laboratoire")
+          .ilike("nom_commercial", `${term}%`)
+          .order("nom_commercial")
+          .limit(50),
+      ]);
       const seen = new Set<string>();
       const items: SourceItem[] = [];
-      (data || []).forEach((r: any) => {
+      (pcRes.data || []).forEach((r: any) => {
         const key = `${r.categorie || ""}::${r.produit}`;
         if (!seen.has(key)) {
           seen.add(key);
           items.push({ produit: r.produit, categorie: r.categorie, laboratoire: null });
         }
       });
-      setSrcResults(items);
+      (medRes.data || []).forEach((r: any) => {
+        const key = `med::${r.nom_commercial}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          items.push({ produit: r.nom_commercial, categorie: "Médicament", laboratoire: r.laboratoire });
+        }
+      });
+      setSrcResults(items.slice(0, 80));
       setSearching(false);
     }, 180);
     return () => clearTimeout(t);
