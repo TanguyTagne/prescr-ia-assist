@@ -5,9 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, Check, ChevronsUpDown, Sparkles } from "lucide-react";
+import { Plus, Trash2, ChevronsUpDown, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -60,21 +59,20 @@ const MappingEditor = ({ groupementId }: Props) => {
 
   // Server-side search on produits_complementaires (categorie OR produit)
   useEffect(() => {
+    const term = srcSearch.trim();
+    if (!term) {
+      setSrcResults([]);
+      setSearching(false);
+      return;
+    }
+    setSearching(true);
     const t = setTimeout(async () => {
-      setSearching(true);
-      const term = srcSearch.trim();
-      let query = supabase
+      const { data } = await supabase
         .from("produits_complementaires")
         .select("produit, categorie")
+        .or(`produit.ilike.${term}%,categorie.ilike.${term}%`)
+        .order("produit")
         .limit(80);
-      if (term) {
-        // "Commence par" : ilike 'terme%'
-        query = query.or(`produit.ilike.${term}%,categorie.ilike.${term}%`).order("produit");
-      } else {
-        query = query.not("categorie", "is", null).order("categorie").limit(80);
-      }
-      const { data } = await query;
-      // Deduplicate by "produit + categorie"
       const seen = new Set<string>();
       const items: SourceItem[] = [];
       (data || []).forEach((r: any) => {
@@ -86,7 +84,7 @@ const MappingEditor = ({ groupementId }: Props) => {
       });
       setSrcResults(items);
       setSearching(false);
-    }, 200);
+    }, 180);
     return () => clearTimeout(t);
   }, [srcSearch]);
 
@@ -170,53 +168,49 @@ const MappingEditor = ({ groupementId }: Props) => {
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-[420px] p-0" align="start">
-                    <Command shouldFilter={false}>
-                      <CommandInput
-                        placeholder="ex: magnésium, doliprane, vitamine D…"
+                    <div className="flex items-center border-b px-3 py-2">
+                      <Input
+                        autoFocus
                         value={srcSearch}
-                        onValueChange={setSrcSearch}
+                        onChange={(e) => setSrcSearch(e.target.value)}
+                        placeholder="ex: mag, doli, vit…"
+                        className="h-8 border-0 focus-visible:ring-0 px-0 text-sm"
                       />
-                      <CommandList>
-                        <CommandEmpty>
-                          {searching ? (
-                            <div className="text-xs text-muted-foreground py-2">Recherche…</div>
-                          ) : srcSearch ? (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="w-full justify-start"
-                              onClick={() => {
-                                setNewCat(srcSearch);
-                                setSrcOpen(false);
-                                setSrcSearch("");
-                              }}
-                            >
-                              <Plus className="h-3 w-3 mr-2" /> Utiliser « {srcSearch} »
-                            </Button>
-                          ) : (
-                            <div className="text-xs text-muted-foreground py-2">Aucun résultat</div>
+                    </div>
+                    <div className="max-h-[280px] overflow-y-auto p-1">
+                      {searching && (
+                        <div className="text-xs text-muted-foreground py-3 text-center">Recherche…</div>
+                      )}
+                      {!searching && srcResults.length === 0 && srcSearch && (
+                        <button
+                          type="button"
+                          className="w-full text-left text-xs px-2 py-2 rounded hover:bg-accent flex items-center gap-2"
+                          onClick={() => {
+                            setNewCat(srcSearch);
+                            setSrcOpen(false);
+                            setSrcSearch("");
+                          }}
+                        >
+                          <Plus className="h-3 w-3" /> Utiliser « {srcSearch} »
+                        </button>
+                      )}
+                      {!searching && srcResults.length === 0 && !srcSearch && (
+                        <div className="text-xs text-muted-foreground py-3 text-center">Tapez quelques lettres…</div>
+                      )}
+                      {!searching && srcResults.map((item, idx) => (
+                        <button
+                          type="button"
+                          key={`${item.categorie}-${item.produit}-${idx}`}
+                          onClick={() => selectSource(item)}
+                          className="w-full text-left px-2 py-2 rounded hover:bg-accent flex flex-col gap-0.5"
+                        >
+                          <span className="text-sm font-medium truncate">{item.produit}</span>
+                          {item.categorie && (
+                            <Badge variant="secondary" className="text-[10px] font-normal w-fit">{item.categorie}</Badge>
                           )}
-                        </CommandEmpty>
-                        <CommandGroup>
-                          {srcResults.map((item, idx) => (
-                            <CommandItem
-                              key={`${item.categorie}-${item.produit}-${idx}`}
-                              value={`${item.produit}-${idx}`}
-                              onSelect={() => selectSource(item)}
-                              className="flex flex-col items-start gap-0.5 py-2"
-                            >
-                              <div className="flex items-center gap-2 w-full">
-                                <Check className={cn("h-3 w-3 shrink-0", newCat === (item.categorie || item.produit) ? "opacity-100" : "opacity-0")} />
-                                <span className="font-medium text-sm truncate">{item.produit}</span>
-                              </div>
-                              {item.categorie && (
-                                <Badge variant="secondary" className="text-[10px] ml-5 font-normal">{item.categorie}</Badge>
-                              )}
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
+                        </button>
+                      ))}
+                    </div>
                   </PopoverContent>
                 </Popover>
               </div>
