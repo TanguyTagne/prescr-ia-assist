@@ -25,30 +25,32 @@ interface MappingRow {
   active: boolean;
 }
 
+interface SourceItem {
+  produit: string;
+  categorie: string | null;
+  laboratoire: string | null;
+}
+
 const MappingEditor = ({ groupementId }: Props) => {
   const [rows, setRows] = useState<MappingRow[]>([]);
-  const [categories, setCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
   const [newCat, setNewCat] = useState("");
   const [newProd, setNewProd] = useState("");
   const [newLab, setNewLab] = useState("");
-  const [catOpen, setCatOpen] = useState(false);
-  const [catSearch, setCatSearch] = useState("");
+  const [srcOpen, setSrcOpen] = useState(false);
+  const [srcSearch, setSrcSearch] = useState("");
+  const [srcResults, setSrcResults] = useState<SourceItem[]>([]);
+  const [searching, setSearching] = useState(false);
 
   const load = async () => {
     setLoading(true);
-    const [{ data: m }, { data: cats }] = await Promise.all([
-      supabase
-        .from("group_product_mapping" as any)
-        .select("*")
-        .eq("groupement_id", groupementId)
-        .order("categorie"),
-      supabase.from("produits_complementaires").select("categorie").not("categorie", "is", null),
-    ]);
+    const { data: m } = await supabase
+      .from("group_product_mapping" as any)
+      .select("*")
+      .eq("groupement_id", groupementId)
+      .order("categorie");
     setRows((m as any[]) || []);
-    const uniqueCats = [...new Set((cats || []).map((c: any) => c.categorie).filter(Boolean))].sort();
-    setCategories(uniqueCats);
     setLoading(false);
   };
 
@@ -56,11 +58,43 @@ const MappingEditor = ({ groupementId }: Props) => {
     load();
   }, [groupementId]);
 
-  const filteredCats = useMemo(() => {
-    if (!catSearch) return categories.slice(0, 50);
-    const s = catSearch.toLowerCase();
-    return categories.filter((c) => c.toLowerCase().includes(s)).slice(0, 50);
-  }, [categories, catSearch]);
+  // Server-side search on produits_complementaires (categorie OR produit)
+  useEffect(() => {
+    const t = setTimeout(async () => {
+      setSearching(true);
+      const term = srcSearch.trim();
+      let query = supabase
+        .from("produits_complementaires")
+        .select("produit, categorie")
+        .limit(80);
+      if (term) {
+        query = query.or(`produit.ilike.%${term}%,categorie.ilike.%${term}%`);
+      } else {
+        query = query.not("categorie", "is", null).order("categorie").limit(80);
+      }
+      const { data } = await query;
+      // Deduplicate by "produit + categorie"
+      const seen = new Set<string>();
+      const items: SourceItem[] = [];
+      (data || []).forEach((r: any) => {
+        const key = `${r.categorie || ""}::${r.produit}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          items.push({ produit: r.produit, categorie: r.categorie, laboratoire: null });
+        }
+      });
+      setSrcResults(items);
+      setSearching(false);
+    }, 200);
+    return () => clearTimeout(t);
+  }, [srcSearch]);
+
+  const selectSource = (item: SourceItem) => {
+    setNewCat(item.categorie || item.produit);
+    if (!newProd) setNewProd(item.produit);
+    setSrcOpen(false);
+    setSrcSearch("");
+  };
 
   const addRow = async () => {
     if (!newCat.trim() || !newProd.trim()) {
