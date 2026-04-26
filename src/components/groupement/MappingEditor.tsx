@@ -247,8 +247,8 @@ const MappingEditor = ({ groupementId }: Props) => {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Catégorie</TableHead>
-              <TableHead>Produit proposé</TableHead>
+              <TableHead>Détecté par Asclion</TableHead>
+              <TableHead>Proposé à la place</TableHead>
               <TableHead>Laboratoire</TableHead>
               <TableHead className="w-12"></TableHead>
             </TableRow>
