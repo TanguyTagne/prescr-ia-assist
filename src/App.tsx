@@ -171,6 +171,7 @@ const App = () => {
                   <Route path="/vs-lgo" element={<VsLgo />} />
                   <Route path="/aide" element={<Aide />} />
                   <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
+                  <Route path="/groupement" element={<GroupRoute><Groupement /></GroupRoute>} />
                   <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                   <Route path="/quiz" element={<ProtectedRoute><Quiz /></ProtectedRoute>} />
                   <Route path="/mentions-legales" element={<MentionsLegales />} />
