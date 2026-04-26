@@ -46,6 +46,7 @@ const MentionsLegales = lazyWithRetry(() => import("./pages/legal/MentionsLegale
 const Confidentialite = lazyWithRetry(() => import("./pages/legal/Confidentialite"));
 const CookiesPage = lazyWithRetry(() => import("./pages/legal/Cookies"));
 const CGU = lazyWithRetry(() => import("./pages/legal/CGU"));
+const Groupement = lazyWithRetry(() => import("./pages/Groupement"));
 
 const queryClient = new QueryClient();
 
