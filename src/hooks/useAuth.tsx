@@ -35,27 +35,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isGroupManager, setIsGroupManager] = useState(false);
+  const [managedGroupementId, setManagedGroupementId] = useState<string | null>(null);
   const [pharmacyStatus, setPharmacyStatus] = useState<string | null>(null);
   const [onboardingCompleted, setOnboardingCompleted] = useState(true);
 
   const fetchRole = async (userId: string) => {
-    const { data } = await supabase
+    const { data: roles } = await supabase
       .from("user_roles")
       .select("role")
-      .eq("user_id", userId)
-      .eq("role", "admin")
-      .maybeSingle();
-    setIsAdmin(!!data);
+      .eq("user_id", userId);
+    const roleList = (roles || []).map((r: any) => r.role);
+    setIsAdmin(roleList.includes("admin"));
+    setIsGroupManager(roleList.includes("group_manager"));
   };
 
   const fetchPharmacyStatus = async (userId: string) => {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("pharmacy_id, onboarding_completed")
+      .select("pharmacy_id, onboarding_completed, managed_groupement_id")
       .eq("id", userId)
       .maybeSingle();
 
     setOnboardingCompleted((profile as any)?.onboarding_completed ?? true);
+    setManagedGroupementId((profile as any)?.managed_groupement_id ?? null);
 
     if (profile?.pharmacy_id) {
       const { data: pharmacy } = await supabase
