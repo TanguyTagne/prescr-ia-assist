@@ -59,21 +59,20 @@ const MappingEditor = ({ groupementId }: Props) => {
 
   // Server-side search on produits_complementaires (categorie OR produit)
   useEffect(() => {
+    const term = srcSearch.trim();
+    if (!term) {
+      setSrcResults([]);
+      setSearching(false);
+      return;
+    }
+    setSearching(true);
     const t = setTimeout(async () => {
-      setSearching(true);
-      const term = srcSearch.trim();
-      let query = supabase
+      const { data } = await supabase
         .from("produits_complementaires")
         .select("produit, categorie")
+        .or(`produit.ilike.${term}%,categorie.ilike.${term}%`)
+        .order("produit")
         .limit(80);
-      if (term) {
-        // "Commence par" : ilike 'terme%'
-        query = query.or(`produit.ilike.${term}%,categorie.ilike.${term}%`).order("produit");
-      } else {
-        query = query.not("categorie", "is", null).order("categorie").limit(80);
-      }
-      const { data } = await query;
-      // Deduplicate by "produit + categorie"
       const seen = new Set<string>();
       const items: SourceItem[] = [];
       (data || []).forEach((r: any) => {
@@ -85,7 +84,7 @@ const MappingEditor = ({ groupementId }: Props) => {
       });
       setSrcResults(items);
       setSearching(false);
-    }, 200);
+    }, 180);
     return () => clearTimeout(t);
   }, [srcSearch]);
 
