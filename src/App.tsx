@@ -77,6 +77,17 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+const GroupRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, loading, isAdmin, isGroupManager } = useAuth();
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+    </div>
+  );
+  if (!user || (!isAdmin && !isGroupManager)) return <Navigate to="/" replace />;
+  return <>{children}</>;
+};
+
 const DeferredWidget = ({ forceOpen, mountImmediately }: { forceOpen?: boolean; mountImmediately?: boolean }) => {
   const [shouldMount, setShouldMount] = useState(!!forceOpen || !!mountImmediately);
 
