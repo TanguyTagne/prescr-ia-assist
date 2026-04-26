@@ -50,7 +50,7 @@ const Admin = () => {
   const [requests, setRequests] = useState<AccessRequest[]>([]);
   const [pharmacies, setPharmacies] = useState<PharmacyWithLGO[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<"requests" | "pharmacies" | "kpis" | "coverage" | "sales" | "perf" | "benchmark" | "registers" | "demo-sessions" | "demo-leads">("kpis");
+  const [tab, setTab] = useState<"requests" | "pharmacies" | "kpis" | "coverage" | "sales" | "perf" | "benchmark" | "registers" | "demo-sessions" | "demo-leads" | "groupements">("kpis");
 
   useEffect(() => {
     loadData();
@@ -145,6 +145,14 @@ const Admin = () => {
             <Trophy className="h-3.5 w-3.5" />
             Benchmark
           </Button>
+          <Button variant={tab === "groupements" ? "default" : "outline"} size="sm" onClick={() => setTab("groupements")} className="gap-1.5">
+            <Network className="h-3.5 w-3.5" />
+            Groupements
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => navigate("/groupement")} className="gap-1.5">
+            <Network className="h-3.5 w-3.5" />
+            Ouvrir dashboard groupement →
+          </Button>
         </div>
 
         {tab === "kpis" && <PharmacyKPIs />}
@@ -157,6 +165,7 @@ const Admin = () => {
         {tab === "perf" && <RecommendationMetrics />}
         {tab === "registers" && <RegistersTab />}
         {tab === "benchmark" && <BenchmarkTab />}
+        {tab === "groupements" && <GroupementsTab />}
       </div>
     </div>
   );
