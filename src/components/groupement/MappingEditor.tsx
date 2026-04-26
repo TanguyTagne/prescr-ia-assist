@@ -157,9 +157,11 @@ const MappingEditor = ({ groupementId }: Props) => {
             {rows.map((r) => (
               <TableRow key={r.id}>
                 <TableCell>
-                  <Input
-                    defaultValue={r.categorie}
-                    onBlur={(e) => updateField(r.id, "categorie", e.target.value)}
+                  <DetectedProductCombobox
+                    value={r.categorie}
+                    onValueChange={(value) => setRows((prev) => prev.map((row) => (row.id === r.id ? { ...row, categorie: value } : row)))}
+                    onCommit={(value) => updateField(r.id, "categorie", value)}
+                    placeholder=""
                     className="h-8"
                   />
                 </TableCell>
