@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { Component, lazy, Suspense, useEffect, useState, type ReactNode } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -20,7 +20,16 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const VsLgo = lazy(() => import("./pages/VsLgo"));
 const Aide = lazy(() => import("./pages/Aide"));
-const Widget = lazy(() => import("./components/Widget"));
+// Retry dynamic import once on failure (handles stale Vite chunks / transient network)
+const lazyWithRetry = <T,>(factory: () => Promise<T>) =>
+  lazy(() =>
+    (factory() as Promise<any>).catch(async (err) => {
+      console.warn("Dynamic import failed, retrying...", err);
+      await new Promise((r) => setTimeout(r, 500));
+      return factory();
+    })
+  );
+const Widget = lazyWithRetry(() => import("./components/Widget"));
 const MentionsLegales = lazy(() => import("./pages/legal/MentionsLegales"));
 const Confidentialite = lazy(() => import("./pages/legal/Confidentialite"));
 const CookiesPage = lazy(() => import("./pages/legal/Cookies"));
@@ -85,8 +94,26 @@ const DeferredWidget = ({ forceOpen, mountImmediately }: { forceOpen?: boolean; 
   }, [shouldMount]);
 
   if (!shouldMount) return null;
-  return <Widget forceOpen={forceOpen} />;
+  return (
+    <WidgetErrorBoundary>
+      <Widget forceOpen={forceOpen} />
+    </WidgetErrorBoundary>
+  );
 };
+
+class WidgetErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
+  state = { hasError: false };
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  componentDidCatch(error: unknown) {
+    console.error("Widget failed to load:", error);
+  }
+  render() {
+    if (this.state.hasError) return null;
+    return this.props.children;
+  }
+}
 
 const VisitorTour = () => {
   const { user, loading } = useAuth();
