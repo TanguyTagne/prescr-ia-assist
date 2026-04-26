@@ -7,6 +7,8 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   isAdmin: boolean;
+  isGroupManager: boolean;
+  managedGroupementId: string | null;
   pharmacyStatus: string | null;
   onboardingCompleted: boolean;
   refreshOnboarding: () => Promise<void>;
@@ -18,6 +20,8 @@ const AuthContext = createContext<AuthContextType>({
   session: null,
   loading: true,
   isAdmin: false,
+  isGroupManager: false,
+  managedGroupementId: null,
   pharmacyStatus: null,
   onboardingCompleted: true,
   refreshOnboarding: async () => {},
