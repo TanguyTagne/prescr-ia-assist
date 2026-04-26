@@ -68,7 +68,8 @@ const MappingEditor = ({ groupementId }: Props) => {
         .select("produit, categorie")
         .limit(80);
       if (term) {
-        query = query.or(`produit.ilike.%${term}%,categorie.ilike.%${term}%`);
+        // "Commence par" : ilike 'terme%'
+        query = query.or(`produit.ilike.${term}%,categorie.ilike.${term}%`).order("produit");
       } else {
         query = query.not("categorie", "is", null).order("categorie").limit(80);
       }
@@ -90,7 +91,8 @@ const MappingEditor = ({ groupementId }: Props) => {
   }, [srcSearch]);
 
   const selectSource = (item: SourceItem) => {
-    setNewCat(item.categorie || item.produit);
+    // Stocke le produit choisi (clé de matching côté moteur)
+    setNewCat(item.produit);
     setSrcOpen(false);
     setSrcSearch("");
   };
