@@ -46,6 +46,7 @@ const MentionsLegales = lazyWithRetry(() => import("./pages/legal/MentionsLegale
 const Confidentialite = lazyWithRetry(() => import("./pages/legal/Confidentialite"));
 const CookiesPage = lazyWithRetry(() => import("./pages/legal/Cookies"));
 const CGU = lazyWithRetry(() => import("./pages/legal/CGU"));
+const Groupement = lazyWithRetry(() => import("./pages/Groupement"));
 
 const queryClient = new QueryClient();
 
@@ -73,6 +74,17 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
     </div>
   );
   if (!user || !isAdmin) return <Navigate to="/" replace />;
+  return <>{children}</>;
+};
+
+const GroupRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, loading, isAdmin, isGroupManager } = useAuth();
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+    </div>
+  );
+  if (!user || (!isAdmin && !isGroupManager)) return <Navigate to="/" replace />;
   return <>{children}</>;
 };
 
@@ -159,6 +171,7 @@ const App = () => {
                   <Route path="/vs-lgo" element={<VsLgo />} />
                   <Route path="/aide" element={<Aide />} />
                   <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
+                  <Route path="/groupement" element={<GroupRoute><Groupement /></GroupRoute>} />
                   <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                   <Route path="/quiz" element={<ProtectedRoute><Quiz /></ProtectedRoute>} />
                   <Route path="/mentions-legales" element={<MentionsLegales />} />
