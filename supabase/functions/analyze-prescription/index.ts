@@ -1263,8 +1263,9 @@ serve(async (req) => {
     let latentNeedUsed = false;
     let usedLatentNeed: LatentNeed | null = null;
 
-    // Load pharmacy product mappings (already have pharmacyIdForMapping)
+    // Load pharmacy product mappings + groupement mappings (groupement = priority override)
     let productMappings: any[] = [];
+    let groupMappings: any[] = [];
     if (pharmacyIdForMapping) {
       const { data: mappings } = await supabase
         .from("product_mapping")
@@ -1272,6 +1273,21 @@ serve(async (req) => {
         .eq("pharmacy_id", pharmacyIdForMapping)
         .eq("active", true);
       productMappings = mappings || [];
+
+      // Load groupement mapping if pharmacy belongs to one
+      const { data: pharma } = await supabase
+        .from("pharmacies")
+        .select("groupement_id")
+        .eq("id", pharmacyIdForMapping)
+        .maybeSingle();
+      if (pharma?.groupement_id) {
+        const { data: gm } = await supabase
+          .from("group_product_mapping")
+          .select("categorie, produit_prioritaire, cip_code, laboratoire_partenaire, niveau_priorite")
+          .eq("groupement_id", pharma.groupement_id)
+          .eq("active", true);
+        groupMappings = gm || [];
+      }
     }
 
     // Protocols already preloaded
