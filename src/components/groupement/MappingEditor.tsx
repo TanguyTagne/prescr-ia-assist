@@ -111,59 +111,12 @@ const MappingEditor = ({ groupementId }: Props) => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div>
                 <label className="text-xs font-medium text-muted-foreground mb-1 block">1. Quand Asclion détecte…</label>
-                <Popover open={srcOpen} onOpenChange={setSrcOpen}>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" role="combobox" className="w-full justify-between h-9 font-normal">
-                      <span className={cn("truncate", !newCat && "text-muted-foreground")}>{newCat || "Rechercher un produit ou une catégorie…"}</span>
-                      <ChevronsUpDown className="h-3 w-3 opacity-50 shrink-0" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[420px] p-0" align="start">
-                    <div className="flex items-center border-b px-3 py-2">
-                      <Input
-                        autoFocus
-                        value={srcSearch}
-                        onChange={(e) => setSrcSearch(e.target.value)}
-                        placeholder="ex: mag, doli, vit…"
-                        className="h-8 border-0 focus-visible:ring-0 px-0 text-sm"
-                      />
-                    </div>
-                    <div className="max-h-[280px] overflow-y-auto p-1">
-                      {searching && (
-                        <div className="text-xs text-muted-foreground py-3 text-center">Recherche…</div>
-                      )}
-                      {!searching && srcResults.length === 0 && srcSearch && (
-                        <button
-                          type="button"
-                          className="w-full text-left text-xs px-2 py-2 rounded hover:bg-accent flex items-center gap-2"
-                          onClick={() => {
-                            setNewCat(srcSearch);
-                            setSrcOpen(false);
-                            setSrcSearch("");
-                          }}
-                        >
-                          <Plus className="h-3 w-3" /> Utiliser « {srcSearch} »
-                        </button>
-                      )}
-                      {!searching && srcResults.length === 0 && !srcSearch && (
-                        <div className="text-xs text-muted-foreground py-3 text-center">Tapez quelques lettres…</div>
-                      )}
-                      {!searching && srcResults.map((item, idx) => (
-                        <button
-                          type="button"
-                          key={`${item.categorie}-${item.produit}-${idx}`}
-                          onClick={() => selectSource(item)}
-                          className="w-full text-left px-2 py-2 rounded hover:bg-accent flex flex-col gap-0.5"
-                        >
-                          <span className="text-sm font-medium truncate">{item.produit}</span>
-                          {item.categorie && (
-                            <Badge variant="secondary" className="text-[10px] font-normal w-fit">{item.categorie}</Badge>
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  </PopoverContent>
-                </Popover>
+                <DetectedProductCombobox
+                  value={newCat}
+                  onValueChange={setNewCat}
+                  placeholder=""
+                  className="h-9"
+                />
               </div>
               <div>
                 <label className="text-xs font-medium text-muted-foreground mb-1 block">2. Proposer à la place…</label>
