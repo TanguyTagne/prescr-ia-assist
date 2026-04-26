@@ -1525,13 +1525,18 @@ serve(async (req) => {
         .filter((r: any) => !allProposedPCs.includes(normalizeText(r.produit)))
         .filter((r: any) => !isAlreadyPrescribed(r.produit));
 
-      // Apply pharmacy product mapping (replace generic → specific)
+      // Apply mappings: groupement first (priority override), then pharmacy
       filteredRecs = filteredRecs.map((r: any) => {
-        const mapping = productMappings.find(
-          (m: any) => normalizeText(m.categorie) === normalizeText(r.categorie)
-        );
-        if (mapping) {
-          return { ...r, produit: mapping.produit_selectionne, mapped: true };
+        const catNorm = normalizeText(r.categorie);
+        // 1. Groupement mapping (highest priority)
+        const gMap = groupMappings.find((m: any) => normalizeText(m.categorie) === catNorm);
+        if (gMap) {
+          return { ...r, produit: gMap.produit_prioritaire, mapped: true, mapped_source: "groupement", laboratoire: gMap.laboratoire_partenaire || null };
+        }
+        // 2. Pharmacy mapping
+        const pMap = productMappings.find((m: any) => normalizeText(m.categorie) === catNorm);
+        if (pMap) {
+          return { ...r, produit: pMap.produit_selectionne, mapped: true, mapped_source: "pharmacy" };
         }
         return r;
       });
