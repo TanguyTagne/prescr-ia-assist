@@ -438,6 +438,155 @@ export type Database = {
         }
         Relationships: []
       }
+      group_alerts: {
+        Row: {
+          alert_type: string
+          created_at: string
+          groupement_id: string
+          id: string
+          message: string
+          metadata: Json | null
+          pharmacy_id: string | null
+          read_at: string | null
+          resolved: boolean
+          severity: string
+          title: string
+        }
+        Insert: {
+          alert_type: string
+          created_at?: string
+          groupement_id: string
+          id?: string
+          message: string
+          metadata?: Json | null
+          pharmacy_id?: string | null
+          read_at?: string | null
+          resolved?: boolean
+          severity?: string
+          title: string
+        }
+        Update: {
+          alert_type?: string
+          created_at?: string
+          groupement_id?: string
+          id?: string
+          message?: string
+          metadata?: Json | null
+          pharmacy_id?: string | null
+          read_at?: string | null
+          resolved?: boolean
+          severity?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_alerts_groupement_id_fkey"
+            columns: ["groupement_id"]
+            isOneToOne: false
+            referencedRelation: "groupements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_alerts_pharmacy_id_fkey"
+            columns: ["pharmacy_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_product_mapping: {
+        Row: {
+          active: boolean
+          categorie: string
+          cip_code: string | null
+          created_at: string
+          groupement_id: string
+          id: string
+          laboratoire_partenaire: string | null
+          niveau_priorite: number
+          notes: string | null
+          produit_prioritaire: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          categorie: string
+          cip_code?: string | null
+          created_at?: string
+          groupement_id: string
+          id?: string
+          laboratoire_partenaire?: string | null
+          niveau_priorite?: number
+          notes?: string | null
+          produit_prioritaire: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          categorie?: string
+          cip_code?: string | null
+          created_at?: string
+          groupement_id?: string
+          id?: string
+          laboratoire_partenaire?: string | null
+          niveau_priorite?: number
+          notes?: string | null
+          produit_prioritaire?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_product_mapping_groupement_id_fkey"
+            columns: ["groupement_id"]
+            isOneToOne: false
+            referencedRelation: "groupements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      groupements: {
+        Row: {
+          contact_email: string | null
+          contact_phone: string | null
+          created_at: string
+          headquarters_city: string | null
+          id: string
+          logo_url: string | null
+          name: string
+          primary_color: string | null
+          slug: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          headquarters_city?: string | null
+          id?: string
+          logo_url?: string | null
+          name: string
+          primary_color?: string | null
+          slug: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          headquarters_city?: string | null
+          id?: string
+          logo_url?: string | null
+          name?: string
+          primary_color?: string | null
+          slug?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       latent_need_metrics: {
         Row: {
           besoin: string
@@ -1095,6 +1244,7 @@ export type Database = {
           address: string | null
           city: string | null
           created_at: string
+          groupement_id: string | null
           id: string
           name: string
           postal_code: string | null
@@ -1104,6 +1254,7 @@ export type Database = {
           address?: string | null
           city?: string | null
           created_at?: string
+          groupement_id?: string | null
           id?: string
           name: string
           postal_code?: string | null
@@ -1113,12 +1264,21 @@ export type Database = {
           address?: string | null
           city?: string | null
           created_at?: string
+          groupement_id?: string | null
           id?: string
           name?: string
           postal_code?: string | null
           status?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "pharmacies_groupement_id_fkey"
+            columns: ["groupement_id"]
+            isOneToOne: false
+            referencedRelation: "groupements"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       pharmacy_benchmark: {
         Row: {
@@ -1500,6 +1660,7 @@ export type Database = {
           email: string | null
           full_name: string | null
           id: string
+          managed_groupement_id: string | null
           onboarding_completed: boolean
           pharmacy_id: string | null
           role: string
@@ -1509,6 +1670,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id: string
+          managed_groupement_id?: string | null
           onboarding_completed?: boolean
           pharmacy_id?: string | null
           role?: string
@@ -1518,11 +1680,19 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          managed_groupement_id?: string | null
           onboarding_completed?: boolean
           pharmacy_id?: string | null
           role?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "profiles_managed_groupement_id_fkey"
+            columns: ["managed_groupement_id"]
+            isOneToOne: false
+            referencedRelation: "groupements"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "profiles_pharmacy_id_fkey"
             columns: ["pharmacy_id"]
@@ -2194,6 +2364,10 @@ export type Database = {
           type_produit: string
         }[]
       }
+      get_user_managed_groupement: {
+        Args: { _user_id: string }
+        Returns: string
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -2203,7 +2377,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "preparateur" | "manager"
+      app_role: "admin" | "preparateur" | "manager" | "group_manager"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2331,7 +2505,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "preparateur", "manager"],
+      app_role: ["admin", "preparateur", "manager", "group_manager"],
     },
   },
 } as const
