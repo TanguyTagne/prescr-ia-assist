@@ -1263,8 +1263,9 @@ serve(async (req) => {
     let latentNeedUsed = false;
     let usedLatentNeed: LatentNeed | null = null;
 
-    // Load pharmacy product mappings (already have pharmacyIdForMapping)
+    // Load pharmacy product mappings + groupement mappings (groupement = priority override)
     let productMappings: any[] = [];
+    let groupMappings: any[] = [];
     if (pharmacyIdForMapping) {
       const { data: mappings } = await supabase
         .from("product_mapping")
@@ -1272,6 +1273,21 @@ serve(async (req) => {
         .eq("pharmacy_id", pharmacyIdForMapping)
         .eq("active", true);
       productMappings = mappings || [];
+
+      // Load groupement mapping if pharmacy belongs to one
+      const { data: pharma } = await supabase
+        .from("pharmacies")
+        .select("groupement_id")
+        .eq("id", pharmacyIdForMapping)
+        .maybeSingle();
+      if (pharma?.groupement_id) {
+        const { data: gm } = await supabase
+          .from("group_product_mapping")
+          .select("categorie, produit_prioritaire, cip_code, laboratoire_partenaire, niveau_priorite")
+          .eq("groupement_id", pharma.groupement_id)
+          .eq("active", true);
+        groupMappings = gm || [];
+      }
     }
 
     // Protocols already preloaded
@@ -1509,13 +1525,18 @@ serve(async (req) => {
         .filter((r: any) => !allProposedPCs.includes(normalizeText(r.produit)))
         .filter((r: any) => !isAlreadyPrescribed(r.produit));
 
-      // Apply pharmacy product mapping (replace generic → specific)
+      // Apply mappings: groupement first (priority override), then pharmacy
       filteredRecs = filteredRecs.map((r: any) => {
-        const mapping = productMappings.find(
-          (m: any) => normalizeText(m.categorie) === normalizeText(r.categorie)
-        );
-        if (mapping) {
-          return { ...r, produit: mapping.produit_selectionne, mapped: true };
+        const catNorm = normalizeText(r.categorie);
+        // 1. Groupement mapping (highest priority)
+        const gMap = groupMappings.find((m: any) => normalizeText(m.categorie) === catNorm);
+        if (gMap) {
+          return { ...r, produit: gMap.produit_prioritaire, mapped: true, mapped_source: "groupement", laboratoire: gMap.laboratoire_partenaire || null };
+        }
+        // 2. Pharmacy mapping
+        const pMap = productMappings.find((m: any) => normalizeText(m.categorie) === catNorm);
+        if (pMap) {
+          return { ...r, produit: pMap.produit_selectionne, mapped: true, mapped_source: "pharmacy" };
         }
         return r;
       });
