@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BarChart3, Activity, MousePointerClick, ShoppingBag, Clock, ArrowLeft, LogOut, Download, Monitor, Shield, Package, Brain, Keyboard } from "lucide-react";
+import { BarChart3, Activity, MousePointerClick, ShoppingBag, Clock, ArrowLeft, LogOut, Download, Monitor, Shield, Package, Brain, Keyboard, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,7 +17,7 @@ interface KpiData {
 }
 
 const Dashboard = () => {
-  const { user, signOut } = useAuth();
+  const { user, signOut, isAdmin, isGroupManager } = useAuth();
   const navigate = useNavigate();
   const [kpis, setKpis] = useState<KpiData>({
     ordonnancesDetected: 0,
@@ -100,10 +100,23 @@ const Dashboard = () => {
               <p className="text-xs text-primary-foreground/70">KPIs pharmacie</p>
             </div>
           </div>
-          <Button variant="ghost" size="sm" onClick={signOut} className="text-primary-foreground hover:bg-primary-foreground/10 gap-2">
-            <LogOut className="h-4 w-4" />
-            Déconnexion
-          </Button>
+          <div className="flex items-center gap-2">
+            {(isGroupManager || isAdmin) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate("/groupement")}
+                className="text-primary-foreground hover:bg-primary-foreground/10 gap-2"
+              >
+                <Building2 className="h-4 w-4" />
+                Espace groupement
+              </Button>
+            )}
+            <Button variant="ghost" size="sm" onClick={signOut} className="text-primary-foreground hover:bg-primary-foreground/10 gap-2">
+              <LogOut className="h-4 w-4" />
+              Déconnexion
+            </Button>
+          </div>
         </div>
       </header>
 
