@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { ArrowLeft, Loader2, Mail, Building2, BarChart3, RefreshCw, ShieldCheck, ShoppingCart, Target, Monitor, Trophy, Sparkles, UserPlus, Network } from "lucide-react";
+import { ArrowLeft, Loader2, Mail, Building2, BarChart3, RefreshCw, ShieldCheck, ShoppingCart, Target, Monitor, Trophy, Sparkles, UserPlus, Network, FileSearch } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import RequestsTab from "@/components/admin/RequestsTab";
 import PharmaciesTab from "@/components/admin/PharmaciesTab";
@@ -16,6 +16,7 @@ import RegistersTab from "@/components/admin/RegistersTab";
 import DemoSessionsTab from "@/components/admin/DemoSessionsTab";
 import DemoLeadsTab from "@/components/admin/DemoLeadsTab";
 import GroupementsTab from "@/components/admin/GroupementsTab";
+import TracabiliteTab from "@/components/admin/TracabiliteTab";
 
 interface AccessRequest {
   id: string;
