@@ -247,6 +247,51 @@ export type Database = {
         }
         Relationships: []
       }
+      clinical_sources: {
+        Row: {
+          code: string
+          created_at: string
+          derniere_synchro: string | null
+          id: string
+          licence: string
+          nom_complet: string
+          notes: string | null
+          type_source: string
+          updated_at: string
+          url_attribution: string | null
+          url_officielle: string | null
+          version_donnees: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          derniere_synchro?: string | null
+          id?: string
+          licence: string
+          nom_complet: string
+          notes?: string | null
+          type_source: string
+          updated_at?: string
+          url_attribution?: string | null
+          url_officielle?: string | null
+          version_donnees?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          derniere_synchro?: string | null
+          id?: string
+          licence?: string
+          nom_complet?: string
+          notes?: string | null
+          type_source?: string
+          updated_at?: string
+          url_attribution?: string | null
+          url_officielle?: string | null
+          version_donnees?: string | null
+        }
+        Relationships: []
+      }
       conseils_associes: {
         Row: {
           conseil: string
@@ -256,6 +301,12 @@ export type Database = {
           id: string
           pathologie_id: string
           priorite: number
+          rule_version: number
+          source_code: string | null
+          source_reference: string | null
+          validated_at: string | null
+          validated_by: string | null
+          validation_notes: string | null
         }
         Insert: {
           conseil: string
@@ -265,6 +316,12 @@ export type Database = {
           id?: string
           pathologie_id: string
           priorite?: number
+          rule_version?: number
+          source_code?: string | null
+          source_reference?: string | null
+          validated_at?: string | null
+          validated_by?: string | null
+          validation_notes?: string | null
         }
         Update: {
           conseil?: string
@@ -274,6 +331,12 @@ export type Database = {
           id?: string
           pathologie_id?: string
           priorite?: number
+          rule_version?: number
+          source_code?: string | null
+          source_reference?: string | null
+          validated_at?: string | null
+          validated_by?: string | null
+          validation_notes?: string | null
         }
         Relationships: [
           {
@@ -282,6 +345,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "pathologies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conseils_associes_source_code_fkey"
+            columns: ["source_code"]
+            isOneToOne: false
+            referencedRelation: "clinical_sources"
+            referencedColumns: ["code"]
           },
         ]
       }
@@ -670,6 +740,51 @@ export type Database = {
         }
         Relationships: []
       }
+      lineage_audit_log: {
+        Row: {
+          after_data: Json | null
+          before_data: Json | null
+          changed_by: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          operation: string
+          record_id: string
+          rule_version: number | null
+          source_code: string | null
+          source_reference: string | null
+          table_name: string
+        }
+        Insert: {
+          after_data?: Json | null
+          before_data?: Json | null
+          changed_by?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          operation: string
+          record_id: string
+          rule_version?: number | null
+          source_code?: string | null
+          source_reference?: string | null
+          table_name: string
+        }
+        Update: {
+          after_data?: Json | null
+          before_data?: Json | null
+          changed_by?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          operation?: string
+          record_id?: string
+          rule_version?: number | null
+          source_code?: string | null
+          source_reference?: string | null
+          table_name?: string
+        }
+        Relationships: []
+      }
       medicament_pathologie: {
         Row: {
           id: string
@@ -720,9 +835,12 @@ export type Database = {
           est_produit_conseil: boolean | null
           forme_galenique: string | null
           id: string
+          imported_at: string | null
           laboratoire: string | null
           molecule_id: string | null
           nom_commercial: string
+          source_code: string | null
+          source_reference: string | null
           statut_officine: string | null
         }
         Insert: {
@@ -735,9 +853,12 @@ export type Database = {
           est_produit_conseil?: boolean | null
           forme_galenique?: string | null
           id?: string
+          imported_at?: string | null
           laboratoire?: string | null
           molecule_id?: string | null
           nom_commercial: string
+          source_code?: string | null
+          source_reference?: string | null
           statut_officine?: string | null
         }
         Update: {
@@ -750,9 +871,12 @@ export type Database = {
           est_produit_conseil?: boolean | null
           forme_galenique?: string | null
           id?: string
+          imported_at?: string | null
           laboratoire?: string | null
           molecule_id?: string | null
           nom_commercial?: string
+          source_code?: string | null
+          source_reference?: string | null
           statut_officine?: string | null
         }
         Relationships: [
@@ -769,6 +893,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "molecules"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medicaments_source_code_fkey"
+            columns: ["source_code"]
+            isOneToOne: false
+            referencedRelation: "clinical_sources"
+            referencedColumns: ["code"]
           },
         ]
       }
@@ -1024,7 +1155,13 @@ export type Database = {
           priority: number
           produit_1: string
           produit_2: string
+          rule_version: number
+          source_code: string | null
+          source_reference: string | null
           updated_at: string
+          validated_at: string | null
+          validated_by: string | null
+          validation_notes: string | null
         }
         Insert: {
           conseil: string
@@ -1034,7 +1171,13 @@ export type Database = {
           priority?: number
           produit_1: string
           produit_2: string
+          rule_version?: number
+          source_code?: string | null
+          source_reference?: string | null
           updated_at?: string
+          validated_at?: string | null
+          validated_by?: string | null
+          validation_notes?: string | null
         }
         Update: {
           conseil?: string
@@ -1044,9 +1187,23 @@ export type Database = {
           priority?: number
           produit_1?: string
           produit_2?: string
+          rule_version?: number
+          source_code?: string | null
+          source_reference?: string | null
           updated_at?: string
+          validated_at?: string | null
+          validated_by?: string | null
+          validation_notes?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "pathology_protocol_source_code_fkey"
+            columns: ["source_code"]
+            isOneToOne: false
+            referencedRelation: "clinical_sources"
+            referencedColumns: ["code"]
+          },
+        ]
       }
       patient_needs: {
         Row: {
@@ -1610,7 +1767,13 @@ export type Database = {
           phrase_conseil: string | null
           priorite: number
           produit: string
+          rule_version: number
+          source_code: string | null
+          source_reference: string | null
           type_produit: string | null
+          validated_at: string | null
+          validated_by: string | null
+          validation_notes: string | null
         }
         Insert: {
           categorie?: string | null
@@ -1626,7 +1789,13 @@ export type Database = {
           phrase_conseil?: string | null
           priorite?: number
           produit: string
+          rule_version?: number
+          source_code?: string | null
+          source_reference?: string | null
           type_produit?: string | null
+          validated_at?: string | null
+          validated_by?: string | null
+          validation_notes?: string | null
         }
         Update: {
           categorie?: string | null
@@ -1642,7 +1811,13 @@ export type Database = {
           phrase_conseil?: string | null
           priorite?: number
           produit?: string
+          rule_version?: number
+          source_code?: string | null
+          source_reference?: string | null
           type_produit?: string | null
+          validated_at?: string | null
+          validated_by?: string | null
+          validation_notes?: string | null
         }
         Relationships: [
           {
@@ -1651,6 +1826,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "pathologies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "produits_complementaires_source_code_fkey"
+            columns: ["source_code"]
+            isOneToOne: false
+            referencedRelation: "clinical_sources"
+            referencedColumns: ["code"]
           },
         ]
       }
@@ -2350,7 +2532,24 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      v_clinical_lineage: {
+        Row: {
+          created_at: string | null
+          pathologie_id: string | null
+          rule_id: string | null
+          rule_label: string | null
+          rule_type: string | null
+          rule_version: number | null
+          source_code: string | null
+          source_derniere_synchro: string | null
+          source_licence: string | null
+          source_nom: string | null
+          source_reference: string | null
+          validated_at: string | null
+          validated_by: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       get_top_produits: {
