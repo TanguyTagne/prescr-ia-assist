@@ -1,12 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { Pill, RotateCcw, AlertTriangle, MessageSquare, Loader2, Sparkles, Database, ShoppingCart, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { AnalysisResult } from "@/lib/prescriptionAnalyzer";
 import LegalDisclaimer from "./LegalDisclaimer";
+import LineageBadge from "./LineageBadge";
 import { trackEvent } from "@/hooks/useAnalytics";
 import { usePcFeedback } from "@/hooks/usePcFeedback";
+import { useProductLineage } from "@/hooks/useProductLineage";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -22,6 +24,17 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
   const [expandedPCConseils, setExpandedPCConseils] = useState<Set<string>>(new Set());
   const [conseilGlobalOpen, setConseilGlobalOpen] = useState(false);
   const { recordFeedback } = usePcFeedback();
+
+  // Lineage : précharge la traçabilité (source officielle, validation) pour
+  // tous les produits affichés afin d'alimenter le badge "Source" sous chaque PC.
+  const allProductNames = useMemo(
+    () =>
+      result.medicaments
+        .flatMap((m) => m.recommendations || [])
+        .map((r) => r.produit),
+    [result.medicaments]
+  );
+  const { lineage } = useProductLineage(allProductNames);
 
   // Escape key resets to new prescription
   useEffect(() => {
@@ -200,6 +213,13 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
                       );
                     })()
                     }
+                    {/* Badge de traçabilité (source officielle, validation) */}
+                    <div className="pt-0.5">
+                      <LineageBadge
+                        productName={rec.produit}
+                        info={lineage.get(rec.produit?.trim().toLowerCase())}
+                      />
+                    </div>
                   </div>);
 
           })}

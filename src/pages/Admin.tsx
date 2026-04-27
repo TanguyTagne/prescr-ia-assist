@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { ArrowLeft, Loader2, Mail, Building2, BarChart3, RefreshCw, ShieldCheck, ShoppingCart, Target, Monitor, Trophy, Sparkles, UserPlus, Network } from "lucide-react";
+import { ArrowLeft, Loader2, Mail, Building2, BarChart3, RefreshCw, ShieldCheck, ShoppingCart, Target, Monitor, Trophy, Sparkles, UserPlus, Network, FileSearch } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import RequestsTab from "@/components/admin/RequestsTab";
 import PharmaciesTab from "@/components/admin/PharmaciesTab";
@@ -16,6 +16,7 @@ import RegistersTab from "@/components/admin/RegistersTab";
 import DemoSessionsTab from "@/components/admin/DemoSessionsTab";
 import DemoLeadsTab from "@/components/admin/DemoLeadsTab";
 import GroupementsTab from "@/components/admin/GroupementsTab";
+import TracabiliteTab from "@/components/admin/TracabiliteTab";
 
 interface AccessRequest {
   id: string;
@@ -50,7 +51,7 @@ const Admin = () => {
   const [requests, setRequests] = useState<AccessRequest[]>([]);
   const [pharmacies, setPharmacies] = useState<PharmacyWithLGO[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<"requests" | "pharmacies" | "kpis" | "coverage" | "sales" | "perf" | "benchmark" | "registers" | "demo-sessions" | "demo-leads" | "groupements">("kpis");
+  const [tab, setTab] = useState<"requests" | "pharmacies" | "kpis" | "coverage" | "sales" | "perf" | "benchmark" | "registers" | "demo-sessions" | "demo-leads" | "groupements" | "tracabilite">("kpis");
 
   useEffect(() => {
     loadData();
@@ -149,6 +150,10 @@ const Admin = () => {
             <Network className="h-3.5 w-3.5" />
             Groupements
           </Button>
+          <Button variant={tab === "tracabilite" ? "default" : "outline"} size="sm" onClick={() => setTab("tracabilite")} className="gap-1.5">
+            <FileSearch className="h-3.5 w-3.5" />
+            Traçabilité
+          </Button>
           <Button variant="outline" size="sm" onClick={() => navigate("/groupement")} className="gap-1.5">
             <Network className="h-3.5 w-3.5" />
             Ouvrir dashboard groupement →
@@ -166,6 +171,7 @@ const Admin = () => {
         {tab === "registers" && <RegistersTab />}
         {tab === "benchmark" && <BenchmarkTab />}
         {tab === "groupements" && <GroupementsTab />}
+        {tab === "tracabilite" && <TracabiliteTab />}
       </div>
     </div>
   );
