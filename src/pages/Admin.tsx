@@ -150,6 +150,10 @@ const Admin = () => {
             <Network className="h-3.5 w-3.5" />
             Groupements
           </Button>
+          <Button variant={tab === "tracabilite" ? "default" : "outline"} size="sm" onClick={() => setTab("tracabilite")} className="gap-1.5">
+            <FileSearch className="h-3.5 w-3.5" />
+            Traçabilité
+          </Button>
           <Button variant="outline" size="sm" onClick={() => navigate("/groupement")} className="gap-1.5">
             <Network className="h-3.5 w-3.5" />
             Ouvrir dashboard groupement →
