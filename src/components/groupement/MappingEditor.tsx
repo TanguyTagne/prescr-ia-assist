@@ -136,10 +136,26 @@ const MappingEditor = ({ groupementId }: Props) => {
               </div>
             )}
             <div className="flex gap-2 justify-end">
-              <Button size="sm" variant="ghost" onClick={() => { setAdding(false); setNewCat(""); setNewProd(""); setNewLab(""); }}>
+              <Button
+                size="sm"
+                variant="ghost"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => { setAdding(false); setNewCat(""); setNewProd(""); setNewLab(""); }}
+              >
                 Annuler
               </Button>
-              <Button size="sm" onClick={addRow}>Enregistrer</Button>
+              <Button
+                size="sm"
+                onMouseDown={(e) => {
+                  // Force focused inputs to blur and commit their value before submit
+                  if (document.activeElement instanceof HTMLElement) {
+                    document.activeElement.blur();
+                  }
+                }}
+                onClick={addRow}
+              >
+                Enregistrer
+              </Button>
             </div>
           </div>
         )}
