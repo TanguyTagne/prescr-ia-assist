@@ -171,6 +171,7 @@ const Admin = () => {
         {tab === "registers" && <RegistersTab />}
         {tab === "benchmark" && <BenchmarkTab />}
         {tab === "groupements" && <GroupementsTab />}
+        {tab === "tracabilite" && <TracabiliteTab />}
       </div>
     </div>
   );
