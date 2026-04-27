@@ -47,6 +47,8 @@ const Confidentialite = lazyWithRetry(() => import("./pages/legal/Confidentialit
 const CookiesPage = lazyWithRetry(() => import("./pages/legal/Cookies"));
 const CGU = lazyWithRetry(() => import("./pages/legal/CGU"));
 const Groupement = lazyWithRetry(() => import("./pages/Groupement"));
+const DPA = lazyWithRetry(() => import("./pages/legal/DPA"));
+const PIA = lazyWithRetry(() => import("./pages/legal/PIA"));
 
 const queryClient = new QueryClient();
 
@@ -178,6 +180,8 @@ const App = () => {
                   <Route path="/confidentialite" element={<Confidentialite />} />
                   <Route path="/cookies" element={<CookiesPage />} />
                   <Route path="/cgu" element={<CGU />} />
+                  <Route path="/legal/dpa" element={<DPA />} />
+                  <Route path="/legal/pia" element={<PIA />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
                 <DeferredWidget mountImmediately />

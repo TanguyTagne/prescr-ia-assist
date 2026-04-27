@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { ArrowLeft, Loader2, Mail, Building2, BarChart3, RefreshCw, ShieldCheck, ShoppingCart, Target, Monitor, Trophy, Sparkles, UserPlus, Network, FileSearch } from "lucide-react";
+import { ArrowLeft, Loader2, Mail, Building2, BarChart3, RefreshCw, ShieldCheck, ShoppingCart, Target, Monitor, Trophy, Sparkles, UserPlus, Network, FileSearch, Shield, FileText, Gauge, UserCog } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import RequestsTab from "@/components/admin/RequestsTab";
 import PharmaciesTab from "@/components/admin/PharmaciesTab";
@@ -17,6 +17,10 @@ import DemoSessionsTab from "@/components/admin/DemoSessionsTab";
 import DemoLeadsTab from "@/components/admin/DemoLeadsTab";
 import GroupementsTab from "@/components/admin/GroupementsTab";
 import TracabiliteTab from "@/components/admin/TracabiliteTab";
+import ConformiteTab from "@/components/admin/ConformiteTab";
+import RgpdTab from "@/components/admin/RgpdTab";
+import QuotasTab from "@/components/admin/QuotasTab";
+import MesDonneesPanel from "@/components/admin/MesDonneesPanel";
 
 interface AccessRequest {
   id: string;
@@ -51,7 +55,7 @@ const Admin = () => {
   const [requests, setRequests] = useState<AccessRequest[]>([]);
   const [pharmacies, setPharmacies] = useState<PharmacyWithLGO[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<"requests" | "pharmacies" | "kpis" | "coverage" | "sales" | "perf" | "benchmark" | "registers" | "demo-sessions" | "demo-leads" | "groupements" | "tracabilite">("kpis");
+  const [tab, setTab] = useState<"requests" | "pharmacies" | "kpis" | "coverage" | "sales" | "perf" | "benchmark" | "registers" | "demo-sessions" | "demo-leads" | "groupements" | "tracabilite" | "conformite" | "rgpd" | "quotas" | "mes-donnees">("kpis");
 
   useEffect(() => {
     loadData();
@@ -154,6 +158,22 @@ const Admin = () => {
             <FileSearch className="h-3.5 w-3.5" />
             Traçabilité
           </Button>
+          <Button variant={tab === "conformite" ? "default" : "outline"} size="sm" onClick={() => setTab("conformite")} className="gap-1.5">
+            <Shield className="h-3.5 w-3.5" />
+            Conformité
+          </Button>
+          <Button variant={tab === "rgpd" ? "default" : "outline"} size="sm" onClick={() => setTab("rgpd")} className="gap-1.5">
+            <FileText className="h-3.5 w-3.5" />
+            RGPD
+          </Button>
+          <Button variant={tab === "quotas" ? "default" : "outline"} size="sm" onClick={() => setTab("quotas")} className="gap-1.5">
+            <Gauge className="h-3.5 w-3.5" />
+            Quotas
+          </Button>
+          <Button variant={tab === "mes-donnees" ? "default" : "outline"} size="sm" onClick={() => setTab("mes-donnees")} className="gap-1.5">
+            <UserCog className="h-3.5 w-3.5" />
+            Mes données
+          </Button>
           <Button variant="outline" size="sm" onClick={() => navigate("/groupement")} className="gap-1.5">
             <Network className="h-3.5 w-3.5" />
             Ouvrir dashboard groupement →
@@ -172,6 +192,10 @@ const Admin = () => {
         {tab === "benchmark" && <BenchmarkTab />}
         {tab === "groupements" && <GroupementsTab />}
         {tab === "tracabilite" && <TracabiliteTab />}
+        {tab === "conformite" && <ConformiteTab />}
+        {tab === "rgpd" && <RgpdTab />}
+        {tab === "quotas" && <QuotasTab />}
+        {tab === "mes-donnees" && <MesDonneesPanel />}
       </div>
     </div>
   );

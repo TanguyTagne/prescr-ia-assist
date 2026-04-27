@@ -508,6 +508,48 @@ export type Database = {
         }
         Relationships: []
       }
+      gdpr_requests: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          id: string
+          ip_address: string | null
+          notes: string | null
+          pharmacy_id: string
+          request_type: string
+          requested_at: string
+          requested_by: string | null
+          result_summary: Json | null
+          status: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          notes?: string | null
+          pharmacy_id: string
+          request_type: string
+          requested_at?: string
+          requested_by?: string | null
+          result_summary?: Json | null
+          status?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          notes?: string | null
+          pharmacy_id?: string
+          request_type?: string
+          requested_at?: string
+          requested_by?: string | null
+          result_summary?: Json | null
+          status?: string
+        }
+        Relationships: []
+      }
       group_alerts: {
         Row: {
           alert_type: string
@@ -1578,6 +1620,51 @@ export type Database = {
           },
         ]
       }
+      pharmacy_quotas: {
+        Row: {
+          created_at: string
+          current_daily_analyses: number
+          current_monthly_ai_calls: number
+          daily_analyses_limit: number
+          last_reset_daily: string
+          last_reset_monthly: string
+          max_upload_size_mb: number
+          monthly_ai_calls_limit: number
+          notes: string | null
+          over_limit_count: number
+          pharmacy_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          current_daily_analyses?: number
+          current_monthly_ai_calls?: number
+          daily_analyses_limit?: number
+          last_reset_daily?: string
+          last_reset_monthly?: string
+          max_upload_size_mb?: number
+          monthly_ai_calls_limit?: number
+          notes?: string | null
+          over_limit_count?: number
+          pharmacy_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          current_daily_analyses?: number
+          current_monthly_ai_calls?: number
+          daily_analyses_limit?: number
+          last_reset_daily?: string
+          last_reset_monthly?: string
+          max_upload_size_mb?: number
+          monthly_ai_calls_limit?: number
+          notes?: string | null
+          over_limit_count?: number
+          pharmacy_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       pharmacy_registers: {
         Row: {
           active: boolean
@@ -2204,6 +2291,60 @@ export type Database = {
           },
         ]
       }
+      rgpd_processing_register: {
+        Row: {
+          active: boolean
+          base_legale: string
+          categories_donnees: string
+          categories_personnes: string
+          created_at: string
+          destinataires: string
+          duree_conservation: string
+          finalite: string
+          id: string
+          mesures_securite: string
+          nom_traitement: string
+          notes: string | null
+          ordre: number
+          transferts_hors_ue: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          base_legale: string
+          categories_donnees: string
+          categories_personnes: string
+          created_at?: string
+          destinataires: string
+          duree_conservation: string
+          finalite: string
+          id?: string
+          mesures_securite: string
+          nom_traitement: string
+          notes?: string | null
+          ordre?: number
+          transferts_hors_ue?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          base_legale?: string
+          categories_donnees?: string
+          categories_personnes?: string
+          created_at?: string
+          destinataires?: string
+          duree_conservation?: string
+          finalite?: string
+          id?: string
+          mesures_securite?: string
+          nom_traitement?: string
+          notes?: string | null
+          ordre?: number
+          transferts_hors_ue?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       sales_transactions: {
         Row: {
           created_at: string
@@ -2552,6 +2693,10 @@ export type Database = {
       }
     }
     Functions: {
+      check_and_increment_quota: {
+        Args: { _pharmacy_id: string; _quota_type: string }
+        Returns: Json
+      }
       get_top_produits: {
         Args: { p_limit?: number; p_pathologie_id: string }
         Returns: {
