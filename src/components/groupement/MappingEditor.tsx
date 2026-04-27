@@ -59,7 +59,11 @@ const MappingEditor = ({ groupementId }: Props) => {
       niveau_priorite: 90,
     });
     if (error) {
-      toast.error(error.message);
+      if ((error as any).code === "23505") {
+        toast.error(`Ce mapping existe déjà : « ${newCat} » → « ${newProd} »`);
+      } else {
+        toast.error(error.message);
+      }
       return;
     }
     toast.success(`${newProd} sera désormais proposé pour la catégorie « ${newCat} »`);
