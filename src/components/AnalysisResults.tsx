@@ -25,6 +25,17 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
   const [conseilGlobalOpen, setConseilGlobalOpen] = useState(false);
   const { recordFeedback } = usePcFeedback();
 
+  // Lineage : précharge la traçabilité (source officielle, validation) pour
+  // tous les produits affichés afin d'alimenter le badge "Source" sous chaque PC.
+  const allProductNames = useMemo(
+    () =>
+      result.medicaments
+        .flatMap((m) => m.recommendations || [])
+        .map((r) => r.produit),
+    [result.medicaments]
+  );
+  const { lineage } = useProductLineage(allProductNames);
+
   // Escape key resets to new prescription
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
