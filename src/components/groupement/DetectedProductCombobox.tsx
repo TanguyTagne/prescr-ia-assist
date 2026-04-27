@@ -110,7 +110,10 @@ const DetectedProductCombobox = ({
   };
 
   const selectSource = (item: SourceItem) => {
-    commitValue(item.produit);
+    // Synchronously notify parent so state is up-to-date even if blur fires after
+    onValueChange(item.produit);
+    setQuery(item.produit);
+    onCommit?.(item.produit);
     setOpen(false);
   };
 
