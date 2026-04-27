@@ -213,6 +213,13 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
                       );
                     })()
                     }
+                    {/* Badge de traçabilité (source officielle, validation) */}
+                    <div className="pt-0.5">
+                      <LineageBadge
+                        productName={rec.produit}
+                        info={lineage.get(rec.produit?.trim().toLowerCase())}
+                      />
+                    </div>
                   </div>);
 
           })}
