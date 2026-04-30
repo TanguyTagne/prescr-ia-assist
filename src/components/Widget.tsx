@@ -1,5 +1,5 @@
-import { useState, useCallback, useRef, useEffect } from "react";
-import { X, Loader2, Mail, Lock, Eye, EyeOff, LogOut, BarChart3, Monitor, HelpCircle } from "lucide-react";
+import { useState, useCallback, useEffect } from "react";
+import { X, Loader2, Mail, Lock, Eye, EyeOff, Monitor, HelpCircle } from "lucide-react";
 import OnboardingTour from "@/components/OnboardingTour";
 import AnalysisSkeleton from "@/components/AnalysisSkeleton";
 import { Button } from "@/components/ui/button";
@@ -11,13 +11,7 @@ import PrescriptionInput from "@/components/PrescriptionInput";
 import AnalysisResults from "@/components/AnalysisResults";
 import LegalDisclaimer from "@/components/LegalDisclaimer";
 import { analyzePrescription, analyzePrescriptionImage, type AnalysisResult } from "@/lib/prescriptionAnalyzer";
-import DemoPrescriptionCards from "@/components/DemoPrescriptionCards";
-import WidgetDemo from "@/components/WidgetDemo";
-import { DEMO_PRESCRIPTIONS } from "@/lib/demoPrescriptions";
 import { trackEvent } from "@/hooks/useAnalytics";
-import { trackDemoSession } from "@/lib/demoTracking";
-import DemoLeadForm from "@/components/DemoLeadForm";
-import { useNavigate } from "react-router-dom";
 import { ScannerStatus } from "@/components/ScannerStatus";
 import { pdfToImageBase64 } from "@/lib/pdfToImage";
 import RegisterSelector from "@/components/RegisterSelector";
@@ -33,28 +27,13 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 
-const WidgetAuth = ({ hideDemo = false }: { hideDemo?: boolean }) => {
+const WidgetAuth = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [demoResult, setDemoResult] = useState<AnalysisResult | null>(null);
-  const [demoLoading, setDemoLoading] = useState(false);
-
-  const handleDemoSelect = (id: string) => {
-    const demo = DEMO_PRESCRIPTIONS.find((d) => d.id === id);
-    if (!demo) return;
-    setDemoLoading(true);
-    setDemoResult(null);
-    trackEvent("demo_analyzed", { ordonnance: id });
-    trackDemoSession(id);
-    setTimeout(() => {
-      setDemoResult(demo.result);
-      setDemoLoading(false);
-    }, 2500);
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,23 +56,6 @@ const WidgetAuth = ({ hideDemo = false }: { hideDemo?: boolean }) => {
       setLoading(false);
     }
   };
-
-  if (demoLoading) {
-    return (
-      <div className="p-4">
-        <AnalysisSkeleton />
-      </div>
-    );
-  }
-
-  if (demoResult) {
-    return (
-      <div className="p-4">
-        <AnalysisResults result={demoResult} demoMode onReset={() => setDemoResult(null)} />
-        <DemoLeadForm />
-      </div>
-    );
-  }
 
   return (
     <div className="p-4 space-y-3">
@@ -126,46 +88,20 @@ const WidgetAuth = ({ hideDemo = false }: { hideDemo?: boolean }) => {
           {isLogin ? "S'inscrire" : "Se connecter"}
         </button>
       </p>
-      {!hideDemo && (
-        <div className="pt-2 border-t border-border">
-          <DemoPrescriptionCards onSelect={handleDemoSelect} />
-        </div>
-      )}
     </div>);
 
 };
 
-const WidgetApp = ({ hideDemo = false }: { hideDemo?: boolean }) => {
+const WidgetApp = () => {
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isDemo, setIsDemo] = useState(false);
-  const { signOut } = useAuth();
-  const navigate = useNavigate();
 
   // Basket memory (anti-loop)
   const [basketSessionId] = useState(() => crypto.randomUUID());
   const [blockedProducts, setBlockedProducts] = useState<string[]>([]);
-  const [orderedProducts, setOrderedProducts] = useState<string[]>([]);
-
-  const basketOptions = { basketSessionId, blockedProducts };
-
-  const handleDemoSelect = (id: string) => {
-    const demo = DEMO_PRESCRIPTIONS.find((d) => d.id === id);
-    if (!demo) return;
-    setIsLoading(true);
-    setIsDemo(true);
-    setResult(null);
-    trackEvent("demo_analyzed", { ordonnance: id });
-    trackDemoSession(id);
-    setTimeout(() => {
-      setResult(demo.result);
-      setIsLoading(false);
-    }, 2500);
-  };
 
   const handleReset = () => {
     setResult(null);
-    setIsDemo(false);
   };
 
   const handleAnalyze = async (text: string) => {
@@ -317,15 +253,13 @@ const WidgetApp = ({ hideDemo = false }: { hideDemo?: boolean }) => {
       <div className="space-y-3">
           <PrescriptionInput onAnalyze={handleAnalyze} onAnalyzeImage={handleAnalyzeImage} />
           <LegalDisclaimer />
-          {!hideDemo && <DemoPrescriptionCards onSelect={handleDemoSelect} compact />}
           <p className="text-[10px] text-foreground/60 text-center pt-1">
             <kbd className="px-1 py-0.5 rounded bg-secondary font-mono">Échap</kbd> · <kbd className="px-1 py-0.5 rounded bg-secondary font-mono">Entrée</kbd> · <kbd className="px-1 py-0.5 rounded bg-secondary font-mono">?</kbd> aide
           </p>
         </div> :
 
       <>
-        <AnalysisResults result={result} demoMode={isDemo} onReset={handleReset} />
-        {isDemo && !hideDemo && <DemoLeadForm />}
+        <AnalysisResults result={result} onReset={handleReset} />
       </>
       }
     </div>);
@@ -395,7 +329,6 @@ const Widget = ({ forceOpen = false }: {forceOpen?: boolean;}) => {
   const { preset: pharmacyPreset, lgoType: pharmacyLgoType } = useLgoPreset();
   const [previewLgo, setPreviewLgo] = useState<LgoType | null>(null);
   const [showTour, setShowTour] = useState(false);
-  const navigateRef = useNavigate();
 
   const lgoType: LgoType = previewLgo ?? pharmacyLgoType;
   const preset = previewLgo ? LGO_PRESETS[previewLgo] : pharmacyPreset;
@@ -449,9 +382,9 @@ const Widget = ({ forceOpen = false }: {forceOpen?: boolean;}) => {
                 <Loader2 className="h-5 w-5 animate-spin text-primary" />
               </div> :
             !user ?
-            <WidgetAuth hideDemo /> :
+            <WidgetAuth /> :
 
-            <WidgetApp hideDemo />
+            <WidgetApp />
             }
           </div>
         </div>
@@ -490,7 +423,14 @@ const Widget = ({ forceOpen = false }: {forceOpen?: boolean;}) => {
             </button>
             <RegisterSelector />
           </div>
-          <WidgetDemo />
+          {loading ?
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            </div> :
+          !user ?
+            <WidgetAuth /> :
+            <WidgetApp />
+          }
 
           </div>
         </div>
