@@ -32,7 +32,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 
-const WidgetAuth = () => {
+const WidgetAuth = ({ hideDemo = false }: { hideDemo?: boolean }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -125,9 +125,11 @@ const WidgetAuth = () => {
           {isLogin ? "S'inscrire" : "Se connecter"}
         </button>
       </p>
-      <div className="pt-2 border-t border-border">
-        <DemoPrescriptionCards onSelect={handleDemoSelect} />
-      </div>
+      {!hideDemo && (
+        <div className="pt-2 border-t border-border">
+          <DemoPrescriptionCards onSelect={handleDemoSelect} />
+        </div>
+      )}
     </div>);
 
 };
@@ -444,7 +446,7 @@ const Widget = ({ forceOpen = false }: {forceOpen?: boolean;}) => {
                 <Loader2 className="h-5 w-5 animate-spin text-primary" />
               </div> :
             !user ?
-            <WidgetAuth /> :
+            <WidgetAuth hideDemo /> :
 
             <WidgetApp />
             }
