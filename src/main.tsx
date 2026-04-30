@@ -4,7 +4,7 @@ import App from "./App.tsx";
 import "./index.css";
 import { isAsclionDesktopRuntime } from "@/lib/runtime";
 
-const SW_VERSION = "v5";
+const SW_VERSION = "v6";
 const isDesktopRuntime = isAsclionDesktopRuntime();
 
 if ("serviceWorker" in navigator) {
