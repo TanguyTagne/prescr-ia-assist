@@ -362,14 +362,10 @@ const Widget = ({ forceOpen = false }: {forceOpen?: boolean;}) => {
   };
 
   if (isDesktopRuntime) {
-    // Electron full-window mode: position the panel in the LGO preset corner,
-    // leaving the rest of the window empty (transparent overlay zone).
-    const electronPos = getPresetClassesElectron(preset.position);
+    // Electron full-window mode: the panel fills the entire native window.
     return (
-      <div className="h-screen w-screen bg-transparent overflow-hidden relative">
-        <div
-          className={`fixed ${electronPos} flex flex-col bg-background border border-border rounded-xl shadow-2xl overflow-hidden transition-all duration-300`}
-          style={{ width: `${preset.width}px`, maxHeight: `calc(100vh - 1rem)` }}>
+      <div className="h-screen w-screen bg-background overflow-hidden flex flex-col">
+        <div className="flex flex-col h-full w-full bg-background overflow-hidden">
           <div className="pharmacy-gradient px-3 py-1.5 flex items-center gap-2 shrink-0">
             <span className="text-sm font-bold text-primary-foreground tracking-tight">Asclion</span>
             <LgoPreviewPicker current={lgoType} onChange={setPreviewLgo} isOverride={isPreview} />
