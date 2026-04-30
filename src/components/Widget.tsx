@@ -1,5 +1,5 @@
-import { useState, useCallback, useRef, useEffect } from "react";
-import { X, Loader2, Mail, Lock, Eye, EyeOff, LogOut, BarChart3, Monitor, HelpCircle } from "lucide-react";
+import { useState, useCallback, useEffect } from "react";
+import { X, Loader2, Mail, Lock, Eye, EyeOff, Monitor, HelpCircle } from "lucide-react";
 import OnboardingTour from "@/components/OnboardingTour";
 import AnalysisSkeleton from "@/components/AnalysisSkeleton";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,6 @@ import AnalysisResults from "@/components/AnalysisResults";
 import LegalDisclaimer from "@/components/LegalDisclaimer";
 import { analyzePrescription, analyzePrescriptionImage, type AnalysisResult } from "@/lib/prescriptionAnalyzer";
 import { trackEvent } from "@/hooks/useAnalytics";
-import { useNavigate } from "react-router-dom";
 import { ScannerStatus } from "@/components/ScannerStatus";
 import { pdfToImageBase64 } from "@/lib/pdfToImage";
 import RegisterSelector from "@/components/RegisterSelector";
@@ -96,15 +95,10 @@ const WidgetAuth = () => {
 const WidgetApp = () => {
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const { signOut } = useAuth();
-  const navigate = useNavigate();
 
   // Basket memory (anti-loop)
   const [basketSessionId] = useState(() => crypto.randomUUID());
   const [blockedProducts, setBlockedProducts] = useState<string[]>([]);
-  const [orderedProducts, setOrderedProducts] = useState<string[]>([]);
-
-  const basketOptions = { basketSessionId, blockedProducts };
 
   const handleReset = () => {
     setResult(null);
@@ -389,9 +383,9 @@ const Widget = ({ forceOpen = false }: {forceOpen?: boolean;}) => {
                 <Loader2 className="h-5 w-5 animate-spin text-primary" />
               </div> :
             !user ?
-            <WidgetAuth hideDemo /> :
+            <WidgetAuth /> :
 
-            <WidgetApp hideDemo />
+            <WidgetApp />
             }
           </div>
         </div>
@@ -430,7 +424,14 @@ const Widget = ({ forceOpen = false }: {forceOpen?: boolean;}) => {
             </button>
             <RegisterSelector />
           </div>
-          <WidgetDemo />
+          {loading ?
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            </div> :
+          !user ?
+            <WidgetAuth /> :
+            <WidgetApp />
+          }
 
           </div>
         </div>
