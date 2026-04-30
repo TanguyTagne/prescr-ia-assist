@@ -33,6 +33,7 @@ function createWindow() {
 
   // Remove the menu bar entirely
   mainWindow.setMenuBarVisibility(false);
+  mainWindow.webContents.setUserAgent(`${mainWindow.webContents.getUserAgent()} AsclionDesktop`);
 
   // Force the window title to "Asclion" and prevent the loaded page from changing it
   mainWindow.setTitle("Asclion");
@@ -42,8 +43,18 @@ function createWindow() {
   });
 
   // Always load remote URL with desktop flag + cache-buster to bypass any stale SW
-  const getDesktopUrl = () => `${APP_URL}?desktop=1&v=${Date.now()}`;
+  const getDesktopUrl = () => `${APP_URL}/?desktop=1&v=${Date.now()}`;
   mainWindow.loadURL(getDesktopUrl());
+
+  mainWindow.webContents.on("will-navigate", (event, url) => {
+    if (!url.startsWith(APP_URL)) return;
+    const next = new URL(url);
+    if (next.searchParams.get("desktop") === "1") return;
+    event.preventDefault();
+    next.searchParams.set("desktop", "1");
+    next.searchParams.set("v", String(Date.now()));
+    mainWindow.loadURL(next.toString());
+  });
 
   // Handle load failures — retry after a delay
   mainWindow.webContents.on("did-fail-load", (_event, _code, _desc, url) => {
