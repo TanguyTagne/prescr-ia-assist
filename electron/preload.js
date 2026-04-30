@@ -1,5 +1,11 @@
 const { contextBridge, ipcRenderer } = require("electron");
 
+Object.defineProperty(window, "__ASCLION_DESKTOP__", {
+  value: true,
+  enumerable: false,
+  configurable: false,
+});
+
 // Expose a minimal API to the renderer
 contextBridge.exposeInMainWorld("electronAPI", {
   isDesktop: true,

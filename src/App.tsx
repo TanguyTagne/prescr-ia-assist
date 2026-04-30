@@ -10,6 +10,7 @@ import { Loader2 } from "lucide-react";
 import CookieBanner from "@/components/CookieBanner";
 import LgoAutoDetectPrompt from "@/components/LgoAutoDetectPrompt";
 import WidgetDemoTour from "@/components/WidgetDemoTour";
+import { isAsclionDesktopRuntime } from "@/lib/runtime";
 
 // Retry dynamic import on failure (handles stale Vite chunks / transient network).
 // On second failure, force a hard reload to fetch the latest asset manifest.
@@ -52,13 +53,7 @@ const PIA = lazyWithRetry(() => import("./pages/legal/PIA"));
 
 const queryClient = new QueryClient();
 
-const isElectronRuntime = /Electron|AsclionDesktop/i.test(window.navigator.userAgent);
-
-const isStandalone = window.matchMedia("(display-mode: standalone)").matches
-  || (window.navigator as any).standalone === true
-  || !!(window as any).electronAPI?.isDesktop
-  || isElectronRuntime
-  || new URLSearchParams(window.location.search).get("desktop") === "1";
+const isStandalone = isAsclionDesktopRuntime();
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();

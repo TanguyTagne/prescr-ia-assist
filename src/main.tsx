@@ -2,11 +2,10 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "./App.tsx";
 import "./index.css";
+import { isAsclionDesktopRuntime } from "@/lib/runtime";
 
-const SW_VERSION = "v5";
-const isDesktopRuntime =
-  !!(window as any).electronAPI?.isDesktop ||
-  new URLSearchParams(window.location.search).get("desktop") === "1";
+const SW_VERSION = "v6";
+const isDesktopRuntime = isAsclionDesktopRuntime();
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", async () => {
