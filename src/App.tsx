@@ -43,6 +43,7 @@ const ResetPassword = lazyWithRetry(() => import("./pages/ResetPassword"));
 const VsLgo = lazyWithRetry(() => import("./pages/VsLgo"));
 const Aide = lazyWithRetry(() => import("./pages/Aide"));
 const Widget = lazyWithRetry(() => import("./components/Widget"));
+const SiteDemoWidget = lazyWithRetry(() => import("./components/SiteDemoWidget"));
 const MentionsLegales = lazyWithRetry(() => import("./pages/legal/MentionsLegales"));
 const Confidentialite = lazyWithRetry(() => import("./pages/legal/Confidentialite"));
 const CookiesPage = lazyWithRetry(() => import("./pages/legal/Cookies"));
@@ -88,7 +89,7 @@ const GroupRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-const DeferredWidget = ({ forceOpen, mountImmediately }: { forceOpen?: boolean; mountImmediately?: boolean }) => {
+const DeferredWidget = ({ forceOpen, mountImmediately, demo = false }: { forceOpen?: boolean; mountImmediately?: boolean; demo?: boolean }) => {
   const [shouldMount, setShouldMount] = useState(!!forceOpen || !!mountImmediately);
 
   useEffect(() => {
@@ -120,7 +121,7 @@ const DeferredWidget = ({ forceOpen, mountImmediately }: { forceOpen?: boolean; 
   if (!shouldMount) return null;
   return (
     <WidgetErrorBoundary>
-      <Widget forceOpen={forceOpen} />
+      {demo ? <SiteDemoWidget /> : <Widget forceOpen={forceOpen} />}
     </WidgetErrorBoundary>
   );
 };
@@ -182,7 +183,7 @@ const App = () => {
                   <Route path="/legal/pia" element={<PIA />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
-                <DeferredWidget mountImmediately />
+                <DeferredWidget demo mountImmediately />
                 <VisitorTour />
                 <CookieBanner />
                 <LgoAutoDetectPrompt />
