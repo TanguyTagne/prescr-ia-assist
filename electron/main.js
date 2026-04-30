@@ -42,13 +42,14 @@ function createWindow() {
   });
 
   // Always load remote URL with desktop flag + cache-buster to bypass any stale SW
-  mainWindow.loadURL(`${APP_URL}?desktop=1&v=${Date.now()}`);
+  const getDesktopUrl = () => `${APP_URL}?desktop=1&v=${Date.now()}`;
+  mainWindow.loadURL(getDesktopUrl());
 
   // Handle load failures — retry after a delay
   mainWindow.webContents.on("did-fail-load", (_event, _code, _desc, url) => {
     console.error("Failed to load:", url);
     setTimeout(() => {
-      mainWindow.loadURL(APP_URL);
+      mainWindow.loadURL(getDesktopUrl());
     }, 3000);
   });
 
