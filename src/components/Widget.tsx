@@ -446,7 +446,7 @@ const Widget = ({ forceOpen = false }: {forceOpen?: boolean;}) => {
                 <Loader2 className="h-5 w-5 animate-spin text-primary" />
               </div> :
             !user ?
-            <WidgetAuth /> :
+            <WidgetAuth hideDemo /> :
 
             <WidgetApp />
             }
