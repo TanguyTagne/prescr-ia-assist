@@ -23,6 +23,7 @@ import { pdfToImageBase64 } from "@/lib/pdfToImage";
 import RegisterSelector from "@/components/RegisterSelector";
 import { useLgoPreset } from "@/hooks/useLgoPreset";
 import { getPresetClasses, getPresetClassesElectron, LGO_PRESETS, type LgoType } from "@/lib/lgoPresets";
+import { isAsclionDesktopRuntime } from "@/lib/runtime";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -386,11 +387,7 @@ const LgoPreviewPicker = ({
 );
 
 const Widget = ({ forceOpen = false }: {forceOpen?: boolean;}) => {
-  const isDesktopRuntime =
-    forceOpen ||
-    !!(window as any).electronAPI?.isDesktop ||
-    /Electron|AsclionDesktop/i.test(window.navigator.userAgent) ||
-    new URLSearchParams(window.location.search).get("desktop") === "1";
+  const isDesktopRuntime = forceOpen || isAsclionDesktopRuntime();
 
   // Web: always open so visitors can naturally try the demo. Electron: forceOpen.
   const [open, setOpen] = useState(true);
