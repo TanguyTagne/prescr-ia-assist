@@ -148,6 +148,12 @@ const VisitorTour = () => {
   return <WidgetDemoTour enabled={enabled} />;
 };
 
+const SiteDemoLayer = () => {
+  const location = useLocation();
+  if (location.pathname !== "/") return null;
+  return <DeferredWidget demo mountImmediately />;
+};
+
 
 const App = () => {
   return (
@@ -183,7 +189,7 @@ const App = () => {
                   <Route path="/legal/pia" element={<PIA />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
-                <DeferredWidget demo mountImmediately />
+                <SiteDemoLayer />
                 <VisitorTour />
                 <CookieBanner />
                 <LgoAutoDetectPrompt />
