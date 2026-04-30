@@ -52,9 +52,12 @@ const PIA = lazyWithRetry(() => import("./pages/legal/PIA"));
 
 const queryClient = new QueryClient();
 
+const isElectronRuntime = /Electron|AsclionDesktop/i.test(window.navigator.userAgent);
+
 const isStandalone = window.matchMedia("(display-mode: standalone)").matches
   || (window.navigator as any).standalone === true
   || !!(window as any).electronAPI?.isDesktop
+  || isElectronRuntime
   || new URLSearchParams(window.location.search).get("desktop") === "1";
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
