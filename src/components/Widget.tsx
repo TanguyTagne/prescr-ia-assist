@@ -329,7 +329,6 @@ const Widget = ({ forceOpen = false }: {forceOpen?: boolean;}) => {
   const { preset: pharmacyPreset, lgoType: pharmacyLgoType } = useLgoPreset();
   const [previewLgo, setPreviewLgo] = useState<LgoType | null>(null);
   const [showTour, setShowTour] = useState(false);
-  const navigateRef = useNavigate();
 
   const lgoType: LgoType = previewLgo ?? pharmacyLgoType;
   const preset = previewLgo ? LGO_PRESETS[previewLgo] : pharmacyPreset;
