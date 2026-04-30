@@ -386,6 +386,12 @@ const LgoPreviewPicker = ({
 );
 
 const Widget = ({ forceOpen = false }: {forceOpen?: boolean;}) => {
+  const isDesktopRuntime =
+    forceOpen ||
+    !!(window as any).electronAPI?.isDesktop ||
+    /Electron|AsclionDesktop/i.test(window.navigator.userAgent) ||
+    new URLSearchParams(window.location.search).get("desktop") === "1";
+
   // Web: always open so visitors can naturally try the demo. Electron: forceOpen.
   const [open, setOpen] = useState(true);
   const { user, loading, onboardingCompleted, refreshOnboarding } = useAuth();
@@ -425,7 +431,7 @@ const Widget = ({ forceOpen = false }: {forceOpen?: boolean;}) => {
     refreshOnboarding();
   };
 
-  if (forceOpen) {
+  if (isDesktopRuntime) {
     // Electron full-window mode: position the panel in the LGO preset corner,
     // leaving the rest of the window empty (transparent overlay zone).
     const electronPos = getPresetClassesElectron(preset.position);
