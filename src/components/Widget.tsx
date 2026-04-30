@@ -32,7 +32,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 
-const WidgetAuth = () => {
+const WidgetAuth = ({ hideDemo = false }: { hideDemo?: boolean }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
