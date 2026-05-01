@@ -128,7 +128,7 @@ export default function VsLgo() {
       <section className="max-w-4xl mx-auto px-4 sm:px-6 mb-16">
         <Card className="p-8 bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
           <p className="text-xl sm:text-2xl font-medium leading-relaxed text-center italic">
-            « Winpharma vous propose des produits que les labos ont payés pour mettre en avant.
+            «Les LGO vous propose des produits que les labos ont payés pour mettre en avant.
             Asclion vous propose ce dont le patient a réellement besoin, avec la phrase exacte à dire.
             Et ça marche sur tous les LGO. »
           </p>
