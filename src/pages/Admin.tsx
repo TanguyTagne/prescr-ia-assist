@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { ArrowLeft, Loader2, Mail, Building2, BarChart3, RefreshCw, ShieldCheck, ShoppingCart, Target, Monitor, Trophy, Sparkles, UserPlus, Network, FileSearch, Shield, FileText, Gauge, UserCog } from "lucide-react";
+import { ArrowLeft, Loader2, Mail, Building2, BarChart3, RefreshCw, ShieldCheck, ShoppingCart, Target, Monitor, Trophy, Sparkles, UserPlus, Network, FileSearch, Shield, FileText, Gauge, UserCog, Link2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import RequestsTab from "@/components/admin/RequestsTab";
 import PharmaciesTab from "@/components/admin/PharmaciesTab";
@@ -21,6 +21,7 @@ import ConformiteTab from "@/components/admin/ConformiteTab";
 import RgpdTab from "@/components/admin/RgpdTab";
 import QuotasTab from "@/components/admin/QuotasTab";
 import MesDonneesPanel from "@/components/admin/MesDonneesPanel";
+import TrackingLinksTab from "@/components/admin/TrackingLinksTab";
 
 interface AccessRequest {
   id: string;
@@ -55,7 +56,7 @@ const Admin = () => {
   const [requests, setRequests] = useState<AccessRequest[]>([]);
   const [pharmacies, setPharmacies] = useState<PharmacyWithLGO[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<"requests" | "pharmacies" | "kpis" | "coverage" | "sales" | "perf" | "benchmark" | "registers" | "demo-sessions" | "demo-leads" | "groupements" | "tracabilite" | "conformite" | "rgpd" | "quotas" | "mes-donnees">("kpis");
+  const [tab, setTab] = useState<"requests" | "pharmacies" | "kpis" | "coverage" | "sales" | "perf" | "benchmark" | "registers" | "demo-sessions" | "demo-leads" | "tracking-links" | "groupements" | "tracabilite" | "conformite" | "rgpd" | "quotas" | "mes-donnees">("kpis");
 
   useEffect(() => {
     loadData();
@@ -122,6 +123,10 @@ const Admin = () => {
             <Sparkles className="h-3.5 w-3.5" />
             Sessions démo
           </Button>
+          <Button variant={tab === "tracking-links" ? "default" : "outline"} size="sm" onClick={() => setTab("tracking-links")} className="gap-1.5">
+            <Link2 className="h-3.5 w-3.5" />
+            Liens trackables
+          </Button>
           <Button variant={tab === "requests" ? "default" : "outline"} size="sm" onClick={() => setTab("requests")} className="gap-1.5">
             <Mail className="h-3.5 w-3.5" />
             Demandes ({requests.filter(r => r.status === "pending").length})
@@ -183,6 +188,7 @@ const Admin = () => {
         {tab === "kpis" && <PharmacyKPIs />}
         {tab === "demo-leads" && <DemoLeadsTab />}
         {tab === "demo-sessions" && <DemoSessionsTab />}
+        {tab === "tracking-links" && <TrackingLinksTab />}
         {tab === "requests" && <RequestsTab requests={requests} onRefresh={loadData} />}
         {tab === "pharmacies" && <PharmaciesTab pharmacies={pharmacies} onRefresh={loadData} />}
         {tab === "coverage" && <CoverageTab />}
