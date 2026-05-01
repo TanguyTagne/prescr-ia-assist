@@ -119,7 +119,6 @@ export default function VsLgo() {
             <span className="bg-gradient-to-r from-primary to-pharmacy-teal bg-clip-text text-transparent">LGO</span>
           </h1>
           <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-            Winpharma, LGPI, Pharmagest, Smart Rx proposent déjà du conseil associé.
             Voici pourquoi Asclion change la donne.
           </p>
         </section>
