@@ -75,7 +75,7 @@ const PrescriptionInput = ({ onAnalyze, onAnalyzeImage, autoAnalyze = true }: Pr
         }
       } catch { /* ignore */ }
 
-      const queries: Promise<any>[] = [
+      const queries: any[] = [
         supabase
           .from("medicaments")
           .select("nom_commercial, laboratoire")
