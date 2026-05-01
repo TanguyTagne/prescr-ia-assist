@@ -27,7 +27,112 @@ const PrescriptionInput = ({ onAnalyze, onAnalyzeImage, autoAnalyze = true }: Pr
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isProcessingFile, setIsProcessingFile] = useState(false);
+  const [suggestions, setSuggestions] = useState<MedSuggestion[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [highlightIdx, setHighlightIdx] = useState(0);
+  const [searching, setSearching] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const quickInputRef = useRef<HTMLInputElement>(null);
+  const latestSearchRef = useRef(0);
+
+  const getLastToken = (value: string) => {
+    const parts = value.split(/[,;\n]/);
+    return parts[parts.length - 1].trimStart();
+  };
+
+  const replaceLastToken = (value: string, replacement: string) => {
+    const idx = Math.max(value.lastIndexOf(","), value.lastIndexOf(";"), value.lastIndexOf("\n"));
+    const prefix = idx === -1 ? "" : value.slice(0, idx + 1) + " ";
+    return prefix + replacement;
+  };
+
+  useEffect(() => {
+    if (mode !== "quick") return;
+    const token = getLastToken(quickInput);
+    if (!showSuggestions || token.length < 2) {
+      setSuggestions([]);
+      setSearching(false);
+      return;
+    }
+
+    const searchId = Date.now();
+    latestSearchRef.current = searchId;
+    setSearching(true);
+
+    const timeout = window.setTimeout(async () => {
+      const startsWith = `${token}%`;
+
+      let pharmacyId: string | null = null;
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("pharmacy_id")
+            .eq("id", user.id)
+            .maybeSingle();
+          pharmacyId = profile?.pharmacy_id || null;
+        }
+      } catch { /* ignore */ }
+
+      const queries: Promise<any>[] = [
+        supabase
+          .from("medicaments")
+          .select("nom_commercial, laboratoire")
+          .ilike("nom_commercial", startsWith)
+          .order("nom_commercial")
+          .limit(15),
+      ];
+
+      if (pharmacyId) {
+        queries.push(
+          (supabase as any)
+            .from("pharmacy_lgo_stock")
+            .select("nom_produit, laboratoire")
+            .eq("pharmacy_id", pharmacyId)
+            .ilike("nom_produit", startsWith)
+            .gt("stock", 0)
+            .limit(15)
+        );
+      }
+
+      const results = await Promise.all(queries);
+      if (latestSearchRef.current !== searchId) return;
+
+      const seen = new Set<string>();
+      const items: MedSuggestion[] = [];
+
+      if (results[1]?.data) {
+        results[1].data.forEach((row: any) => {
+          const key = (row.nom_produit || "").toLowerCase();
+          if (!key || seen.has(key)) return;
+          seen.add(key);
+          items.push({ nom: row.nom_produit, laboratoire: row.laboratoire, source: "stock" });
+        });
+      }
+
+      (results[0]?.data || []).forEach((row: any) => {
+        const key = (row.nom_commercial || "").toLowerCase();
+        if (!key || seen.has(key)) return;
+        seen.add(key);
+        items.push({ nom: row.nom_commercial, laboratoire: row.laboratoire, source: "base" });
+      });
+
+      setSuggestions(items.slice(0, 12));
+      setHighlightIdx(0);
+      setSearching(false);
+    }, 120);
+
+    return () => window.clearTimeout(timeout);
+  }, [quickInput, mode, showSuggestions]);
+
+  const applySuggestion = (sug: MedSuggestion) => {
+    const next = replaceLastToken(quickInput, sug.nom);
+    setQuickInput(next + ", ");
+    setSuggestions([]);
+    setShowSuggestions(false);
+    setTimeout(() => quickInputRef.current?.focus(), 0);
+  };
 
   const processFile = useCallback(async (file: File) => {
     setIsProcessingFile(true);
