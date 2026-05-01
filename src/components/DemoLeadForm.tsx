@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Loader2, X, CheckCircle2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { getStoredAttribution } from "@/lib/trackingAttribution";
 
 const SESSION_KEY = "asclion_demo_session_id";
 
@@ -33,6 +34,7 @@ const DemoLeadForm = () => {
           nom: nom.trim(),
           officine: officine.trim(),
           email: email.trim(),
+          tracking_link_id: getStoredAttribution(),
         },
       });
       if (error) throw error;

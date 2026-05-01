@@ -3,9 +3,15 @@ import { BrowserRouter } from "react-router-dom";
 import App from "./App.tsx";
 import "./index.css";
 import { isAsclionDesktopRuntime } from "@/lib/runtime";
+import { processIncomingTrackingLink } from "@/lib/trackingAttribution";
 
 const SW_VERSION = "v6";
 const isDesktopRuntime = isAsclionDesktopRuntime();
+
+// Process ?r=<slug> trackable links on every page load (web only)
+if (!isDesktopRuntime) {
+  processIncomingTrackingLink();
+}
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", async () => {
