@@ -228,16 +228,81 @@ const PrescriptionInput = ({ onAnalyze, onAnalyzeImage, autoAnalyze = true }: Pr
         ))}
       </div>
 
-      {/* Quick input */}
+      {/* Quick input with autocomplete */}
       {mode === "quick" && (
-        <Input
-          placeholder="Ex : Amoxicilline, Doliprane, Oméprazole..."
-          value={quickInput}
-          onChange={(e) => setQuickInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          className="h-9 text-sm px-3 border border-border focus:border-primary"
-          autoFocus
-        />
+        <div className="relative">
+          <Input
+            ref={quickInputRef}
+            placeholder="Ex : Doli... (suggestions stock + base)"
+            value={quickInput}
+            onChange={(e) => {
+              setQuickInput(e.target.value);
+              setShowSuggestions(true);
+            }}
+            onFocus={() => setShowSuggestions(true)}
+            onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+            onKeyDown={(e) => {
+              if (showSuggestions && suggestions.length > 0) {
+                if (e.key === "ArrowDown") {
+                  e.preventDefault();
+                  setHighlightIdx((i) => Math.min(i + 1, suggestions.length - 1));
+                  return;
+                }
+                if (e.key === "ArrowUp") {
+                  e.preventDefault();
+                  setHighlightIdx((i) => Math.max(i - 1, 0));
+                  return;
+                }
+                if (e.key === "Tab" || (e.key === "Enter" && !e.shiftKey)) {
+                  e.preventDefault();
+                  applySuggestion(suggestions[highlightIdx]);
+                  return;
+                }
+                if (e.key === "Escape") {
+                  e.preventDefault();
+                  setShowSuggestions(false);
+                  return;
+                }
+              }
+              handleKeyDown(e);
+            }}
+            className="h-9 text-sm px-3 border border-border focus:border-primary"
+            autoFocus
+            autoComplete="off"
+          />
+          {showSuggestions && (suggestions.length > 0 || searching) && (
+            <div className="absolute z-50 mt-1 w-full bg-popover border border-border rounded-md shadow-lg max-h-[260px] overflow-y-auto">
+              {searching && suggestions.length === 0 && (
+                <div className="py-2 px-3 text-xs text-muted-foreground flex items-center gap-2">
+                  <Loader2 className="h-3 w-3 animate-spin" /> Recherche…
+                </div>
+              )}
+              {suggestions.map((sug, idx) => (
+                <button
+                  key={`${sug.source}-${sug.nom}-${idx}`}
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => applySuggestion(sug)}
+                  className={`w-full flex items-center gap-2 px-2.5 py-1.5 text-left text-xs hover:bg-accent ${
+                    idx === highlightIdx ? "bg-accent" : ""
+                  }`}
+                >
+                  <Pill className="h-3 w-3 text-muted-foreground shrink-0" />
+                  <span className="flex-1 truncate font-medium">{sug.nom}</span>
+                  {sug.laboratoire && (
+                    <span className="text-[10px] text-muted-foreground truncate max-w-[100px]">{sug.laboratoire}</span>
+                  )}
+                  <Badge
+                    variant={sug.source === "stock" ? "default" : "secondary"}
+                    className="text-[9px] px-1.5 py-0 h-4"
+                  >
+                    {sug.source === "stock" ? "Stock" : "Base"}
+                  </Badge>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       )}
 
       {/* Text input */}
