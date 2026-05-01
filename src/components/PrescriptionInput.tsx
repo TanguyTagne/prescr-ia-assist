@@ -1,10 +1,18 @@
-import { useState, useRef, useCallback } from "react";
-import { Search, FileText, Keyboard, Camera, X, ImageIcon, Loader2 } from "lucide-react";
+import { useState, useRef, useCallback, useEffect } from "react";
+import { Search, FileText, Keyboard, Camera, X, ImageIcon, Loader2, Pill } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 import { pdfToImageBase64 } from "@/lib/pdfToImage";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+
+interface MedSuggestion {
+  nom: string;
+  laboratoire?: string | null;
+  source: "stock" | "base";
+}
 
 interface PrescriptionInputProps {
   onAnalyze: (text: string) => void;
@@ -19,7 +27,112 @@ const PrescriptionInput = ({ onAnalyze, onAnalyzeImage, autoAnalyze = true }: Pr
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isProcessingFile, setIsProcessingFile] = useState(false);
+  const [suggestions, setSuggestions] = useState<MedSuggestion[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [highlightIdx, setHighlightIdx] = useState(0);
+  const [searching, setSearching] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const quickInputRef = useRef<HTMLInputElement>(null);
+  const latestSearchRef = useRef(0);
+
+  const getLastToken = (value: string) => {
+    const parts = value.split(/[,;\n]/);
+    return parts[parts.length - 1].trimStart();
+  };
+
+  const replaceLastToken = (value: string, replacement: string) => {
+    const idx = Math.max(value.lastIndexOf(","), value.lastIndexOf(";"), value.lastIndexOf("\n"));
+    const prefix = idx === -1 ? "" : value.slice(0, idx + 1) + " ";
+    return prefix + replacement;
+  };
+
+  useEffect(() => {
+    if (mode !== "quick") return;
+    const token = getLastToken(quickInput);
+    if (!showSuggestions || token.length < 2) {
+      setSuggestions([]);
+      setSearching(false);
+      return;
+    }
+
+    const searchId = Date.now();
+    latestSearchRef.current = searchId;
+    setSearching(true);
+
+    const timeout = window.setTimeout(async () => {
+      const startsWith = `${token}%`;
+
+      let pharmacyId: string | null = null;
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("pharmacy_id")
+            .eq("id", user.id)
+            .maybeSingle();
+          pharmacyId = profile?.pharmacy_id || null;
+        }
+      } catch { /* ignore */ }
+
+      const queries: any[] = [
+        supabase
+          .from("medicaments")
+          .select("nom_commercial, laboratoire")
+          .ilike("nom_commercial", startsWith)
+          .order("nom_commercial")
+          .limit(15),
+      ];
+
+      if (pharmacyId) {
+        queries.push(
+          (supabase as any)
+            .from("pharmacy_lgo_stock")
+            .select("nom_produit, laboratoire")
+            .eq("pharmacy_id", pharmacyId)
+            .ilike("nom_produit", startsWith)
+            .gt("stock", 0)
+            .limit(15)
+        );
+      }
+
+      const results = await Promise.all(queries);
+      if (latestSearchRef.current !== searchId) return;
+
+      const seen = new Set<string>();
+      const items: MedSuggestion[] = [];
+
+      if (results[1]?.data) {
+        results[1].data.forEach((row: any) => {
+          const key = (row.nom_produit || "").toLowerCase();
+          if (!key || seen.has(key)) return;
+          seen.add(key);
+          items.push({ nom: row.nom_produit, laboratoire: row.laboratoire, source: "stock" });
+        });
+      }
+
+      (results[0]?.data || []).forEach((row: any) => {
+        const key = (row.nom_commercial || "").toLowerCase();
+        if (!key || seen.has(key)) return;
+        seen.add(key);
+        items.push({ nom: row.nom_commercial, laboratoire: row.laboratoire, source: "base" });
+      });
+
+      setSuggestions(items.slice(0, 12));
+      setHighlightIdx(0);
+      setSearching(false);
+    }, 120);
+
+    return () => window.clearTimeout(timeout);
+  }, [quickInput, mode, showSuggestions]);
+
+  const applySuggestion = (sug: MedSuggestion) => {
+    const next = replaceLastToken(quickInput, sug.nom);
+    setQuickInput(next + ", ");
+    setSuggestions([]);
+    setShowSuggestions(false);
+    setTimeout(() => quickInputRef.current?.focus(), 0);
+  };
 
   const processFile = useCallback(async (file: File) => {
     setIsProcessingFile(true);
@@ -115,16 +228,81 @@ const PrescriptionInput = ({ onAnalyze, onAnalyzeImage, autoAnalyze = true }: Pr
         ))}
       </div>
 
-      {/* Quick input */}
+      {/* Quick input with autocomplete */}
       {mode === "quick" && (
-        <Input
-          placeholder="Ex : Amoxicilline, Doliprane, Oméprazole..."
-          value={quickInput}
-          onChange={(e) => setQuickInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          className="h-9 text-sm px-3 border border-border focus:border-primary"
-          autoFocus
-        />
+        <div className="relative">
+          <Input
+            ref={quickInputRef}
+            placeholder="Ex : Doli... (suggestions stock + base)"
+            value={quickInput}
+            onChange={(e) => {
+              setQuickInput(e.target.value);
+              setShowSuggestions(true);
+            }}
+            onFocus={() => setShowSuggestions(true)}
+            onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+            onKeyDown={(e) => {
+              if (showSuggestions && suggestions.length > 0) {
+                if (e.key === "ArrowDown") {
+                  e.preventDefault();
+                  setHighlightIdx((i) => Math.min(i + 1, suggestions.length - 1));
+                  return;
+                }
+                if (e.key === "ArrowUp") {
+                  e.preventDefault();
+                  setHighlightIdx((i) => Math.max(i - 1, 0));
+                  return;
+                }
+                if (e.key === "Tab" || (e.key === "Enter" && !e.shiftKey)) {
+                  e.preventDefault();
+                  applySuggestion(suggestions[highlightIdx]);
+                  return;
+                }
+                if (e.key === "Escape") {
+                  e.preventDefault();
+                  setShowSuggestions(false);
+                  return;
+                }
+              }
+              handleKeyDown(e);
+            }}
+            className="h-9 text-sm px-3 border border-border focus:border-primary"
+            autoFocus
+            autoComplete="off"
+          />
+          {showSuggestions && (suggestions.length > 0 || searching) && (
+            <div className="absolute z-50 mt-1 w-full bg-popover border border-border rounded-md shadow-lg max-h-[260px] overflow-y-auto">
+              {searching && suggestions.length === 0 && (
+                <div className="py-2 px-3 text-xs text-muted-foreground flex items-center gap-2">
+                  <Loader2 className="h-3 w-3 animate-spin" /> Recherche…
+                </div>
+              )}
+              {suggestions.map((sug, idx) => (
+                <button
+                  key={`${sug.source}-${sug.nom}-${idx}`}
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => applySuggestion(sug)}
+                  className={`w-full flex items-center gap-2 px-2.5 py-1.5 text-left text-xs hover:bg-accent ${
+                    idx === highlightIdx ? "bg-accent" : ""
+                  }`}
+                >
+                  <Pill className="h-3 w-3 text-muted-foreground shrink-0" />
+                  <span className="flex-1 truncate font-medium">{sug.nom}</span>
+                  {sug.laboratoire && (
+                    <span className="text-[10px] text-muted-foreground truncate max-w-[100px]">{sug.laboratoire}</span>
+                  )}
+                  <Badge
+                    variant={sug.source === "stock" ? "default" : "secondary"}
+                    className="text-[9px] px-1.5 py-0 h-4"
+                  >
+                    {sug.source === "stock" ? "Stock" : "Base"}
+                  </Badge>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       )}
 
       {/* Text input */}
