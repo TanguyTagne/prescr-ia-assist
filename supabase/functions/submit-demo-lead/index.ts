@@ -11,6 +11,7 @@ const LeadSchema = z.object({
   nom: z.string().trim().min(1).max(100),
   officine: z.string().trim().min(1).max(150),
   email: z.string().trim().email().max(255),
+  tracking_link_id: z.string().uuid().optional().nullable(),
 });
 
 const NOTIFY_EMAIL = "tanguytubert@gmail.com";
@@ -29,7 +30,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { session_id, nom, officine, email } = parsed.data;
+    const { session_id, nom, officine, email, tracking_link_id } = parsed.data;
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -39,7 +40,7 @@ Deno.serve(async (req) => {
     // Insert lead
     const { data: lead, error: leadErr } = await supabase
       .from("demo_leads")
-      .insert({ session_id, nom, officine, email })
+      .insert({ session_id, nom, officine, email, tracking_link_id: tracking_link_id ?? null })
       .select()
       .single();
 
