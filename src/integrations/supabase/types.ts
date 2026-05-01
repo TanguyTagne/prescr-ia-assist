@@ -444,6 +444,7 @@ export type Database = {
           officine: string
           session_id: string
           status: string
+          tracking_link_id: string | null
           updated_at: string
         }
         Insert: {
@@ -456,6 +457,7 @@ export type Database = {
           officine: string
           session_id: string
           status?: string
+          tracking_link_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -468,9 +470,18 @@ export type Database = {
           officine?: string
           session_id?: string
           status?: string
+          tracking_link_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "demo_leads_tracking_link_id_fkey"
+            columns: ["tracking_link_id"]
+            isOneToOne: false
+            referencedRelation: "tracking_links"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       demo_sessions: {
         Row: {
@@ -482,6 +493,7 @@ export type Database = {
           ordonnance_id: string
           referrer: string | null
           session_id: string
+          tracking_link_id: string | null
           user_agent: string | null
         }
         Insert: {
@@ -493,6 +505,7 @@ export type Database = {
           ordonnance_id: string
           referrer?: string | null
           session_id: string
+          tracking_link_id?: string | null
           user_agent?: string | null
         }
         Update: {
@@ -504,9 +517,18 @@ export type Database = {
           ordonnance_id?: string
           referrer?: string | null
           session_id?: string
+          tracking_link_id?: string | null
           user_agent?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "demo_sessions_tracking_link_id_fkey"
+            columns: ["tracking_link_id"]
+            isOneToOne: false
+            referencedRelation: "tracking_links"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       gdpr_requests: {
         Row: {
@@ -2587,6 +2609,104 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      tracking_clicks: {
+        Row: {
+          created_at: string
+          device_type: string | null
+          id: string
+          ip_city: string | null
+          ip_country: string | null
+          is_unique: boolean
+          link_id: string
+          referrer: string | null
+          session_id: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          created_at?: string
+          device_type?: string | null
+          id?: string
+          ip_city?: string | null
+          ip_country?: string | null
+          is_unique?: boolean
+          link_id: string
+          referrer?: string | null
+          session_id?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          created_at?: string
+          device_type?: string | null
+          id?: string
+          ip_city?: string | null
+          ip_country?: string | null
+          is_unique?: boolean
+          link_id?: string
+          referrer?: string | null
+          session_id?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tracking_clicks_link_id_fkey"
+            columns: ["link_id"]
+            isOneToOne: false
+            referencedRelation: "tracking_links"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tracking_links: {
+        Row: {
+          campaign: string | null
+          clicks_count: number
+          created_at: string
+          created_by: string | null
+          demos_count: number
+          destination: string
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          label: string
+          leads_count: number
+          slug: string
+          unique_clicks_count: number
+          updated_at: string
+        }
+        Insert: {
+          campaign?: string | null
+          clicks_count?: number
+          created_at?: string
+          created_by?: string | null
+          demos_count?: number
+          destination?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          label: string
+          leads_count?: number
+          slug: string
+          unique_clicks_count?: number
+          updated_at?: string
+        }
+        Update: {
+          campaign?: string | null
+          clicks_count?: number
+          created_at?: string
+          created_by?: string | null
+          demos_count?: number
+          destination?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          label?: string
+          leads_count?: number
+          slug?: string
+          unique_clicks_count?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       unmatched_medicaments: {
         Row: {

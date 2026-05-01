@@ -16,6 +16,8 @@ Deno.serve(async (req) => {
     const ordonnance_id = String(body?.ordonnance_id ?? "").slice(0, 50);
     const referrer = body?.referrer ? String(body.referrer).slice(0, 500) : null;
     const user_agent = body?.user_agent ? String(body.user_agent).slice(0, 500) : null;
+    const tracking_link_id = body?.tracking_link_id && /^[0-9a-f-]{36}$/i.test(String(body.tracking_link_id))
+      ? String(body.tracking_link_id) : null;
 
     if (!session_id || !ordonnance_id) {
       return new Response(JSON.stringify({ error: "session_id and ordonnance_id required" }), {
@@ -40,6 +42,7 @@ Deno.serve(async (req) => {
       ip_city: city,
       referrer,
       user_agent,
+      tracking_link_id,
     });
 
     if (error) {

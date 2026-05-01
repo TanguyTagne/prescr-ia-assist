@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.submit-demo-lead]
 verify_jwt = false
+
+[functions.track-link-click]
+verify_jwt = false
