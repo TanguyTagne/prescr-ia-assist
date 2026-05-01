@@ -1,10 +1,18 @@
-import { useState, useRef, useCallback } from "react";
-import { Search, FileText, Keyboard, Camera, X, ImageIcon, Loader2 } from "lucide-react";
+import { useState, useRef, useCallback, useEffect } from "react";
+import { Search, FileText, Keyboard, Camera, X, ImageIcon, Loader2, Pill } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 import { pdfToImageBase64 } from "@/lib/pdfToImage";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+
+interface MedSuggestion {
+  nom: string;
+  laboratoire?: string | null;
+  source: "stock" | "base";
+}
 
 interface PrescriptionInputProps {
   onAnalyze: (text: string) => void;
