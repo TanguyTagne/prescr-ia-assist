@@ -1,222 +1,98 @@
+## Objectif
 
-# Plan : Pack RGPD B2B + Quotas applicatifs
+Garantir qu'**au moins quelques médicaments représentatifs** existent dans la base pour **chacune des 22 grandes catégories** demandées, afin que toute ordonnance courante soit reconnue, quel que soit son domaine thérapeutique.
 
-Deux chantiers parallèles à livrer en 2-4 semaines pour être prêt à signer un groupement.
+## État actuel (audit DB)
 
----
+Base : 895 médicaments, 434 pathologies, 2557 produits complémentaires, 18 classes thérapeutiques structurées.
 
-## CHANTIER 1 — Pack RGPD B2B opposable
+Répartition ATC niveau 1 des médicaments présents :
 
-Objectif : pouvoir répondre "oui" à toutes les questions juridiques d'un acheteur groupement, et fournir les documents sur demande en moins de 24h.
-
-### 1.1 — Registre des traitements (Article 30 RGPD)
-
-Créer `mem://compliance/rgpd-registre` + une page admin `/admin` onglet **"RGPD"** affichant le registre structuré :
-
-Pour chaque traitement (analyse d'ordonnance, CRM patient, analytics, leads démo, traçabilité clinique) :
-- Finalité
-- Base légale (intérêt légitime / consentement / contrat)
-- Catégories de données (hash patient, métadonnées, pas de PII directe)
-- Catégories de personnes concernées (patients indirects, pharmaciens, prospects)
-- Destinataires (Lovable Cloud / Supabase EU Frankfurt, Resend, Twilio si activé)
-- Transferts hors UE (aucun, ou garanties SCC)
-- Durée de conservation
-- Mesures de sécurité (RLS, JWT, hash, TLS)
-
-Stocké dans une nouvelle table `rgpd_processing_register` éditable par admin uniquement, exportable en PDF.
-
-### 1.2 — DPA type signable
-
-Document Markdown généré dans `/mnt/documents/` en version statique + accessible via `/legal/dpa` côté pharmacien.
-
-Contenu standard :
-- Identification responsable de traitement (pharmacie) / sous-traitant (Asclion)
-- Objet, durée, nature des traitements
-- Obligations Asclion (sécurité, confidentialité, sous-traitants ultérieurs)
-- Localisation données (UE)
-- Droit d'audit
-- Notification de violation < 72h
-- Sort des données en fin de contrat
-
-Bouton "Télécharger le DPA pré-rempli" dans l'onglet Conformité côté pharmacien (utilise les données pharmacie depuis la table `pharmacies`).
-
-### 1.3 — Procédure droit à l'effacement / portabilité
-
-Edge function `gdpr-data-request` :
-- Endpoint `POST /functions/v1/gdpr-data-request` avec action `export` ou `delete`
-- Accessible depuis page pharmacien `/admin` → onglet "Mes données"
-- **Export** : génère un ZIP JSON contenant toutes les données liées à `pharmacy_id` (analyses, feedback, ventes, registres)
-- **Effacement** : anonymise (pas de DELETE pour préserver KPIs anonymisés) → remplace `pharmacy_id` par un UUID `deleted_pharmacy` et purge les hashes patient associés
-- Logue chaque demande dans nouvelle table `gdpr_requests` (audit)
-
-### 1.4 — PIA simplifié (Privacy Impact Assessment)
-
-Document statique `/legal/pia` (page React) répondant aux 6 questions CNIL :
-1. Description du traitement
-2. Nécessité et proportionnalité
-3. Risques pour les personnes (faible : pas de PII directe, hash irréversible)
-4. Mesures pour traiter les risques
-5. Validation
-6. Plan d'action
-
-Téléchargeable en PDF depuis l'onglet RGPD admin.
-
-### 1.5 — Page "Conformité & Sécurité" admin (synthèse opposable)
-
-Nouvel onglet `/admin` → **"Conformité"** centralisant :
-- Statut RGPD (registre à jour, DPA dispo, PIA dispo)
-- Statut sécurité (RLS actif, JWT, chiffrement TLS, hash patients)
-- Hébergement (Lovable Cloud / Supabase EU Frankfurt — analyse HDS écrite)
-- Traçabilité clinique (lien vers onglet existant)
-- Liens téléchargement : DPA type, PIA, Politique Confidentialité, CGU
-- Bouton "Générer pack PDF complet" → ZIP unique pour acheteur
-
-### 1.6 — Analyse HDS (Hébergeur Données de Santé)
-
-Document Markdown justifiant **pourquoi Asclion n'est pas soumis à HDS** :
-- Données traitées : hashes irréversibles + métadonnées non-nominatives
-- Pas d'hébergement de dossier patient
-- Référence à la doctrine ANS : seuils d'identifiabilité
-- Vérification région Supabase = Frankfurt (UE)
-
-À placer dans la page Conformité admin.
-
----
-
-## CHANTIER 2 — Quotas applicatifs par pharmacie
-
-⚠️ **Contrainte plateforme** : la plateforme Lovable n'a pas encore de primitives de rate limiting backend natif. On implémente donc des **quotas applicatifs** au niveau DB (compteurs + alertes), suffisants pour protéger budget AI et détecter les abus.
-
-### 2.1 — Table `pharmacy_quotas`
-
-Nouvelle table :
-- `pharmacy_id` (PK)
-- `daily_analyses_limit` (default 500)
-- `monthly_ai_calls_limit` (default 15000)
-- `max_upload_size_mb` (default 10)
-- `current_daily_analyses` (compteur, reset 24h)
-- `current_monthly_ai_calls` (compteur, reset mensuel)
-- `last_reset_daily`, `last_reset_monthly`
-- `over_limit` (bool — déclencheur alerte)
-
-RLS : admin lecture totale, pharmacie lecture de sa propre ligne uniquement.
-
-### 2.2 — Fonction DB `check_and_increment_quota`
-
-Fonction PL/pgSQL `SECURITY DEFINER` :
-- Input : `pharmacy_id`, `quota_type` (`analysis` | `ai_call`)
-- Auto-reset compteur si nouveau jour/mois
-- Incrémente le compteur
-- Renvoie `{ allowed: bool, current: int, limit: int, remaining: int }`
-- Si dépassement : renvoie `allowed: false` ET insère dans `group_alerts` (severity warning)
-
-### 2.3 — Intégration dans edge functions sensibles
-
-Modifier `analyze-prescription/index.ts` et toute autre edge function consommant Lovable AI :
-- Avant l'appel AI : `supabase.rpc('check_and_increment_quota', { ... })`
-- Si `allowed: false` → réponse 429 avec message clair pour l'utilisateur ("Quota journalier atteint, contactez admin")
-- Logger côté `analytics_events` avec `event_type: 'quota_exceeded'`
-
-### 2.4 — UI quota côté admin
-
-Onglet `/admin` → **"Quotas"** :
-- Tableau pharmacie / quotas / consommation / % utilisé
-- Édition manuelle des limites par pharmacie (ex : groupement premium = 2000 analyses/jour)
-- Graphique top 10 consommatrices (30j)
-- Alertes "Pharmacie X a dépassé son quota X fois"
-
-### 2.5 — UI quota côté pharmacien (discret)
-
-Dans page `/admin` pharmacien (ou settings) :
-- Petite jauge "Vous avez utilisé X / Y analyses aujourd'hui"
-- Affichée seulement si > 70% de consommation
-- Bouton "Demander une augmentation" → email admin via edge function existante
-
-### 2.6 — Validation taille upload
-
-Côté `analyze-prescription` :
-- Vérifier `max_upload_size_mb` depuis `pharmacy_quotas` avant traitement image/PDF
-- Refus 413 avec message clair
-
----
-
-## Architecture résumée
-
-```text
-┌─────────────────────────────────────────────────────┐
-│  /admin                                             │
-│  ├─ Onglet "Conformité"   → RGPD + HDS + sécurité  │
-│  ├─ Onglet "RGPD"         → Registre traitements   │
-│  ├─ Onglet "Quotas"       → Gestion limites        │
-│  └─ Onglet "Traçabilité"  → (existant)             │
-└─────────────────────────────────────────────────────┘
-              │
-              ▼
-┌─────────────────────────────────────────────────────┐
-│  Edge Functions                                     │
-│  ├─ gdpr-data-request   → Export/Effacement        │
-│  └─ analyze-prescription → check_and_increment     │
-└─────────────────────────────────────────────────────┘
-              │
-              ▼
-┌─────────────────────────────────────────────────────┐
-│  Database (nouvelles tables)                        │
-│  ├─ rgpd_processing_register                        │
-│  ├─ gdpr_requests (audit)                           │
-│  └─ pharmacy_quotas + check_and_increment_quota()   │
-└─────────────────────────────────────────────────────┘
-              │
-              ▼
-┌─────────────────────────────────────────────────────┐
-│  Pharmacien                                         │
-│  ├─ /legal/dpa       → DPA pré-rempli              │
-│  ├─ /legal/pia       → PIA téléchargeable          │
-│  └─ Onglet "Mes données" → Export/Suppression      │
-└─────────────────────────────────────────────────────┘
+```
+A (digestif/métabolisme) 104   N (SNC)               117
+B (sang)                  25   P (parasitaires)        8
+C (cardio)                60   R (respiratoire)       50
+D (dermato)               31   S (organes sensoriels) 18
+G (génito-urinaire)       25   L (oncologie/immuno)    9
+H (hormones)              20   V (divers)              1
+J (anti-infectieux)       24
 ```
 
----
+Sans code ATC : 348 médicaments (à compléter, hors scope ici).
 
-## Détails techniques
+### Catégories bien couvertes (✓ — aucun seed)
+Antalgiques I/II, AINS, antibiotiques, antiseptiques, antihypertenseurs, diurétiques, anti­agrégants/anti­coagulants, hypolipémiants, broncho­dilatateurs/CSI, antihistaminiques, IPP/anti-H2, anti­diarrhéiques, laxatifs, anti­spasmodiques, anti­dépresseurs, anxio­lytiques/hypnotiques, anti­épileptiques, anti­diabétiques (incl. GLP-1), thyroïde, corticoïdes systémiques, contraceptifs/THM, gynéco locaux, prostate/incontinence/IPDE5, myo­relaxants, corticoïdes topiques, anti­fongiques cutanés, antibio topiques, acné, émollients, ophtalmo, ORL, vitamines/minéraux, substituts nicotiniques, TSO.
 
-**Migrations DB** :
-- 3 nouvelles tables : `rgpd_processing_register`, `gdpr_requests`, `pharmacy_quotas`
-- 1 fonction SECURITY DEFINER : `check_and_increment_quota`
-- RLS strictes : admin total, pharmacie lecture restreinte à `pharmacy_id`
-- Trigger `set_updated_at` sur les nouvelles tables
+### Catégories sous-couvertes ou absentes (à seeder)
 
-**Edge functions** :
-- `gdpr-data-request` (nouveau) — export ZIP / anonymisation
-- `analyze-prescription` (modifié) — intègre check quota
-- Pas d'autres edge functions à modifier dans le périmètre initial
+| # | Catégorie | Manque |
+|---|-----------|--------|
+| 1 | Anti­viraux (J05) | herpès (aciclovir, valaciclovir), grippe (osel­tamivir), VHC (sofosbuvir/velpatasvir), VIH (bictégravir, dolutégravir, emtricitabine/ténofovir) |
+| 2 | Anti­fongiques systémiques (J02) | fluconazole, itraconazole, terbinafine PO, vori­conazole |
+| 3 | Anti­arythmiques & digitaliques (C01) | amiodarone, flécaïnide, sotalol, digoxine |
+| 4 | Hépatique/biliaire (A05) | acide ursodéoxycholique, sili­marine |
+| 5 | Anti­émétiques (A04) | métoclopramide, dom­péridone, ondan­sétron, métopimazine |
+| 6 | MICI (A07E) | mésa­lazine, sulfasalazine, budésonide locale |
+| 7 | Anti­parkinsoniens (N04) | L-DOPA/carbi­dopa, ropinirole, prami­pexole, rasagiline |
+| 8 | Démences (N06D) | donépézil, riva­stigmine, galanta­mine, mémantine |
+| 9 | Psychostimulants (N06B) | méthyl­phénidate (Ritaline, Concerta, Quasym) |
+| 10 | Ostéoporose (M05) | alen­dronate, risé­dronate, zolé­dronate, dénos­umab, calcium+vit D |
+| 11 | Anti­goutteux (M04) | allo­purinol, fébu­xostat, colchicine |
+| 12 | Polyarthrite/biothérapies (L04) | métho­trexate, lé­flu­no­mide, adali­mumab, étaner­cept, hydro­xychloroquine |
+| 13 | Psoriasis (D05) | calci­potriol, calci­potriol+béta­métha­sone |
+| 14 | Anti­parasitaires cutanés (P03) | per­méthrine, ivermectine topique, mala­thion (gale & poux) |
+| 15 | Cicatrisants (D03) | trolamine, sulfa­diazine d'argent |
+| 16 | Vaccins (J07) | DTPolio, ROR, grippe, COVID-19, HPV, pneumo­coque, zona, méningo, hépatites |
+| 17 | Anti­hémorragiques (B02) | acide tranex­amique, vitamine K, facteur VIII (1 entrée symbolique) |
+| 18 | Anti­dotes / urgences (V03) | naloxone, N-acétyl­cystéine antidote, atropine, charbon activé |
+| 19 | Adrénaline auto-injectable | EpiPen, Anapen, Jext, Emerade |
+| 20 | Immuno­globulines (J06) | Ig polyvalentes IV, Ig anti-D, Ig spécifiques |
+| 21 | Désensibilisation (V01) | Stallergènes (acariens, pollens) |
+| 22 | Oncologie orale & hormono­thérapie (L01/L02) | imatinib, létrozole, tamoxifène, anastrozole, capéci­tabine |
+| 23 | Soins de support oncologie | aprépitant, fil­grastim |
+| 24 | Anesthésiques locaux dentaires (N01B) | articaïne, lidocaïne dentaire |
+| 25 | Probiotiques (A07F) | Saccharomyces, Lacto­bacillus rhamnosus |
+| 26 | Nutrition clinique (V06) | CNO Fortimel/Resource, Kaleorid, Phlexy (PCU) |
+| 27 | Mucoviscidose (R07) | Kaftrio (élexa/téza/iva), Symkevi |
+| 28 | Arthrose (chondro­protecteurs) | Structum (chondroïtine), Piascledine, acide hyalu­ronique injectable |
+| 29 | Alcool (sevrage) | naltrexone PO, acam­prosate, baclofène, disulfirame |
+| 30 | Tabac (médicaments) | varé­nicline (Champix), bupropion (Zyban) |
 
-**Frontend** :
-- 4 nouveaux composants admin : `ConformiteTab.tsx`, `RgpdTab.tsx`, `QuotasTab.tsx`, `MesDonneesPanel.tsx`
-- 2 nouvelles pages publiques : `/legal/dpa`, `/legal/pia`
-- Génération PDF côté client via `jspdf` (déjà disponible) ou via edge function dédiée
+> Hors scope : « dispositifs médicaux & para­pharmacie » (pansements, contention, glucomètres) — c'est du LGO/parapharmacie, pas de la table `medicaments`.
 
-**Mémoires à créer** :
-- `mem://compliance/rgpd-registre` — registre des traitements de référence
-- `mem://compliance/quotas-policy` — politique de quotas par défaut
-- `mem://compliance/hds-analysis` — analyse pourquoi non-soumis HDS
+## Plan d'action
 
----
+### Étape 1 — Migration de seed (`seed-coverage-22-categories`)
 
-## Hors périmètre (à faire plus tard)
+Insérer ~120-150 médicaments représentatifs dans `medicaments` couvrant les 30 lacunes ci-dessus, avec :
+- `nom_commercial`, `atc_code`, `laboratoire`, `forme_galenique`, `dosage`
+- `statut_officine = 'officine'`, `est_otc` calculé selon le produit
+- `source_code = 'asclion-coverage-v1'` pour traçabilité
 
-- Dépôt INPI de la marque (action externe, pas de code)
-- CGV B2B avec SLA (rédaction juridique)
-- Sentry / observabilité (chantier séparé déjà identifié)
-- Environnement staging (chantier séparé)
+Insérer en parallèle les **molécules** (`molecules`) manquantes et les liens `medicament_pathologie` minimaux pour 5-10 nouvelles `pathologies` essentielles non encore listées (Maladie de Parkinson, Alzheimer, Goutte, Mucoviscidose, Allergie sévère/anaphylaxie, Sevrage alcool…).
 
----
+Volume estimé : 150 INSERT médicaments + 30 molécules + 10 pathologies + 50 liens. Batché par groupes de 30-50 (cf. memory `data-operations-constraints`).
+
+### Étape 2 — Edge function `audit-coverage` (mise à jour)
+
+Étendre la liste des "catégories cibles" auditées par le tableau de bord Admin → onglet **Couverture clinique** pour matcher les 22 grandes catégories pharmacie (au lieu d'une liste interne plus courte). Génération automatique d'un rapport % de couverture par catégorie.
+
+### Étape 3 — Vérification
+
+Requêtes de contrôle après seed :
+```sql
+SELECT substr(atc_code,1,3), COUNT(*) FROM medicaments GROUP BY 1;
+```
+Objectif : aucune cellule du tableau d'audit < 3 médicaments pour les 22 catégories.
+
+### Notes de sécurité clinique
+Conformément aux memories `clinical-safety` et `legal-constraints` :
+- **Exclus** : chimios IV hospitalières, anesthésiques généraux, médicaments réservés réa.
+- **Inclus uniquement** : présentations délivrées en officine de ville.
+- Aucun protocole posologique ne sera ajouté — seulement l'identification produit (pour reconnaissance d'ordonnance).
 
 ## Livrables
 
-À la fin du chantier, tu pourras :
-1. Cliquer sur "Générer pack RGPD complet" et obtenir un ZIP signable à envoyer à n'importe quel groupement / juriste
-2. Garantir contractuellement le droit à l'effacement et à la portabilité
-3. Avoir un quota technique qui protège ton budget AI Gateway même en cas d'abus
-4. Répondre "oui, document disponible" à toutes les questions de due diligence RGPD
-
-Veux-tu que j'attaque l'implémentation dans cet ordre ?
+1. Migration SQL avec seed batché.
+2. Mise à jour `supabase/functions/audit-coverage/index.ts`.
+3. Confirmation visuelle dans Admin → Couverture clinique que les 22 catégories sont à ≥ "minimal" (≥3 médicaments représentatifs).
