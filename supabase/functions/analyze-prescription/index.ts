@@ -235,17 +235,20 @@ async function clinicalLookup(supabase: any, medName: string, moleculeName?: str
   let pathologies: any[] = [];
   const pathologieIdSet = new Set<string>();
 
-  // 1) Via molecule_pathologie
+  // Collect (pathology, score) pairs from BOTH sources, then sort by score
+  const pathoScored: { patho: any; score: number }[] = [];
+
+  // 1) Via molecule_pathologie (now WITH score_pertinence)
   const moleculeId = molecule?.id;
   if (moleculeId) {
     const { data } = await supabase
       .from("molecule_pathologie")
-      .select("pathologie_id, pathologies(*)")
+      .select("pathologie_id, score_pertinence, pathologies(*)")
       .eq("molecule_id", moleculeId);
     for (const mp of data || []) {
       if (mp.pathologies && !pathologieIdSet.has(mp.pathologies.id)) {
         pathologieIdSet.add(mp.pathologies.id);
-        pathologies.push(mp.pathologies);
+        pathoScored.push({ patho: mp.pathologies, score: mp.score_pertinence ?? 50 });
       }
     }
   }
@@ -255,17 +258,37 @@ async function clinicalLookup(supabase: any, medName: string, moleculeName?: str
     const { data } = await supabase
       .from("medicament_pathologie")
       .select("pathologie_id, score_pertinence, pathologies(*)")
-      .eq("medicament_id", medicament.id)
-      .order("score_pertinence", { ascending: false });
+      .eq("medicament_id", medicament.id);
     for (const mp of data || []) {
       if (mp.pathologies && !pathologieIdSet.has(mp.pathologies.id)) {
         pathologieIdSet.add(mp.pathologies.id);
-        pathologies.push(mp.pathologies);
+        pathoScored.push({ patho: mp.pathologies, score: mp.score_pertinence ?? 50 });
       }
     }
   }
 
-  const pathologieIds = [...pathologieIdSet];
+  // Filter dermato pathologies for systemic-only forms (oral / injectable)
+  // to avoid e.g. Solupred 20mg (oral) → "produit pour la peau"
+  const formeGal = (medicament?.forme_galenique || "").toLowerCase();
+  const isSystemicOnly = /comprim|g[ée]lule|sachet|sirop|solution buvable|injectable|lyoc|orodisp|effervesc/.test(formeGal)
+    && !/cr[èe]me|pommade|gel\b|patch|spray|collyre|gouttes|topique|cutan/.test(formeGal);
+  const dermatoCategoriesToSkip = new Set(["dermatologie"]);
+
+  let filteredScored = pathoScored;
+  if (isSystemicOnly) {
+    filteredScored = pathoScored.filter(({ patho }) => {
+      const cat = (patho.categorie || "").toLowerCase();
+      return !dermatoCategoriesToSkip.has(cat);
+    });
+    // Safety: if filter removes everything, fall back to original list
+    if (filteredScored.length === 0) filteredScored = pathoScored;
+  }
+
+  // Sort by score desc, then keep only top 4 to focus recommendations
+  filteredScored.sort((a, b) => b.score - a.score);
+  pathologies = filteredScored.slice(0, 4).map((x) => x.patho);
+
+  const pathologieIds = pathologies.map((p) => p.id);
   let conseils: any[] = [];
   let produits: any[] = [];
   let protocoles: any[] = [];
