@@ -126,7 +126,7 @@ const PrescriptionInput = ({ onAnalyze, onAnalyzeImage, autoAnalyze = true }: Pr
     }, 120);
 
     return () => window.clearTimeout(timeout);
-  }, [quickInput, mode, showSuggestions]);
+  }, [quickInput, textInput, mode, showSuggestions]);
 
   const applySuggestion = (sug: MedSuggestion) => {
     const next = replaceLastToken(quickInput, sug.nom);
