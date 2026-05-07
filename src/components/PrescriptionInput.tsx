@@ -46,9 +46,11 @@ const PrescriptionInput = ({ onAnalyze, onAnalyzeImage, autoAnalyze = true }: Pr
     return prefix + replacement;
   };
 
+  const currentValue = mode === "quick" ? quickInput : textInput;
+
   useEffect(() => {
-    if (mode !== "quick") return;
-    const token = getLastToken(quickInput);
+    if (mode !== "quick" && mode !== "text") return;
+    const token = getLastToken(currentValue);
     if (!showSuggestions || token.length < 2) {
       setSuggestions([]);
       setSearching(false);
