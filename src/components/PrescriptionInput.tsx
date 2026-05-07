@@ -128,12 +128,19 @@ const PrescriptionInput = ({ onAnalyze, onAnalyzeImage, autoAnalyze = true }: Pr
     return () => window.clearTimeout(timeout);
   }, [quickInput, textInput, mode, showSuggestions]);
 
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
   const applySuggestion = (sug: MedSuggestion) => {
-    const next = replaceLastToken(quickInput, sug.nom);
-    setQuickInput(next + ", ");
+    const next = replaceLastToken(currentValue, sug.nom) + ", ";
+    if (mode === "quick") {
+      setQuickInput(next);
+      setTimeout(() => quickInputRef.current?.focus(), 0);
+    } else {
+      setTextInput(next);
+      setTimeout(() => textareaRef.current?.focus(), 0);
+    }
     setSuggestions([]);
     setShowSuggestions(false);
-    setTimeout(() => quickInputRef.current?.focus(), 0);
   };
 
   const processFile = useCallback(async (file: File) => {
