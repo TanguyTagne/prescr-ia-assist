@@ -9,7 +9,7 @@ import { trackEvent } from "@/hooks/useAnalytics";
 import { trackDemoSession } from "@/lib/demoTracking";
 import DemoLeadForm from "@/components/DemoLeadForm";
 
-type Phase = "list" | "preview" | "analyzing" | "result";
+type Phase = "list" | "preview" | "analyzing" | "result" | "lead";
 
 const WidgetDemo = () => {
   const [phase, setPhase] = useState<Phase>("list");
