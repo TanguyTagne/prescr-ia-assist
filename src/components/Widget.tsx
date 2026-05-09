@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { X, Loader2, Mail, Lock, Eye, EyeOff, Monitor, HelpCircle } from "lucide-react";
+import { X, Loader2, Mail, Lock, Eye, EyeOff, Monitor, HelpCircle, Pin, PinOff, Minimize2, Maximize2 } from "lucide-react";
 import OnboardingTour from "@/components/OnboardingTour";
 import AnalysisSkeleton from "@/components/AnalysisSkeleton";
 import { Button } from "@/components/ui/button";
