@@ -244,7 +244,7 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
         </Button>
         {orderedItems.size > 0 &&
         <Badge variant="secondary" className="text-[10px]">
-            {orderedItems.size} produit(s) commandé(s)
+            {orderedItems.size} produit(s) accepté(s)
           </Badge>
         }
       </div>
