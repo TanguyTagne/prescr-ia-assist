@@ -370,6 +370,7 @@ const Widget = ({ forceOpen = false }: {forceOpen?: boolean;}) => {
             <span className="text-sm font-bold text-primary-foreground tracking-tight">Asclion</span>
             <LgoPreviewPicker current={lgoType} onChange={setPreviewLgo} isOverride={isPreview} />
             <div className="flex-1" />
+            <PipControls />
             <RegisterSelector />
           </div>
           <div className="flex-1 overflow-y-auto">
