@@ -63,7 +63,6 @@ const WidgetDemo = () => {
     return (
       <div className="p-4">
         <AnalysisResults result={result} demoMode onReset={handleReset} />
-        <DemoLeadForm />
       </div>
     );
   }
