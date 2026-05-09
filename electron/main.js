@@ -1,7 +1,41 @@
 const { app, BrowserWindow, shell, ipcMain, Notification } = require("electron");
 const { autoUpdater } = require("electron-updater");
 const path = require("path");
+const fs = require("fs");
 const { exec } = require("child_process");
+
+// ────────────────────────────────────────────────────────────
+// Picture-in-Picture state (always-on-top + compact mode)
+// ────────────────────────────────────────────────────────────
+const SIZE_NORMAL = { width: 380, height: 580 };
+const SIZE_COMPACT = { width: 300, height: 440 };
+let pipState = { alwaysOnTop: true, compact: false };
+
+function getStateFile() {
+  return path.join(app.getPath("userData"), "pip-state.json");
+}
+function loadPipState() {
+  try {
+    const raw = fs.readFileSync(getStateFile(), "utf-8");
+    const parsed = JSON.parse(raw);
+    if (typeof parsed.alwaysOnTop === "boolean") pipState.alwaysOnTop = parsed.alwaysOnTop;
+    if (typeof parsed.compact === "boolean") pipState.compact = parsed.compact;
+  } catch { /* first run */ }
+}
+function savePipState() {
+  try {
+    fs.writeFileSync(getStateFile(), JSON.stringify(pipState));
+  } catch (e) { console.error("PiP state save failed:", e); }
+}
+function applyPipState() {
+  if (!mainWindow) return;
+  mainWindow.setAlwaysOnTop(pipState.alwaysOnTop, "floating");
+  try {
+    mainWindow.setVisibleOnAllWorkspaces(pipState.alwaysOnTop, { visibleOnFullScreen: true });
+  } catch { /* not supported on all platforms */ }
+  const size = pipState.compact ? SIZE_COMPACT : SIZE_NORMAL;
+  mainWindow.setSize(size.width, size.height);
+}
 
 // Disable hardware acceleration for compatibility
 app.disableHardwareAcceleration();
@@ -12,14 +46,17 @@ const APP_URL = "https://prescr-ia-assist.lovable.app";
 const LOCAL_PATH = path.join(__dirname, "web", "index.html");
 
 function createWindow() {
+  loadPipState();
+  const initSize = pipState.compact ? SIZE_COMPACT : SIZE_NORMAL;
   mainWindow = new BrowserWindow({
-    width: 380,
-    height: 580,
-    minWidth: 340,
-    minHeight: 480,
-    maxWidth: 450,
-    maxHeight: 700,
+    width: initSize.width,
+    height: initSize.height,
+    minWidth: 280,
+    minHeight: 400,
+    maxWidth: 520,
+    maxHeight: 800,
     resizable: true,
+    alwaysOnTop: pipState.alwaysOnTop,
     title: "Asclion",
     icon: path.join(__dirname, "assets", "icon.ico"),
     autoHideMenuBar: true,
@@ -30,6 +67,13 @@ function createWindow() {
       nodeIntegration: false,
     },
   });
+
+  if (pipState.alwaysOnTop) {
+    mainWindow.setAlwaysOnTop(true, "floating");
+    try {
+      mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+    } catch { /* not supported */ }
+  }
 
   // Remove the menu bar entirely
   mainWindow.setMenuBarVisibility(false);
@@ -133,6 +177,20 @@ app.on("activate", () => {
 // ────────────────────────────────────────────────────────────
 // IPC: Native notification (called from renderer via preload)
 // ────────────────────────────────────────────────────────────
+ipcMain.handle("pip:get-state", () => ({ ...pipState }));
+ipcMain.handle("pip:toggle", () => {
+  pipState.alwaysOnTop = !pipState.alwaysOnTop;
+  applyPipState();
+  savePipState();
+  return { ...pipState };
+});
+ipcMain.handle("pip:set-compact", (_e, compact) => {
+  pipState.compact = !!compact;
+  applyPipState();
+  savePipState();
+  return { ...pipState };
+});
+
 ipcMain.handle("notify", (_event, { title, body }) => {
   if (!Notification.isSupported()) return false;
   const notif = new Notification({
