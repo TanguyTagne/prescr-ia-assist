@@ -320,6 +320,52 @@ const LgoPreviewPicker = ({
   </DropdownMenu>
 );
 
+const PipControls = () => {
+  const api = (typeof window !== "undefined" ? (window as any).electronAPI?.pip : null) as
+    | { getState: () => Promise<{ alwaysOnTop: boolean; compact: boolean }>; toggle: () => Promise<{ alwaysOnTop: boolean; compact: boolean }>; setCompact: (c: boolean) => Promise<{ alwaysOnTop: boolean; compact: boolean }> }
+    | null;
+  const [state, setState] = useState<{ alwaysOnTop: boolean; compact: boolean } | null>(null);
+
+  useEffect(() => {
+    if (!api) return;
+    api.getState().then(setState).catch(() => {});
+  }, [api]);
+
+  if (!api || !state) return null;
+
+  const togglePin = async () => {
+    const next = await api.toggle();
+    setState(next);
+  };
+  const toggleCompact = async () => {
+    const next = await api.setCompact(!state.compact);
+    setState(next);
+  };
+
+  return (
+    <div className="flex items-center gap-0.5">
+      <button
+        type="button"
+        onClick={togglePin}
+        title={state.alwaysOnTop ? "Désépingler la fenêtre" : "Garder au premier plan"}
+        aria-label={state.alwaysOnTop ? "Désépingler" : "Épingler"}
+        className="text-primary-foreground/80 hover:text-primary-foreground transition-colors p-1 rounded focus-visible:ring-2 focus-visible:ring-primary-foreground/50"
+      >
+        {state.alwaysOnTop ? <Pin className="h-3.5 w-3.5" /> : <PinOff className="h-3.5 w-3.5" />}
+      </button>
+      <button
+        type="button"
+        onClick={toggleCompact}
+        title={state.compact ? "Taille normale" : "Mode compact"}
+        aria-label={state.compact ? "Agrandir" : "Réduire"}
+        className="text-primary-foreground/80 hover:text-primary-foreground transition-colors p-1 rounded focus-visible:ring-2 focus-visible:ring-primary-foreground/50"
+      >
+        {state.compact ? <Maximize2 className="h-3.5 w-3.5" /> : <Minimize2 className="h-3.5 w-3.5" />}
+      </button>
+    </div>
+  );
+};
+
 const Widget = ({ forceOpen = false }: {forceOpen?: boolean;}) => {
   const isDesktopRuntime = forceOpen || isAsclionDesktopRuntime();
 
