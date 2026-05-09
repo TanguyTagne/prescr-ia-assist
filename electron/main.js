@@ -177,6 +177,20 @@ app.on("activate", () => {
 // ────────────────────────────────────────────────────────────
 // IPC: Native notification (called from renderer via preload)
 // ────────────────────────────────────────────────────────────
+ipcMain.handle("pip:get-state", () => ({ ...pipState }));
+ipcMain.handle("pip:toggle", () => {
+  pipState.alwaysOnTop = !pipState.alwaysOnTop;
+  applyPipState();
+  savePipState();
+  return { ...pipState };
+});
+ipcMain.handle("pip:set-compact", (_e, compact) => {
+  pipState.compact = !!compact;
+  applyPipState();
+  savePipState();
+  return { ...pipState };
+});
+
 ipcMain.handle("notify", (_event, { title, body }) => {
   if (!Notification.isSupported()) return false;
   const notif = new Notification({
