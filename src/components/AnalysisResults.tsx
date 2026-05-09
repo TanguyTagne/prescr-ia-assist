@@ -82,19 +82,27 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
     setOrderedItems((prev) => new Set(prev).add(key));
 
     if (demoMode) {
-      toast.info("Démonstration — connectez-vous pour activer la commande LGO.");
+      toast.info("Démonstration — connectez-vous pour activer l'historique des combinaisons.");
       return;
     }
 
-    trackEvent("product_ordered", { medicament: medNom, produit });
-    recordFeedback(medNom, produit, "accepted", categorie);
+    trackEvent("product_accepted", { medicament: medNom, produit });
 
-    // Try to push to LGO
+    const medicaments_analyses = result.medicaments.map((m) => m.nom);
+    const pcs_proposes = result.medicaments.flatMap((m) =>
+      (m.recommendations || []).map((r) => r.produit)
+    );
+    recordFeedback(medNom, produit, "accepted", categorie, undefined, {
+      medicaments_analyses,
+      pcs_proposes,
+    });
+
+    // Push silencieux au LGO si configuré (best-effort)
     supabase.functions.invoke("lgo-push-cart", {
       body: { products: [{ name: produit, category: categorie }] },
     }).catch(() => {});
 
-    toast.success(`${produit} ajouté à la commande`);
+    toast.success(`${produit} accepté`);
   };
 
   const isOrdered = (medNom: string, produit: string) => orderedItems.has(`${medNom}::${produit}`);
