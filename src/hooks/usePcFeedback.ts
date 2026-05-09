@@ -12,7 +12,8 @@ export const usePcFeedback = () => {
     pcNom: string,
     action: "accepted" | "refused" | "ignored",
     pcCategorie?: string,
-    reason?: string
+    reason?: string,
+    context?: { medicaments_analyses?: string[]; pcs_proposes?: string[] }
   ) => {
     if (!user) return;
 
