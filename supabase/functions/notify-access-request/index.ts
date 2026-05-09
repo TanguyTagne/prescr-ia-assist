@@ -45,7 +45,7 @@ async function sendEmail(formData: Record<string, any>) {
     body: JSON.stringify({
       from: "Asclion <onboarding@resend.dev>",
       to: ADMIN_EMAIL,
-      subject: `Nouvelle demande d'accès — ${pharmacy_name}`,
+      subject,
       html: htmlBody,
     }),
   });
@@ -65,7 +65,19 @@ serve(async (req) => {
 
   try {
     const formData = await req.json();
-    EdgeRuntime.waitUntil(sendEmail(formData));
+    // Basic input validation + size cap to mitigate abuse
+    if (!formData || typeof formData !== "object") {
+      return new Response(JSON.stringify({ error: "Invalid payload" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const safe: Record<string, string> = {};
+    for (const k of ["pharmacy_name", "contact_name", "email", "phone", "city", "lgo_type"]) {
+      const v = (formData as any)[k];
+      safe[k] = typeof v === "string" ? v.slice(0, 200) : "";
+    }
+    EdgeRuntime.waitUntil(sendEmail(safe));
     return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
