@@ -98,10 +98,11 @@ serve(async (req) => {
           "Content-Type": "application/json",
         };
 
-        if (lgoConfig.auth_method === "api_key" && lgoConfig.api_key_encrypted) {
-          headers["X-API-Key"] = lgoConfig.api_key_encrypted;
-        } else if (lgoConfig.auth_method === "bearer" && lgoConfig.api_key_encrypted) {
-          headers["Authorization"] = `Bearer ${lgoConfig.api_key_encrypted}`;
+        const lgoApiKey = lgoConfig.api_key ?? lgoConfig.api_key_encrypted;
+        if (lgoConfig.auth_method === "api_key" && lgoApiKey) {
+          headers["X-API-Key"] = lgoApiKey;
+        } else if (lgoConfig.auth_method === "bearer" && lgoApiKey) {
+          headers["Authorization"] = `Bearer ${lgoApiKey}`;
         }
 
         const resp = await fetch(`${lgoConfig.api_base_url}/cart/add`, {
