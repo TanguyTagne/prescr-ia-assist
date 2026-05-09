@@ -46,14 +46,17 @@ const APP_URL = "https://prescr-ia-assist.lovable.app";
 const LOCAL_PATH = path.join(__dirname, "web", "index.html");
 
 function createWindow() {
+  loadPipState();
+  const initSize = pipState.compact ? SIZE_COMPACT : SIZE_NORMAL;
   mainWindow = new BrowserWindow({
-    width: 380,
-    height: 580,
-    minWidth: 340,
-    minHeight: 480,
-    maxWidth: 450,
-    maxHeight: 700,
+    width: initSize.width,
+    height: initSize.height,
+    minWidth: 280,
+    minHeight: 400,
+    maxWidth: 520,
+    maxHeight: 800,
     resizable: true,
+    alwaysOnTop: pipState.alwaysOnTop,
     title: "Asclion",
     icon: path.join(__dirname, "assets", "icon.ico"),
     autoHideMenuBar: true,
@@ -64,6 +67,13 @@ function createWindow() {
       nodeIntegration: false,
     },
   });
+
+  if (pipState.alwaysOnTop) {
+    mainWindow.setAlwaysOnTop(true, "floating");
+    try {
+      mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+    } catch { /* not supported */ }
+  }
 
   // Remove the menu bar entirely
   mainWindow.setMenuBarVisibility(false);
