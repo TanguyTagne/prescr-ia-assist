@@ -1679,10 +1679,8 @@ serve(async (req) => {
     try {
       const pharmacyId = pharmacyIdForMapping;
       
-      if (pharmacyId && authHeader) {
-        const token = authHeader.replace("Bearer ", "");
-        const payload = JSON.parse(atob(token.split(".")[1]));
-        const userId = payload.sub;
+      if (pharmacyId && authHeader && claimsData?.claims?.sub) {
+        const userId = claimsData.claims.sub;
 
         const inputText = prescriptionText || medNames.join(",");
         const encoder = new TextEncoder();

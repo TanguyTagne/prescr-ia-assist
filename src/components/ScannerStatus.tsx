@@ -204,14 +204,14 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
           api_base_url: lgoForm.api_base_url,
           updated_at: new Date().toISOString(),
         };
-        if (lgoForm.api_key) updateData.api_key_encrypted = lgoForm.api_key;
+        if (lgoForm.api_key) updateData.api_key = lgoForm.api_key;
         await supabase.from("pharmacy_lgo_config").update(updateData).eq("id", existing.id);
       } else {
         await supabase.from("pharmacy_lgo_config").insert({
           pharmacy_id: pharmacyId,
           lgo_type: lgoForm.lgo_type,
           api_base_url: lgoForm.api_base_url,
-          api_key_encrypted: lgoForm.api_key || null,
+          api_key: lgoForm.api_key || null,
         });
       }
       setLgoConnected(true);

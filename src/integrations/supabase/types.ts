@@ -1599,7 +1599,7 @@ export type Database = {
       pharmacy_lgo_config: {
         Row: {
           api_base_url: string
-          api_key_encrypted: string | null
+          api_key: string | null
           auth_method: string
           created_at: string
           enabled: boolean
@@ -1611,7 +1611,7 @@ export type Database = {
         }
         Insert: {
           api_base_url: string
-          api_key_encrypted?: string | null
+          api_key?: string | null
           auth_method?: string
           created_at?: string
           enabled?: boolean
@@ -1623,7 +1623,7 @@ export type Database = {
         }
         Update: {
           api_base_url?: string
-          api_key_encrypted?: string | null
+          api_key?: string | null
           auth_method?: string
           created_at?: string
           enabled?: boolean

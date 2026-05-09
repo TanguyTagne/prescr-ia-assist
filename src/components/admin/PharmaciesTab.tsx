@@ -26,7 +26,7 @@ interface PharmacyWithLGO {
     id: string;
     lgo_type: string;
     api_base_url: string;
-    api_key_encrypted: string | null;
+    api_key: string | null;
     enabled: boolean;
     last_sync_at: string | null;
   } | null;
@@ -51,7 +51,7 @@ const PharmaciesTab = ({ pharmacies, onRefresh }: PharmaciesTabProps) => {
           .from("pharmacy_lgo_config" as any)
           .update({
             api_base_url: lgoForm.api_base_url,
-            api_key_encrypted: lgoForm.api_key || existing.api_key_encrypted,
+            api_key: lgoForm.api_key || existing.api_key,
             lgo_type: lgoForm.lgo_type,
             updated_at: new Date().toISOString(),
           } as any)
@@ -62,7 +62,7 @@ const PharmaciesTab = ({ pharmacies, onRefresh }: PharmaciesTabProps) => {
           .insert({
             pharmacy_id: pharmacyId,
             api_base_url: lgoForm.api_base_url,
-            api_key_encrypted: lgoForm.api_key,
+            api_key: lgoForm.api_key,
             lgo_type: lgoForm.lgo_type,
           } as any);
       }
@@ -257,7 +257,7 @@ const PharmaciesTab = ({ pharmacies, onRefresh }: PharmaciesTabProps) => {
                 </div>
                 <Input
                   type="password"
-                  placeholder={pharm.lgo_config?.api_key_encrypted ? "Clé API (laisser vide pour ne pas changer)" : "Clé API du LGO"}
+                  placeholder={pharm.lgo_config?.api_key ? "Clé API (laisser vide pour ne pas changer)" : "Clé API du LGO"}
                   value={lgoForm.api_key}
                   onChange={e => setLgoForm(f => ({ ...f, api_key: e.target.value }))}
                   className="h-9 text-sm"

@@ -8,6 +8,10 @@ const corsHeaders = {
 
 const ADMIN_EMAIL = "tanguytagne12@gmail.com";
 
+function escapeHtml(s: unknown): string {
+  return String(s ?? "N/A").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
+}
+
 async function sendEmail(formData: Record<string, any>) {
   const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
   if (!RESEND_API_KEY) throw new Error("RESEND_API_KEY is not configured");
@@ -18,17 +22,19 @@ async function sendEmail(formData: Record<string, any>) {
     <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px">
       <h2 style="color:#16a34a">Nouvelle demande d'accès Asclion</h2>
       <table style="width:100%;border-collapse:collapse;margin-top:16px">
-        <tr><td style="padding:8px;font-weight:bold;border-bottom:1px solid #eee">Pharmacie</td><td style="padding:8px;border-bottom:1px solid #eee">${pharmacy_name || "N/A"}</td></tr>
-        <tr><td style="padding:8px;font-weight:bold;border-bottom:1px solid #eee">Contact</td><td style="padding:8px;border-bottom:1px solid #eee">${contact_name || "N/A"}</td></tr>
-        <tr><td style="padding:8px;font-weight:bold;border-bottom:1px solid #eee">Email</td><td style="padding:8px;border-bottom:1px solid #eee">${email || "N/A"}</td></tr>
-        <tr><td style="padding:8px;font-weight:bold;border-bottom:1px solid #eee">Téléphone</td><td style="padding:8px;border-bottom:1px solid #eee">${phone || "N/A"}</td></tr>
-        <tr><td style="padding:8px;font-weight:bold;border-bottom:1px solid #eee">Ville</td><td style="padding:8px;border-bottom:1px solid #eee">${city || "N/A"}</td></tr>
-        <tr><td style="padding:8px;font-weight:bold">LGO</td><td style="padding:8px">${lgo_type || "N/A"}</td></tr>
+        <tr><td style="padding:8px;font-weight:bold;border-bottom:1px solid #eee">Pharmacie</td><td style="padding:8px;border-bottom:1px solid #eee">${escapeHtml(pharmacy_name)}</td></tr>
+        <tr><td style="padding:8px;font-weight:bold;border-bottom:1px solid #eee">Contact</td><td style="padding:8px;border-bottom:1px solid #eee">${escapeHtml(contact_name)}</td></tr>
+        <tr><td style="padding:8px;font-weight:bold;border-bottom:1px solid #eee">Email</td><td style="padding:8px;border-bottom:1px solid #eee">${escapeHtml(email)}</td></tr>
+        <tr><td style="padding:8px;font-weight:bold;border-bottom:1px solid #eee">Téléphone</td><td style="padding:8px;border-bottom:1px solid #eee">${escapeHtml(phone)}</td></tr>
+        <tr><td style="padding:8px;font-weight:bold;border-bottom:1px solid #eee">Ville</td><td style="padding:8px;border-bottom:1px solid #eee">${escapeHtml(city)}</td></tr>
+        <tr><td style="padding:8px;font-weight:bold">LGO</td><td style="padding:8px">${escapeHtml(lgo_type)}</td></tr>
       </table>
       <p style="margin-top:20px;font-size:0.9em;color:#666">
         <a href="https://prescr-ia-assist.lovable.app/admin">Ouvrir le dashboard admin</a>
       </p>
     </div>`;
+
+  const subject = `Nouvelle demande d'accès — ${String(pharmacy_name ?? "").slice(0, 100)}`;
 
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -39,7 +45,7 @@ async function sendEmail(formData: Record<string, any>) {
     body: JSON.stringify({
       from: "Asclion <onboarding@resend.dev>",
       to: ADMIN_EMAIL,
-      subject: `Nouvelle demande d'accès — ${pharmacy_name}`,
+      subject,
       html: htmlBody,
     }),
   });
@@ -59,7 +65,19 @@ serve(async (req) => {
 
   try {
     const formData = await req.json();
-    EdgeRuntime.waitUntil(sendEmail(formData));
+    // Basic input validation + size cap to mitigate abuse
+    if (!formData || typeof formData !== "object") {
+      return new Response(JSON.stringify({ error: "Invalid payload" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const safe: Record<string, string> = {};
+    for (const k of ["pharmacy_name", "contact_name", "email", "phone", "city", "lgo_type"]) {
+      const v = (formData as any)[k];
+      safe[k] = typeof v === "string" ? v.slice(0, 200) : "";
+    }
+    EdgeRuntime.waitUntil(sendEmail(safe));
     return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
