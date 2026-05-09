@@ -68,6 +68,30 @@ const WidgetDemo = () => {
     );
   }
 
+  if (phase === "lead") {
+    return (
+      <div className="p-4 space-y-3 animate-fade-in">
+        <div className="text-center space-y-1">
+          <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary">
+            <Sparkles className="h-3.5 w-3.5" />
+            Cette démo vous parle ?
+          </div>
+          <p className="text-[11px] text-muted-foreground leading-snug">
+            Asclion s'adapte à votre officine, votre LGO et votre catalogue.
+            Recevez une démo personnalisée — 15 minutes, sans engagement.
+          </p>
+        </div>
+        <DemoLeadForm />
+        <button
+          onClick={handleNewDemoFromLead}
+          className="w-full text-[11px] text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
+        >
+          Passer cette étape, tester une autre ordonnance →
+        </button>
+      </div>
+    );
+  }
+
   if (phase === "preview" && selected) {
     const Icon = selected.icon;
     return (
