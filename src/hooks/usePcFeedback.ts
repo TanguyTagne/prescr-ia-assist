@@ -12,7 +12,8 @@ export const usePcFeedback = () => {
     pcNom: string,
     action: "accepted" | "refused" | "ignored",
     pcCategorie?: string,
-    reason?: string
+    reason?: string,
+    context?: { medicaments_analyses?: string[]; pcs_proposes?: string[] }
   ) => {
     if (!user) return;
 
@@ -71,6 +72,18 @@ export const usePcFeedback = () => {
             times_displayed: 1,
           });
         }
+
+        // Log full accepted combination (KPI: meds analysed + PCs proposed + PC accepted)
+        await supabase.from("accepted_combinations").insert({
+          pharmacy_id: profile.pharmacy_id,
+          user_id: user.id,
+          register_id: registerId,
+          medicaments_analyses: context?.medicaments_analyses || [medicamentNom],
+          pcs_proposes: context?.pcs_proposes || [pcNom],
+          pc_accepte: pcNom,
+          pc_categorie: pcCategorie || null,
+          medicament_source: medicamentNom,
+        });
       }
 
       trackEvent("pc_feedback", { medicament: medicamentNom, pc: pcNom, action });

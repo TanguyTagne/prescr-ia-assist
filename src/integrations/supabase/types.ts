@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      accepted_combinations: {
+        Row: {
+          created_at: string
+          id: string
+          medicament_source: string | null
+          medicaments_analyses: string[]
+          pc_accepte: string
+          pc_categorie: string | null
+          pcs_proposes: string[]
+          pharmacy_id: string
+          register_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          medicament_source?: string | null
+          medicaments_analyses?: string[]
+          pc_accepte: string
+          pc_categorie?: string | null
+          pcs_proposes?: string[]
+          pharmacy_id: string
+          register_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          medicament_source?: string | null
+          medicaments_analyses?: string[]
+          pc_accepte?: string
+          pc_categorie?: string | null
+          pcs_proposes?: string[]
+          pharmacy_id?: string
+          register_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       access_requests: {
         Row: {
           city: string | null
