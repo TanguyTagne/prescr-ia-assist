@@ -98,7 +98,7 @@ serve(async (req) => {
           "Content-Type": "application/json",
         };
 
-        const lgoApiKey = lgoConfig.api_key ?? lgoConfig.api_key_encrypted;
+        const lgoApiKey = lgoConfig.api_key ?? lgoConfig.api_key;
         if (lgoConfig.auth_method === "api_key" && lgoApiKey) {
           headers["X-API-Key"] = lgoApiKey;
         } else if (lgoConfig.auth_method === "bearer" && lgoApiKey) {

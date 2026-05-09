@@ -44,7 +44,7 @@ interface PharmacyWithLGO {
     id: string;
     lgo_type: string;
     api_base_url: string;
-    api_key_encrypted: string | null;
+    api_key: string | null;
     enabled: boolean;
     last_sync_at: string | null;
   } | null;
