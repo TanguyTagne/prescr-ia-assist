@@ -27,4 +27,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.on("lgo-detected", handler);
     return () => ipcRenderer.removeListener("lgo-detected", handler);
   },
+
+  // Picture-in-Picture (always-on-top + compact mode)
+  pip: {
+    getState: () => ipcRenderer.invoke("pip:get-state"),
+    toggle: () => ipcRenderer.invoke("pip:toggle"),
+    setCompact: (compact) => ipcRenderer.invoke("pip:set-compact", compact),
+  },
 });
