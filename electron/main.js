@@ -1,7 +1,41 @@
 const { app, BrowserWindow, shell, ipcMain, Notification } = require("electron");
 const { autoUpdater } = require("electron-updater");
 const path = require("path");
+const fs = require("fs");
 const { exec } = require("child_process");
+
+// ────────────────────────────────────────────────────────────
+// Picture-in-Picture state (always-on-top + compact mode)
+// ────────────────────────────────────────────────────────────
+const SIZE_NORMAL = { width: 380, height: 580 };
+const SIZE_COMPACT = { width: 300, height: 440 };
+let pipState = { alwaysOnTop: true, compact: false };
+
+function getStateFile() {
+  return path.join(app.getPath("userData"), "pip-state.json");
+}
+function loadPipState() {
+  try {
+    const raw = fs.readFileSync(getStateFile(), "utf-8");
+    const parsed = JSON.parse(raw);
+    if (typeof parsed.alwaysOnTop === "boolean") pipState.alwaysOnTop = parsed.alwaysOnTop;
+    if (typeof parsed.compact === "boolean") pipState.compact = parsed.compact;
+  } catch { /* first run */ }
+}
+function savePipState() {
+  try {
+    fs.writeFileSync(getStateFile(), JSON.stringify(pipState));
+  } catch (e) { console.error("PiP state save failed:", e); }
+}
+function applyPipState() {
+  if (!mainWindow) return;
+  mainWindow.setAlwaysOnTop(pipState.alwaysOnTop, "floating");
+  try {
+    mainWindow.setVisibleOnAllWorkspaces(pipState.alwaysOnTop, { visibleOnFullScreen: true });
+  } catch { /* not supported on all platforms */ }
+  const size = pipState.compact ? SIZE_COMPACT : SIZE_NORMAL;
+  mainWindow.setSize(size.width, size.height);
+}
 
 // Disable hardware acceleration for compatibility
 app.disableHardwareAcceleration();
