@@ -174,7 +174,7 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
                       <button
                     onClick={() => handleOrder(med.nom, rec.produit, rec.categorie)}
                     disabled={ordered}
-                    aria-label={ordered ? `${rec.produit} ajouté à la commande` : `Commander ${rec.produit}`}
+                    aria-label={ordered ? `${rec.produit} accepté` : `Accepter ${rec.produit}`}
                     className={`shrink-0 flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                     ordered ?
                     "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" :
@@ -184,12 +184,12 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
                         {ordered ?
                     <>
                             <Check className="h-3 w-3" />
-                            Ajouté
+                            Accepté
                           </> :
 
                     <>
-                            <ShoppingCart className="h-3 w-3" />
-                            Commander
+                            <Check className="h-3 w-3" />
+                            Accepter
                           </>
                     }
                       </button>
