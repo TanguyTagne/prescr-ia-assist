@@ -41,6 +41,11 @@ const WidgetDemo = () => {
   };
 
   const handleReset = () => {
+    // Toujours passer par l'écran de capture lead avant de relancer une démo
+    setPhase("lead");
+  };
+
+  const handleNewDemoFromLead = () => {
     setResult(null);
     setSelectedId(null);
     setPhase("list");
