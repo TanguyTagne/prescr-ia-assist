@@ -316,9 +316,16 @@ async function clinicalLookup(
 
   // Filter dermato pathologies for systemic-only forms (oral / injectable)
   // to avoid e.g. Solupred 20mg (oral) → "produit pour la peau"
+  // Determine route: prefer the prescription hint (voie_administration), fallback to matched medicament's forme galénique
   const formeGal = (medicament?.forme_galenique || "").toLowerCase();
-  const isSystemicOnly = /comprim|g[ée]lule|sachet|sirop|solution buvable|injectable|lyoc|orodisp|effervesc/.test(formeGal)
-    && !/cr[èe]me|pommade|gel\b|patch|spray|collyre|gouttes|topique|cutan/.test(formeGal);
+  const voieHint = (hints?.voie_administration || "").toLowerCase();
+  const formeHint = (hints?.forme_galenique || "").toLowerCase();
+  const isSystemicOnly =
+    voieHint === "orale" || voieHint === "injectable" || voieHint === "rectale" || voieHint === "inhalée" || voieHint === "inhalee"
+    || isOralForm(formeHint)
+    || (!voieHint && !formeHint && /comprim|g[ée]lule|sachet|sirop|solution buvable|injectable|lyoc|orodisp|effervesc/.test(formeGal)
+        && !/cr[èe]me|pommade|gel\b|patch|spray|collyre|gouttes|topique|cutan/.test(formeGal));
+  const isTopicalRoute = voieHint === "cutanée" || voieHint === "cutanee" || isTopicalForm(formeHint) || isTopicalForm(formeGal);
   const dermatoCategoriesToSkip = new Set(["dermatologie"]);
 
   let filteredScored = pathoScored;
