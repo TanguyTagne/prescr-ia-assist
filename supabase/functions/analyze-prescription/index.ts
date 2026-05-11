@@ -1306,7 +1306,7 @@ serve(async (req) => {
       try {
         const aiData = await callAI(LOVABLE_API_KEY, [
           { role: "system", content: prompt },
-          { role: "user", content: `Médicament : ${medNames[i]}${medMolecules[i] ? ` (DCI probable: ${medMolecules[i]})` : ""}` },
+          { role: "user", content: `Médicament : ${medNames[i]}${medMolecules[i] ? ` (DCI probable: ${medMolecules[i]})` : ""}${medHints[i]?.dosage ? ` — dosage: ${medHints[i].dosage}` : ""}${medHints[i]?.forme_galenique ? ` — forme: ${medHints[i].forme_galenique}` : ""}${medHints[i]?.voie_administration ? ` — voie: ${medHints[i].voie_administration} (IMPORTANT: respecte strictement cette voie d'administration, ne propose pas d'indications d'autres voies)` : ""}` },
         ]);
         enrichedMeds[i] = {
           ...dbMed,
