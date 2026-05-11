@@ -1206,6 +1206,11 @@ serve(async (req) => {
 
     const medNames = medEntries.map((m: any) => typeof m === "string" ? m : m.nom_commercial);
     const medMolecules = medEntries.map((m: any) => typeof m === "string" ? null : m.molecule_probable);
+    const medHints = medEntries.map((m: any) => typeof m === "string" ? {} : {
+      voie_administration: m.voie_administration || null,
+      forme_galenique: m.forme_galenique || null,
+      dosage: m.dosage || null,
+    });
 
     const protocoles = protocolesRes.data;
     const legacyProtocols = legacyProtocolsRes.data;
@@ -1218,7 +1223,7 @@ serve(async (req) => {
 
     // Launch ALL clinical lookups + legacy lookups simultaneously
     const [clinicalLookupResults, dbMeds] = await Promise.all([
-      Promise.all(medNames.map((name, i) => clinicalLookup(supabase, name, medMolecules[i]))),
+      Promise.all(medNames.map((name, i) => clinicalLookup(supabase, name, medMolecules[i], medHints[i]))),
       Promise.all(medNames.map((name) => {
         const n = name.trim().toLowerCase();
         return (async () => {
