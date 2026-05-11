@@ -1,18 +1,20 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { FolderSearch, ShieldCheck, ArrowRight, Download, BarChart3, LogOut, Zap, Monitor, Send, Loader2, Settings } from "lucide-react";
+import { ArrowRight, Download, BarChart3, LogOut, Zap, Send, Loader2, Settings, FolderSearch, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import SiteFooter from "@/components/SiteFooter";
+import { useI18n } from "@/i18n/I18nProvider";
+import LanguageToggle from "@/i18n/LanguageToggle";
 
 const DOWNLOAD_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/download-app`;
 
-
 const AccessRequestForm = () => {
+  const { t, lp } = useI18n();
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [accepted, setAccepted] = useState(false);
@@ -28,19 +30,18 @@ const AccessRequestForm = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!accepted) {
-      toast.error("Veuillez accepter la politique de confidentialité.");
+      toast.error(t("form.error.consent"));
       return;
     }
     setLoading(true);
     try {
       const { error } = await supabase.from("access_requests" as any).insert(form as any);
       if (error) throw error;
-      // Notify admin by email (fire-and-forget)
       supabase.functions.invoke("notify-access-request", { body: form }).catch(console.error);
       setSubmitted(true);
-      toast.success("Demande envoyée ! Nous reviendrons vers vous rapidement.");
+      toast.success(t("form.success.toast"));
     } catch (err: any) {
-      toast.error(err.message || "Erreur lors de l'envoi");
+      toast.error(err.message || t("form.error.toast"));
     } finally {
       setLoading(false);
     }
@@ -52,8 +53,8 @@ const AccessRequestForm = () => {
         <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
           <Send className="h-5 w-5 text-primary" />
         </div>
-        <p className="font-semibold">Demande envoyée !</p>
-        <p className="text-sm text-muted-foreground">Nous vous contacterons pour créer votre accès.</p>
+        <p className="font-semibold">{t("form.submitted.title")}</p>
+        <p className="text-sm text-muted-foreground">{t("form.submitted.desc")}</p>
       </div>
     );
   }
@@ -61,23 +62,24 @@ const AccessRequestForm = () => {
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Input placeholder="Nom de la pharmacie *" required value={form.pharmacy_name} onChange={e => setForm(f => ({ ...f, pharmacy_name: e.target.value }))} />
-        <Input placeholder="Nom du contact *" required value={form.contact_name} onChange={e => setForm(f => ({ ...f, contact_name: e.target.value }))} />
-        <Input type="email" placeholder="Email *" required value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
-        <Input placeholder="Téléphone" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} />
-        <Input placeholder="Ville" value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} />
-        <Input placeholder="LGO utilisé (ex: Winpharma, LGPI...)" value={form.lgo_type} onChange={e => setForm(f => ({ ...f, lgo_type: e.target.value }))} />
+        <Input placeholder={t("form.pharmacy_name")} required value={form.pharmacy_name} onChange={e => setForm(f => ({ ...f, pharmacy_name: e.target.value }))} />
+        <Input placeholder={t("form.contact_name")} required value={form.contact_name} onChange={e => setForm(f => ({ ...f, contact_name: e.target.value }))} />
+        <Input type="email" placeholder={t("form.email")} required value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
+        <Input placeholder={t("form.phone")} value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} />
+        <Input placeholder={t("form.city")} value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} />
+        <Input placeholder={t("form.lgo")} value={form.lgo_type} onChange={e => setForm(f => ({ ...f, lgo_type: e.target.value }))} />
       </div>
       <label className="flex items-start gap-2 text-xs text-muted-foreground leading-relaxed">
         <Checkbox checked={accepted} onCheckedChange={(v) => setAccepted(v === true)} className="mt-0.5" />
         <span>
-          J'accepte que mes données soient traitées pour répondre à ma demande, conformément à la{" "}
-          <Link to="/confidentialite" className="text-primary underline">politique de confidentialité</Link> et aux{" "}
-          <Link to="/cgu" className="text-primary underline">CGU</Link>.
+          {t("form.consent")}{" "}
+          <Link to={lp("/confidentialite")} className="text-primary underline">{t("form.privacy")}</Link>{" "}
+          {t("form.and")}{" "}
+          <Link to={lp("/cgu")} className="text-primary underline">{t("form.terms")}</Link>.
         </span>
       </label>
       <Button type="submit" className="w-full h-11 text-sm font-semibold pharmacy-gradient border-0 gap-2" disabled={loading || !accepted}>
-        {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Send className="h-4 w-4" /> Envoyer ma demande d'accès</>}
+        {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Send className="h-4 w-4" /> {t("form.submit")}</>}
       </Button>
     </form>
   );
@@ -86,10 +88,16 @@ const AccessRequestForm = () => {
 const Landing = () => {
   const { user, isAdmin, signOut } = useAuth();
   const navigate = useNavigate();
+  const { t, lp } = useI18n();
+
+  const features = [
+    { icon: FolderSearch, title: t("landing.how.step1.title"), desc: t("landing.how.step1.desc") },
+    { icon: Zap, title: t("landing.how.step2.title"), desc: t("landing.how.step2.desc") },
+    { icon: ShieldCheck, title: t("landing.how.step3.title"), desc: t("landing.how.step3.desc") },
+  ];
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Nav */}
       <nav className="border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
@@ -99,119 +107,101 @@ const Landing = () => {
             {user ? (
               <>
                 {isAdmin && (
-                  <Button variant="ghost" size="sm" onClick={() => navigate("/admin")} className="gap-1.5 text-xs">
+                  <Button variant="ghost" size="sm" onClick={() => navigate(lp("/admin"))} className="gap-1.5 text-xs">
                     <Settings className="h-3.5 w-3.5" />
-                    Admin
+                    {t("nav.admin")}
                   </Button>
                 )}
-                <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")} className="gap-1.5 text-xs">
+                <Button variant="ghost" size="sm" onClick={() => navigate(lp("/dashboard"))} className="gap-1.5 text-xs">
                   <BarChart3 className="h-3.5 w-3.5" />
-                  Dashboard
+                  {t("nav.dashboard")}
                 </Button>
                 <Button variant="ghost" size="sm" asChild className="gap-1.5 text-xs">
                   <a href={DOWNLOAD_URL} target="_blank" rel="noopener noreferrer">
                     <Download className="h-3.5 w-3.5" />
-                    Télécharger
+                    {t("nav.download")}
                   </a>
                 </Button>
-                <Button variant="ghost" size="icon" onClick={signOut} className="h-8 w-8">
+                <LanguageToggle />
+                <Button variant="ghost" size="icon" onClick={signOut} className="h-8 w-8" aria-label={t("nav.signout")}>
                   <LogOut className="h-3.5 w-3.5" />
                 </Button>
               </>
             ) : (
-              <Button variant="outline" size="sm" onClick={() => navigate("/auth")} className="gap-1.5">
-                Se connecter
-              </Button>
+              <>
+                <LanguageToggle />
+                <Button variant="outline" size="sm" onClick={() => navigate(lp("/auth"))} className="gap-1.5">
+                  {t("nav.signin")}
+                </Button>
+              </>
             )}
           </div>
         </div>
       </nav>
 
       <main>
-      <section className="py-20 px-4">
-        <div className="container max-w-3xl mx-auto text-center space-y-6">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent text-accent-foreground text-xs font-medium">
-            <Zap className="h-3 w-3" />
-            Copilote IA pour l'équipe officinale
-          </div>
-          <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight leading-tight">
-            Le conseil associé,
-            <br />
-            <span className="text-primary">automatisé et intelligent</span>
-          </h1>
-          <p className="text-lg text-muted-foreground max-w-xl mx-auto leading-relaxed">
-            Asclion analyse chaque ordonnance en quelques secondes, identifie les besoins du patient et suggère les produits complémentaires les plus pertinents — accompagnement du traitement, réduction des effets secondaires — directement au comptoir.
-          </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-            <Button size="lg" asChild className="h-12 px-8 text-base font-semibold pharmacy-gradient border-0 gap-2">
-              <a href="#demande-acces">
-                <Send className="h-5 w-5" />
-                Demander un accès
-              </a>
-            </Button>
-            <Button size="lg" variant="outline" asChild className="h-12 px-6 text-base font-semibold gap-2">
-              <a href="/vs-lgo">
-                Asclion vs LGO
-                <ArrowRight className="h-4 w-4" />
-              </a>
-            </Button>
-          </div>
-        </div>
-      </section>
-
-      {/* Features */}
-      <section className="py-16 px-4 bg-secondary/50">
-        <div className="container max-w-4xl mx-auto">
-          <h2 className="text-2xl font-bold text-center mb-10">Comment ça marche</h2>
-          <div className="grid md:grid-cols-3 gap-6">
-            {[
-              {
-                icon: FolderSearch,
-                title: "Scannez ou tapez",
-                desc: "Connectez votre scanner ou l'IA se charge de lire les médicaments prescrits. Asclion détecte automatiquement les nouveaux fichiers.",
-              },
-              {
-                icon: Zap,
-                title: "Analyse IA instantanée",
-                desc: "L'IA identifie les interactions, le contexte thérapeutique et génère des questions pertinentes à poser au patient.",
-              },
-              {
-                icon: ShieldCheck,
-                title: "Suggestions au comptoir",
-                desc: "Recevez des suggestions de produits complémentaires disponibles dans votre stock, avec des phrases conseils.",
-              },
-            ].map((f, i) => (
-              <div key={i} className="glass-card rounded-xl p-6 space-y-3">
-                <div className="h-10 w-10 rounded-lg bg-accent flex items-center justify-center">
-                  <f.icon className="h-5 w-5 text-accent-foreground" />
-                </div>
-                <h3 className="font-semibold">{f.title}</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Access Request */}
-      <section id="demande-acces" className="py-16 px-4">
-        <div className="container max-w-xl mx-auto space-y-6">
-          <div className="text-center space-y-3">
-            <div className="h-14 w-14 rounded-2xl bg-accent flex items-center justify-center mx-auto">
-              <Send className="h-7 w-7 text-accent-foreground" />
+        <section className="py-20 px-4">
+          <div className="container max-w-3xl mx-auto text-center space-y-6">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent text-accent-foreground text-xs font-medium">
+              <Zap className="h-3 w-3" />
+              {t("landing.badge")}
             </div>
-            <h2 className="text-2xl font-bold">Demande de renseignements</h2>
-            <p className="text-muted-foreground leading-relaxed">
-              Remplissez le formulaire ci-dessous, notre équipe vous recontactera dans les plus brefs délais.
+            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight leading-tight">
+              {t("landing.title.line1")}
+              <br />
+              <span className="text-primary">{t("landing.title.line2")}</span>
+            </h1>
+            <p className="text-lg text-muted-foreground max-w-xl mx-auto leading-relaxed">
+              {t("landing.subtitle")}
             </p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+              <Button size="lg" asChild className="h-12 px-8 text-base font-semibold pharmacy-gradient border-0 gap-2">
+                <a href="#demande-acces">
+                  <Send className="h-5 w-5" />
+                  {t("landing.cta.access")}
+                </a>
+              </Button>
+              <Button size="lg" variant="outline" asChild className="h-12 px-6 text-base font-semibold gap-2">
+                <a href={lp("/vs-lgo")}>
+                  {t("landing.cta.vsLgo")}
+                  <ArrowRight className="h-4 w-4" />
+                </a>
+              </Button>
+            </div>
           </div>
-          <div className="rounded-xl border border-border p-6 bg-card">
-            <AccessRequestForm />
-          </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Footer */}
+        <section className="py-16 px-4 bg-secondary/50">
+          <div className="container max-w-4xl mx-auto">
+            <h2 className="text-2xl font-bold text-center mb-10">{t("landing.how.title")}</h2>
+            <div className="grid md:grid-cols-3 gap-6">
+              {features.map((f, i) => (
+                <div key={i} className="glass-card rounded-xl p-6 space-y-3">
+                  <div className="h-10 w-10 rounded-lg bg-accent flex items-center justify-center">
+                    <f.icon className="h-5 w-5 text-accent-foreground" />
+                  </div>
+                  <h3 className="font-semibold">{f.title}</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section id="demande-acces" className="py-16 px-4">
+          <div className="container max-w-xl mx-auto space-y-6">
+            <div className="text-center space-y-3">
+              <div className="h-14 w-14 rounded-2xl bg-accent flex items-center justify-center mx-auto">
+                <Send className="h-7 w-7 text-accent-foreground" />
+              </div>
+              <h2 className="text-2xl font-bold">{t("landing.access.title")}</h2>
+              <p className="text-muted-foreground leading-relaxed">{t("landing.access.desc")}</p>
+            </div>
+            <div className="rounded-xl border border-border p-6 bg-card">
+              <AccessRequestForm />
+            </div>
+          </div>
+        </section>
       </main>
       <SiteFooter />
     </div>

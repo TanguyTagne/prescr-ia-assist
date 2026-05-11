@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { RegisterProvider } from "@/hooks/useRegister";
+import { I18nProvider } from "@/i18n/I18nProvider";
 import { Loader2 } from "lucide-react";
 import CookieBanner from "@/components/CookieBanner";
 import LgoAutoDetectPrompt from "@/components/LgoAutoDetectPrompt";
@@ -163,6 +164,7 @@ const App = () => {
         <Sonner />
         <AuthProvider>
           <RegisterProvider>
+          <I18nProvider>
           <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}>
             {isStandalone ? (
               <>
@@ -172,6 +174,7 @@ const App = () => {
             ) : (
               <>
                 <Routes>
+                  {/* FR (default) */}
                   <Route path="/" element={<Landing />} />
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/reset-password" element={<ResetPassword />} />
@@ -187,6 +190,22 @@ const App = () => {
                   <Route path="/cgu" element={<CGU />} />
                   <Route path="/legal/dpa" element={<DPA />} />
                   <Route path="/legal/pia" element={<PIA />} />
+                  {/* EN mirror */}
+                  <Route path="/en" element={<Landing />} />
+                  <Route path="/en/auth" element={<Auth />} />
+                  <Route path="/en/reset-password" element={<ResetPassword />} />
+                  <Route path="/en/vs-lgo" element={<VsLgo />} />
+                  <Route path="/en/aide" element={<Aide />} />
+                  <Route path="/en/admin" element={<AdminRoute><Admin /></AdminRoute>} />
+                  <Route path="/en/groupement" element={<GroupRoute><Groupement /></GroupRoute>} />
+                  <Route path="/en/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+                  <Route path="/en/quiz" element={<ProtectedRoute><Quiz /></ProtectedRoute>} />
+                  <Route path="/en/mentions-legales" element={<MentionsLegales />} />
+                  <Route path="/en/confidentialite" element={<Confidentialite />} />
+                  <Route path="/en/cookies" element={<CookiesPage />} />
+                  <Route path="/en/cgu" element={<CGU />} />
+                  <Route path="/en/legal/dpa" element={<DPA />} />
+                  <Route path="/en/legal/pia" element={<PIA />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
                 <SiteDemoLayer />
@@ -196,6 +215,7 @@ const App = () => {
               </>
             )}
           </Suspense>
+          </I18nProvider>
           </RegisterProvider>
         </AuthProvider>
       </TooltipProvider>
