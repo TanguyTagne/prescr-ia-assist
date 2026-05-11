@@ -11,6 +11,7 @@ import { usePcFeedback } from "@/hooks/usePcFeedback";
 import { useProductLineage } from "@/hooks/useProductLineage";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useI18n } from "@/i18n/I18nProvider";
 
 interface AnalysisResultsProps {
   result: AnalysisResult;
@@ -19,6 +20,7 @@ interface AnalysisResultsProps {
 }
 
 const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsProps) => {
+  const { t } = useI18n();
   const [orderedItems, setOrderedItems] = useState<Set<string>>(new Set());
   const [expandedConseils, setExpandedConseils] = useState<Set<number>>(new Set());
   const [expandedPCConseils, setExpandedPCConseils] = useState<Set<string>>(new Set());
@@ -60,10 +62,10 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
   if (result.medicaments.length === 0) {
     return (
       <div className="text-center space-y-3 animate-fade-in py-6">
-        <p className="text-sm text-muted-foreground">🔍 Aucun médicament reconnu.</p>
+        <p className="text-sm text-muted-foreground">{t("results.empty")}</p>
         <Button onClick={onReset} variant="outline" size="sm" className="gap-1.5 text-xs">
           <RotateCcw className="h-3 w-3" />
-          Nouvelle analyse
+          {t("results.newAnalysis")}
         </Button>
       </div>);
 
@@ -82,7 +84,7 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
     setOrderedItems((prev) => new Set(prev).add(key));
 
     if (demoMode) {
-      toast.info("Démonstration — connectez-vous pour activer l'historique des combinaisons.");
+      toast.info(t("results.demoToast"));
       return;
     }
 
@@ -102,7 +104,7 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
       body: { products: [{ name: produit, category: categorie }] },
     }).catch(() => {});
 
-    toast.success(`${produit} accepté`);
+    toast.success(`${produit} ${t("results.acceptedToast")}`);
   };
 
   const isOrdered = (medNom: string, produit: string) => orderedItems.has(`${medNom}::${produit}`);
@@ -114,7 +116,7 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
       <div className="rounded-lg border border-destructive/30 p-2.5">
           <div className="flex items-center gap-1.5 mb-1">
             <AlertTriangle className="h-3 w-3 text-destructive" />
-            <span className="font-semibold text-xs text-destructive">Interactions</span>
+            <span className="font-semibold text-xs text-destructive">{t("results.interactions")}</span>
           </div>
           {result.interactions.map((inter, i) =>
         <div key={i} className="flex items-start gap-1.5 py-0.5 text-xs">
@@ -138,11 +140,11 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
         <button
           onClick={() => toggleConseil(i)}
           aria-expanded={expandedConseils.has(i)}
-          aria-label={`${expandedConseils.has(i) ? "Masquer" : "Afficher"} le conseil pour ${med.nom}`}
+          aria-label={`${expandedConseils.has(i) ? t("results.hide") : t("results.show")} ${t("results.adviceFor")} ${med.nom}`}
           className="flex items-center gap-1 text-xs text-primary/90 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded transition-colors w-full text-left">
           
               {expandedConseils.has(i) ? <ChevronDown className="h-3 w-3 shrink-0" /> : <ChevronRight className="h-3 w-3 shrink-0" />}
-              <span className="font-semibold">Conseil</span>
+              <span className="font-semibold">{t("results.advice")}</span>
             </button>
         }
           {med.conseil_associe && expandedConseils.has(i) &&
@@ -156,7 +158,7 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
         <div className="space-y-1 pt-1 border-t border-border/50">
               <div className="flex items-center gap-1 text-[10px] text-primary font-semibold uppercase tracking-wider">
                 <Sparkles className="h-2.5 w-2.5" />
-                Produits complémentaires
+                {t("results.complementary")}
               </div>
               {med.recommendations.map((rec, j) => {
             const ordered = isOrdered(med.nom, rec.produit);
@@ -167,14 +169,14 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
                         <div className="flex items-center gap-1">
                           <span className="font-medium text-xs">{rec.produit}</span>
                           {rec.priorite >= 80 &&
-                      <Badge className="bg-primary/20 text-primary text-[10px] px-1 py-0">prioritaire</Badge>
+                      <Badge className="bg-primary/20 text-primary text-[10px] px-1 py-0">{t("results.priority")}</Badge>
                       }
                         </div>
                       </div>
                       <button
                     onClick={() => handleOrder(med.nom, rec.produit, rec.categorie)}
                     disabled={ordered}
-                    aria-label={ordered ? `${rec.produit} accepté` : `Accepter ${rec.produit}`}
+                    aria-label={ordered ? `${rec.produit} ${t("results.acceptedAria")}` : `${t("results.acceptAria")} ${rec.produit}`}
                     className={`shrink-0 flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                     ordered ?
                     "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" :
@@ -184,12 +186,12 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
                         {ordered ?
                     <>
                             <Check className="h-3 w-3" />
-                            Accepté
+                            {t("results.accepted")}
                           </> :
 
                     <>
                             <Check className="h-3 w-3" />
-                            Accepter
+                            {t("results.accept")}
                           </>
                     }
                       </button>
@@ -206,11 +208,11 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
                               return next;
                             })}
                             aria-expanded={isOpen}
-                            aria-label={`${isOpen ? "Masquer" : "Afficher"} le conseil patient pour ${rec.produit}`}
+                            aria-label={`${isOpen ? t("results.hide") : t("results.show")} ${t("results.patientAdviceFor")} ${rec.produit}`}
                             className="text-[11px] text-primary/80 hover:text-primary transition-colors flex items-center gap-0.5 pl-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
                           >
                             {isOpen ? <ChevronDown className="h-2.5 w-2.5" /> : <ChevronRight className="h-2.5 w-2.5" />}
-                            Conseil
+                            {t("results.advice")}
                           </button>
                           {isOpen &&
                             <p className="text-xs text-foreground/80 italic leading-snug pl-3 animate-fade-in">
@@ -240,18 +242,18 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
       <div className="flex items-center gap-2">
         <Button onClick={onReset} variant="outline" size="sm" className="h-7 text-[11px] gap-1">
           <RotateCcw className="h-3 w-3" />
-          Nouvelle ordonnance
+          {t("results.newPrescription")}
         </Button>
         {orderedItems.size > 0 &&
         <Badge variant="secondary" className="text-[10px]">
-            {orderedItems.size} produit(s) accepté(s)
+            {orderedItems.size} {t("results.productsAccepted")}
           </Badge>
         }
       </div>
       {demoMode &&
         <div className="rounded-md border border-primary/30 bg-primary/5 px-2 py-1.5 text-[11px] text-foreground/80 leading-snug">
-          <span className="font-semibold text-primary">Démonstration · </span>
-          activez votre officine pour analyser vos vraies ordonnances et bénéficier du mapping LGO personnalisé.
+          <span className="font-semibold text-primary">{t("results.demoBannerLabel")}</span>
+          {t("results.demoBannerText")}
         </div>
       }
       <LegalDisclaimer />
