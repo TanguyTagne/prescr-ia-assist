@@ -107,7 +107,8 @@ RÈGLES :
 - Extrais le nom du patient s'il est visible sur l'ordonnance
 - Extrais TOUS les noms de médicaments (commerciaux ou DCI)
 - CRITIQUE : la voie d'administration change radicalement le médicament. Exemple : prednisolone ORALE (anti-inflammatoire systémique) ≠ prednisolone CUTANÉE (dermocorticoïde). Sois TRÈS attentif à la forme galénique écrite (cp, gél, sachet, sirop = orale ; crème, pommade, gel = cutanée ; collyre = ophtalmique ; etc.).
-- Si la forme galénique n'est pas explicite, déduis-la du dosage et du contexte (ex: "20 mg cp" → orale ; "1% crème" → cutanée). Si vraiment ambigu, mets voie_administration = "inconnue".
+- Si la forme galénique n'est pas explicite, déduis-la du dosage et du contexte (ex: "20 mg cp" → orale ; "1% crème" → cutanée).
+- DÉFAUT : si la voie reste ambiguë alors que le médicament existe sous plusieurs voies (ex: prednisolone seule, sans forme indiquée), pars du principe que la voie est ORALE (forme la plus prescrite en officine), mets voie_administration = "orale" et signale-le en mettant confiance = "moyenne". N'utilise "inconnue" qu'en tout dernier recours si même la voie orale n'a aucun sens.
 - Si tu reconnais la DCI, indique-la
 - Indique le niveau de confiance de lecture (haute si clair, basse si écriture illisible)
 - Ne retourne RIEN d'autre que ce JSON`;
