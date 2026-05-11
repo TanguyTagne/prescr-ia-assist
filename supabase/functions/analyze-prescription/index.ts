@@ -334,8 +334,14 @@ async function clinicalLookup(
       const cat = (patho.categorie || "").toLowerCase();
       return !dermatoCategoriesToSkip.has(cat);
     });
-    // Safety: if filter removes everything, fall back to original list
     if (filteredScored.length === 0) filteredScored = pathoScored;
+  } else if (isTopicalRoute) {
+    // For topical/cutaneous route, prioritize dermato pathologies and exclude clearly systemic categories
+    const dermatoOnly = pathoScored.filter(({ patho }) => {
+      const cat = (patho.categorie || "").toLowerCase();
+      return dermatoCategoriesToSkip.has(cat) || /dermat|peau|cutan/i.test(cat) || /dermat|peau|cutan|eczema|psoriasis|acn[ée]/i.test(patho.nom_pathologie || "");
+    });
+    if (dermatoOnly.length > 0) filteredScored = dermatoOnly;
   }
 
   // Sort by score desc, then keep only top 4 to focus recommendations
