@@ -92,13 +92,22 @@ ATTENTION : Les ordonnances peuvent être MANUSCRITES (écriture de médecin, pa
 {
   "patient_nom": "Nom et prénom du patient tels qu'écrits sur l'ordonnance, ou null si non trouvé",
   "medicaments_detectes": [
-    {"nom_commercial": "nom tel qu'écrit ou interprété", "molecule_probable": "DCI si connue, sinon null", "confiance": "haute|moyenne|basse"}
+    {
+      "nom_commercial": "nom tel qu'écrit ou interprété",
+      "molecule_probable": "DCI si connue, sinon null",
+      "dosage": "dosage tel qu'écrit (ex: '20 mg', '1%', '5 mg/ml') ou null",
+      "forme_galenique": "forme tel qu'écrit (ex: 'comprimé', 'crème', 'pommade', 'sirop', 'collyre', 'gouttes auriculaires', 'spray nasal', 'suppositoire', 'patch') ou null",
+      "voie_administration": "orale|cutanée|nasale|ophtalmique|auriculaire|rectale|vaginale|inhalée|injectable|sublinguale|inconnue",
+      "confiance": "haute|moyenne|basse"
+    }
   ]
 }
 
 RÈGLES :
 - Extrais le nom du patient s'il est visible sur l'ordonnance
 - Extrais TOUS les noms de médicaments (commerciaux ou DCI)
+- CRITIQUE : la voie d'administration change radicalement le médicament. Exemple : prednisolone ORALE (anti-inflammatoire systémique) ≠ prednisolone CUTANÉE (dermocorticoïde). Sois TRÈS attentif à la forme galénique écrite (cp, gél, sachet, sirop = orale ; crème, pommade, gel = cutanée ; collyre = ophtalmique ; etc.).
+- Si la forme galénique n'est pas explicite, déduis-la du dosage et du contexte (ex: "20 mg cp" → orale ; "1% crème" → cutanée). Si vraiment ambigu, mets voie_administration = "inconnue".
 - Si tu reconnais la DCI, indique-la
 - Indique le niveau de confiance de lecture (haute si clair, basse si écriture illisible)
 - Ne retourne RIEN d'autre que ce JSON`;
@@ -160,39 +169,77 @@ function buildSearchVariants(medName: string): string[] {
   return [...variants];
 }
 
-async function clinicalLookup(supabase: any, medName: string, moleculeName?: string | null) {
+// Determine if a forme galénique string is cutaneous/topical
+function isTopicalForm(forme: string): boolean {
+  return /cr[èe]me|pommade|\bgel\b|patch|spray cutan|topique|cutan|dermique/i.test(forme || "");
+}
+// Determine if a forme galénique string is systemic-oral
+function isOralForm(forme: string): boolean {
+  return /comprim|g[ée]lule|sachet|sirop|solution buvable|lyoc|orodisp|effervesc|granul[ée]/i.test(forme || "");
+}
+// Map a voie_administration to a form-test predicate
+function buildFormFilter(voie?: string | null, forme?: string | null) {
+  const v = (voie || "").toLowerCase();
+  const f = (forme || "").toLowerCase();
+  if (v === "orale" || isOralForm(f)) return (rowForme: string) => !isTopicalForm(rowForme);
+  if (v === "cutanée" || v === "cutanee" || isTopicalForm(f)) return (rowForme: string) => isTopicalForm(rowForme);
+  if (v === "ophtalmique") return (rowForme: string) => /collyre|ophta/i.test(rowForme);
+  if (v === "auriculaire") return (rowForme: string) => /auricul|otique/i.test(rowForme);
+  if (v === "nasale") return (rowForme: string) => /nasal|spray nasal/i.test(rowForme);
+  if (v === "rectale") return (rowForme: string) => /suppo|rectal/i.test(rowForme);
+  if (v === "vaginale") return (rowForme: string) => /ovule|vaginal/i.test(rowForme);
+  if (v === "inhalée" || v === "inhalee") return (rowForme: string) => /inhal|a[ée]rosol|spray\b/i.test(rowForme);
+  if (v === "injectable") return (rowForme: string) => /inject|amp|sc\b|im\b|iv\b/i.test(rowForme);
+  return null;
+}
+
+async function clinicalLookup(
+  supabase: any,
+  medName: string,
+  moleculeName?: string | null,
+  hints?: { voie_administration?: string | null; forme_galenique?: string | null; dosage?: string | null },
+) {
   let medicament = null;
   let molecule = null;
 
   const searchVariants = buildSearchVariants(medName);
+  const formFilter = buildFormFilter(hints?.voie_administration, hints?.forme_galenique);
 
-  // Try each variant: exact match first, then partial
+  // Helper: pick best row matching the form filter, fallback to first row
+  const pickByForm = (rows: any[] | null) => {
+    if (!rows || rows.length === 0) return null;
+    if (!formFilter) return rows[0];
+    const match = rows.find((r) => formFilter(r.forme_galenique || ""));
+    return match || rows[0];
+  };
+
+  // Try each variant: exact match first, then partial — fetch up to 10 to allow form filtering
   for (const variant of searchVariants) {
     if (medicament) break;
-    const { data: exactMatch } = await supabase
+    const { data: exactRows } = await supabase
       .from("medicaments")
       .select("*, molecules(*)")
       .ilike("nom_commercial", variant)
-      .limit(1)
-      .maybeSingle();
-    if (exactMatch) {
-      medicament = exactMatch;
-      molecule = exactMatch.molecules;
+      .limit(10);
+    const picked = pickByForm(exactRows);
+    if (picked) {
+      medicament = picked;
+      molecule = picked.molecules;
     }
   }
 
   if (!medicament) {
     for (const variant of searchVariants) {
       if (medicament) break;
-      const { data: partialMatch } = await supabase
+      const { data: partialRows } = await supabase
         .from("medicaments")
         .select("*, molecules(*)")
         .ilike("nom_commercial", `%${variant}%`)
-        .limit(1)
-        .maybeSingle();
-      if (partialMatch) {
-        medicament = partialMatch;
-        molecule = partialMatch.molecules;
+        .limit(10);
+      const picked = pickByForm(partialRows);
+      if (picked) {
+        medicament = picked;
+        molecule = picked.molecules;
       }
     }
   }
@@ -269,9 +316,16 @@ async function clinicalLookup(supabase: any, medName: string, moleculeName?: str
 
   // Filter dermato pathologies for systemic-only forms (oral / injectable)
   // to avoid e.g. Solupred 20mg (oral) → "produit pour la peau"
+  // Determine route: prefer the prescription hint (voie_administration), fallback to matched medicament's forme galénique
   const formeGal = (medicament?.forme_galenique || "").toLowerCase();
-  const isSystemicOnly = /comprim|g[ée]lule|sachet|sirop|solution buvable|injectable|lyoc|orodisp|effervesc/.test(formeGal)
-    && !/cr[èe]me|pommade|gel\b|patch|spray|collyre|gouttes|topique|cutan/.test(formeGal);
+  const voieHint = (hints?.voie_administration || "").toLowerCase();
+  const formeHint = (hints?.forme_galenique || "").toLowerCase();
+  const isSystemicOnly =
+    voieHint === "orale" || voieHint === "injectable" || voieHint === "rectale" || voieHint === "inhalée" || voieHint === "inhalee"
+    || isOralForm(formeHint)
+    || (!voieHint && !formeHint && /comprim|g[ée]lule|sachet|sirop|solution buvable|injectable|lyoc|orodisp|effervesc/.test(formeGal)
+        && !/cr[èe]me|pommade|gel\b|patch|spray|collyre|gouttes|topique|cutan/.test(formeGal));
+  const isTopicalRoute = voieHint === "cutanée" || voieHint === "cutanee" || isTopicalForm(formeHint) || isTopicalForm(formeGal);
   const dermatoCategoriesToSkip = new Set(["dermatologie"]);
 
   let filteredScored = pathoScored;
@@ -280,8 +334,14 @@ async function clinicalLookup(supabase: any, medName: string, moleculeName?: str
       const cat = (patho.categorie || "").toLowerCase();
       return !dermatoCategoriesToSkip.has(cat);
     });
-    // Safety: if filter removes everything, fall back to original list
     if (filteredScored.length === 0) filteredScored = pathoScored;
+  } else if (isTopicalRoute) {
+    // For topical/cutaneous route, prioritize dermato pathologies and exclude clearly systemic categories
+    const dermatoOnly = pathoScored.filter(({ patho }) => {
+      const cat = (patho.categorie || "").toLowerCase();
+      return dermatoCategoriesToSkip.has(cat) || /dermat|peau|cutan/i.test(cat) || /dermat|peau|cutan|eczema|psoriasis|acn[ée]/i.test(patho.nom_pathologie || "");
+    });
+    if (dermatoOnly.length > 0) filteredScored = dermatoOnly;
   }
 
   // Sort by score desc, then keep only top 4 to focus recommendations
@@ -1146,6 +1206,11 @@ serve(async (req) => {
 
     const medNames = medEntries.map((m: any) => typeof m === "string" ? m : m.nom_commercial);
     const medMolecules = medEntries.map((m: any) => typeof m === "string" ? null : m.molecule_probable);
+    const medHints = medEntries.map((m: any) => typeof m === "string" ? {} : {
+      voie_administration: m.voie_administration || null,
+      forme_galenique: m.forme_galenique || null,
+      dosage: m.dosage || null,
+    });
 
     const protocoles = protocolesRes.data;
     const legacyProtocols = legacyProtocolsRes.data;
@@ -1158,7 +1223,7 @@ serve(async (req) => {
 
     // Launch ALL clinical lookups + legacy lookups simultaneously
     const [clinicalLookupResults, dbMeds] = await Promise.all([
-      Promise.all(medNames.map((name, i) => clinicalLookup(supabase, name, medMolecules[i]))),
+      Promise.all(medNames.map((name, i) => clinicalLookup(supabase, name, medMolecules[i], medHints[i]))),
       Promise.all(medNames.map((name) => {
         const n = name.trim().toLowerCase();
         return (async () => {
@@ -1241,7 +1306,7 @@ serve(async (req) => {
       try {
         const aiData = await callAI(LOVABLE_API_KEY, [
           { role: "system", content: prompt },
-          { role: "user", content: `Médicament : ${medNames[i]}${medMolecules[i] ? ` (DCI probable: ${medMolecules[i]})` : ""}` },
+          { role: "user", content: `Médicament : ${medNames[i]}${medMolecules[i] ? ` (DCI probable: ${medMolecules[i]})` : ""}${medHints[i]?.dosage ? ` — dosage: ${medHints[i].dosage}` : ""}${medHints[i]?.forme_galenique ? ` — forme: ${medHints[i].forme_galenique}` : ""}${medHints[i]?.voie_administration ? ` — voie: ${medHints[i].voie_administration} (IMPORTANT: respecte strictement cette voie d'administration, ne propose pas d'indications d'autres voies)` : ""}` },
         ]);
         enrichedMeds[i] = {
           ...dbMed,
