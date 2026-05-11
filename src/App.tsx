@@ -215,6 +215,7 @@ const App = () => {
               </>
             )}
           </Suspense>
+          </I18nProvider>
           </RegisterProvider>
         </AuthProvider>
       </TooltipProvider>
