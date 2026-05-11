@@ -151,7 +151,7 @@ const VisitorTour = () => {
 
 const SiteDemoLayer = () => {
   const location = useLocation();
-  if (location.pathname !== "/") return null;
+  if (location.pathname !== "/" && location.pathname !== "/en") return null;
   return <DeferredWidget demo mountImmediately />;
 };
 

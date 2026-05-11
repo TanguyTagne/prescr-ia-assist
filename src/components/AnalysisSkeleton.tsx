@@ -1,14 +1,11 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
-
-const STEPS = [
-  "Lecture de l'ordonnance…",
-  "Recherche clinique…",
-  "Préparation des suggestions…",
-];
+import { useI18n } from "@/i18n/I18nProvider";
 
 export const AnalysisSkeleton = () => {
+  const { t } = useI18n();
+  const STEPS = [t("skeleton.step1"), t("skeleton.step2"), t("skeleton.step3")];
   const [step, setStep] = useState(0);
 
   useEffect(() => {
@@ -16,7 +13,7 @@ export const AnalysisSkeleton = () => {
       setStep((s) => (s + 1) % STEPS.length);
     }, 800);
     return () => clearInterval(id);
-  }, []);
+  }, [STEPS.length]);
 
   return (
     <div className="space-y-3 py-2" aria-busy="true" aria-live="polite">
@@ -25,13 +22,11 @@ export const AnalysisSkeleton = () => {
         <span className="font-medium">{STEPS[step]}</span>
       </div>
 
-      {/* Header med skeleton */}
       <div className="space-y-1.5">
         <Skeleton className="h-3 w-2/3" />
         <Skeleton className="h-2 w-1/3" />
       </div>
 
-      {/* 3 recommendation cards */}
       <div className="space-y-2">
         {[0, 1, 2].map((i) => (
           <div key={i} className="rounded-md border border-border p-2 space-y-1.5">

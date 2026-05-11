@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
-import { Sparkles, FileText, ArrowLeft, Loader2 } from "lucide-react";
-import { DEMO_PRESCRIPTIONS } from "@/lib/demoPrescriptions";
+import { useState, useEffect, useMemo } from "react";
+import { Sparkles, FileText, ArrowLeft } from "lucide-react";
+import { getDemoPrescriptions } from "@/lib/demoPrescriptions";
 import AnalysisSkeleton from "@/components/AnalysisSkeleton";
 import AnalysisResults from "@/components/AnalysisResults";
 import LegalDisclaimer from "@/components/LegalDisclaimer";
@@ -8,23 +8,26 @@ import type { AnalysisResult } from "@/lib/prescriptionAnalyzer";
 import { trackEvent } from "@/hooks/useAnalytics";
 import { trackDemoSession } from "@/lib/demoTracking";
 import DemoLeadForm from "@/components/DemoLeadForm";
+import { useI18n } from "@/i18n/I18nProvider";
 
 type Phase = "list" | "preview" | "analyzing" | "result" | "lead";
 
 const WidgetDemo = () => {
+  const { t, lang } = useI18n();
+  const demos = useMemo(() => getDemoPrescriptions(lang), [lang]);
   const [phase, setPhase] = useState<Phase>("list");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [result, setResult] = useState<AnalysisResult | null>(null);
 
-  const selected = DEMO_PRESCRIPTIONS.find((d) => d.id === selectedId) || null;
+  const selected = demos.find((d) => d.id === selectedId) || null;
 
   useEffect(() => {
     if (phase !== "analyzing" || !selected) return;
-    const t = setTimeout(() => {
+    const tm = setTimeout(() => {
       setResult(selected.result);
       setPhase("result");
     }, 2500);
-    return () => clearTimeout(t);
+    return () => clearTimeout(tm);
   }, [phase, selected]);
 
   const handleSelect = (id: string) => {
@@ -40,10 +43,7 @@ const WidgetDemo = () => {
     setPhase("analyzing");
   };
 
-  const handleReset = () => {
-    // Toujours passer par l'écran de capture lead avant de relancer une démo
-    setPhase("lead");
-  };
+  const handleReset = () => setPhase("lead");
 
   const handleNewDemoFromLead = () => {
     setResult(null);
@@ -73,19 +73,16 @@ const WidgetDemo = () => {
         <div className="text-center space-y-1">
           <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary">
             <Sparkles className="h-3.5 w-3.5" />
-            Cette démo vous parle ?
+            {t("demo.lead.intro")}
           </div>
-          <p className="text-[11px] text-muted-foreground leading-snug">
-            Asclion s'adapte à votre officine, votre LGO et votre catalogue.
-            Recevez une démo personnalisée — 15 minutes, sans engagement.
-          </p>
+          <p className="text-[11px] text-muted-foreground leading-snug">{t("demo.lead.desc")}</p>
         </div>
         <DemoLeadForm />
         <button
           onClick={handleNewDemoFromLead}
           className="w-full text-[11px] text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
         >
-          Passer cette étape, tester une autre ordonnance →
+          {t("demo.lead.skip")}
         </button>
       </div>
     );
@@ -100,7 +97,7 @@ const WidgetDemo = () => {
           className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
         >
           <ArrowLeft className="h-3 w-3" />
-          Retour
+          {t("demo.preview.back")}
         </button>
 
         <div className="flex items-center gap-2">
@@ -120,7 +117,7 @@ const WidgetDemo = () => {
           className="w-full h-10 rounded-md pharmacy-gradient text-primary-foreground text-sm font-semibold flex items-center justify-center gap-2 hover:opacity-95 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         >
           <Sparkles className="h-3.5 w-3.5" />
-          Analyser cette ordonnance
+          {t("demo.preview.analyze")}
         </button>
 
         <LegalDisclaimer />
@@ -132,12 +129,12 @@ const WidgetDemo = () => {
     <div className="p-4 space-y-3">
       <div className="flex items-center gap-1.5">
         <Sparkles className="h-3.5 w-3.5 text-primary" />
-        <span className="text-xs font-semibold">Démo</span>
-        <span className="text-[10px] text-muted-foreground">— choisissez une ordonnance type</span>
+        <span className="text-xs font-semibold">{t("demo.list.title")}</span>
+        <span className="text-[10px] text-muted-foreground">{t("demo.list.subtitle")}</span>
       </div>
 
       <div className="grid gap-1.5">
-        {DEMO_PRESCRIPTIONS.map((demo) => {
+        {demos.map((demo) => {
           const Icon = demo.icon;
           return (
             <button
