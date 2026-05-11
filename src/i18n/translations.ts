@@ -283,6 +283,74 @@ export const translations = {
     en: "Asclion is a dispensing-support tool for healthcare professionals. The displayed suggestions are provided for informational purposes only and do not replace the professional judgment of the pharmacist, who remains solely responsible for dispensing. Asclion does not perform any medical diagnosis and is not intended to qualify as a medical device under regulation (EU) 2017/745.",
   },
   "legal.mentions.links": { fr: "Liens utiles", en: "Useful links" },
+
+  // ===== DEMO WIDGET =====
+  "demo.headerTag": { fr: "Démo", en: "Demo" },
+  "demo.closeAria": { fr: "Fermer la démo Asclion", en: "Close Asclion demo" },
+  "demo.openAria": { fr: "Ouvrir la démo Asclion", en: "Open Asclion demo" },
+  "demo.list.title": { fr: "Démo", en: "Demo" },
+  "demo.list.subtitle": { fr: "— choisissez une ordonnance type", en: "— pick a sample prescription" },
+  "demo.preview.back": { fr: "Retour", en: "Back" },
+  "demo.preview.analyze": { fr: "Analyser cette ordonnance", en: "Analyze this prescription" },
+  "demo.lead.intro": { fr: "Cette démo vous parle ?", en: "Liked the demo?" },
+  "demo.lead.desc": {
+    fr: "Asclion s'adapte à votre officine, votre LGO et votre catalogue. Recevez une démo personnalisée — 15 minutes, sans engagement.",
+    en: "Asclion adapts to your pharmacy, software and catalog. Get a personalized demo — 15 minutes, no commitment.",
+  },
+  "demo.lead.skip": { fr: "Passer cette étape, tester une autre ordonnance →", en: "Skip this step, try another prescription →" },
+  "demo.lead.namePh": { fr: "Nom", en: "Full name" },
+  "demo.lead.officinePh": { fr: "Officine", en: "Pharmacy" },
+  "demo.lead.emailPh": { fr: "Email", en: "Email" },
+  "demo.lead.submit": { fr: "Être recontacté", en: "Get a callback" },
+  "demo.lead.thanks": { fr: "Merci !", en: "Thank you!" },
+  "demo.lead.callback": { fr: "Nous vous contactons sous 24h pour une démo personnalisée.", en: "We'll reach out within 24 hours for a personalized demo." },
+  "demo.lead.successToast": { fr: "Merci ! Nous vous recontactons rapidement.", en: "Thanks! We'll get back to you soon." },
+  "demo.lead.errorToast": { fr: "Une erreur est survenue. Réessayez.", en: "An error occurred. Please try again." },
+  "demo.lead.disclaimer": {
+    fr: "En soumettant, vous acceptez d'être recontacté par Asclion. Données conservées 12 mois max.",
+    en: "By submitting, you agree to be contacted by Asclion. Data kept for max 12 months.",
+  },
+  "demo.lead.privacyLink": { fr: "Politique de confidentialité", en: "Privacy policy" },
+  "demo.lead.dismiss": { fr: "Fermer", en: "Close" },
+
+  // ===== ANALYSIS RESULTS =====
+  "results.empty": { fr: "🔍 Aucun médicament reconnu.", en: "🔍 No medication recognized." },
+  "results.newAnalysis": { fr: "Nouvelle analyse", en: "New analysis" },
+  "results.newPrescription": { fr: "Nouvelle ordonnance", en: "New prescription" },
+  "results.interactions": { fr: "Interactions", en: "Interactions" },
+  "results.advice": { fr: "Conseil", en: "Advice" },
+  "results.complementary": { fr: "Produits complémentaires", en: "Complementary products" },
+  "results.priority": { fr: "prioritaire", en: "priority" },
+  "results.accepted": { fr: "Accepté", en: "Accepted" },
+  "results.accept": { fr: "Accepter", en: "Accept" },
+  "results.acceptAria": { fr: "Accepter", en: "Accept" },
+  "results.acceptedAria": { fr: "accepté", en: "accepted" },
+  "results.acceptedToast": { fr: "accepté", en: "accepted" },
+  "results.demoToast": {
+    fr: "Démonstration — connectez-vous pour activer l'historique des combinaisons.",
+    en: "Demo mode — sign in to enable combination history.",
+  },
+  "results.productsAccepted": { fr: "produit(s) accepté(s)", en: "product(s) accepted" },
+  "results.demoBannerLabel": { fr: "Démonstration · ", en: "Demo · " },
+  "results.demoBannerText": {
+    fr: "activez votre officine pour analyser vos vraies ordonnances et bénéficier du mapping LGO personnalisé.",
+    en: "activate your pharmacy to analyze real prescriptions and benefit from custom software mapping.",
+  },
+  "results.show": { fr: "Afficher", en: "Show" },
+  "results.hide": { fr: "Masquer", en: "Hide" },
+  "results.adviceFor": { fr: "le conseil pour", en: "advice for" },
+  "results.patientAdviceFor": { fr: "le conseil patient pour", en: "patient advice for" },
+
+  // ===== SKELETON =====
+  "skeleton.step1": { fr: "Lecture de l'ordonnance…", en: "Reading the prescription…" },
+  "skeleton.step2": { fr: "Recherche clinique…", en: "Clinical lookup…" },
+  "skeleton.step3": { fr: "Préparation des suggestions…", en: "Preparing suggestions…" },
+
+  // ===== LEGAL DISCLAIMER =====
+  "disclaimer.text": {
+    fr: "Les suggestions sont fournies à titre informatif. La décision finale appartient au pharmacien.",
+    en: "Suggestions are provided for informational purposes. The final decision belongs to the pharmacist.",
+  },
 } as const;
 
 export type TranslationKey = keyof typeof translations;
