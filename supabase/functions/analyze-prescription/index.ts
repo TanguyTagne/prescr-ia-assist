@@ -206,12 +206,20 @@ async function clinicalLookup(
   const searchVariants = buildSearchVariants(medName);
   const formFilter = buildFormFilter(hints?.voie_administration, hints?.forme_galenique);
 
-  // Helper: pick best row matching the form filter, fallback to first row
+  // Helper: pick best row matching the form filter
+  // Default (no hint): prefer oral systemic forms over topical (safer + more common in officine)
   const pickByForm = (rows: any[] | null) => {
     if (!rows || rows.length === 0) return null;
-    if (!formFilter) return rows[0];
-    const match = rows.find((r) => formFilter(r.forme_galenique || ""));
-    return match || rows[0];
+    if (formFilter) {
+      const match = rows.find((r) => formFilter(r.forme_galenique || ""));
+      if (match) return match;
+    }
+    // Default heuristic: prefer oral, then non-topical, then anything
+    const oral = rows.find((r) => isOralForm(r.forme_galenique || ""));
+    if (oral) return oral;
+    const nonTopical = rows.find((r) => !isTopicalForm(r.forme_galenique || ""));
+    if (nonTopical) return nonTopical;
+    return rows[0];
   };
 
   // Try each variant: exact match first, then partial — fetch up to 10 to allow form filtering
