@@ -92,13 +92,22 @@ ATTENTION : Les ordonnances peuvent être MANUSCRITES (écriture de médecin, pa
 {
   "patient_nom": "Nom et prénom du patient tels qu'écrits sur l'ordonnance, ou null si non trouvé",
   "medicaments_detectes": [
-    {"nom_commercial": "nom tel qu'écrit ou interprété", "molecule_probable": "DCI si connue, sinon null", "confiance": "haute|moyenne|basse"}
+    {
+      "nom_commercial": "nom tel qu'écrit ou interprété",
+      "molecule_probable": "DCI si connue, sinon null",
+      "dosage": "dosage tel qu'écrit (ex: '20 mg', '1%', '5 mg/ml') ou null",
+      "forme_galenique": "forme tel qu'écrit (ex: 'comprimé', 'crème', 'pommade', 'sirop', 'collyre', 'gouttes auriculaires', 'spray nasal', 'suppositoire', 'patch') ou null",
+      "voie_administration": "orale|cutanée|nasale|ophtalmique|auriculaire|rectale|vaginale|inhalée|injectable|sublinguale|inconnue",
+      "confiance": "haute|moyenne|basse"
+    }
   ]
 }
 
 RÈGLES :
 - Extrais le nom du patient s'il est visible sur l'ordonnance
 - Extrais TOUS les noms de médicaments (commerciaux ou DCI)
+- CRITIQUE : la voie d'administration change radicalement le médicament. Exemple : prednisolone ORALE (anti-inflammatoire systémique) ≠ prednisolone CUTANÉE (dermocorticoïde). Sois TRÈS attentif à la forme galénique écrite (cp, gél, sachet, sirop = orale ; crème, pommade, gel = cutanée ; collyre = ophtalmique ; etc.).
+- Si la forme galénique n'est pas explicite, déduis-la du dosage et du contexte (ex: "20 mg cp" → orale ; "1% crème" → cutanée). Si vraiment ambigu, mets voie_administration = "inconnue".
 - Si tu reconnais la DCI, indique-la
 - Indique le niveau de confiance de lecture (haute si clair, basse si écriture illisible)
 - Ne retourne RIEN d'autre que ce JSON`;
