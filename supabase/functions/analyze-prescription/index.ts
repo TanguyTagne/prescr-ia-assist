@@ -169,39 +169,77 @@ function buildSearchVariants(medName: string): string[] {
   return [...variants];
 }
 
-async function clinicalLookup(supabase: any, medName: string, moleculeName?: string | null) {
+// Determine if a forme galénique string is cutaneous/topical
+function isTopicalForm(forme: string): boolean {
+  return /cr[èe]me|pommade|\bgel\b|patch|spray cutan|topique|cutan|dermique/i.test(forme || "");
+}
+// Determine if a forme galénique string is systemic-oral
+function isOralForm(forme: string): boolean {
+  return /comprim|g[ée]lule|sachet|sirop|solution buvable|lyoc|orodisp|effervesc|granul[ée]/i.test(forme || "");
+}
+// Map a voie_administration to a form-test predicate
+function buildFormFilter(voie?: string | null, forme?: string | null) {
+  const v = (voie || "").toLowerCase();
+  const f = (forme || "").toLowerCase();
+  if (v === "orale" || isOralForm(f)) return (rowForme: string) => !isTopicalForm(rowForme);
+  if (v === "cutanée" || v === "cutanee" || isTopicalForm(f)) return (rowForme: string) => isTopicalForm(rowForme);
+  if (v === "ophtalmique") return (rowForme: string) => /collyre|ophta/i.test(rowForme);
+  if (v === "auriculaire") return (rowForme: string) => /auricul|otique/i.test(rowForme);
+  if (v === "nasale") return (rowForme: string) => /nasal|spray nasal/i.test(rowForme);
+  if (v === "rectale") return (rowForme: string) => /suppo|rectal/i.test(rowForme);
+  if (v === "vaginale") return (rowForme: string) => /ovule|vaginal/i.test(rowForme);
+  if (v === "inhalée" || v === "inhalee") return (rowForme: string) => /inhal|a[ée]rosol|spray\b/i.test(rowForme);
+  if (v === "injectable") return (rowForme: string) => /inject|amp|sc\b|im\b|iv\b/i.test(rowForme);
+  return null;
+}
+
+async function clinicalLookup(
+  supabase: any,
+  medName: string,
+  moleculeName?: string | null,
+  hints?: { voie_administration?: string | null; forme_galenique?: string | null; dosage?: string | null },
+) {
   let medicament = null;
   let molecule = null;
 
   const searchVariants = buildSearchVariants(medName);
+  const formFilter = buildFormFilter(hints?.voie_administration, hints?.forme_galenique);
 
-  // Try each variant: exact match first, then partial
+  // Helper: pick best row matching the form filter, fallback to first row
+  const pickByForm = (rows: any[] | null) => {
+    if (!rows || rows.length === 0) return null;
+    if (!formFilter) return rows[0];
+    const match = rows.find((r) => formFilter(r.forme_galenique || ""));
+    return match || rows[0];
+  };
+
+  // Try each variant: exact match first, then partial — fetch up to 10 to allow form filtering
   for (const variant of searchVariants) {
     if (medicament) break;
-    const { data: exactMatch } = await supabase
+    const { data: exactRows } = await supabase
       .from("medicaments")
       .select("*, molecules(*)")
       .ilike("nom_commercial", variant)
-      .limit(1)
-      .maybeSingle();
-    if (exactMatch) {
-      medicament = exactMatch;
-      molecule = exactMatch.molecules;
+      .limit(10);
+    const picked = pickByForm(exactRows);
+    if (picked) {
+      medicament = picked;
+      molecule = picked.molecules;
     }
   }
 
   if (!medicament) {
     for (const variant of searchVariants) {
       if (medicament) break;
-      const { data: partialMatch } = await supabase
+      const { data: partialRows } = await supabase
         .from("medicaments")
         .select("*, molecules(*)")
         .ilike("nom_commercial", `%${variant}%`)
-        .limit(1)
-        .maybeSingle();
-      if (partialMatch) {
-        medicament = partialMatch;
-        molecule = partialMatch.molecules;
+        .limit(10);
+      const picked = pickByForm(partialRows);
+      if (picked) {
+        medicament = picked;
+        molecule = picked.molecules;
       }
     }
   }
