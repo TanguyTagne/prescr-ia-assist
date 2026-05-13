@@ -130,7 +130,7 @@ const WidgetDemo = () => {
       <div className="flex items-center gap-1.5">
         <Sparkles className="h-3.5 w-3.5 text-primary" />
         <span className="text-xs font-semibold">{t("demo.list.title")}</span>
-        <span className="text-[10px] text-muted-foreground">{t("demo.list.subtitle")}</span>
+        <span className="text-[10px] text-muted-foreground whitespace-pre-line">{t("demo.list.subtitle")}</span>
       </div>
 
       <div className="grid gap-1.5">
