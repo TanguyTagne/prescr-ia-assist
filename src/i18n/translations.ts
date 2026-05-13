@@ -289,7 +289,7 @@ export const translations = {
   "demo.closeAria": { fr: "Fermer la démo Asclion", en: "Close Asclion demo" },
   "demo.openAria": { fr: "Ouvrir la démo Asclion", en: "Open Asclion demo" },
   "demo.list.title": { fr: "Démo", en: "Demo" },
-  "demo.list.subtitle": { fr: "— choisissez une ordonnance type", en: "— pick a sample prescription" },
+  "demo.list.subtitle": { fr: "— choisissez une ordonnance à analyser\n", en: "— pick a sample prescription" },
   "demo.preview.back": { fr: "Retour", en: "Back" },
   "demo.preview.analyze": { fr: "Analyser cette ordonnance", en: "Analyze this prescription" },
   "demo.lead.intro": { fr: "Cette démo vous parle ?", en: "Liked the demo?" },
