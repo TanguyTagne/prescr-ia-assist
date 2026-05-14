@@ -6,6 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate, Link } from "react-router-dom";
+import Seo from "@/components/Seo";
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -73,6 +74,11 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      <Seo
+        title="Connexion — Asclion"
+        description="Connectez-vous à votre espace Asclion pour accéder au copilote IA de votre pharmacie."
+        path="/auth"
+      />
       <header className="pharmacy-gradient px-4 py-4">
         <div className="container max-w-md mx-auto flex items-center gap-3">
           <div className="h-10 w-10 rounded-xl bg-primary-foreground/20 flex items-center justify-center">

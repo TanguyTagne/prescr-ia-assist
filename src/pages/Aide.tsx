@@ -3,12 +3,27 @@ import { ArrowLeft, HelpCircle, Mail } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import SiteFooter from "@/components/SiteFooter";
+import Seo from "@/components/Seo";
 import { useI18n } from "@/i18n/I18nProvider";
 
 const Aide = () => {
   const { t, lp } = useI18n();
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      <Seo
+        title="Aide — FAQ Asclion pour pharmaciens"
+        description="Réponses aux questions fréquentes sur Asclion : installation, scanner, surveillance dossier, confidentialité des données patient."
+        path="/aide"
+        jsonLd={{
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: [
+            { "@type": "Question", name: "Comment installer Asclion ?", acceptedAnswer: { "@type": "Answer", text: "Téléchargez le logiciel desktop depuis le site et lancez l'installateur Windows en un clic." } },
+            { "@type": "Question", name: "Asclion remplace-t-il mon LGO ?", acceptedAnswer: { "@type": "Answer", text: "Non, Asclion est un copilote complémentaire qui s'intègre à votre LGO existant (Winpharma, LGPI, Pharmagest)." } },
+            { "@type": "Question", name: "Les données patient sont-elles protégées ?", acceptedAnswer: { "@type": "Answer", text: "Oui : aucune donnée patient identifiable ne sort de la pharmacie. Seuls des hashes anonymes sont stockés." } },
+          ],
+        }}
+      />
       <header className="pharmacy-gradient px-4 py-4">
         <div className="container max-w-3xl mx-auto flex items-center gap-3">
           <Link to={lp("/")}>

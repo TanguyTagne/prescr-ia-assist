@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { ArrowLeft, Check, X, Brain, ShieldCheck, MessageSquare, BarChart3, RefreshCw, Layers, Unlock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import Seo from "@/components/Seo";
 import { useI18n } from "@/i18n/I18nProvider";
 import LanguageToggle from "@/i18n/LanguageToggle";
 import type { TranslationKey } from "@/i18n/translations";
@@ -36,6 +37,11 @@ export default function VsLgo() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-accent/30 to-background relative overflow-hidden">
+      <Seo
+        title="Asclion vs LGO — Comparatif copilote IA pharmacie"
+        description="Asclion vs Winpharma, LGPI, Pharmagest : pourquoi un copilote IA dédié au conseil associé surpasse les modules cross-sell des LGO traditionnels."
+        path="/vs-lgo"
+      />
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute -top-40 -right-40 h-[600px] w-[600px] rounded-full bg-primary/25 blur-3xl animate-pulse" style={{ animationDuration: "8s" }} />
         <div className="absolute top-[35%] -left-40 h-[500px] w-[500px] rounded-full bg-pharmacy-teal/25 blur-3xl animate-pulse" style={{ animationDuration: "10s" }} />
