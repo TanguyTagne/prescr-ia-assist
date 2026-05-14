@@ -39,7 +39,18 @@ conseil associé pharmacie, vente complémentaire officine, cross-selling pharma
 
 Application web progressive (PWA) + logiciel desktop. Analyse propulsée par intelligence artificielle (Gemini). Base de données clinique couvrant les 300 médicaments les plus prescrits en France, avec mapping ATC, pathologies, protocoles de conseil et produits complémentaires associés.
 
+## Pages
+
+- [Accueil](/): Présentation d'Asclion, copilote IA pour pharmaciens d'officine.
+- [Asclion vs LGO](/vs-lgo): Comparaison entre Asclion et les LGO traditionnels (Winpharma, LGPI, Pharmagest).
+- [Aide](/aide): Questions fréquentes sur l'installation, le scanner, la confidentialité.
+- [Connexion](/auth): Espace de connexion pour les pharmacies pilotes.
+- [Mentions légales](/mentions-legales): Informations légales de l'éditeur.
+- [Confidentialité](/confidentialite): Politique de protection des données.
+- [CGU](/cgu): Conditions générales d'utilisation.
+
 ## Accès
 
-Site : https://prescr-ia-assist.lovable.app
-Contact : Demande d'accès via le formulaire sur le site
+Site : https://www.asclion.com
+Contact : tanguytubert@gmail.com (demande d'accès via le formulaire sur le site)
+
