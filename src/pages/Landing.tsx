@@ -8,6 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import SiteFooter from "@/components/SiteFooter";
+import Seo from "@/components/Seo";
 import { useI18n } from "@/i18n/I18nProvider";
 import LanguageToggle from "@/i18n/LanguageToggle";
 
@@ -98,6 +99,11 @@ const Landing = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <Seo
+        title="Asclion — Copilote pharmacien intelligent au comptoir"
+        description="Asclion analyse l'ordonnance en moins de 3s et suggère les produits complémentaires pertinents. Copilote IA pour pharmaciens d'officine."
+        path="/"
+      />
       <nav className="border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
