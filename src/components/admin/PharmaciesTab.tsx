@@ -259,6 +259,19 @@ const PharmaciesTab = ({ pharmacies, onRefresh }: PharmaciesTabProps) => {
                   size="sm"
                   className="h-7 text-xs gap-1"
                   onClick={() => {
+                    setCreatingAccount(creatingAccount === pharm.id ? null : pharm.id);
+                    setAccountForm({ email: "", password: "", full_name: "", role: "preparateur" });
+                  }}
+                >
+                  <UserPlus className="h-3 w-3" />
+                  Compte
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs gap-1"
+                  onClick={() => {
                     setEditingLGO(editingLGO === pharm.id ? null : pharm.id);
                     setLgoForm({
                       api_base_url: pharm.lgo_config?.api_base_url || "",
@@ -307,6 +320,55 @@ const PharmaciesTab = ({ pharmacies, onRefresh }: PharmaciesTabProps) => {
                   <Button size="sm" className="gap-1" onClick={() => handleSaveLGO(pharm.id)}>
                     <Check className="h-3.5 w-3.5" />
                     Enregistrer
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {creatingAccount === pharm.id && (
+              <div className="space-y-2 rounded-md border border-primary/30 p-3 bg-primary/5">
+                <p className="text-xs font-semibold text-primary flex items-center gap-1.5">
+                  <UserPlus className="h-3.5 w-3.5" />
+                  Créer un compte pour cette pharmacie
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <Input
+                    type="email"
+                    placeholder="Email"
+                    value={accountForm.email}
+                    onChange={e => setAccountForm(f => ({ ...f, email: e.target.value }))}
+                    className="h-9 text-sm"
+                  />
+                  <Input
+                    placeholder="Nom complet"
+                    value={accountForm.full_name}
+                    onChange={e => setAccountForm(f => ({ ...f, full_name: e.target.value }))}
+                    className="h-9 text-sm"
+                  />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <Input
+                    type="password"
+                    placeholder="Mot de passe (6+ caractères)"
+                    value={accountForm.password}
+                    onChange={e => setAccountForm(f => ({ ...f, password: e.target.value }))}
+                    className="h-9 text-sm"
+                  />
+                  <select
+                    className="h-9 text-sm rounded-md border border-input bg-background px-3"
+                    value={accountForm.role}
+                    onChange={e => setAccountForm(f => ({ ...f, role: e.target.value }))}
+                  >
+                    <option value="preparateur">Préparateur</option>
+                    <option value="manager">Manager</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button variant="ghost" size="sm" onClick={() => setCreatingAccount(null)} disabled={submittingAccount}>Annuler</Button>
+                  <Button size="sm" className="gap-1" onClick={() => handleCreateAccount(pharm.id)} disabled={submittingAccount}>
+                    <UserPlus className="h-3.5 w-3.5" />
+                    {submittingAccount ? "Création..." : "Créer le compte"}
                   </Button>
                 </div>
               </div>
