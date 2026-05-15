@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Key, Check, Pause, Play, Trash2, AlertTriangle } from "lucide-react";
+import { Key, Check, Pause, Play, Trash2, AlertTriangle, UserPlus } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,6 +41,46 @@ const PharmaciesTab = ({ pharmacies, onRefresh }: PharmaciesTabProps) => {
   const [editingLGO, setEditingLGO] = useState<string | null>(null);
   const [lgoForm, setLgoForm] = useState({ api_base_url: "", api_key: "", lgo_type: "winpharma" });
   const [loading, setLoading] = useState<string | null>(null);
+  const [creatingAccount, setCreatingAccount] = useState<string | null>(null);
+  const [accountForm, setAccountForm] = useState({ email: "", password: "", full_name: "", role: "preparateur" });
+  const [submittingAccount, setSubmittingAccount] = useState(false);
+
+  const handleCreateAccount = async (pharmacyId: string) => {
+    if (!accountForm.email || !accountForm.password || accountForm.password.length < 6) {
+      toast.error("Email et mot de passe (6+ caractères) requis");
+      return;
+    }
+    setSubmittingAccount(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("create-pharmacy-account", {
+        body: {
+          email: accountForm.email,
+          password: accountForm.password,
+          full_name: accountForm.full_name || accountForm.email,
+          pharmacy_id: pharmacyId,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      // Apply selected role if not default preparateur
+      if (accountForm.role !== "preparateur" && data?.user_id) {
+        await supabase.from("user_roles").insert({
+          user_id: data.user_id,
+          role: accountForm.role as any,
+        });
+      }
+
+      toast.success(`Compte créé pour ${accountForm.email}`);
+      setAccountForm({ email: "", password: "", full_name: "", role: "preparateur" });
+      setCreatingAccount(null);
+      onRefresh();
+    } catch (err: any) {
+      toast.error(err.message || "Erreur lors de la création");
+    } finally {
+      setSubmittingAccount(false);
+    }
+  };
 
   const handleSaveLGO = async (pharmacyId: string) => {
     try {
