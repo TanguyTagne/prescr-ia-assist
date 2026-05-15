@@ -87,24 +87,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        fetchRole(session.user.id);
-        fetchPharmacyStatus(session.user.id);
+        // Defer to avoid deadlock inside the auth callback, then await role load
+        setTimeout(async () => {
+          await Promise.all([
+            fetchRole(session.user.id),
+            fetchPharmacyStatus(session.user.id),
+          ]);
+          setLoading(false);
+        }, 0);
       } else {
         setIsAdmin(false);
         setIsGroupManager(false);
         setManagedGroupementId(null);
         setPharmacyStatus(null);
         setOnboardingCompleted(true);
+        setLoading(false);
       }
-      setLoading(false);
     });
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        fetchRole(session.user.id);
-        fetchPharmacyStatus(session.user.id);
+        await Promise.all([
+          fetchRole(session.user.id),
+          fetchPharmacyStatus(session.user.id),
+        ]);
       }
       setLoading(false);
     });
