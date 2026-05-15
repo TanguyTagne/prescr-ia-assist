@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Key, Check, Pause, Play, Trash2, AlertTriangle, UserPlus } from "lucide-react";
+import { Key, Check, Pause, Play, Trash2, AlertTriangle, UserPlus, Building2, Plus } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -139,6 +139,56 @@ const PharmaciesTab = ({ pharmacies, onRefresh }: PharmaciesTabProps) => {
     }
   };
 
+  const [showCreatePharmacy, setShowCreatePharmacy] = useState(false);
+  const [newPharmacy, setNewPharmacy] = useState({
+    name: "", city: "", postal_code: "",
+    email: "", password: "", full_name: "", role: "manager",
+  });
+  const [submittingPharmacy, setSubmittingPharmacy] = useState(false);
+
+  const handleCreatePharmacy = async () => {
+    if (!newPharmacy.name || !newPharmacy.email || !newPharmacy.password || newPharmacy.password.length < 6) {
+      toast.error("Nom de pharmacie, email et mot de passe (6+ car.) requis");
+      return;
+    }
+    setSubmittingPharmacy(true);
+    try {
+      const { data: pharmacy, error: pharmErr } = await supabase
+        .from("pharmacies")
+        .insert({ name: newPharmacy.name, city: newPharmacy.city || null, postal_code: newPharmacy.postal_code || null })
+        .select()
+        .single();
+      if (pharmErr) throw pharmErr;
+
+      const { data, error } = await supabase.functions.invoke("create-pharmacy-account", {
+        body: {
+          email: newPharmacy.email,
+          password: newPharmacy.password,
+          full_name: newPharmacy.full_name || newPharmacy.email,
+          pharmacy_id: pharmacy.id,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      if (newPharmacy.role !== "preparateur" && data?.user_id) {
+        await supabase.from("user_roles").insert({
+          user_id: data.user_id,
+          role: newPharmacy.role as any,
+        });
+      }
+
+      toast.success(`Pharmacie ${newPharmacy.name} créée avec compte ${newPharmacy.email}`);
+      setNewPharmacy({ name: "", city: "", postal_code: "", email: "", password: "", full_name: "", role: "manager" });
+      setShowCreatePharmacy(false);
+      onRefresh();
+    } catch (err: any) {
+      toast.error(err.message || "Erreur lors de la création");
+    } finally {
+      setSubmittingPharmacy(false);
+    }
+  };
+
   const getStatusBadge = (status: string | undefined) => {
     switch (status) {
       case "paused":
@@ -150,12 +200,65 @@ const PharmaciesTab = ({ pharmacies, onRefresh }: PharmaciesTabProps) => {
     }
   };
 
+  const createPharmacyPanel = (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold">Pharmacies ({pharmacies.length})</h3>
+        <Button size="sm" className="gap-1.5" onClick={() => setShowCreatePharmacy(s => !s)}>
+          <Plus className="h-3.5 w-3.5" />
+          {showCreatePharmacy ? "Annuler" : "Créer une pharmacie"}
+        </Button>
+      </div>
+
+      {showCreatePharmacy && (
+        <div className="space-y-2 rounded-md border border-primary/30 p-4 bg-primary/5">
+          <p className="text-xs font-semibold text-primary flex items-center gap-1.5">
+            <Building2 className="h-3.5 w-3.5" />
+            Nouvelle pharmacie + premier compte d'accès
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <Input placeholder="Nom de la pharmacie *" value={newPharmacy.name} onChange={e => setNewPharmacy(f => ({ ...f, name: e.target.value }))} className="h-9 text-sm" />
+            <Input placeholder="Ville" value={newPharmacy.city} onChange={e => setNewPharmacy(f => ({ ...f, city: e.target.value }))} className="h-9 text-sm" />
+            <Input placeholder="Code postal" value={newPharmacy.postal_code} onChange={e => setNewPharmacy(f => ({ ...f, postal_code: e.target.value }))} className="h-9 text-sm" />
+          </div>
+          <p className="text-[11px] text-muted-foreground pt-1">Premier compte utilisateur :</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <Input type="email" placeholder="Email *" value={newPharmacy.email} onChange={e => setNewPharmacy(f => ({ ...f, email: e.target.value }))} className="h-9 text-sm" />
+            <Input placeholder="Nom complet" value={newPharmacy.full_name} onChange={e => setNewPharmacy(f => ({ ...f, full_name: e.target.value }))} className="h-9 text-sm" />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <Input type="password" placeholder="Mot de passe (6+ car.) *" value={newPharmacy.password} onChange={e => setNewPharmacy(f => ({ ...f, password: e.target.value }))} className="h-9 text-sm" />
+            <select className="h-9 text-sm rounded-md border border-input bg-background px-3" value={newPharmacy.role} onChange={e => setNewPharmacy(f => ({ ...f, role: e.target.value }))}>
+              <option value="preparateur">Préparateur</option>
+              <option value="manager">Manager (recommandé)</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+          <div className="flex justify-end gap-2 pt-1">
+            <Button variant="ghost" size="sm" onClick={() => setShowCreatePharmacy(false)} disabled={submittingPharmacy}>Annuler</Button>
+            <Button size="sm" className="gap-1" onClick={handleCreatePharmacy} disabled={submittingPharmacy}>
+              <Check className="h-3.5 w-3.5" />
+              {submittingPharmacy ? "Création..." : "Créer pharmacie + compte"}
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
   if (pharmacies.length === 0) {
-    return <p className="text-sm text-muted-foreground text-center py-8">Aucune pharmacie</p>;
+    return (
+      <div className="space-y-4">
+        {createPharmacyPanel}
+        <p className="text-sm text-muted-foreground text-center py-8">Aucune pharmacie</p>
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
+      {createPharmacyPanel}
+      <div className="space-y-3">
       {pharmacies.map((pharm) => {
         const status = (pharm as any).status || "active";
         const isDisabled = loading === pharm.id;
