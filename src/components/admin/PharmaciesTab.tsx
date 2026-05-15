@@ -479,6 +479,7 @@ const PharmaciesTab = ({ pharmacies, onRefresh }: PharmaciesTabProps) => {
           </div>
         );
       })}
+      </div>
     </div>
   );
 };
