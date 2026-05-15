@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Key, Check, Pause, Play, Trash2, AlertTriangle } from "lucide-react";
+import { Key, Check, Pause, Play, Trash2, AlertTriangle, UserPlus } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,6 +41,46 @@ const PharmaciesTab = ({ pharmacies, onRefresh }: PharmaciesTabProps) => {
   const [editingLGO, setEditingLGO] = useState<string | null>(null);
   const [lgoForm, setLgoForm] = useState({ api_base_url: "", api_key: "", lgo_type: "winpharma" });
   const [loading, setLoading] = useState<string | null>(null);
+  const [creatingAccount, setCreatingAccount] = useState<string | null>(null);
+  const [accountForm, setAccountForm] = useState({ email: "", password: "", full_name: "", role: "preparateur" });
+  const [submittingAccount, setSubmittingAccount] = useState(false);
+
+  const handleCreateAccount = async (pharmacyId: string) => {
+    if (!accountForm.email || !accountForm.password || accountForm.password.length < 6) {
+      toast.error("Email et mot de passe (6+ caractères) requis");
+      return;
+    }
+    setSubmittingAccount(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("create-pharmacy-account", {
+        body: {
+          email: accountForm.email,
+          password: accountForm.password,
+          full_name: accountForm.full_name || accountForm.email,
+          pharmacy_id: pharmacyId,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      // Apply selected role if not default preparateur
+      if (accountForm.role !== "preparateur" && data?.user_id) {
+        await supabase.from("user_roles").insert({
+          user_id: data.user_id,
+          role: accountForm.role as any,
+        });
+      }
+
+      toast.success(`Compte créé pour ${accountForm.email}`);
+      setAccountForm({ email: "", password: "", full_name: "", role: "preparateur" });
+      setCreatingAccount(null);
+      onRefresh();
+    } catch (err: any) {
+      toast.error(err.message || "Erreur lors de la création");
+    } finally {
+      setSubmittingAccount(false);
+    }
+  };
 
   const handleSaveLGO = async (pharmacyId: string) => {
     try {
@@ -219,6 +259,19 @@ const PharmaciesTab = ({ pharmacies, onRefresh }: PharmaciesTabProps) => {
                   size="sm"
                   className="h-7 text-xs gap-1"
                   onClick={() => {
+                    setCreatingAccount(creatingAccount === pharm.id ? null : pharm.id);
+                    setAccountForm({ email: "", password: "", full_name: "", role: "preparateur" });
+                  }}
+                >
+                  <UserPlus className="h-3 w-3" />
+                  Compte
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs gap-1"
+                  onClick={() => {
                     setEditingLGO(editingLGO === pharm.id ? null : pharm.id);
                     setLgoForm({
                       api_base_url: pharm.lgo_config?.api_base_url || "",
@@ -267,6 +320,55 @@ const PharmaciesTab = ({ pharmacies, onRefresh }: PharmaciesTabProps) => {
                   <Button size="sm" className="gap-1" onClick={() => handleSaveLGO(pharm.id)}>
                     <Check className="h-3.5 w-3.5" />
                     Enregistrer
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {creatingAccount === pharm.id && (
+              <div className="space-y-2 rounded-md border border-primary/30 p-3 bg-primary/5">
+                <p className="text-xs font-semibold text-primary flex items-center gap-1.5">
+                  <UserPlus className="h-3.5 w-3.5" />
+                  Créer un compte pour cette pharmacie
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <Input
+                    type="email"
+                    placeholder="Email"
+                    value={accountForm.email}
+                    onChange={e => setAccountForm(f => ({ ...f, email: e.target.value }))}
+                    className="h-9 text-sm"
+                  />
+                  <Input
+                    placeholder="Nom complet"
+                    value={accountForm.full_name}
+                    onChange={e => setAccountForm(f => ({ ...f, full_name: e.target.value }))}
+                    className="h-9 text-sm"
+                  />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <Input
+                    type="password"
+                    placeholder="Mot de passe (6+ caractères)"
+                    value={accountForm.password}
+                    onChange={e => setAccountForm(f => ({ ...f, password: e.target.value }))}
+                    className="h-9 text-sm"
+                  />
+                  <select
+                    className="h-9 text-sm rounded-md border border-input bg-background px-3"
+                    value={accountForm.role}
+                    onChange={e => setAccountForm(f => ({ ...f, role: e.target.value }))}
+                  >
+                    <option value="preparateur">Préparateur</option>
+                    <option value="manager">Manager</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button variant="ghost" size="sm" onClick={() => setCreatingAccount(null)} disabled={submittingAccount}>Annuler</Button>
+                  <Button size="sm" className="gap-1" onClick={() => handleCreateAccount(pharm.id)} disabled={submittingAccount}>
+                    <UserPlus className="h-3.5 w-3.5" />
+                    {submittingAccount ? "Création..." : "Créer le compte"}
                   </Button>
                 </div>
               </div>

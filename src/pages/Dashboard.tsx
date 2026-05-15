@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BarChart3, Activity, MousePointerClick, ShoppingBag, Clock, ArrowLeft, LogOut, Download, Monitor, Shield, Package, Brain, Keyboard, Building2, Wrench } from "lucide-react";
+import { BarChart3, Activity, MousePointerClick, ShoppingBag, Clock, ArrowLeft, LogOut, Download, Monitor, Shield, Package, Brain, Keyboard, Building2, Wrench, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
@@ -101,6 +101,15 @@ const Dashboard = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate("/fonctionnalites")}
+              className="text-primary-foreground hover:bg-primary-foreground/10 gap-2"
+            >
+              <Sparkles className="h-4 w-4" />
+              Fonctionnalités
+            </Button>
             {(isGroupManager || isAdmin) && (
               <Button
                 variant="ghost"
