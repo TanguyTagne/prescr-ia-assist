@@ -1,129 +1,44 @@
+## État actuel
 
-# Plan — Asclion 100% pro (marché FR, focus rétention pilote)
+**Besoins latents : 21** (1 par molécule). Couvre uniquement : paracetamol, ibuprofène, kétoprofène, IPP (oméprazole/eso/panto), antihistaminiques (cétirizine/lorat/deslo), antibiotiques (amox/augmentin/azithro), statines (atorva/rosuva), antidépresseurs (escitalo/sertra), corticoïdes (predni/prednisolone), metformine.
 
-Objectif : que ta pharmacie pilote (et les 5 prochaines) ne puissent plus s'en passer au quotidien. On laisse de côté l'anglais, les pages légales, les sujets VC pur. On muscle le **produit utilisé en officine**.
+**Médicaments sans PC liés : 397 / 1 324 (30%)**
+- 184 sans code ATC → orphelins (impossible de matcher une pathologie)
+- 213 avec ATC mais sans lien `medicament_pathologie` → pathologie existe mais lien manquant
 
----
+## Plan
 
-## Sprint 1 — Fiabiliser le hardware (bloquant aujourd'hui)
+### 1. Étendre les besoins latents (~25 classes additionnelles)
+Ajouter des `latent_needs` ciblées pour les grandes classes thérapeutiques qui en manquent :
+- **Cardio** : IEC/ARA2 (toux/hydratation), bêtabloquants (fatigue/froid), calciques (œdèmes), diurétiques (déshydratation/photosensibilité), anti-arythmiques
+- **Anticoagulants** : AOD (saignements gingivaux), HBPM (DASRI), AVK (alimentation), antiplaquettaires (gastrite)
+- **Diabète** : GLP-1 (nausées), SGLT2 (mycoses), DPP-4 (carence D), sulfamides (hypoglycémie), insulines (kits)
+- **Neuro/psy** : benzodiazépines (somnolence/mémoire), Z-drugs (rebond), SSRI (libido/sécheresse), antiépileptiques (folates)
+- **Respi** : β2-agonistes (sécheresse bouche), corticoïdes inhalés (candidose), antitussifs
+- **Uro/gynéco** : alpha-bloquants (hypoTA orthostatique), pilules (carence B9), HBP (mictions)
+- **Dermato** : corticoïdes topiques (atrophie), antifongiques topiques (récidive)
+- **Métabolisme** : biphosphonates (œsophagite), thyroïde (Ca/Fe), allopurinol (hydratation)
 
-Le scan code-barres et le watcher de documents sont marqués "pas fiables". C'est le différenciateur #1 d'Asclion : sans hardware fluide, on est juste un chatbot.
+→ Objectif : passer de 21 à ~45-50 besoins latents.
 
-1. **Page "Diagnostic Hardware"** dans Réglages
-   - Test live scanner code-barres (HID) : on voit chaque keystroke en temps réel, latence, complétude
-   - Test live watcher documents : statut du dossier surveillé, dernier fichier détecté, erreurs
-   - Bouton "Lancer un scan test" + "Importer un PDF test"
-   - Export d'un rapport texte à m'envoyer si problème
+### 2. Combler les 213 liens médicament→pathologie manquants
+Pour chaque médicament avec `atc_code` mais sans `medicament_pathologie` :
+- Trouver une molécule sœur (même ATC5) qui a déjà un lien pathologie
+- Cloner le lien `medicament_pathologie` → le médicament hérite automatiquement des PCs
 
-2. **Mode debug visible** (toggle dans header en local/desktop)
-   - Affiche overlay : événements clavier captés, fichiers détectés, état de la file de scan
-   - Toast d'erreur explicite ("Scanner détecté mais code mal formé", "Dossier inaccessible : permission refusée")
+### 3. Enrichir l'ATC des 184 médicaments orphelins
+- Matching nom → molécule existante dans `molecules`
+- Pour ceux qui restent (vraiment génériques type « Doliprane Pédiatrique », « Sodium Chl », vaccins anciens) : marquer `est_produit_conseil = true` et accepter qu'ils n'aient pas de PC pharmacologique
+- Ne **pas** forcer une pathologie/PC si pas pertinent (sécurité clinique)
 
-3. **Robustesse du watcher**
-   - Retry exponentiel sur fichier verrouillé (cas Windows fréquent)
-   - Détection des doublons (hash fichier) pour éviter de relancer 2x la même analyse
-   - Blacklist auto des extensions ignorées (.tmp, .crdownload)
+### 4. Vérification finale
+Re-query :
+- Nombre de médicaments cliniquement pertinents (hors OTC pédiatriques/vaccins) sans PC → cible **0**
+- Nombre de besoins latents → cible **~45**
 
-4. **Robustesse du scan HID**
-   - Anti-rebond configurable (certains scanners envoient l'EAN 2x)
-   - Reconnaissance des préfixes/suffixes scanner (CR/LF/Tab) configurables
-   - File d'attente visible si plusieurs scans rapides
+### Technique
+- Migration SQL unique pour les `latent_needs`
+- Script d'insertion en batch pour `medicament_pathologie` (clone par ATC5)
+- Update batch pour `est_produit_conseil` sur les orphelins non-cliniques
 
----
-
-## Sprint 2 — Rétention quotidienne (faire revenir le préparateur)
-
-Aujourd'hui le préparateur ouvre Asclion → analyse → ferme. Il faut qu'il y revienne **plusieurs fois par jour sans y penser**.
-
-5. **Notifications discrètes desktop**
-   - "3 patients fidélisés cette semaine grâce à tes recos" (vendredi 17h)
-   - "Rappel SMS programmé envoyé à 12 patients aujourd'hui"
-   - "Nouvelle interaction médicamenteuse détectée dans ta dernière analyse"
-
-6. **Widget "Ma journée"** (page d'accueil app)
-   - Compteur ordonnances analysées du jour
-   - Top 3 recos commandées
-   - 1 patient à rappeler aujourd'hui (si CRM activé)
-   - Score équipe vs hier (gamification légère, pas de classement public)
-
-7. **Mode "Comptoir rapide"**
-   - Vue ultra-condensée : ordonnance scannée → 3 produits avec stock LGO → 1 phrase de conseil → bouton "Commander"
-   - Tout tient sur 1 écran sans scroll
-   - Raccourci clavier (ex : F2) pour basculer mode rapide ↔ mode complet
-
-8. **Historique patient au scan carte vitale** (si déjà supporté côté hardware)
-   - Affiche les 3 dernières ordonnances anonymisées (hash) du même patient
-   - "Ce patient a refusé X la dernière fois → propose Y"
-
----
-
-## Sprint 3 — Confiance & qualité des recommandations
-
-Si une reco est mauvaise 2 fois, le préparateur ne te fait plus confiance et arrête.
-
-9. **Bouton "Reco non pertinente"** sur chaque produit recommandé
-   - 1 clic → motif rapide (déjà pris / pas adapté / patient refuse / autre)
-   - Boucle de feedback qui ajuste le ranking en temps réel pour cette pharmacie
-
-10. **Explication visible "Pourquoi cette reco ?"**
-    - Hover/clic sur un produit → "Recommandé car : interaction X, carence Y, protocole Z"
-    - Sources cliquables (ATC, base patho)
-
-11. **Garde-fou "Reco déjà refusée par ce patient"**
-    - Si le hash patient a refusé un produit dans les 30 derniers jours, on l'enlève automatiquement
-    - Ou on l'affiche barré avec mention discrète
-
-12. **Auto-curation continue**
-    - Tâche planifiée hebdo qui identifie les produits avec >70% de "non pertinent" et alerte l'admin
-    - Tu peux désactiver/remplacer en 1 clic depuis le dashboard admin
-
----
-
-## Sprint 4 — Onboarding pilote en 10 minutes
-
-Pour signer les prochains pilotes sans passer 2h en visio à expliquer.
-
-13. **Assistant onboarding interactif** (premier login pharmacie)
-    - Étape 1 : connecte ton LGO (auto-détect existante)
-    - Étape 2 : branche ton scanner (test live de Sprint 1)
-    - Étape 3 : configure le dossier surveillé (test live)
-    - Étape 4 : analyse une ordonnance test
-    - Étape 5 : configure tes raccourcis clavier
-    - Validation = badge "Pharmacie configurée" visible côté admin
-
-14. **Page "Démarrage rapide"** (Aide enrichie)
-    - Vidéo 2 min embedded
-    - Checklist persistante (apparait tant que pas terminée)
-
-15. **Ping santé pharmacie** (côté admin)
-    - Vue : "Pharmacie X — dernière analyse il y a 4 jours" → alerte rouge → t'envoie un mail auto
-    - Permet de détecter le décrochage avant qu'il devienne définitif
-
----
-
-## Hors-sprint (à confirmer ensemble)
-
-- Email de notification leads démo va aujourd'hui à `tanguytubert@gmail.com` ✅, à conserver
-- Pas de pages légales pour l'instant ✅
-- Code signing Windows : reporté
-- Pages About/Pricing/Trust center : reporté
-
----
-
-## Ordre proposé d'exécution
-
-```text
-Semaine 1 → Sprint 1 (Hardware) — bloquant
-Semaine 2 → Sprint 2 (Rétention) — quick wins visibles
-Semaine 3 → Sprint 3 (Qualité recos) — base feedback
-Semaine 4 → Sprint 4 (Onboarding) — préparation scale
-```
-
-## Détails techniques
-
-- Sprint 1 : extension de `useBarcodeScanner.ts`, `useFolderWatcher.ts`, nouvelle page `/settings/hardware`
-- Sprint 2 : nouvelle table `daily_user_stats`, edge function `daily-digest` cron, refactor `Dashboard.tsx`
-- Sprint 3 : ajout colonne `relevance_feedback` sur `recommendation_metrics`, exploitation dans le ranker
-- Sprint 4 : nouvelle table `pharmacy_onboarding_steps`, composant `OnboardingWizard.tsx` (remplace `OnboardingTour` actuel pour les pilotes)
-
-Dis-moi si on attaque par le **Sprint 1 (hardware)** ou si tu veux réordonner.
+Aucun changement frontend.
