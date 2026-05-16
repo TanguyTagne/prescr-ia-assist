@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Plus, Trash2, Save, Package } from "lucide-react";
+import DetectedProductCombobox from "@/components/groupement/DetectedProductCombobox";
 
 interface ProductMapping {
   id?: string;
@@ -145,17 +146,14 @@ const ProductMappingSettings = () => {
             <div className="flex-1 space-y-1">
               <div className="flex gap-2">
                 <div className="flex-1">
-                  <label className="text-[9px] text-muted-foreground uppercase tracking-wider">Catégorie</label>
-                  <Input
+                  <label className="text-[9px] text-muted-foreground uppercase tracking-wider">Catégorie détectée</label>
+                  <DetectedProductCombobox
                     value={m.categorie}
-                    onChange={e => updateMapping(i, "categorie", e.target.value)}
-                    placeholder="ex: Sirop toux"
+                    onValueChange={(v) => updateMapping(i, "categorie", v)}
+                    onCommit={(v) => updateMapping(i, "categorie", v)}
+                    placeholder="ex: Magnésium, Toplexil…"
                     className="h-7 text-xs"
-                    list={`cat-suggestions-${i}`}
                   />
-                  <datalist id={`cat-suggestions-${i}`}>
-                    {ALL_CATEGORIES.map(c => <option key={c} value={c} />)}
-                  </datalist>
                 </div>
                 <div className="flex-1">
                   <label className="text-[9px] text-muted-foreground uppercase tracking-wider">Produit du stock</label>
