@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Plus, Trash2, Save, Package } from "lucide-react";
+import DetectedProductCombobox from "@/components/groupement/DetectedProductCombobox";
 
 interface ProductMapping {
   id?: string;
