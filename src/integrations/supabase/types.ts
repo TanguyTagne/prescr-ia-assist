@@ -942,9 +942,11 @@ export type Database = {
           laboratoire: string | null
           molecule_id: string | null
           nom_commercial: string
+          posologie: string | null
           source_code: string | null
           source_reference: string | null
           statut_officine: string | null
+          voie_administration: string | null
         }
         Insert: {
           atc_code?: string | null
@@ -960,9 +962,11 @@ export type Database = {
           laboratoire?: string | null
           molecule_id?: string | null
           nom_commercial: string
+          posologie?: string | null
           source_code?: string | null
           source_reference?: string | null
           statut_officine?: string | null
+          voie_administration?: string | null
         }
         Update: {
           atc_code?: string | null
@@ -978,9 +982,11 @@ export type Database = {
           laboratoire?: string | null
           molecule_id?: string | null
           nom_commercial?: string
+          posologie?: string | null
           source_code?: string | null
           source_reference?: string | null
           statut_officine?: string | null
+          voie_administration?: string | null
         }
         Relationships: [
           {
@@ -1910,6 +1916,7 @@ export type Database = {
           est_eligible_cross_sell: boolean | null
           est_otc: boolean | null
           id: string
+          medicament_id: string | null
           nom_produit: string | null
           pathologie_id: string
           phrase_conseil: string | null
@@ -1932,6 +1939,7 @@ export type Database = {
           est_eligible_cross_sell?: boolean | null
           est_otc?: boolean | null
           id?: string
+          medicament_id?: string | null
           nom_produit?: string | null
           pathologie_id: string
           phrase_conseil?: string | null
@@ -1954,6 +1962,7 @@ export type Database = {
           est_eligible_cross_sell?: boolean | null
           est_otc?: boolean | null
           id?: string
+          medicament_id?: string | null
           nom_produit?: string | null
           pathologie_id?: string
           phrase_conseil?: string | null
@@ -1968,6 +1977,13 @@ export type Database = {
           validation_notes?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "produits_complementaires_medicament_id_fkey"
+            columns: ["medicament_id"]
+            isOneToOne: false
+            referencedRelation: "medicaments"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "produits_complementaires_pathologie_id_fkey"
             columns: ["pathologie_id"]
