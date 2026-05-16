@@ -531,7 +531,9 @@ Deno.serve(async (req) => {
         source_code: "seed_subclass_pcs",
       }));
       const { error } = await supabase.from("produits_complementaires").insert(pcRows);
-      if (!error) {
+      if (error) {
+        console.error("INSERT_ERR", med.nom_commercial, error.message);
+      } else {
         pcCount += pcRows.length;
         totalPcs += pcRows.length;
       }
