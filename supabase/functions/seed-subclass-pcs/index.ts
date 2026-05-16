@@ -509,16 +509,15 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 5. Insert PCs for each medication
+    // 5. Replace PCs for each medication (delete old seed PCs, insert new subclass-specific)
     let pcCount = 0;
     for (const med of medList) {
-      // Check if PCs already exist for this med
-      const { count } = await supabase
+      // Delete previous seed PCs (keep manually-validated ones)
+      await supabase
         .from("produits_complementaires")
-        .select("id", { count: "exact", head: true })
-        .eq("medicament_id", med.id);
-
-      if ((count ?? 0) > 0) continue; // skip if already seeded
+        .delete()
+        .eq("medicament_id", med.id)
+        .in("source_code", ["seed_top100_2024", "seed_top1000_2025", "seed_subclass_pcs"]);
 
       const pcRows = sc.pcs.map((pc, idx) => ({
         pathologie_id: patho!.id,
