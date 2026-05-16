@@ -15,7 +15,7 @@ const FR: DemoPrescription[] = [
   {
     id: "medecine-generale",
     label: "Médecine générale",
-    description: "Doliprane + Amoxicilline + Drill",
+    description: "Doliprane + Amoxicilline + Pastille pour la gorge",
     icon: Stethoscope,
     prescriptionPreview: [
       "Dr. M. Durand — Médecin généraliste",
