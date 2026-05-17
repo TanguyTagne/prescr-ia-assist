@@ -927,6 +927,36 @@ export type Database = {
           },
         ]
       }
+      medicament_pc_valide: {
+        Row: {
+          created_at: string
+          finalite: string
+          id: string
+          medicament_id: string
+          pc_id: string
+          score: number
+          source: string
+        }
+        Insert: {
+          created_at?: string
+          finalite: string
+          id?: string
+          medicament_id: string
+          pc_id: string
+          score?: number
+          source?: string
+        }
+        Update: {
+          created_at?: string
+          finalite?: string
+          id?: string
+          medicament_id?: string
+          pc_id?: string
+          score?: number
+          source?: string
+        }
+        Relationships: []
+      }
       medicaments: {
         Row: {
           atc_code: string | null
@@ -1405,6 +1435,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      pc_audit_runs: {
+        Row: {
+          error: string | null
+          finished_at: string | null
+          id: string
+          links_created: number
+          links_rejected: number
+          new_pcs_created: number
+          orphans_filled: number
+          pcs_classified: number
+          started_at: string
+          status: string
+        }
+        Insert: {
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          links_created?: number
+          links_rejected?: number
+          new_pcs_created?: number
+          orphans_filled?: number
+          pcs_classified?: number
+          started_at?: string
+          status?: string
+        }
+        Update: {
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          links_created?: number
+          links_rejected?: number
+          new_pcs_created?: number
+          orphans_filled?: number
+          pcs_classified?: number
+          started_at?: string
+          status?: string
+        }
+        Relationships: []
       }
       pc_feedback: {
         Row: {
@@ -1915,6 +1984,8 @@ export type Database = {
           est_dispositif_medical: boolean | null
           est_eligible_cross_sell: boolean | null
           est_otc: boolean | null
+          finalite: string | null
+          finalite_audited_at: string | null
           id: string
           medicament_id: string | null
           nom_produit: string | null
@@ -1925,6 +1996,7 @@ export type Database = {
           rule_version: number
           source_code: string | null
           source_reference: string | null
+          trigger_atc_prefixes: string[] | null
           type_produit: string | null
           validated_at: string | null
           validated_by: string | null
@@ -1938,6 +2010,8 @@ export type Database = {
           est_dispositif_medical?: boolean | null
           est_eligible_cross_sell?: boolean | null
           est_otc?: boolean | null
+          finalite?: string | null
+          finalite_audited_at?: string | null
           id?: string
           medicament_id?: string | null
           nom_produit?: string | null
@@ -1948,6 +2022,7 @@ export type Database = {
           rule_version?: number
           source_code?: string | null
           source_reference?: string | null
+          trigger_atc_prefixes?: string[] | null
           type_produit?: string | null
           validated_at?: string | null
           validated_by?: string | null
@@ -1961,6 +2036,8 @@ export type Database = {
           est_dispositif_medical?: boolean | null
           est_eligible_cross_sell?: boolean | null
           est_otc?: boolean | null
+          finalite?: string | null
+          finalite_audited_at?: string | null
           id?: string
           medicament_id?: string | null
           nom_produit?: string | null
@@ -1971,6 +2048,7 @@ export type Database = {
           rule_version?: number
           source_code?: string | null
           source_reference?: string | null
+          trigger_atc_prefixes?: string[] | null
           type_produit?: string | null
           validated_at?: string | null
           validated_by?: string | null

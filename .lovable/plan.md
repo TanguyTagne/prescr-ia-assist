@@ -1,44 +1,57 @@
-## État actuel
+## Constat
 
-**Besoins latents : 21** (1 par molécule). Couvre uniquement : paracetamol, ibuprofène, kétoprofène, IPP (oméprazole/eso/panto), antihistaminiques (cétirizine/lorat/deslo), antibiotiques (amox/augmentin/azithro), statines (atorva/rosuva), antidépresseurs (escitalo/sertra), corticoïdes (predni/prednisolone), metformine.
+- **53 359 paires** médicament↔PC (via la pathologie).
+- Beaucoup sont **incohérentes** : ex. *Advil 400mg* hérite de *Macrogol (laxatif)* avec une phrase qui parle du **tramadol** (constipation opioïde) — alors qu'Advil n'est pas un opioïde. De même *Dompéridone* (médicament sur ordonnance) apparaît comme PC.
+- Cause racine : les PC sont rattachés à une **pathologie**, donc tout médicament lié à cette pathologie hérite automatiquement de **tous** ses PC, sans filtre par classe ATC ni par finalité clinique.
 
-**Médicaments sans PC liés : 397 / 1 324 (30%)**
-- 184 sans code ATC → orphelins (impossible de matcher une pathologie)
-- 213 avec ATC mais sans lien `medicament_pathologie` → pathologie existe mais lien manquant
+## Règle cible
+
+Chaque PC rattaché à un médicament doit relever d'**une** des 2 finalités :
+1. **Réduit / prévient un effet indésirable** de la classe ATC du médicament (ex : IPP sous AINS, laxatif sous opioïde, candidose sous corticoïde inhalé…).
+2. **Accompagne l'efficacité** du traitement (ex : magnésium + statine, probiotiques + antibiotique, hydratation + diurétique…).
+
+Tout PC qui ne correspond à aucune des deux pour la classe ATC du médicament → **lien supprimé**.
 
 ## Plan
 
-### 1. Étendre les besoins latents (~25 classes additionnelles)
-Ajouter des `latent_needs` ciblées pour les grandes classes thérapeutiques qui en manquent :
-- **Cardio** : IEC/ARA2 (toux/hydratation), bêtabloquants (fatigue/froid), calciques (œdèmes), diurétiques (déshydratation/photosensibilité), anti-arythmiques
-- **Anticoagulants** : AOD (saignements gingivaux), HBPM (DASRI), AVK (alimentation), antiplaquettaires (gastrite)
-- **Diabète** : GLP-1 (nausées), SGLT2 (mycoses), DPP-4 (carence D), sulfamides (hypoglycémie), insulines (kits)
-- **Neuro/psy** : benzodiazépines (somnolence/mémoire), Z-drugs (rebond), SSRI (libido/sécheresse), antiépileptiques (folates)
-- **Respi** : β2-agonistes (sécheresse bouche), corticoïdes inhalés (candidose), antitussifs
-- **Uro/gynéco** : alpha-bloquants (hypoTA orthostatique), pilules (carence B9), HBP (mictions)
-- **Dermato** : corticoïdes topiques (atrophie), antifongiques topiques (récidive)
-- **Métabolisme** : biphosphonates (œsophagite), thyroïde (Ca/Fe), allopurinol (hydratation)
+### 1. Schéma : finalité explicite sur chaque PC
+Migration : ajouter à `produits_complementaires` :
+- `finalite text check in ('side_effect','treatment_support','symptom_relief',null)`
+- `trigger_atc_prefixes text[]` (classes ATC qui justifient ce PC — ex `{'M01A','N02BE'}` pour un IPP gastroprotecteur AINS)
 
-→ Objectif : passer de 21 à ~45-50 besoins latents.
+### 2. Classification AI (Gemini Flash, batch)
+Edge function `audit-pc-purpose` (admin only) :
+- Pour chaque PC unique (3 233), appel Gemini Flash : "Classe la finalité (side_effect / treatment_support / symptom_relief) et liste les préfixes ATC qui justifient ce PC".
+- Écrit `finalite` + `trigger_atc_prefixes` en base.
+- Coût ≈ 3k appels Flash, lance-le en chunks de 50 en parallèle (~5 min).
 
-### 2. Combler les 213 liens médicament→pathologie manquants
-Pour chaque médicament avec `atc_code` mais sans `medicament_pathologie` :
-- Trouver une molécule sœur (même ATC5) qui a déjà un lien pathologie
-- Cloner le lien `medicament_pathologie` → le médicament hérite automatiquement des PCs
+### 3. Re-validation des liens med↔PC
+SQL en batch :
+- Pour chaque paire `(medicament, pc)` issue de `medicament_pathologie ⨝ pc`, garder uniquement si `medicament.atc_code` commence par un des `pc.trigger_atc_prefixes`, **OU** si `pc.finalite = 'symptom_relief'` ET le PC est lié à la pathologie principale du médicament.
+- Matérialiser les liens validés dans une nouvelle table `medicament_pc_valide(medicament_id, pc_id, finalite, score)`.
+- Le front lit cette table plutôt que la jointure pathologie large.
 
-### 3. Enrichir l'ATC des 184 médicaments orphelins
-- Matching nom → molécule existante dans `molecules`
-- Pour ceux qui restent (vraiment génériques type « Doliprane Pédiatrique », « Sodium Chl », vaccins anciens) : marquer `est_produit_conseil = true` et accepter qu'ils n'aient pas de PC pharmacologique
-- Ne **pas** forcer une pathologie/PC si pas pertinent (sécurité clinique)
+### 4. Combler les médicaments qui perdent tous leurs PC
+Après filtrage, certains médicaments n'auront plus de PC pertinent (effet de bord du nettoyage).
+- Liste ces orphelins, génère via Gemini Flash 2-3 PC ciblés (finalité + ATC trigger explicite) par médicament orphelin.
+- Insertion en `produits_complementaires` avec `medicament_id` direct + `finalite`.
 
-### 4. Vérification finale
-Re-query :
-- Nombre de médicaments cliniquement pertinents (hors OTC pédiatriques/vaccins) sans PC → cible **0**
-- Nombre de besoins latents → cible **~45**
+### 5. Reporting admin
+Nouvel onglet "Audit PC" dans Admin :
+- Avant/après : nombre de paires, paires supprimées avec exemple, médicaments enrichis.
+- Liste filtrable des PC sans finalité (validation manuelle si besoin).
 
-### Technique
-- Migration SQL unique pour les `latent_needs`
-- Script d'insertion en batch pour `medicament_pathologie` (clone par ATC5)
-- Update batch pour `est_produit_conseil` sur les orphelins non-cliniques
+## Détails techniques
 
-Aucun changement frontend.
+- AI : Gemini Flash via `LOVABLE_API_KEY` (déjà configuré).
+- Sécurité : fonction admin-only avec check `has_role(_, 'admin')`.
+- Idempotent : `ON CONFLICT DO UPDATE` partout, ré-exécutable.
+- Pas de breaking change côté `analyze-prescription` : on garde la jointure actuelle en fallback si `medicament_pc_valide` est vide pour un médicament.
+
+## Livrables
+
+1. Migration schéma (`finalite`, `trigger_atc_prefixes`, table `medicament_pc_valide`).
+2. Edge function `audit-pc-purpose` (classification AI + re-validation + comblement orphelins).
+3. Onglet admin "Audit PC" avec bouton de lancement et stats.
+
+Pas de changement UX côté pharmacien — uniquement une amélioration qualitative des PC proposés.
