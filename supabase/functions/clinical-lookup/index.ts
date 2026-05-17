@@ -8,7 +8,8 @@ const corsHeaders = {
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders }
+    return new Response("ok", { headers: corsHeaders });
+  }
 
   // ── Auth guard (any authenticated user) ──
   const authHeader = req.headers.get("Authorization");
@@ -29,8 +30,6 @@ serve(async (req) => {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-  }
-);
   }
 
   try {
