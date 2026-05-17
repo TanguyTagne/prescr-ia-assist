@@ -221,11 +221,14 @@ Deno.serve(async (req) => {
         }
       }
 
+      console.log(`[phase2] toInsert=${toInsert.length} rejected=${rejected}`);
       for (const batch of chunked(toInsert, 500)) {
         const { error } = await svc.from("medicament_pc_valide").upsert(batch, { onConflict: "medicament_id,pc_id" });
-        if (!error) stats.links_created += batch.length;
+        if (error) console.error(`[phase2] upsert err:`, error.message);
+        else stats.links_created += batch.length;
       }
       stats.links_rejected = rejected;
+      console.log(`[phase2] links_created=${stats.links_created}`);
     }
 
     // === PHASE 3: fill orphans (meds with 0 valid PC) ===
