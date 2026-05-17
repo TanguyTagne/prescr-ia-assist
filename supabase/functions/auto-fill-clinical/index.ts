@@ -202,7 +202,8 @@ function getCategoryFromPathologie(name: string): string {
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders }
+    return new Response("ok", { headers: corsHeaders });
+  }
 
   // ── Admin auth guard ──
   const authHeader = req.headers.get("Authorization");
@@ -235,8 +236,6 @@ serve(async (req) => {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-  }
-);
   }
 
   try {
