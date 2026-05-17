@@ -51,14 +51,22 @@ Phrase conseil: ${pc.phrase_conseil ?? "n/a"}`;
         response_format: { type: "json_object" },
       }),
     });
-    if (!r.ok) return null;
+    if (!r.ok) {
+      const txt = await r.text();
+      console.error(`[classifyPc] HTTP ${r.status} for ${pc.produit}: ${txt.slice(0, 200)}`);
+      return null;
+    }
     const j = await r.json();
     const txt = j?.choices?.[0]?.message?.content ?? "";
     const parsed = JSON.parse(txt);
-    if (!["side_effect", "treatment_support", "symptom_relief"].includes(parsed.finalite)) return null;
+    if (!["side_effect", "treatment_support", "symptom_relief"].includes(parsed.finalite)) {
+      console.error(`[classifyPc] bad finalite for ${pc.produit}: ${txt.slice(0, 200)}`);
+      return null;
+    }
     const atc = Array.isArray(parsed.atc) ? parsed.atc.filter((x: any) => typeof x === "string").map((x: string) => x.toUpperCase().trim()).slice(0, 8) : [];
     return { finalite: parsed.finalite, atc };
-  } catch {
+  } catch (e) {
+    console.error(`[classifyPc] exception for ${pc.produit}:`, e);
     return null;
   }
 }
