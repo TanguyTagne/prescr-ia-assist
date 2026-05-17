@@ -145,6 +145,10 @@ const Admin = () => {
             <ShieldCheck className="h-3.5 w-3.5" />
             Couverture
           </Button>
+          <Button variant={tab === "audit-pc" ? "default" : "outline"} size="sm" onClick={() => setTab("audit-pc")} className="gap-1.5">
+            <Sparkle className="h-3.5 w-3.5" />
+            Audit PC
+          </Button>
           <Button variant={tab === "sales" ? "default" : "outline"} size="sm" onClick={() => setTab("sales")} className="gap-1.5">
             <ShoppingCart className="h-3.5 w-3.5" />
             Ventes
