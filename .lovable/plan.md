@@ -1,57 +1,56 @@
-## Constat
+## Objectif
 
-- **53 359 paires** médicament↔PC (via la pathologie).
-- Beaucoup sont **incohérentes** : ex. *Advil 400mg* hérite de *Macrogol (laxatif)* avec une phrase qui parle du **tramadol** (constipation opioïde) — alors qu'Advil n'est pas un opioïde. De même *Dompéridone* (médicament sur ordonnance) apparaît comme PC.
-- Cause racine : les PC sont rattachés à une **pathologie**, donc tout médicament lié à cette pathologie hérite automatiquement de **tous** ses PC, sans filtre par classe ATC ni par finalité clinique.
+Obtenir une base **"top du top"** : chaque médicament a entre 2 et ~10 PC réellement pertinents (mécanisme documenté), avec au minimum 1 PC effets secondaires/symptômes + 1 PC accompagnement.
 
-## Règle cible
+## Étape 1 — Finir l'audit GPT-5.5 (301 paires restantes)
 
-Chaque PC rattaché à un médicament doit relever d'**une** des 2 finalités :
-1. **Réduit / prévient un effet indésirable** de la classe ATC du médicament (ex : IPP sous AINS, laxatif sous opioïde, candidose sous corticoïde inhalé…).
-2. **Accompagne l'efficacité** du traitement (ex : magnésium + statine, probiotiques + antibiotique, hydratation + diurétique…).
+Relancer `/tmp/audit2.py` en mode reprise (le `done` set saute les 810 déjà traitées). Budget : ~10 min, ~301 appels GPT-5.5 sur les paires `(ATC3 × catégorie × finalité)` manquantes.
 
-Tout PC qui ne correspond à aucune des deux pour la classe ATC du médicament → **lien supprimé**.
+→ Sortie : `/tmp/audit2_results.jsonl` complet (1 111 verdicts keep/reject avec justification).
 
-## Plan
+## Étape 2 — Appliquer le filtre hybride "top du top"
 
-### 1. Schéma : finalité explicite sur chaque PC
-Migration : ajouter à `produits_complementaires` :
-- `finalite text check in ('side_effect','treatment_support','symptom_relief',null)`
-- `trigger_atc_prefixes text[]` (classes ATC qui justifient ce PC — ex `{'M01A','N02BE'}` pour un IPP gastroprotecteur AINS)
+**Règle de suppression** (= on supprime un lien si **toutes** ces conditions) :
+1. GPT-5.5 a jugé la paire `(atc3, catégorie, finalité) = reject`
+2. ET la raison du rejet est **structurelle** (catégorie générique sans cible, ex: "phytothérapie générique", "complément trop générique", "minéral sans lien direct")
+3. ET l'ATC du médicament est défini (≠ "NON")
 
-### 2. Classification AI (Gemini Flash, batch)
-Edge function `audit-pc-purpose` (admin only) :
-- Pour chaque PC unique (3 233), appel Gemini Flash : "Classe la finalité (side_effect / treatment_support / symptom_relief) et liste les préfixes ATC qui justifient ce PC".
-- Écrit `finalite` + `trigger_atc_prefixes` en base.
-- Coût ≈ 3k appels Flash, lance-le en chunks de 50 en parallèle (~5 min).
+**On conserve** :
+- Tous les liens vers médicaments à ATC = "NON" (vaccins, DM, OTC purs) — GPT manque de contexte
+- Les liens où GPT n'a pas tranché (paire absente du verdict)
+- Les liens vers les PC à `medicament_id` direct (PC explicitement attachés au médicament, pas via pathologie)
+- Tous les "keep" GPT
 
-### 3. Re-validation des liens med↔PC
-SQL en batch :
-- Pour chaque paire `(medicament, pc)` issue de `medicament_pathologie ⨝ pc`, garder uniquement si `medicament.atc_code` commence par un des `pc.trigger_atc_prefixes`, **OU** si `pc.finalite = 'symptom_relief'` ET le PC est lié à la pathologie principale du médicament.
-- Matérialiser les liens validés dans une nouvelle table `medicament_pc_valide(medicament_id, pc_id, finalite, score)`.
-- Le front lit cette table plutôt que la jointure pathologie large.
+**Estimation impact** : ~8 600 liens supprimés (43% du bruit), reste ~11 600 liens / ~1 100 méd couverts. Orphelins attendus : ~50.
 
-### 4. Combler les médicaments qui perdent tous leurs PC
-Après filtrage, certains médicaments n'auront plus de PC pertinent (effet de bord du nettoyage).
-- Liste ces orphelins, génère via Gemini Flash 2-3 PC ciblés (finalité + ATC trigger explicite) par médicament orphelin.
-- Insertion en `produits_complementaires` avec `medicament_id` direct + `finalite`.
+## Étape 3 — Combler les orphelins (~542 si strict, ~50 en hybride)
 
-### 5. Reporting admin
-Nouvel onglet "Audit PC" dans Admin :
-- Avant/après : nombre de paires, paires supprimées avec exemple, médicaments enrichis.
-- Liste filtrable des PC sans finalité (validation manuelle si besoin).
+Pour chaque médicament identifié comme orphelin **après l'étape 2**, appel GPT-5.5 demandant strictement :
+- **1 PC "side_effect" ou "symptom_relief"** (réduit un effet indésirable connu OU soulage un symptôme associé)
+- **1 PC "treatment_support"** (accompagne ou améliore l'efficacité)
+
+Format de réponse imposé : JSON `{pcs: [{produit, categorie, description, phrase_conseil, finalite, atc:[...]}, …]}`.
+
+Insertion dans `produits_complementaires` avec `medicament_id` direct (pas via pathologie), `finalite` + `trigger_atc_prefixes` pré-remplis, `priorite=80`, et création du lien dans `medicament_pc_valide`.
+
+## Étape 4 — Rapport final
+
+Tableau dans le chat :
+- Avant / après nombre total de liens
+- Distribution PC par médicament (médian, p25, p75, max)
+- Nombre d'orphelins comblés et exemples (3 méd avec leurs 2 nouveaux PC)
+- 10 exemples de liens supprimés (haut volume) pour validation visuelle
 
 ## Détails techniques
 
-- AI : Gemini Flash via `LOVABLE_API_KEY` (déjà configuré).
-- Sécurité : fonction admin-only avec check `has_role(_, 'admin')`.
-- Idempotent : `ON CONFLICT DO UPDATE` partout, ré-exécutable.
-- Pas de breaking change côté `analyze-prescription` : on garde la jointure actuelle en fallback si `medicament_pc_valide` est vide pour un médicament.
+- **Modèle** : `openai/gpt-5.5` via Lovable AI Gateway (vérifier les crédits avant lancement de l'étape 3 — ~542 appels × 2 PC).
+- **Suppressions** : via `supabase--insert` (DELETE FROM `medicament_pc_valide`), pas de migration de schéma.
+- **Insertions orphelins** : batch de 30 méd en parallèle via `Promise.all` pour rester dans le budget temps.
+- **Aucun changement front-end** : la table `medicament_pc_valide` reste l'unique source de vérité lue par `analyze-prescription`.
+- **Idempotence** : on conserve `source='audit_v1'` pour pouvoir replay si besoin ; nouveaux PC tagués `source_code='gpt55_orphan_fill'` pour traçabilité.
 
-## Livrables
+## Risques
 
-1. Migration schéma (`finalite`, `trigger_atc_prefixes`, table `medicament_pc_valide`).
-2. Edge function `audit-pc-purpose` (classification AI + re-validation + comblement orphelins).
-3. Onglet admin "Audit PC" avec bouton de lancement et stats.
-
-Pas de changement UX côté pharmacien — uniquement une amélioration qualitative des PC proposés.
+- **Crédits Lovable AI** : ~300 appels (étape 1) + ~540 appels (étape 3) = ~840 appels GPT-5.5. Si épuisés en cours de route, le script reprend (resume via `done` set).
+- **Faux rejets** : on garde un filtre conservateur (raison structurelle seulement) pour éviter de couper des liens valides que GPT aurait mal compris.
+- **Aucune perte irréversible** : les liens supprimés peuvent être recréés à partir de `medicament_pathologie` (la jointure d'origine reste intacte).
