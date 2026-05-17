@@ -23,6 +23,7 @@ import QuotasTab from "@/components/admin/QuotasTab";
 import MesDonneesPanel from "@/components/admin/MesDonneesPanel";
 import TrackingLinksTab from "@/components/admin/TrackingLinksTab";
 import SignalementsTab from "@/components/admin/SignalementsTab";
+import AuditPcTab from "@/components/admin/AuditPcTab";
 
 interface AccessRequest {
   id: string;
