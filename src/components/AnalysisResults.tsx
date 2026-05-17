@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import type { AnalysisResult } from "@/lib/prescriptionAnalyzer";
 import LegalDisclaimer from "./LegalDisclaimer";
 import LineageBadge from "./LineageBadge";
+import ReportButton from "./ReportButton";
 import { trackEvent } from "@/hooks/useAnalytics";
 import { usePcFeedback } from "@/hooks/usePcFeedback";
 import { useProductLineage } from "@/hooks/useProductLineage";
@@ -134,6 +135,15 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
             <Pill className="h-3 w-3 text-primary shrink-0" />
             <span className="font-semibold text-xs">{med.nom}</span>
             {med.code_atc && <span className="text-[10px] text-muted-foreground">[{med.code_atc}]</span>}
+            {!demoMode && (
+              <div className="ml-auto">
+                <ReportButton
+                  type="medicament_different"
+                  medicamentNom={med.nom}
+                  context={{ classe: med.classe, code_atc: med.code_atc, molecule: med.molecule }}
+                />
+              </div>
+            )}
           </div>
 
           {med.conseil_associe &&
@@ -195,6 +205,15 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
                           </>
                     }
                       </button>
+                      {!demoMode && (
+                        <ReportButton
+                          type="pc_inadapte"
+                          medicamentNom={med.nom}
+                          pcNom={rec.produit}
+                          pcCategorie={rec.categorie}
+                          context={{ priorite: rec.priorite, pathologie: rec.pathologie }}
+                        />
+                      )}
                     </div>
                     {rec.phrase_conseil && (() => {
                       const pcKey = `${i}-${j}`;

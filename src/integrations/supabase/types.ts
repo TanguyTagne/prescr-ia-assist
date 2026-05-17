@@ -2510,6 +2510,60 @@ export type Database = {
           },
         ]
       }
+      signalements: {
+        Row: {
+          admin_notes: string | null
+          commentaire: string | null
+          context: Json | null
+          created_at: string
+          id: string
+          medicament_nom: string
+          pc_categorie: string | null
+          pc_nom: string | null
+          pharmacy_id: string
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          commentaire?: string | null
+          context?: Json | null
+          created_at?: string
+          id?: string
+          medicament_nom: string
+          pc_categorie?: string | null
+          pc_nom?: string | null
+          pharmacy_id: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_notes?: string | null
+          commentaire?: string | null
+          context?: Json | null
+          created_at?: string
+          id?: string
+          medicament_nom?: string
+          pc_categorie?: string | null
+          pc_nom?: string | null
+          pharmacy_id?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       symptome_pathologie: {
         Row: {
           id: string
