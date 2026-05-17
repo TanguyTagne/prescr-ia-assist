@@ -58,7 +58,9 @@ Phrase conseil: ${pc.phrase_conseil ?? "n/a"}`;
     }
     const j = await r.json();
     const txt = j?.choices?.[0]?.message?.content ?? "";
-    const parsed = JSON.parse(txt);
+    const m = txt.match(/\{[\s\S]*\}/);
+    if (!m) { console.error(`[classifyPc] no JSON for ${pc.produit}: ${txt.slice(0, 200)}`); return null; }
+    const parsed = JSON.parse(m[0]);
     if (!["side_effect", "treatment_support", "symptom_relief"].includes(parsed.finalite)) {
       console.error(`[classifyPc] bad finalite for ${pc.produit}: ${txt.slice(0, 200)}`);
       return null;
