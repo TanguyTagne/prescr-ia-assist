@@ -178,8 +178,17 @@ serve(async (req) => {
     let produits: any[] = [];
     let rankedProduits: any[] = [];
 
+    // Direct medication-bound PCs (vaccines, chemo, opioids — covered by gpt55_orphan_fill)
+    const directMedPcsPromise = medicament?.id
+      ? supabase
+          .from("produits_complementaires")
+          .select("*, pathologies(nom_pathologie)")
+          .eq("medicament_id", medicament.id)
+          .order("priorite", { ascending: false })
+      : Promise.resolve({ data: [] });
+
     if (pathologieIds.length > 0) {
-      const [protocolesRes, conseilsRes, produitsRes, rankingRes] = await Promise.all([
+      const [protocolesRes, conseilsRes, produitsRes, rankingRes, directMedPcsRes] = await Promise.all([
         supabase
           .from("protocole_pathologie")
           .select(`
@@ -207,11 +216,23 @@ serve(async (req) => {
           .select("*, produits_complementaires(produit, categorie, description, type_produit), pathologies(nom_pathologie)")
           .in("pathologie_id", pathologieIds)
           .order("score_final", { ascending: false }),
+        directMedPcsPromise,
       ]);
       protocoles = protocolesRes.data || [];
       conseils = conseilsRes.data || [];
-      produits = produitsRes.data || [];
+      // Merge direct medication-bound PCs first (priority boost), dedupe by produit name
+      const directPcs = (directMedPcsRes.data || []).map((p: any) => ({ ...p, priorite: Math.max(p.priorite || 0, 85) }));
+      const seen = new Set<string>();
+      produits = [...directPcs, ...(produitsRes.data || [])].filter((p: any) => {
+        const k = (p.produit || "").toLowerCase().trim();
+        if (!k || seen.has(k)) return false;
+        seen.add(k);
+        return true;
+      });
       rankedProduits = rankingRes.data || [];
+    } else {
+      const directMedPcsRes = await directMedPcsPromise;
+      produits = (directMedPcsRes.data || []).map((p: any) => ({ ...p, priorite: Math.max(p.priorite || 0, 85) }));
     }
 
     // Step 5: Build structured response
