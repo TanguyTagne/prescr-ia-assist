@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { ArrowLeft, Loader2, Mail, Building2, BarChart3, RefreshCw, ShieldCheck, ShoppingCart, Target, Monitor, Trophy, Sparkles, UserPlus, Network, FileSearch, Shield, FileText, Gauge, UserCog, Link2, Flag } from "lucide-react";
+import { ArrowLeft, Loader2, Mail, Building2, BarChart3, RefreshCw, ShieldCheck, ShoppingCart, Target, Monitor, Trophy, Sparkles, UserPlus, Network, FileSearch, Shield, FileText, Gauge, UserCog, Link2, Flag, Sparkle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import RequestsTab from "@/components/admin/RequestsTab";
 import PharmaciesTab from "@/components/admin/PharmaciesTab";
@@ -23,6 +23,7 @@ import QuotasTab from "@/components/admin/QuotasTab";
 import MesDonneesPanel from "@/components/admin/MesDonneesPanel";
 import TrackingLinksTab from "@/components/admin/TrackingLinksTab";
 import SignalementsTab from "@/components/admin/SignalementsTab";
+import AuditPcTab from "@/components/admin/AuditPcTab";
 
 interface AccessRequest {
   id: string;
@@ -57,7 +58,7 @@ const Admin = () => {
   const [requests, setRequests] = useState<AccessRequest[]>([]);
   const [pharmacies, setPharmacies] = useState<PharmacyWithLGO[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<"requests" | "pharmacies" | "kpis" | "coverage" | "sales" | "perf" | "benchmark" | "registers" | "demo-sessions" | "demo-leads" | "tracking-links" | "groupements" | "tracabilite" | "conformite" | "rgpd" | "quotas" | "mes-donnees" | "signalements">("kpis");
+  const [tab, setTab] = useState<"requests" | "pharmacies" | "kpis" | "coverage" | "sales" | "perf" | "benchmark" | "registers" | "demo-sessions" | "demo-leads" | "tracking-links" | "groupements" | "tracabilite" | "conformite" | "rgpd" | "quotas" | "mes-donnees" | "signalements" | "audit-pc">("kpis");
 
   useEffect(() => {
     loadData();
@@ -144,6 +145,10 @@ const Admin = () => {
             <ShieldCheck className="h-3.5 w-3.5" />
             Couverture
           </Button>
+          <Button variant={tab === "audit-pc" ? "default" : "outline"} size="sm" onClick={() => setTab("audit-pc")} className="gap-1.5">
+            <Sparkle className="h-3.5 w-3.5" />
+            Audit PC
+          </Button>
           <Button variant={tab === "sales" ? "default" : "outline"} size="sm" onClick={() => setTab("sales")} className="gap-1.5">
             <ShoppingCart className="h-3.5 w-3.5" />
             Ventes
@@ -208,6 +213,7 @@ const Admin = () => {
         {tab === "quotas" && <QuotasTab />}
         {tab === "mes-donnees" && <MesDonneesPanel />}
         {tab === "signalements" && <SignalementsTab />}
+        {tab === "audit-pc" && <AuditPcTab />}
       </div>
     </div>
   );
