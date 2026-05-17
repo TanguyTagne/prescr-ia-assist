@@ -202,7 +202,8 @@ function getCategoryFromPathologie(name: string): string {
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders }
+    return new Response("ok", { headers: corsHeaders });
+  }
 
   // ── Admin auth guard ──
   const authHeader = req.headers.get("Authorization");
