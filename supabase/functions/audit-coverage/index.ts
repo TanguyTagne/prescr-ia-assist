@@ -316,7 +316,8 @@ const TOP_300_ATC5: { atc5: string; molecule: string; nom: string; classe: strin
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders }
+    return new Response(null, { headers: corsHeaders });
+  }
 
   // ── Admin auth guard ──
   const authHeader = req.headers.get("Authorization");
