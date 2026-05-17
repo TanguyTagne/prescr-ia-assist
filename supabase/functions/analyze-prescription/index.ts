@@ -362,8 +362,18 @@ async function clinicalLookup(
   let produits: any[] = [];
   let protocoles: any[] = [];
 
+  // Direct medication-bound PCs (covers vaccines, chemo, opioids etc. without pathology link)
+  // Source: gpt55_orphan_fill + any future medicament_id-direct PCs
+  const directMedPcsPromise = medicament?.id
+    ? supabase
+        .from("produits_complementaires")
+        .select("*, pathologies(nom_pathologie)")
+        .eq("medicament_id", medicament.id)
+        .order("priorite", { ascending: false })
+    : Promise.resolve({ data: [] });
+
   if (pathologieIds.length > 0) {
-    const [conseilsRes, produitsRes, protocolesRes] = await Promise.all([
+    const [conseilsRes, produitsRes, protocolesRes, directMedPcsRes] = await Promise.all([
       supabase
         .from("conseils_associes")
         .select("*, pathologies(nom_pathologie)")
@@ -386,10 +396,24 @@ async function clinicalLookup(
         `)
         .in("pathologie_id", pathologieIds)
         .eq("actif", true),
+      directMedPcsPromise,
     ]);
     conseils = conseilsRes.data || [];
-    produits = produitsRes.data || [];
+    // Merge: direct medication-bound PCs FIRST (most specific), then pathology-based, dedupe by produit name
+    const directPcs = (directMedPcsRes.data || []).map((p: any) => ({ ...p, priorite: Math.max(p.priorite || 0, 85) }));
+    const pathologyPcs = produitsRes.data || [];
+    const seen = new Set<string>();
+    produits = [...directPcs, ...pathologyPcs].filter((p: any) => {
+      const key = (p.produit || "").toLowerCase().trim();
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
     protocoles = protocolesRes.data || [];
+  } else {
+    // No pathology — still serve direct medication-bound PCs (vaccines, chemo orphans)
+    const directMedPcsRes = await directMedPcsPromise;
+    produits = (directMedPcsRes.data || []).map((p: any) => ({ ...p, priorite: Math.max(p.priorite || 0, 85) }));
   }
 
   return {
