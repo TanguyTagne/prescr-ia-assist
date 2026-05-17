@@ -213,6 +213,7 @@ const Admin = () => {
         {tab === "quotas" && <QuotasTab />}
         {tab === "mes-donnees" && <MesDonneesPanel />}
         {tab === "signalements" && <SignalementsTab />}
+        {tab === "audit-pc" && <AuditPcTab />}
       </div>
     </div>
   );
