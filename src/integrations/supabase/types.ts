@@ -14,6 +14,18 @@ export type Database = {
   }
   public: {
     Tables: {
+      _pc_audit_to_delete: {
+        Row: {
+          id: string
+        }
+        Insert: {
+          id: string
+        }
+        Update: {
+          id?: string
+        }
+        Relationships: []
+      }
       accepted_combinations: {
         Row: {
           created_at: string
