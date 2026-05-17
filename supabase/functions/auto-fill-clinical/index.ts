@@ -237,7 +237,6 @@ serve(async (req) => {
       });
     }
   }
-);
   }
 
   try {
