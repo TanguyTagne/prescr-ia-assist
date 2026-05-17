@@ -13,7 +13,7 @@ export const translations = {
   "landing.title.line1": { fr: "Le conseil associé,", en: "Companion advice," },
   "landing.title.line2": { fr: "automatisé et intelligent", en: "automated and intelligent" },
   "landing.subtitle": {
-    fr: "Asclion analyse chaque ordonnance en quelques secondes, identifie les besoins du patient et suggère les produits complémentaires les plus pertinents — accompagnement du traitement, réduction des effets secondaires — directement au comptoir.",
+    fr: "Asclion analyse chaque ordonnance et médicament scanné en quelques secondes, identifie les besoins du patient et suggère les produits complémentaires les plus pertinents — accompagnement du traitement, réduction des effets secondaires — directement au comptoir.",
     en: "Asclion analyzes every prescription in seconds, identifies patient needs and suggests the most relevant complementary products — treatment support, side-effect reduction — right at the counter.",
   },
   "landing.cta.access": { fr: "Demander un accès", en: "Request access" },
