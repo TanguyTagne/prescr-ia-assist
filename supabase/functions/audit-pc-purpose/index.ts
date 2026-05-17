@@ -272,9 +272,22 @@ Deno.serve(async (req) => {
     }
 
     await svc.from("pc_audit_runs").update({ ...stats, status: "done", finished_at: new Date().toISOString() }).eq("id", runId);
-    return new Response(JSON.stringify({ ok: true, run_id: runId, ...stats }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-  } catch (e: any) {
+    console.log(`[audit-pc] done runId=${runId}`, stats);
+   } catch (e: any) {
+    console.error(`[audit-pc] error runId=${runId}:`, e?.message ?? e);
     await svc.from("pc_audit_runs").update({ status: "error", error: String(e?.message ?? e), finished_at: new Date().toISOString() }).eq("id", runId);
-    return new Response(JSON.stringify({ error: String(e?.message ?? e) }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+   }
+  };
+
+  // @ts-ignore EdgeRuntime is provided by Supabase Edge runtime
+  if (typeof EdgeRuntime !== "undefined" && EdgeRuntime?.waitUntil) {
+    // @ts-ignore
+    EdgeRuntime.waitUntil(work());
+  } else {
+    work();
   }
+
+  return new Response(JSON.stringify({ ok: true, run_id: runId, status: "running", mode }), {
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
 });
