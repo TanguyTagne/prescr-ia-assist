@@ -51,14 +51,22 @@ Phrase conseil: ${pc.phrase_conseil ?? "n/a"}`;
         response_format: { type: "json_object" },
       }),
     });
-    if (!r.ok) return null;
+    if (!r.ok) {
+      const txt = await r.text();
+      console.error(`[classifyPc] HTTP ${r.status} for ${pc.produit}: ${txt.slice(0, 200)}`);
+      return null;
+    }
     const j = await r.json();
     const txt = j?.choices?.[0]?.message?.content ?? "";
     const parsed = JSON.parse(txt);
-    if (!["side_effect", "treatment_support", "symptom_relief"].includes(parsed.finalite)) return null;
+    if (!["side_effect", "treatment_support", "symptom_relief"].includes(parsed.finalite)) {
+      console.error(`[classifyPc] bad finalite for ${pc.produit}: ${txt.slice(0, 200)}`);
+      return null;
+    }
     const atc = Array.isArray(parsed.atc) ? parsed.atc.filter((x: any) => typeof x === "string").map((x: string) => x.toUpperCase().trim()).slice(0, 8) : [];
     return { finalite: parsed.finalite, atc };
-  } catch {
+  } catch (e) {
+    console.error(`[classifyPc] exception for ${pc.produit}:`, e);
     return null;
   }
 }
@@ -117,14 +125,16 @@ Deno.serve(async (req) => {
   const runId = run!.id;
   const stats = { pcs_classified: 0, links_created: 0, links_rejected: 0, orphans_filled: 0, new_pcs_created: 0 };
 
+  console.log(`[audit-pc] starting mode=${mode} limit=${limit} runId=${runId}`);
   try {
     // === PHASE 1: classify PCs without finalite ===
     if (mode === "classify" || mode === "all") {
-      const { data: pcs } = await svc
+      const { data: pcs, error: pcErr } = await svc
         .from("produits_complementaires")
         .select("id,produit,categorie,description,phrase_conseil,finalite,trigger_atc_prefixes")
         .is("finalite", null)
         .limit(limit);
+      console.log(`[phase1] pcs to classify: ${pcs?.length ?? 0}, err: ${pcErr?.message ?? "none"}`);
 
       for (const batch of chunked(pcs ?? [], 10)) {
         const results = await Promise.all(batch.map(p => classifyPc(p as PcRow)));
@@ -138,48 +148,63 @@ Deno.serve(async (req) => {
         await Promise.all(updates as any);
         stats.pcs_classified += results.filter(Boolean).length;
       }
+      console.log(`[phase1] classified: ${stats.pcs_classified}`);
     }
 
     // === PHASE 2: revalidate med <-> pc links ===
     if (mode === "revalidate" || mode === "all") {
-      const [{ data: meds }, { data: pcsAll }, { data: medPatho }] = await Promise.all([
-        svc.from("medicaments").select("id,nom_commercial,atc_code"),
-        svc.from("produits_complementaires").select("id,pathologie_id,finalite,trigger_atc_prefixes,priorite,medicament_id").not("finalite", "is", null),
-        svc.from("medicament_pathologie").select("medicament_id,pathologie_id,score_pertinence"),
+      const fetchAll = async (table: string, cols: string, filter?: (q: any) => any) => {
+        const all: any[] = [];
+        const pageSize = 1000;
+        for (let from = 0; ; from += pageSize) {
+          let q: any = svc.from(table).select(cols).range(from, from + pageSize - 1);
+          if (filter) q = filter(q);
+          const { data, error } = await q;
+          if (error) { console.error(`[fetchAll ${table}]`, error.message); break; }
+          if (!data || data.length === 0) break;
+          all.push(...data);
+          if (data.length < pageSize) break;
+        }
+        return all;
+      };
+
+      const [meds, pcsAll, medPatho] = await Promise.all([
+        fetchAll("medicaments", "id,nom_commercial,atc_code"),
+        fetchAll("produits_complementaires", "id,pathologie_id,finalite,trigger_atc_prefixes,priorite,medicament_id", q => q.not("finalite", "is", null)),
+        fetchAll("medicament_pathologie", "medicament_id,pathologie_id,score_pertinence"),
       ]);
+      console.log(`[phase2] meds=${meds.length} pcsAll=${pcsAll.length} medPatho=${medPatho.length}`);
 
       const pcsByPatho = new Map<string, any[]>();
-      for (const pc of pcsAll ?? []) {
+      for (const pc of pcsAll) {
         if (!pc.pathologie_id) continue;
         const arr = pcsByPatho.get(pc.pathologie_id) ?? [];
         arr.push(pc);
         pcsByPatho.set(pc.pathologie_id, arr);
       }
       const pathosByMed = new Map<string, { pathologie_id: string; score: number }[]>();
-      for (const mp of medPatho ?? []) {
+      for (const mp of medPatho) {
         const arr = pathosByMed.get(mp.medicament_id) ?? [];
         arr.push({ pathologie_id: mp.pathologie_id, score: mp.score_pertinence ?? 50 });
         pathosByMed.set(mp.medicament_id, arr);
       }
 
-      // Clear existing audit_v1 links
-      await svc.from("medicament_pc_valide").delete().eq("source", "audit_v1");
+      const { error: delErr } = await svc.from("medicament_pc_valide").delete().eq("source", "audit_v1");
+      if (delErr) console.error(`[phase2] delete err:`, delErr.message);
 
       const toInsert: any[] = [];
       let rejected = 0;
-      for (const med of meds ?? []) {
+      for (const med of meds) {
         const atc = (med.atc_code ?? "").toUpperCase();
         const pathos = pathosByMed.get(med.id) ?? [];
         const seen = new Set<string>();
 
-        // Direct medicament_id links (always valid)
-        for (const pc of (pcsAll ?? []).filter((p: any) => p.medicament_id === med.id)) {
+        for (const pc of pcsAll.filter((p: any) => p.medicament_id === med.id)) {
           if (seen.has(pc.id)) continue;
           seen.add(pc.id);
           toInsert.push({ medicament_id: med.id, pc_id: pc.id, finalite: pc.finalite, score: pc.priorite ?? 70, source: "audit_v1" });
         }
 
-        // Via pathology
         for (const { pathologie_id, score } of pathos) {
           for (const pc of pcsByPatho.get(pathologie_id) ?? []) {
             if (seen.has(pc.id)) continue;
@@ -196,11 +221,14 @@ Deno.serve(async (req) => {
         }
       }
 
+      console.log(`[phase2] toInsert=${toInsert.length} rejected=${rejected}`);
       for (const batch of chunked(toInsert, 500)) {
         const { error } = await svc.from("medicament_pc_valide").upsert(batch, { onConflict: "medicament_id,pc_id" });
-        if (!error) stats.links_created += batch.length;
+        if (error) console.error(`[phase2] upsert err:`, error.message);
+        else stats.links_created += batch.length;
       }
       stats.links_rejected = rejected;
+      console.log(`[phase2] links_created=${stats.links_created}`);
     }
 
     // === PHASE 3: fill orphans (meds with 0 valid PC) ===
