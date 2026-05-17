@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { ArrowLeft, Loader2, Mail, Building2, BarChart3, RefreshCw, ShieldCheck, ShoppingCart, Target, Monitor, Trophy, Sparkles, UserPlus, Network, FileSearch, Shield, FileText, Gauge, UserCog, Link2 } from "lucide-react";
+import { ArrowLeft, Loader2, Mail, Building2, BarChart3, RefreshCw, ShieldCheck, ShoppingCart, Target, Monitor, Trophy, Sparkles, UserPlus, Network, FileSearch, Shield, FileText, Gauge, UserCog, Link2, Flag } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import RequestsTab from "@/components/admin/RequestsTab";
 import PharmaciesTab from "@/components/admin/PharmaciesTab";
@@ -22,6 +22,7 @@ import RgpdTab from "@/components/admin/RgpdTab";
 import QuotasTab from "@/components/admin/QuotasTab";
 import MesDonneesPanel from "@/components/admin/MesDonneesPanel";
 import TrackingLinksTab from "@/components/admin/TrackingLinksTab";
+import SignalementsTab from "@/components/admin/SignalementsTab";
 
 interface AccessRequest {
   id: string;
@@ -56,7 +57,7 @@ const Admin = () => {
   const [requests, setRequests] = useState<AccessRequest[]>([]);
   const [pharmacies, setPharmacies] = useState<PharmacyWithLGO[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<"requests" | "pharmacies" | "kpis" | "coverage" | "sales" | "perf" | "benchmark" | "registers" | "demo-sessions" | "demo-leads" | "tracking-links" | "groupements" | "tracabilite" | "conformite" | "rgpd" | "quotas" | "mes-donnees">("kpis");
+  const [tab, setTab] = useState<"requests" | "pharmacies" | "kpis" | "coverage" | "sales" | "perf" | "benchmark" | "registers" | "demo-sessions" | "demo-leads" | "tracking-links" | "groupements" | "tracabilite" | "conformite" | "rgpd" | "quotas" | "mes-donnees" | "signalements">("kpis");
 
   useEffect(() => {
     loadData();
@@ -114,6 +115,10 @@ const Admin = () => {
           <Button variant={tab === "kpis" ? "default" : "outline"} size="sm" onClick={() => setTab("kpis")} className="gap-1.5">
             <BarChart3 className="h-3.5 w-3.5" />
             KPIs
+          </Button>
+          <Button variant={tab === "signalements" ? "default" : "outline"} size="sm" onClick={() => setTab("signalements")} className="gap-1.5">
+            <Flag className="h-3.5 w-3.5" />
+            Signalements
           </Button>
           <Button variant={tab === "demo-leads" ? "default" : "outline"} size="sm" onClick={() => setTab("demo-leads")} className="gap-1.5">
             <UserPlus className="h-3.5 w-3.5" />
@@ -202,6 +207,7 @@ const Admin = () => {
         {tab === "rgpd" && <RgpdTab />}
         {tab === "quotas" && <QuotasTab />}
         {tab === "mes-donnees" && <MesDonneesPanel />}
+        {tab === "signalements" && <SignalementsTab />}
       </div>
     </div>
   );
