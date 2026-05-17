@@ -351,8 +351,6 @@ serve(async (req) => {
       });
     }
   }
-);
-  }
 
   try {
     const supabase = createClient(
