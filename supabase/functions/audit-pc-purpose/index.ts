@@ -58,7 +58,9 @@ Phrase conseil: ${pc.phrase_conseil ?? "n/a"}`;
     }
     const j = await r.json();
     const txt = j?.choices?.[0]?.message?.content ?? "";
-    const parsed = JSON.parse(txt);
+    const m = txt.match(/\{[\s\S]*\}/);
+    if (!m) { console.error(`[classifyPc] no JSON for ${pc.produit}: ${txt.slice(0, 200)}`); return null; }
+    const parsed = JSON.parse(m[0]);
     if (!["side_effect", "treatment_support", "symptom_relief"].includes(parsed.finalite)) {
       console.error(`[classifyPc] bad finalite for ${pc.produit}: ${txt.slice(0, 200)}`);
       return null;
@@ -126,7 +128,10 @@ Deno.serve(async (req) => {
   const stats = { pcs_classified: 0, links_created: 0, links_rejected: 0, orphans_filled: 0, new_pcs_created: 0 };
 
   console.log(`[audit-pc] starting mode=${mode} limit=${limit} runId=${runId}`);
-  try {
+
+  // Run the heavy work in background; return immediately so the client doesn't time out (150s limit).
+  const work = async () => {
+   try {
     // === PHASE 1: classify PCs without finalite ===
     if (mode === "classify" || mode === "all") {
       const { data: pcs, error: pcErr } = await svc
@@ -269,9 +274,22 @@ Deno.serve(async (req) => {
     }
 
     await svc.from("pc_audit_runs").update({ ...stats, status: "done", finished_at: new Date().toISOString() }).eq("id", runId);
-    return new Response(JSON.stringify({ ok: true, run_id: runId, ...stats }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-  } catch (e: any) {
+    console.log(`[audit-pc] done runId=${runId}`, stats);
+   } catch (e: any) {
+    console.error(`[audit-pc] error runId=${runId}:`, e?.message ?? e);
     await svc.from("pc_audit_runs").update({ status: "error", error: String(e?.message ?? e), finished_at: new Date().toISOString() }).eq("id", runId);
-    return new Response(JSON.stringify({ error: String(e?.message ?? e) }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+   }
+  };
+
+  // @ts-ignore EdgeRuntime is provided by Supabase Edge runtime
+  if (typeof EdgeRuntime !== "undefined" && EdgeRuntime?.waitUntil) {
+    // @ts-ignore
+    EdgeRuntime.waitUntil(work());
+  } else {
+    work();
   }
+
+  return new Response(JSON.stringify({ ok: true, run_id: runId, status: "running", mode }), {
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
 });
