@@ -126,7 +126,10 @@ Deno.serve(async (req) => {
   const stats = { pcs_classified: 0, links_created: 0, links_rejected: 0, orphans_filled: 0, new_pcs_created: 0 };
 
   console.log(`[audit-pc] starting mode=${mode} limit=${limit} runId=${runId}`);
-  try {
+
+  // Run the heavy work in background; return immediately so the client doesn't time out (150s limit).
+  const work = async () => {
+   try {
     // === PHASE 1: classify PCs without finalite ===
     if (mode === "classify" || mode === "all") {
       const { data: pcs, error: pcErr } = await svc
