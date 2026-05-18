@@ -409,11 +409,13 @@ async function clinicalLookup(
       seen.add(key);
       return true;
     });
+    produits = filterPediatricSafe(produits, medicament);
     protocoles = protocolesRes.data || [];
   } else {
     // No pathology — still serve direct medication-bound PCs (vaccines, chemo orphans)
     const directMedPcsRes = await directMedPcsPromise;
     produits = (directMedPcsRes.data || []).map((p: any) => ({ ...p, priorite: Math.max(p.priorite || 0, 85) }));
+    produits = filterPediatricSafe(produits, medicament);
   }
 
   return {
