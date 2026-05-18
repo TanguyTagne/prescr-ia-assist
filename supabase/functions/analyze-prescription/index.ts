@@ -1677,8 +1677,10 @@ serve(async (req) => {
         recs.push(...atcRecs);
         if (atcRecs.length > 0) {
           hasStructuredData = true;
-          for (const rec of atcRecs) {
-            if (rec.pathologie) allContexts.push(`Traitement souvent associé à : ${rec.pathologie}`);
+          if (!singleMedAmbiguous) {
+            for (const rec of atcRecs) {
+              if (rec.pathologie) allContexts.push(`Traitement souvent associé à : ${rec.pathologie}`);
+            }
           }
         }
       }
@@ -1689,11 +1691,14 @@ serve(async (req) => {
         recs.push(...classRecs);
         if (classRecs.length > 0) {
           hasStructuredData = true;
-          for (const rec of classRecs) {
-            if (rec.pathologie) allContexts.push(`Traitement souvent associé à : ${rec.pathologie}`);
+          if (!singleMedAmbiguous) {
+            for (const rec of classRecs) {
+              if (rec.pathologie) allContexts.push(`Traitement souvent associé à : ${rec.pathologie}`);
+            }
           }
         }
       }
+
 
       if (!advice) {
         const pathIds = med.pathologies?.map((p: any) => p.id) || [];
