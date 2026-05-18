@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { ArrowLeft, Loader2, Mail, Building2, BarChart3, RefreshCw, ShieldCheck, ShoppingCart, Target, Monitor, Trophy, Sparkles, UserPlus, Network, FileSearch, Shield, FileText, Gauge, UserCog, Link2, Flag, Sparkle } from "lucide-react";
+import { ArrowLeft, Loader2, Mail, Building2, BarChart3, RefreshCw, ShieldCheck, ShoppingCart, Target, Monitor, Trophy, Sparkles, UserPlus, Network, FileSearch, Shield, FileText, Gauge, UserCog, Link2, Flag, Sparkle, CheckCircle2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import RequestsTab from "@/components/admin/RequestsTab";
 import PharmaciesTab from "@/components/admin/PharmaciesTab";
@@ -24,6 +24,7 @@ import MesDonneesPanel from "@/components/admin/MesDonneesPanel";
 import TrackingLinksTab from "@/components/admin/TrackingLinksTab";
 import SignalementsTab from "@/components/admin/SignalementsTab";
 import AuditPcTab from "@/components/admin/AuditPcTab";
+import AcceptedPcsTab from "@/components/admin/AcceptedPcsTab";
 
 interface AccessRequest {
   id: string;
@@ -58,7 +59,7 @@ const Admin = () => {
   const [requests, setRequests] = useState<AccessRequest[]>([]);
   const [pharmacies, setPharmacies] = useState<PharmacyWithLGO[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<"requests" | "pharmacies" | "kpis" | "coverage" | "sales" | "perf" | "benchmark" | "registers" | "demo-sessions" | "demo-leads" | "tracking-links" | "groupements" | "tracabilite" | "conformite" | "rgpd" | "quotas" | "mes-donnees" | "signalements" | "audit-pc">("kpis");
+  const [tab, setTab] = useState<"requests" | "pharmacies" | "kpis" | "coverage" | "sales" | "perf" | "benchmark" | "registers" | "demo-sessions" | "demo-leads" | "tracking-links" | "groupements" | "tracabilite" | "conformite" | "rgpd" | "quotas" | "mes-donnees" | "signalements" | "audit-pc" | "accepted-pcs">("kpis");
 
   useEffect(() => {
     loadData();
@@ -185,6 +186,10 @@ const Admin = () => {
             <Gauge className="h-3.5 w-3.5" />
             Quotas
           </Button>
+          <Button variant={tab === "accepted-pcs" ? "default" : "outline"} size="sm" onClick={() => setTab("accepted-pcs")} className="gap-1.5">
+            <CheckCircle2 className="h-3.5 w-3.5" />
+            PC acceptés
+          </Button>
           <Button variant={tab === "mes-donnees" ? "default" : "outline"} size="sm" onClick={() => setTab("mes-donnees")} className="gap-1.5">
             <UserCog className="h-3.5 w-3.5" />
             Mes données
@@ -214,6 +219,7 @@ const Admin = () => {
         {tab === "mes-donnees" && <MesDonneesPanel />}
         {tab === "signalements" && <SignalementsTab />}
         {tab === "audit-pc" && <AuditPcTab />}
+        {tab === "accepted-pcs" && <AcceptedPcsTab />}
       </div>
     </div>
   );
