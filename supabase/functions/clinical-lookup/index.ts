@@ -6,6 +6,23 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Pediatric safety filter — drop adult-only PCs when scanned med is infant/child
+const PEDS_BLACKLIST = /(aspirine|aspégic ?(?!nourrisson)|kardégic|ibuprof[èe]ne ?400|nurofen ?400|paracétamol ?1000|doliprane ?1000|efferalgan ?1000|mopralpro|inexium|om[ée]prazole|esom[ée]prazole|pantoprazole|baume du tigre|harpagophyt|curcuma|magn[ée]sium ?(200|300|400|450)|spasfon lyoc|imodium adulte|nicopatch|nicorette|champix|cialis|viagra|huile essentielle (?!eucalyptus radiata))/i;
+const PEDS_WHITELIST = /(b[ée]b[ée]|nourrisson|enfant|p[ée]diatr|junior|kids|sirop|gouttes|suspension|st[ée]rimar|physiomer|prorhinel|bepanthen|mustela|weleda b[ée]b[ée]|calmosine|biogaia|p[ée]diakid|liniment|s[ée]rum physiologique|mouche-b[ée]b[ée]|zymad|doliprane 2,?4|doliprane sirop|advil enfant|nurofen enfant|efferalgan susp|forlax junior|movicol enfant|microlax b[ée]b[ée]|gaviscon nourrisson)/i;
+
+function filterPediatricSafe(pcs: any[], med: any): any[] {
+  const cible = med?.cible_age;
+  if (cible !== "nourrisson" && cible !== "enfant") return pcs;
+  return pcs.filter((p: any) => {
+    const ages: string[] = Array.isArray(p.cible_age) ? p.cible_age : [];
+    if (ages.includes("nourrisson") || ages.includes("enfant")) return true;
+    const text = `${p.produit || ""} ${p.description || ""}`;
+    if (PEDS_BLACKLIST.test(text)) return false;
+    if (PEDS_WHITELIST.test(text)) return true;
+    return false;
+  });
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -229,10 +246,12 @@ serve(async (req) => {
         seen.add(k);
         return true;
       });
+      produits = filterPediatricSafe(produits, medicament);
       rankedProduits = rankingRes.data || [];
     } else {
       const directMedPcsRes = await directMedPcsPromise;
       produits = (directMedPcsRes.data || []).map((p: any) => ({ ...p, priorite: Math.max(p.priorite || 0, 85) }));
+      produits = filterPediatricSafe(produits, medicament);
     }
 
     // Step 5: Build structured response

@@ -960,6 +960,7 @@ export type Database = {
       medicaments: {
         Row: {
           atc_code: string | null
+          cible_age: string
           cip_code: string | null
           created_at: string
           dosage: string | null
@@ -980,6 +981,7 @@ export type Database = {
         }
         Insert: {
           atc_code?: string | null
+          cible_age?: string
           cip_code?: string | null
           created_at?: string
           dosage?: string | null
@@ -1000,6 +1002,7 @@ export type Database = {
         }
         Update: {
           atc_code?: string | null
+          cible_age?: string
           cip_code?: string | null
           created_at?: string
           dosage?: string | null
@@ -1978,6 +1981,7 @@ export type Database = {
       produits_complementaires: {
         Row: {
           categorie: string | null
+          cible_age: string[]
           created_at: string
           description: string | null
           est_complement: boolean | null
@@ -1989,7 +1993,7 @@ export type Database = {
           id: string
           medicament_id: string | null
           nom_produit: string | null
-          pathologie_id: string
+          pathologie_id: string | null
           phrase_conseil: string | null
           priorite: number
           produit: string
@@ -2004,6 +2008,7 @@ export type Database = {
         }
         Insert: {
           categorie?: string | null
+          cible_age?: string[]
           created_at?: string
           description?: string | null
           est_complement?: boolean | null
@@ -2015,7 +2020,7 @@ export type Database = {
           id?: string
           medicament_id?: string | null
           nom_produit?: string | null
-          pathologie_id: string
+          pathologie_id?: string | null
           phrase_conseil?: string | null
           priorite?: number
           produit: string
@@ -2030,6 +2035,7 @@ export type Database = {
         }
         Update: {
           categorie?: string | null
+          cible_age?: string[]
           created_at?: string
           description?: string | null
           est_complement?: boolean | null
@@ -2041,7 +2047,7 @@ export type Database = {
           id?: string
           medicament_id?: string | null
           nom_produit?: string | null
-          pathologie_id?: string
+          pathologie_id?: string | null
           phrase_conseil?: string | null
           priorite?: number
           produit?: string

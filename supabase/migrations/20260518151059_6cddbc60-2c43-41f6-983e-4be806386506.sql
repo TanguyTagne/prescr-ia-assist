@@ -1,0 +1,1 @@
+ALTER TABLE public.produits_complementaires ALTER COLUMN pathologie_id DROP NOT NULL;
