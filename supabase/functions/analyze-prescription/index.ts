@@ -1676,9 +1676,7 @@ serve(async (req) => {
       // (e.g. "Infection bactérienne" for amoxicilline) — avoids picking specific
       // clinical pictures (Otite, Scarlatine…) we cannot infer from the prescription alone.
 
-      const GENERIC_PATHO_RE = /infection|douleur|fi[èe]vre|inflammation|allergie\b|anti[-\s]?infect/i;
-      const isGenericPatho = (name: string | undefined | null) =>
-        !name || GENERIC_PATHO_RE.test(name);
+
 
       if (recs.length === 0 && singleMedAmbiguous) {
         // Direct DB query: PCs linked to generic pathologies for THIS molecule
