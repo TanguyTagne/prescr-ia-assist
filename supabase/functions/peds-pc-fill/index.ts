@@ -80,8 +80,7 @@ serve(async (req) => {
     if (!exists || exists.length === 0) targets.push(m);
   }
 
-  const results: any[] = [];
-  for (const m of targets) {
+  async function processMed(m: any) {
     try {
       const out = await callGpt55({ nom: m.nom_commercial, atc: m.atc_code });
       const rows: any[] = [];
@@ -105,10 +104,18 @@ serve(async (req) => {
         const { error: insErr } = await svc.from("produits_complementaires").insert(rows);
         if (insErr) throw insErr;
       }
-      results.push({ med: m.nom_commercial, ok: true, count: rows.length });
+      return { med: m.nom_commercial, ok: true, count: rows.length };
     } catch (e) {
-      results.push({ med: m.nom_commercial, ok: false, error: String(e) });
+      return { med: m.nom_commercial, ok: false, error: String(e) };
     }
+  }
+
+  // Parallel batches of 8
+  const results: any[] = [];
+  for (let i = 0; i < targets.length; i += 8) {
+    const batch = targets.slice(i, i + 8);
+    const batchResults = await Promise.all(batch.map(processMed));
+    results.push(...batchResults);
   }
 
   return new Response(
