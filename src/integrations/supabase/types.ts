@@ -1993,7 +1993,7 @@ export type Database = {
           id: string
           medicament_id: string | null
           nom_produit: string | null
-          pathologie_id: string
+          pathologie_id: string | null
           phrase_conseil: string | null
           priorite: number
           produit: string
@@ -2020,7 +2020,7 @@ export type Database = {
           id?: string
           medicament_id?: string | null
           nom_produit?: string | null
-          pathologie_id: string
+          pathologie_id?: string | null
           phrase_conseil?: string | null
           priorite?: number
           produit: string
@@ -2047,7 +2047,7 @@ export type Database = {
           id?: string
           medicament_id?: string | null
           nom_produit?: string | null
-          pathologie_id?: string
+          pathologie_id?: string | null
           phrase_conseil?: string | null
           priorite?: number
           produit?: string
