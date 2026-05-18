@@ -178,9 +178,6 @@ function isTopicalForm(forme: string): boolean {
 function isOralForm(forme: string): boolean {
   return /comprim|g[ée]lule|sachet|sirop|solution buvable|lyoc|orodisp|effervesc|granul[ée]/i.test(forme || "");
 }
-// Map a voie_administration to a form-test predicate
-function buildFormFilter(voie?: string | null, forme?: string | null) {
-
 // Pediatric safety filter — when scanned medication targets infants/children,
 // strip any PC that is adult-only (aspirin adult, ibuprofen 400, paracetamol 1000, PPI, etc.)
 const PEDS_BLACKLIST = /(aspirine|aspégic ?(?!nourrisson)|kardégic|ibuprof[èe]ne ?400|nurofen ?400|paracétamol ?1000|doliprane ?1000|efferalgan ?1000|mopralpro|inexium|om[ée]prazole|esom[ée]prazole|pantoprazole|baume du tigre|harpagophyt|curcuma|magn[ée]sium ?(200|300|400|450)|spasfon lyoc|imodium adulte|nicopatch|nicorette|champix|cialis|viagra|huile essentielle (?!eucalyptus radiata))/i;
@@ -199,6 +196,9 @@ function filterPediatricSafe(pcs: any[], med: any): any[] {
     return false;
   });
 }
+
+// Map a voie_administration to a form-test predicate
+function buildFormFilter(voie?: string | null, forme?: string | null) {
 
   const v = (voie || "").toLowerCase();
   const f = (forme || "").toLowerCase();
