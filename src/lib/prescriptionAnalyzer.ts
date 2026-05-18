@@ -73,9 +73,21 @@ export async function analyzePrescription(
 
   if (error) {
     console.error("Edge function error:", error);
+    // Supabase invoke wraps non-2xx responses; try to surface server quota message
+    const ctx: any = (error as any).context;
+    if (ctx?.body) {
+      try {
+        const parsed = typeof ctx.body === "string" ? JSON.parse(ctx.body) : ctx.body;
+        if (parsed?.error === "QUOTA_EXCEEDED") throw new Error(parsed.message || "Quota journalier atteint");
+        if (parsed?.message || parsed?.error) throw new Error(parsed.message || parsed.error);
+      } catch (_) { /* fallthrough */ }
+    }
     throw new Error(error.message || "Erreur lors de l'analyse");
   }
-  if (data?.error) throw new Error(data.error);
+  if (data?.error) {
+    if (data.error === "QUOTA_EXCEEDED") throw new Error(data.message || "Quota journalier atteint");
+    throw new Error(data.error);
+  }
   return normalizeResult(data);
 }
 
