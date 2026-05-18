@@ -186,6 +186,10 @@ const Admin = () => {
             <Gauge className="h-3.5 w-3.5" />
             Quotas
           </Button>
+          <Button variant={tab === "accepted-pcs" ? "default" : "outline"} size="sm" onClick={() => setTab("accepted-pcs")} className="gap-1.5">
+            <CheckCircle2 className="h-3.5 w-3.5" />
+            PC acceptés
+          </Button>
           <Button variant={tab === "mes-donnees" ? "default" : "outline"} size="sm" onClick={() => setTab("mes-donnees")} className="gap-1.5">
             <UserCog className="h-3.5 w-3.5" />
             Mes données
