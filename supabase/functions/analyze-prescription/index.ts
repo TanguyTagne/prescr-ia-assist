@@ -1519,23 +1519,35 @@ serve(async (req) => {
       const recs: any[] = [];
       let advice: string | null = null;
 
+      // ====== AMBIGUITY GUARD ======
+      // When a single medication is prescribed and it covers multiple plausible pathologies
+      // (e.g. amoxicilline → otite, angine, sinusite, scarlatine…), we MUST NOT pretend
+      // to know which one the patient has. We skip pathology-specific protocols and
+      // fall back to GENERAL PCs (class/ATC-based: probiotiques pour antibio, etc.)
+      // that reduce side-effects or generally accompany the molecule.
+      const pathoCount = (med.pathologies || []).length;
+      const singleMedAmbiguous = enrichedMeds.length === 1 && pathoCount >= 2;
+
       if (med.clinical_kb) {
         hasStructuredData = true;
-        const pathNames = (med.pathologies || []).map((p: any) => p.nom_pathologie);
-        for (const pName of pathNames) {
-          allContexts.push(`Traitement souvent associé à : ${pName}`);
+        if (!singleMedAmbiguous) {
+          const pathNames = (med.pathologies || []).map((p: any) => p.nom_pathologie);
+          for (const pName of pathNames) {
+            allContexts.push(`Traitement souvent associé à : ${pName}`);
+          }
         }
 
         const clinical = clinicalResults.find((c: any) => c.index === i);
 
         // Use protocols from clinicalLookup first (per-medication, already filtered)
-        const perMedProtocols = clinical?.protocoles || [];
+        // — but ONLY if we are not in the single-med ambiguous case.
+        const perMedProtocols = singleMedAmbiguous ? [] : (clinical?.protocoles || []);
         let matchedProtocol = perMedProtocols.length > 0
           ? perMedProtocols.sort((a: any, b: any) => (b?.priorite_produit_1 || 0) - (a?.priorite_produit_1 || 0))[0]
           : null;
 
-        // Fallback to global protocol search
-        if (!matchedProtocol) {
+        // Fallback to global protocol search (also skipped when ambiguous)
+        if (!matchedProtocol && !singleMedAmbiguous) {
           matchedProtocol = findProtocolForPathologies(allProtocols, med.pathologies || []);
         }
 
@@ -1587,8 +1599,8 @@ serve(async (req) => {
           }
         }
 
-        // Fallback on existing clinical product rows
-        if (recs.length === 0 && clinical?.produits) {
+        // Fallback on existing clinical product rows (skip pathology-specific when ambiguous)
+        if (recs.length === 0 && clinical?.produits && !singleMedAmbiguous) {
           const mappedClinicalProducts = (clinical.produits || []).map((p: any) => ({
             produit: p.produit,
             categorie: p.categorie || "Complément",
@@ -1617,7 +1629,8 @@ serve(async (req) => {
       }
 
       // Fallback 1: products from pathologies already loaded in current prescription scope
-      if (recs.length === 0 && med.pathologies?.length > 0) {
+      // Skip when single med is ambiguous → prefer ATC/class-based general PCs below.
+      if (recs.length === 0 && med.pathologies?.length > 0 && !singleMedAmbiguous) {
         const pathIds = med.pathologies.map((p: any) => p.id);
         const pathProducts = allDbProduits
           .filter((p: any) => pathIds.includes(p.pathologie_id))
