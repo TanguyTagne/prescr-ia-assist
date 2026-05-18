@@ -27,7 +27,7 @@ async function callGpt55(med: { nom: string; atc: string | null }) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "openai/gpt-5.2",
+      model: "google/gemini-2.5-flash",
       messages: [
         { role: "system", content: SYSTEM },
         { role: "user", content: `Médicament pédiatrique : ${med.nom}${med.atc ? ` (ATC ${med.atc})` : ""}` },
