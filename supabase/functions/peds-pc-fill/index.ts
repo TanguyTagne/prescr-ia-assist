@@ -110,8 +110,8 @@ serve(async (req) => {
         if (insErr) throw insErr;
       }
       return { med: m.nom_commercial, ok: true, count: rows.length };
-    } catch (e) {
-      return { med: m.nom_commercial, ok: false, error: String(e) };
+    } catch (e: any) {
+      return { med: m.nom_commercial, ok: false, error: e?.message || JSON.stringify(e) };
     }
   }
 
