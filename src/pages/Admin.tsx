@@ -24,6 +24,7 @@ import MesDonneesPanel from "@/components/admin/MesDonneesPanel";
 import TrackingLinksTab from "@/components/admin/TrackingLinksTab";
 import SignalementsTab from "@/components/admin/SignalementsTab";
 import AuditPcTab from "@/components/admin/AuditPcTab";
+import AcceptedPcsTab from "@/components/admin/AcceptedPcsTab";
 
 interface AccessRequest {
   id: string;
