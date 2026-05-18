@@ -1646,6 +1646,31 @@ serve(async (req) => {
         recs.push(...pickDistinctProducts(pathProducts, MAX_RECOMMENDATIONS_PER_MED));
       }
 
+      // Fallback 1bis (AMBIGUOUS SINGLE MED): pick PCs only from GENERIC pathologies
+      // (e.g. "Infection bactérienne" for amoxicilline) — avoids picking specific
+      // clinical pictures (Otite, Scarlatine…) we cannot infer from the prescription alone.
+      if (recs.length === 0 && singleMedAmbiguous && med.pathologies?.length > 0) {
+        const GENERIC_PATHO_RE = /infection|douleur|fi[èe]vre|inflammation|allergie\b|anti[-\s]?infect/i;
+        const genericPathos = (med.pathologies || []).filter((p: any) =>
+          GENERIC_PATHO_RE.test(p?.nom_pathologie || "")
+        );
+        const genericPathIds = genericPathos.map((p: any) => p.id);
+        if (genericPathIds.length > 0) {
+          const genericProducts = allDbProduits
+            .filter((p: any) => genericPathIds.includes(p.pathologie_id))
+            .map((p: any) => ({
+              produit: p.produit,
+              categorie: p.categorie || "Complément",
+              description: p.description || "",
+              priorite: p.priorite || 50,
+              pathologie: "", // hide pathology label — stay non-diagnostic in UI
+              phrase_conseil: p.phrase_conseil || undefined,
+            }));
+          recs.push(...pickDistinctProducts(genericProducts, MAX_RECOMMENDATIONS_PER_MED));
+        }
+      }
+
+
       // Fallback 2: ATC linked products
       if (recs.length === 0 && med.code_atc && atcFallbackMap.has(med.code_atc)) {
         const atcRecs = pickDistinctProducts(atcFallbackMap.get(med.code_atc) || [], MAX_RECOMMENDATIONS_PER_MED);
