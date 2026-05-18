@@ -1514,19 +1514,45 @@ serve(async (req) => {
     const medMainAdvice: Map<number, string> = new Map();
     const allProposedPCs: string[] = [];
 
+    // Generic-pathology regex (shared across meds)
+    const GENERIC_PATHO_RE = /infection|douleur|fi[èe]vre|inflammation|allergie\b|anti[-\s]?infect|rhume|toux|constipation|diarrh|nause|reflux|spasme|anxi|stress|insomnie|fatigue|carence/i;
+    const isGenericPatho = (name: string | undefined | null) =>
+      !name || GENERIC_PATHO_RE.test(name);
+
+    // Pre-compute per-med ambiguity:
+    // A med is "ambiguous" when it covers ≥2 plausible pathologies AND no OTHER med
+    // in the basket converges on a specific (non-generic) pathology with it.
+    // Applies to ALL meds — even within a multi-med prescription — so that we never
+    // pretend to know a diagnosis when the prescription doesn't make it obvious.
+    const ambiguousFlags: boolean[] = enrichedMeds.map((m: any, idx: number) => {
+      const ps = (m.pathologies || []) as any[];
+      if (ps.length < 2) return false;
+      const specificNames = ps
+        .map((p) => (p?.nom_pathologie || "").toLowerCase())
+        .filter((n) => n && !GENERIC_PATHO_RE.test(n));
+      if (specificNames.length === 0) return false;
+      // Check convergence with other meds
+      for (let j = 0; j < enrichedMeds.length; j++) {
+        if (j === idx) continue;
+        const otherSpecific = ((enrichedMeds[j].pathologies || []) as any[])
+          .map((p: any) => (p?.nom_pathologie || "").toLowerCase())
+          .filter((n: string) => n && !GENERIC_PATHO_RE.test(n));
+        if (specificNames.some((s) => otherSpecific.includes(s))) {
+          return false; // convergence found → not ambiguous
+        }
+      }
+      return true;
+    });
+
     for (let i = 0; i < enrichedMeds.length; i++) {
       const med = enrichedMeds[i];
       const recs: any[] = [];
       let advice: string | null = null;
 
       // ====== AMBIGUITY GUARD ======
-      // When a single medication is prescribed and it covers multiple plausible pathologies
-      // (e.g. amoxicilline → otite, angine, sinusite, scarlatine…), we MUST NOT pretend
-      // to know which one the patient has. We skip pathology-specific protocols and
-      // fall back to GENERAL PCs (class/ATC-based: probiotiques pour antibio, etc.)
-      // that reduce side-effects or generally accompany the molecule.
-      const pathoCount = (med.pathologies || []).length;
-      const singleMedAmbiguous = enrichedMeds.length === 1 && pathoCount >= 2;
+      // See ambiguousFlags computation above.
+      const singleMedAmbiguous = ambiguousFlags[i];
+
 
       if (med.clinical_kb) {
         hasStructuredData = true;
@@ -1646,12 +1672,11 @@ serve(async (req) => {
         recs.push(...pickDistinctProducts(pathProducts, MAX_RECOMMENDATIONS_PER_MED));
       }
 
-      // Fallback 1bis (AMBIGUOUS SINGLE MED): pick PCs only from GENERIC pathologies
+      // Fallback 1bis (AMBIGUOUS MED): pick PCs only from GENERIC pathologies
       // (e.g. "Infection bactérienne" for amoxicilline) — avoids picking specific
       // clinical pictures (Otite, Scarlatine…) we cannot infer from the prescription alone.
-      const GENERIC_PATHO_RE = /infection|douleur|fi[èe]vre|inflammation|allergie\b|anti[-\s]?infect/i;
-      const isGenericPatho = (name: string | undefined | null) =>
-        !name || GENERIC_PATHO_RE.test(name);
+
+
 
       if (recs.length === 0 && singleMedAmbiguous) {
         // Direct DB query: PCs linked to generic pathologies for THIS molecule
