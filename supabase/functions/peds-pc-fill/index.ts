@@ -62,6 +62,10 @@ serve(async (req) => {
     return new Response(JSON.stringify({ error: "Admin only" }), { status: 403, headers: corsHeaders });
   }
 
+  // Optional limit (default 10) to stay under curl/proxy timeouts; call repeatedly until empty.
+  const url = new URL(req.url);
+  const limit = Math.max(1, Math.min(parseInt(url.searchParams.get("limit") || "10", 10), 40));
+
   // Pick pediatric meds that have not been filled yet
   const { data: meds, error } = await svc
     .from("medicaments")
@@ -78,6 +82,7 @@ serve(async (req) => {
       .eq("source_code", "gpt55_peds_fill")
       .limit(1);
     if (!exists || exists.length === 0) targets.push(m);
+    if (targets.length >= limit) break;
   }
 
   async function processMed(m: any) {
