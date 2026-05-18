@@ -1527,6 +1527,7 @@ serve(async (req) => {
       // that reduce side-effects or generally accompany the molecule.
       const pathoCount = (med.pathologies || []).length;
       const singleMedAmbiguous = enrichedMeds.length === 1 && pathoCount >= 2;
+      console.log(`[DBG] med=${med.nom_commercial} pathoCount=${pathoCount} enriched=${enrichedMeds.length} singleMedAmbiguous=${singleMedAmbiguous}`);
 
       if (med.clinical_kb) {
         hasStructuredData = true;
