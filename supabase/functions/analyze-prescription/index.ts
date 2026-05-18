@@ -1519,23 +1519,35 @@ serve(async (req) => {
       const recs: any[] = [];
       let advice: string | null = null;
 
+      // ====== AMBIGUITY GUARD ======
+      // When a single medication is prescribed and it covers multiple plausible pathologies
+      // (e.g. amoxicilline → otite, angine, sinusite, scarlatine…), we MUST NOT pretend
+      // to know which one the patient has. We skip pathology-specific protocols and
+      // fall back to GENERAL PCs (class/ATC-based: probiotiques pour antibio, etc.)
+      // that reduce side-effects or generally accompany the molecule.
+      const pathoCount = (med.pathologies || []).length;
+      const singleMedAmbiguous = enrichedMeds.length === 1 && pathoCount >= 2;
+
       if (med.clinical_kb) {
         hasStructuredData = true;
-        const pathNames = (med.pathologies || []).map((p: any) => p.nom_pathologie);
-        for (const pName of pathNames) {
-          allContexts.push(`Traitement souvent associé à : ${pName}`);
+        if (!singleMedAmbiguous) {
+          const pathNames = (med.pathologies || []).map((p: any) => p.nom_pathologie);
+          for (const pName of pathNames) {
+            allContexts.push(`Traitement souvent associé à : ${pName}`);
+          }
         }
 
         const clinical = clinicalResults.find((c: any) => c.index === i);
 
         // Use protocols from clinicalLookup first (per-medication, already filtered)
-        const perMedProtocols = clinical?.protocoles || [];
+        // — but ONLY if we are not in the single-med ambiguous case.
+        const perMedProtocols = singleMedAmbiguous ? [] : (clinical?.protocoles || []);
         let matchedProtocol = perMedProtocols.length > 0
           ? perMedProtocols.sort((a: any, b: any) => (b?.priorite_produit_1 || 0) - (a?.priorite_produit_1 || 0))[0]
           : null;
 
-        // Fallback to global protocol search
-        if (!matchedProtocol) {
+        // Fallback to global protocol search (also skipped when ambiguous)
+        if (!matchedProtocol && !singleMedAmbiguous) {
           matchedProtocol = findProtocolForPathologies(allProtocols, med.pathologies || []);
         }
 
@@ -1587,8 +1599,8 @@ serve(async (req) => {
           }
         }
 
-        // Fallback on existing clinical product rows
-        if (recs.length === 0 && clinical?.produits) {
+        // Fallback on existing clinical product rows (skip pathology-specific when ambiguous)
+        if (recs.length === 0 && clinical?.produits && !singleMedAmbiguous) {
           const mappedClinicalProducts = (clinical.produits || []).map((p: any) => ({
             produit: p.produit,
             categorie: p.categorie || "Complément",
@@ -1617,7 +1629,8 @@ serve(async (req) => {
       }
 
       // Fallback 1: products from pathologies already loaded in current prescription scope
-      if (recs.length === 0 && med.pathologies?.length > 0) {
+      // Skip when single med is ambiguous → prefer ATC/class-based general PCs below.
+      if (recs.length === 0 && med.pathologies?.length > 0 && !singleMedAmbiguous) {
         const pathIds = med.pathologies.map((p: any) => p.id);
         const pathProducts = allDbProduits
           .filter((p: any) => pathIds.includes(p.pathologie_id))
@@ -1633,29 +1646,83 @@ serve(async (req) => {
         recs.push(...pickDistinctProducts(pathProducts, MAX_RECOMMENDATIONS_PER_MED));
       }
 
+      // Fallback 1bis (AMBIGUOUS SINGLE MED): pick PCs only from GENERIC pathologies
+      // (e.g. "Infection bactérienne" for amoxicilline) — avoids picking specific
+      // clinical pictures (Otite, Scarlatine…) we cannot infer from the prescription alone.
+      const GENERIC_PATHO_RE = /infection|douleur|fi[èe]vre|inflammation|allergie\b|anti[-\s]?infect/i;
+      const isGenericPatho = (name: string | undefined | null) =>
+        !name || GENERIC_PATHO_RE.test(name);
+
+      if (recs.length === 0 && singleMedAmbiguous) {
+        // Direct DB query: PCs linked to generic pathologies for THIS molecule
+        const moleculeId = (clinicalResults.find((c: any) => c.index === i) as any)?.molecule?.id;
+        if (moleculeId) {
+          const { data: mpRows } = await supabase
+            .from("molecule_pathologie")
+            .select("pathologies(id, nom_pathologie)")
+            .eq("molecule_id", moleculeId);
+          const genericIds = (mpRows || [])
+            .map((r: any) => r.pathologies)
+            .filter((p: any) => p && GENERIC_PATHO_RE.test(p.nom_pathologie || ""))
+            .map((p: any) => p.id);
+          if (genericIds.length > 0) {
+            const { data: genericPcs } = await supabase
+              .from("produits_complementaires")
+              .select("*")
+              .in("pathologie_id", genericIds)
+              .order("priorite", { ascending: false })
+              .limit(20);
+            const mapped = (genericPcs || []).map((p: any) => ({
+              produit: p.produit,
+              categorie: p.categorie || "Complément",
+              description: p.description || "",
+              priorite: p.priorite || 50,
+              pathologie: "", // hide pathology label — stay non-diagnostic
+              phrase_conseil: p.phrase_conseil || undefined,
+            }));
+            recs.push(...pickDistinctProducts(mapped, MAX_RECOMMENDATIONS_PER_MED));
+          }
+        }
+      }
+
       // Fallback 2: ATC linked products
       if (recs.length === 0 && med.code_atc && atcFallbackMap.has(med.code_atc)) {
-        const atcRecs = pickDistinctProducts(atcFallbackMap.get(med.code_atc) || [], MAX_RECOMMENDATIONS_PER_MED);
+        let atcSource = atcFallbackMap.get(med.code_atc) || [];
+        // When ambiguous, keep ONLY generic-pathology PCs to stay non-diagnostic
+        if (singleMedAmbiguous) {
+          atcSource = atcSource.filter((r: any) => isGenericPatho(r.pathologie)).map((r: any) => ({ ...r, pathologie: "" }));
+        }
+        const atcRecs = pickDistinctProducts(atcSource, MAX_RECOMMENDATIONS_PER_MED);
         recs.push(...atcRecs);
         if (atcRecs.length > 0) {
           hasStructuredData = true;
-          for (const rec of atcRecs) {
-            if (rec.pathologie) allContexts.push(`Traitement souvent associé à : ${rec.pathologie}`);
+          if (!singleMedAmbiguous) {
+            for (const rec of atcRecs) {
+              if (rec.pathologie) allContexts.push(`Traitement souvent associé à : ${rec.pathologie}`);
+            }
           }
         }
       }
 
       // Fallback 3: class linked products
       if (recs.length === 0 && med.classe_therapeutique && classFallbackMap.has(med.classe_therapeutique)) {
-        const classRecs = pickDistinctProducts(classFallbackMap.get(med.classe_therapeutique) || [], MAX_RECOMMENDATIONS_PER_MED);
+        let classSource = classFallbackMap.get(med.classe_therapeutique) || [];
+        if (singleMedAmbiguous) {
+          classSource = classSource.filter((r: any) => isGenericPatho(r.pathologie)).map((r: any) => ({ ...r, pathologie: "" }));
+        }
+        const classRecs = pickDistinctProducts(classSource, MAX_RECOMMENDATIONS_PER_MED);
         recs.push(...classRecs);
         if (classRecs.length > 0) {
           hasStructuredData = true;
-          for (const rec of classRecs) {
-            if (rec.pathologie) allContexts.push(`Traitement souvent associé à : ${rec.pathologie}`);
+          if (!singleMedAmbiguous) {
+            for (const rec of classRecs) {
+              if (rec.pathologie) allContexts.push(`Traitement souvent associé à : ${rec.pathologie}`);
+            }
           }
         }
+
       }
+
 
       if (!advice) {
         const pathIds = med.pathologies?.map((p: any) => p.id) || [];
