@@ -246,10 +246,12 @@ serve(async (req) => {
         seen.add(k);
         return true;
       });
+      produits = filterPediatricSafe(produits, medicament);
       rankedProduits = rankingRes.data || [];
     } else {
       const directMedPcsRes = await directMedPcsPromise;
       produits = (directMedPcsRes.data || []).map((p: any) => ({ ...p, priorite: Math.max(p.priorite || 0, 85) }));
+      produits = filterPediatricSafe(produits, medicament);
     }
 
     // Step 5: Build structured response
