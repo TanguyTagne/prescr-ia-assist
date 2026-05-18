@@ -1193,6 +1193,42 @@ serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
+    // ====== QUOTA CHECK (server-side, atomic, multi-PC safe) ======
+    try {
+      const userId = claimsData.claims.sub;
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("pharmacy_id")
+        .eq("id", userId)
+        .maybeSingle();
+      const pharmacyIdForQuota = (profile as any)?.pharmacy_id;
+      if (pharmacyIdForQuota) {
+        const { data: quotaRes, error: quotaErr } = await supabase.rpc("check_and_increment_quota", {
+          _pharmacy_id: pharmacyIdForQuota,
+          _quota_type: "analysis",
+        });
+        if (quotaErr) {
+          console.error("Quota RPC error:", quotaErr);
+        } else if (quotaRes && (quotaRes as any).allowed === false) {
+          return new Response(
+            JSON.stringify({
+              error: "QUOTA_EXCEEDED",
+              message: "Quota journalier d'analyses atteint.",
+              quota: quotaRes,
+            }),
+            { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          );
+        }
+        // Also increment monthly AI call counter (non-blocking on failure)
+        supabase.rpc("check_and_increment_quota", {
+          _pharmacy_id: pharmacyIdForQuota,
+          _quota_type: "ai_call",
+        }).then(() => {}, (e: any) => console.error("ai_call quota error:", e));
+      }
+    } catch (qErr) {
+      console.error("Quota check failed (non-blocking):", qErr);
+    }
+
     // Parse blocked products from basket context (anti-loop)
     const blockedPCSet = new Set<string>(
       (blockedProducts || []).map((p: string) => normalizeText(p))
