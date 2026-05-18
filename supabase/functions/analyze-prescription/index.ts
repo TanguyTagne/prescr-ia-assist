@@ -1672,9 +1672,10 @@ serve(async (req) => {
         recs.push(...pickDistinctProducts(pathProducts, MAX_RECOMMENDATIONS_PER_MED));
       }
 
-      // Fallback 1bis (AMBIGUOUS SINGLE MED): pick PCs only from GENERIC pathologies
+      // Fallback 1bis (AMBIGUOUS MED): pick PCs only from GENERIC pathologies
       // (e.g. "Infection bactérienne" for amoxicilline) — avoids picking specific
       // clinical pictures (Otite, Scarlatine…) we cannot infer from the prescription alone.
+
       const GENERIC_PATHO_RE = /infection|douleur|fi[èe]vre|inflammation|allergie\b|anti[-\s]?infect/i;
       const isGenericPatho = (name: string | undefined | null) =>
         !name || GENERIC_PATHO_RE.test(name);
