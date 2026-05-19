@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Plus, Trash2, Save, Package, Pill } from "lucide-react";
 import DetectedProductCombobox from "@/components/groupement/DetectedProductCombobox";
+import SuggestCombobox from "@/components/SuggestCombobox";
 
 interface ProductMapping {
   id?: string;
@@ -268,18 +269,26 @@ const ProductMappingSettings = () => {
                 <div className="flex gap-2">
                   <div className="flex-1">
                     <label className="text-[9px] text-muted-foreground uppercase tracking-wider">Médicament</label>
-                    <Input
+                    <SuggestCombobox
+                      kind="medicament"
                       value={m.medicament_nom}
-                      onChange={e => updateMedMapping(i, "medicament_nom", e.target.value)}
+                      onValueChange={(v) => updateMedMapping(i, "medicament_nom", v)}
                       placeholder="ex: Amoxicilline"
                       className="h-7 text-xs"
                     />
                   </div>
                   <div className="flex-1">
                     <label className="text-[9px] text-muted-foreground uppercase tracking-wider">PC à proposer</label>
-                    <Input
+                    <SuggestCombobox
+                      kind="pc"
                       value={m.pc_nom}
-                      onChange={e => updateMedMapping(i, "pc_nom", e.target.value)}
+                      onValueChange={(v) => updateMedMapping(i, "pc_nom", v)}
+                      onSelect={(item) => {
+                        updateMedMapping(i, "pc_nom", item.produit);
+                        if (item.categorie && !m.pc_categorie) {
+                          updateMedMapping(i, "pc_categorie", item.categorie);
+                        }
+                      }}
                       placeholder="ex: Ultra-Levure"
                       className="h-7 text-xs"
                     />
@@ -294,6 +303,7 @@ const ProductMappingSettings = () => {
                     />
                   </div>
                 </div>
+
               </div>
               <Button onClick={() => removeMedMapping(i)} variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive">
                 <Trash2 className="h-3 w-3" />
