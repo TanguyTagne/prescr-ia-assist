@@ -14,6 +14,8 @@ import { pdfToImageBase64 } from "@/lib/pdfToImage";
 import { supabase } from "@/integrations/supabase/client";
 import type { ScanEvent } from "@/hooks/useScanQueue";
 import RegisterSelector from "@/components/RegisterSelector";
+import SoundToggle from "@/components/SoundToggle";
+import { notifyAnalysisDone } from "@/lib/notifyAnalysisDone";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -69,6 +71,7 @@ const Index = () => {
       const analysis = await analyzePrescription(text);
       const responseTime = Date.now() - start;
       setResult(analysis);
+      notifyAnalysisDone({ count: analysis.medicaments.length });
       trackEvent("ordonnance_analyzed", { input_type: "text", response_time: responseTime, medicaments: analysis.medicaments.map(m => m.nom) });
       trackEvent("widget_shown", {});
     } catch (e) {
@@ -85,6 +88,7 @@ const Index = () => {
       const analysis = await analyzePrescriptionImage(imageBase64);
       const responseTime = Date.now() - start;
       setResult(analysis);
+      notifyAnalysisDone({ count: analysis.medicaments.length });
       trackEvent("ordonnance_analyzed", { input_type: "image", response_time: responseTime, medicaments: analysis.medicaments.map(m => m.nom) });
       trackEvent("widget_shown", {});
     } catch (e) {
