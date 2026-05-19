@@ -927,6 +927,39 @@ export type Database = {
           },
         ]
       }
+      medicament_pc_mapping: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          medicament_nom: string
+          pc_categorie: string | null
+          pc_nom: string
+          pharmacy_id: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          medicament_nom: string
+          pc_categorie?: string | null
+          pc_nom: string
+          pharmacy_id: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          medicament_nom?: string
+          pc_categorie?: string | null
+          pc_nom?: string
+          pharmacy_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       medicament_pc_valide: {
         Row: {
           created_at: string
