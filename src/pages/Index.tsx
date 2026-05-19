@@ -206,6 +206,7 @@ const Index = () => {
         structuredData: scan.result.structuredData || false,
         sources: scan.result.sources || [],
       });
+      notifyAnalysisDone({ count: (scan.result.medicaments || []).length });
     }
   };
 
