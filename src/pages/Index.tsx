@@ -243,6 +243,7 @@ const Index = () => {
           <Pill className="h-4 w-4 text-primary-foreground" />
           <span className="text-sm font-bold text-primary-foreground tracking-tight">Asclion</span>
           <div className="flex-1" />
+          <SoundToggle />
           <RegisterSelector />
         </div>
       </header>
