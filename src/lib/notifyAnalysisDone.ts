@@ -7,7 +7,7 @@
 import { toast } from "sonner";
 
 const SOUND_KEY = "asclion.sound.enabled";
-const FAVICON_NORMAL = "/favicon.png";
+const FAVICON_NORMAL = "/favicon.ico";
 const FAVICON_ALERT = "/favicon-alert.png";
 
 export function isSoundEnabled(): boolean {
