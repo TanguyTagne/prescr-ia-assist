@@ -1821,8 +1821,33 @@ serve(async (req) => {
         return r;
       });
 
+      // Inject pharmacy-forced med→PC mappings: always proposed first when the medication is detected
+      if (medForcedMappings.length > 0) {
+        const medNameNorm = normalizeText(med.nom_commercial || med.nom || "");
+        const forced = medForcedMappings.filter((fm: any) => {
+          const fmNorm = normalizeText(fm.medicament_nom || "");
+          return fmNorm && (medNameNorm.includes(fmNorm) || fmNorm.includes(medNameNorm));
+        });
+        for (const fm of forced) {
+          const pcNameNorm = normalizeText(fm.pc_nom);
+          // Drop any existing rec of the same PC to avoid duplicates, then prepend
+          filteredRecs = filteredRecs.filter((r: any) => normalizeText(r.produit) !== pcNameNorm);
+          filteredRecs.unshift({
+            produit: fm.pc_nom,
+            categorie: fm.pc_categorie || "Recommandation officine",
+            description: "Produit favori de votre officine pour ce médicament",
+            priorite: 100,
+            pathologie: "",
+            forced: true,
+            mapped: true,
+            mapped_source: "pharmacy_med_forced",
+          });
+        }
+      }
+
       // Cap to degressive limit
       const finalRecs = filteredRecs.slice(0, maxPCPerMed);
+
 
       // Generate phrase_conseil for each PC: [context/problem] + [simple explanation] + [patient benefit]
       for (const r of finalRecs) {
