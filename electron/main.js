@@ -156,6 +156,9 @@ if (!gotTheLock) {
 
     createWindow();
 
+    // Register Windows daily auto-launch at 08:30
+    registerDailyAutoLaunch();
+
     // Detect installed LGO (Windows only) and forward to renderer when ready
     detectLgoAndNotify();
 
@@ -214,6 +217,24 @@ ipcMain.handle("notify", (_event, { title, body }) => {
 // ────────────────────────────────────────────────────────────
 // LGO auto-detection (Windows only — silent fallback elsewhere)
 // ────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────
+// Auto-launch every day at 08:30 (Windows Task Scheduler)
+// ────────────────────────────────────────────────────────────
+function registerDailyAutoLaunch() {
+  if (process.platform !== "win32") return;
+  const TASK_NAME = "AsclionDailyLaunch";
+  const exePath = process.execPath;
+  // Recreate the task on every startup so the exe path stays valid after updates.
+  const cmd = `schtasks /Create /TN "${TASK_NAME}" /TR "\\"${exePath}\\"" /SC DAILY /ST 08:30 /F /RL LIMITED`;
+  exec(cmd, { windowsHide: true, timeout: 8000 }, (err, _stdout, stderr) => {
+    if (err) {
+      console.error("Daily auto-launch task registration failed:", stderr || err.message);
+    } else {
+      console.log("Daily auto-launch task registered (08:30).");
+    }
+  });
+}
+
 function detectLgoAndNotify() {
   if (process.platform !== "win32") return;
 
