@@ -1442,9 +1442,10 @@ serve(async (req) => {
     let latentNeedUsed = false;
     let usedLatentNeed: LatentNeed | null = null;
 
-    // Load pharmacy product mappings + groupement mappings (groupement = priority override)
+    // Load pharmacy product mappings + groupement mappings + medication-forced mappings
     let productMappings: any[] = [];
     let groupMappings: any[] = [];
+    let medForcedMappings: any[] = [];
     if (pharmacyIdForMapping) {
       const { data: mappings } = await supabase
         .from("product_mapping")
@@ -1452,6 +1453,13 @@ serve(async (req) => {
         .eq("pharmacy_id", pharmacyIdForMapping)
         .eq("active", true);
       productMappings = mappings || [];
+
+      const { data: medMaps } = await supabase
+        .from("medicament_pc_mapping")
+        .select("medicament_nom, pc_nom, pc_categorie")
+        .eq("pharmacy_id", pharmacyIdForMapping)
+        .eq("active", true);
+      medForcedMappings = medMaps || [];
 
       // Load groupement mapping if pharmacy belongs to one
       const { data: pharma } = await supabase
@@ -1468,6 +1476,7 @@ serve(async (req) => {
         groupMappings = gm || [];
       }
     }
+
 
     // Protocols already preloaded
 
@@ -1812,8 +1821,33 @@ serve(async (req) => {
         return r;
       });
 
+      // Inject pharmacy-forced med→PC mappings: always proposed first when the medication is detected
+      if (medForcedMappings.length > 0) {
+        const medNameNorm = normalizeText(med.nom_commercial || med.nom || "");
+        const forced = medForcedMappings.filter((fm: any) => {
+          const fmNorm = normalizeText(fm.medicament_nom || "");
+          return fmNorm && (medNameNorm.includes(fmNorm) || fmNorm.includes(medNameNorm));
+        });
+        for (const fm of forced) {
+          const pcNameNorm = normalizeText(fm.pc_nom);
+          // Drop any existing rec of the same PC to avoid duplicates, then prepend
+          filteredRecs = filteredRecs.filter((r: any) => normalizeText(r.produit) !== pcNameNorm);
+          filteredRecs.unshift({
+            produit: fm.pc_nom,
+            categorie: fm.pc_categorie || "Recommandation officine",
+            description: "Produit favori de votre officine pour ce médicament",
+            priorite: 100,
+            pathologie: "",
+            forced: true,
+            mapped: true,
+            mapped_source: "pharmacy_med_forced",
+          });
+        }
+      }
+
       // Cap to degressive limit
       const finalRecs = filteredRecs.slice(0, maxPCPerMed);
+
 
       // Generate phrase_conseil for each PC: [context/problem] + [simple explanation] + [patient benefit]
       for (const r of finalRecs) {
