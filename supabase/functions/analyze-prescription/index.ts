@@ -1442,9 +1442,10 @@ serve(async (req) => {
     let latentNeedUsed = false;
     let usedLatentNeed: LatentNeed | null = null;
 
-    // Load pharmacy product mappings + groupement mappings (groupement = priority override)
+    // Load pharmacy product mappings + groupement mappings + medication-forced mappings
     let productMappings: any[] = [];
     let groupMappings: any[] = [];
+    let medForcedMappings: any[] = [];
     if (pharmacyIdForMapping) {
       const { data: mappings } = await supabase
         .from("product_mapping")
@@ -1452,6 +1453,13 @@ serve(async (req) => {
         .eq("pharmacy_id", pharmacyIdForMapping)
         .eq("active", true);
       productMappings = mappings || [];
+
+      const { data: medMaps } = await supabase
+        .from("medicament_pc_mapping")
+        .select("medicament_nom, pc_nom, pc_categorie")
+        .eq("pharmacy_id", pharmacyIdForMapping)
+        .eq("active", true);
+      medForcedMappings = medMaps || [];
 
       // Load groupement mapping if pharmacy belongs to one
       const { data: pharma } = await supabase
@@ -1468,6 +1476,7 @@ serve(async (req) => {
         groupMappings = gm || [];
       }
     }
+
 
     // Protocols already preloaded
 
