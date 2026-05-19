@@ -34,4 +34,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
     toggle: () => ipcRenderer.invoke("pip:toggle"),
     setCompact: (compact) => ipcRenderer.invoke("pip:set-compact", compact),
   },
+
+  // Attention / notifications (flash taskbar icon + bring to front)
+  attention: {
+    flash: () => ipcRenderer.invoke("attention:flash"),
+    bringToFront: () => ipcRenderer.invoke("attention:bring-to-front"),
+    isFocused: () => ipcRenderer.invoke("attention:is-focused"),
+  },
 });

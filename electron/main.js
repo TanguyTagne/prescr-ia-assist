@@ -215,6 +215,53 @@ ipcMain.handle("notify", (_event, { title, body }) => {
 });
 
 // ────────────────────────────────────────────────────────────
+// Attention IPC: flash taskbar icon + bring window to front
+// ────────────────────────────────────────────────────────────
+ipcMain.handle("attention:flash", () => {
+  if (!mainWindow) return false;
+  try {
+    mainWindow.flashFrame(true);
+    const stop = () => {
+      try { mainWindow && mainWindow.flashFrame(false); } catch { /* noop */ }
+    };
+    mainWindow.once("focus", stop);
+  } catch (e) {
+    console.error("flashFrame failed:", e);
+  }
+  return true;
+});
+
+ipcMain.handle("attention:bring-to-front", () => {
+  if (!mainWindow) return false;
+  try {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.show();
+    // Force-foreground hack: temporarily pin always-on-top, then restore PiP state
+    const wasOnTop = mainWindow.isAlwaysOnTop();
+    mainWindow.setAlwaysOnTop(true, "floating");
+    mainWindow.moveTop();
+    mainWindow.focus();
+    setTimeout(() => {
+      try {
+        if (!mainWindow) return;
+        // Restore the persisted PiP preference (not the temporary force)
+        mainWindow.setAlwaysOnTop(pipState.alwaysOnTop, "floating");
+        if (!pipState.alwaysOnTop && wasOnTop === false) {
+          mainWindow.setAlwaysOnTop(false);
+        }
+      } catch { /* noop */ }
+    }, 250);
+  } catch (e) {
+    console.error("bring-to-front failed:", e);
+  }
+  return true;
+});
+
+ipcMain.handle("attention:is-focused", () => {
+  return !!(mainWindow && mainWindow.isFocused());
+});
+
+// ────────────────────────────────────────────────────────────
 // LGO auto-detection (Windows only — silent fallback elsewhere)
 // ────────────────────────────────────────────────────────────
 // ────────────────────────────────────────────────────────────

@@ -15,6 +15,8 @@ import { trackEvent } from "@/hooks/useAnalytics";
 import { ScannerStatus } from "@/components/ScannerStatus";
 import { pdfToImageBase64 } from "@/lib/pdfToImage";
 import RegisterSelector from "@/components/RegisterSelector";
+import SoundToggle from "@/components/SoundToggle";
+import { notifyAnalysisDone } from "@/lib/notifyAnalysisDone";
 import { useLgoPreset } from "@/hooks/useLgoPreset";
 import { getPresetClasses, getPresetClassesElectron, LGO_PRESETS, type LgoType } from "@/lib/lgoPresets";
 import { isAsclionDesktopRuntime } from "@/lib/runtime";
@@ -113,6 +115,7 @@ const WidgetApp = () => {
       setResult(analysis);
       const proposed = analysis.medicaments.flatMap(m => (m.recommendations || []).map(r => r.produit));
       setBlockedProducts(proposed);
+      notifyAnalysisDone({ count: analysis.medicaments.length });
       trackEvent("ordonnance_analyzed", { input_type: "text", medicaments: analysis.medicaments.map((m) => m.nom) });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erreur lors de l'analyse");
@@ -129,6 +132,7 @@ const WidgetApp = () => {
       setResult(analysis);
       const proposed = analysis.medicaments.flatMap(m => (m.recommendations || []).map(r => r.produit));
       setBlockedProducts(proposed);
+      notifyAnalysisDone({ count: analysis.medicaments.length });
       trackEvent("ordonnance_analyzed", { input_type: "image", medicaments: analysis.medicaments.map((m) => m.nom) });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erreur lors de l'analyse OCR");
@@ -149,6 +153,7 @@ const WidgetApp = () => {
           sources: scan.result.sources || [],
         };
         setResult(normalized as AnalysisResult);
+        notifyAnalysisDone({ count: normalized.medicaments.length });
       } catch {}
     }
   };
@@ -235,6 +240,7 @@ const WidgetApp = () => {
             structuredData: true,
             sources: [],
           });
+          notifyAnalysisDone({ count: 1 });
         }
       }
     } catch (err) {
@@ -417,6 +423,7 @@ const Widget = ({ forceOpen = false }: {forceOpen?: boolean;}) => {
             <LgoPreviewPicker current={lgoType} onChange={setPreviewLgo} isOverride={isPreview} />
             <div className="flex-1" />
             <PipControls />
+            <SoundToggle />
             <RegisterSelector />
           </div>
           <div className="flex-1 overflow-y-auto">
