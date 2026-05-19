@@ -187,6 +187,7 @@ const Index = () => {
             structuredData: true,
             sources: [],
           });
+          notifyAnalysisDone({ count: 1 });
         }
       }
     } catch (err) {
