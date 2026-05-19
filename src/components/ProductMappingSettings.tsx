@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Plus, Trash2, Save, Package, Pill } from "lucide-react";
 import DetectedProductCombobox from "@/components/groupement/DetectedProductCombobox";
+import SuggestCombobox from "@/components/SuggestCombobox";
 
 interface ProductMapping {
   id?: string;
