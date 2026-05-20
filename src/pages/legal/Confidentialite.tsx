@@ -115,6 +115,7 @@ const Confidentialite = () => {
       </div>
     </div>
   </div>
-);
+  );
+};
 
 export default Confidentialite;
