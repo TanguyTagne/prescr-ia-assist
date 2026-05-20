@@ -1,11 +1,13 @@
 import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
+import Seo from "@/components/Seo";
 
 const MentionsLegales = () => {
   const { t, lp, lang } = useI18n();
   return (
     <div className="min-h-screen bg-background">
+      <Seo title={t("seo.legal.mentions.title")} description={t("seo.legal.mentions.desc")} path="/mentions-legales" />
       <div className="container max-w-3xl mx-auto px-4 py-10">
         <Link to={lp("/")} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-6">
           <ArrowLeft className="h-4 w-4" /> {t("legal.back")}

@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import Seo from "@/components/Seo";
+import { useI18n } from "@/i18n/I18nProvider";
 
 interface Feature {
   icon: any;
@@ -191,12 +192,14 @@ const sections: { title: string; features: Feature[] }[] = [
 
 const Fonctionnalites = () => {
   const navigate = useNavigate();
+  const { t } = useI18n();
+
 
   return (
     <div className="min-h-screen bg-background">
       <Seo
-        title="Fonctionnalités Asclion — Toutes les capacités du copilote"
-        description="Découvrez toutes les fonctionnalités d'Asclion : scan douchette, analyse clinique IA, recommandations personnalisées, intégration LGO, dashboard KPI."
+        title={t("seo.features.title")}
+        description={t("seo.features.desc")}
         path="/fonctionnalites"
       />
 

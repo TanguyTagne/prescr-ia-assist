@@ -100,9 +100,22 @@ const Landing = () => {
   return (
     <div className="min-h-screen bg-background">
       <Seo
-        title="Asclion — Copilote pharmacien intelligent au comptoir"
-        description="Asclion analyse l'ordonnance en moins de 3s et suggère les produits complémentaires pertinents. Copilote IA pour pharmaciens d'officine."
+        title={t("seo.landing.title")}
+        description={t("seo.landing.desc")}
         path="/"
+        jsonLd={{
+          "@context": "https://schema.org",
+          "@type": "SoftwareApplication",
+          name: "Asclion",
+          applicationCategory: "BusinessApplication",
+          applicationSubCategory: "PharmacyManagement",
+          operatingSystem: "Web, Windows",
+          description: t("seo.landing.desc"),
+          url: "https://www.asclion.com",
+          offers: { "@type": "Offer", price: "0", priceCurrency: "EUR", availability: "https://schema.org/InStock" },
+          audience: { "@type": "Audience", audienceType: "Pharmacists" },
+          inLanguage: ["fr-FR", "en"],
+        }}
       />
       <nav className="border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">

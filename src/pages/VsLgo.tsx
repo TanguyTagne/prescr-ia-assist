@@ -38,8 +38,8 @@ export default function VsLgo() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-accent/30 to-background relative overflow-hidden">
       <Seo
-        title="Asclion vs LGO — Comparatif copilote IA pharmacie"
-        description="Asclion vs Winpharma, LGPI, Pharmagest : pourquoi un copilote IA dédié au conseil associé surpasse les modules cross-sell des LGO traditionnels."
+        title={t("seo.vslgo.title")}
+        description={t("seo.vslgo.desc")}
         path="/vs-lgo"
       />
       <div className="pointer-events-none absolute inset-0 overflow-hidden">

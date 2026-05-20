@@ -11,16 +11,16 @@ const Aide = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Seo
-        title="Aide — FAQ Asclion pour pharmaciens"
-        description="Réponses aux questions fréquentes sur Asclion : installation, scanner, surveillance dossier, confidentialité des données patient."
+        title={t("seo.aide.title")}
+        description={t("seo.aide.desc")}
         path="/aide"
         jsonLd={{
           "@context": "https://schema.org",
           "@type": "FAQPage",
           mainEntity: [
-            { "@type": "Question", name: "Comment installer Asclion ?", acceptedAnswer: { "@type": "Answer", text: "Téléchargez le logiciel desktop depuis le site et lancez l'installateur Windows en un clic." } },
-            { "@type": "Question", name: "Asclion remplace-t-il mon LGO ?", acceptedAnswer: { "@type": "Answer", text: "Non, Asclion est un copilote complémentaire qui s'intègre à votre LGO existant (Winpharma, LGPI, Pharmagest)." } },
-            { "@type": "Question", name: "Les données patient sont-elles protégées ?", acceptedAnswer: { "@type": "Answer", text: "Oui : aucune donnée patient identifiable ne sort de la pharmacie. Seuls des hashes anonymes sont stockés." } },
+            { "@type": "Question", name: t("aide.faq.q1"), acceptedAnswer: { "@type": "Answer", text: t("aide.faq.a1") } },
+            { "@type": "Question", name: t("aide.faq.q2"), acceptedAnswer: { "@type": "Answer", text: t("aide.faq.a2") } },
+            { "@type": "Question", name: t("aide.faq.q3"), acceptedAnswer: { "@type": "Answer", text: t("aide.faq.a3") } },
           ],
         }}
       />

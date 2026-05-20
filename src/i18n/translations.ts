@@ -351,6 +351,113 @@ export const translations = {
     fr: "Les suggestions sont fournies à titre informatif. La décision finale appartient au pharmacien.",
     en: "Suggestions are provided for informational purposes. The final decision belongs to the pharmacist.",
   },
+
+  // ===== SEO META =====
+  "seo.landing.title": {
+    fr: "Asclion — Copilote pharmacien intelligent au comptoir",
+    en: "Asclion — Smart pharmacist copilot at the counter",
+  },
+  "seo.landing.desc": {
+    fr: "Asclion analyse l'ordonnance en moins de 3s et suggère les produits complémentaires pertinents. Copilote IA pour pharmaciens d'officine.",
+    en: "Asclion analyzes prescriptions in under 3s and suggests relevant complementary products. AI copilot for community pharmacists.",
+  },
+  "seo.vslgo.title": {
+    fr: "Asclion vs LGO — Comparatif copilote IA pharmacie",
+    en: "Asclion vs PMS — AI pharmacy copilot comparison",
+  },
+  "seo.vslgo.desc": {
+    fr: "Asclion vs Winpharma, LGPI, Pharmagest : pourquoi un copilote IA dédié au conseil associé surpasse les modules cross-sell des LGO.",
+    en: "Asclion vs Winpharma, LGPI, Pharmagest: why a dedicated AI copilot outperforms the cross-sell modules of traditional pharmacy systems.",
+  },
+  "seo.aide.title": {
+    fr: "Aide — FAQ Asclion pour pharmaciens",
+    en: "Help — Asclion FAQ for pharmacists",
+  },
+  "seo.aide.desc": {
+    fr: "Réponses aux questions fréquentes sur Asclion : installation, scanner, surveillance dossier, confidentialité des données patient.",
+    en: "Frequently asked questions about Asclion: installation, scanner, folder watching, patient data privacy.",
+  },
+  "seo.auth.title": {
+    fr: "Connexion — Asclion",
+    en: "Sign in — Asclion",
+  },
+  "seo.auth.desc": {
+    fr: "Connectez-vous à votre espace Asclion pour accéder au copilote IA de votre pharmacie.",
+    en: "Sign in to your Asclion workspace to access your pharmacy's AI copilot.",
+  },
+  "seo.features.title": {
+    fr: "Fonctionnalités Asclion — Toutes les capacités du copilote",
+    en: "Asclion Features — Every copilot capability",
+  },
+  "seo.features.desc": {
+    fr: "Découvrez toutes les fonctionnalités d'Asclion : scan douchette, analyse clinique IA, recommandations personnalisées, intégration LGO, dashboard KPI.",
+    en: "Discover every Asclion feature: barcode scan, AI clinical analysis, tailored recommendations, PMS integration, KPI dashboard.",
+  },
+  "seo.legal.mentions.title": {
+    fr: "Mentions légales — Asclion",
+    en: "Legal notice — Asclion",
+  },
+  "seo.legal.mentions.desc": {
+    fr: "Mentions légales du site Asclion : éditeur, hébergeur, propriété intellectuelle.",
+    en: "Legal notice for the Asclion site: publisher, host, intellectual property.",
+  },
+  "seo.legal.privacy.title": {
+    fr: "Politique de confidentialité — Asclion",
+    en: "Privacy policy — Asclion",
+  },
+  "seo.legal.privacy.desc": {
+    fr: "Politique de confidentialité d'Asclion : données collectées, finalités, RGPD, droits des utilisateurs et des patients.",
+    en: "Asclion privacy policy: data collected, purposes, GDPR, rights of users and patients.",
+  },
+  "seo.legal.cookies.title": {
+    fr: "Gestion des cookies — Asclion",
+    en: "Cookie policy — Asclion",
+  },
+  "seo.legal.cookies.desc": {
+    fr: "Gestion des cookies sur asclion.com : cookies nécessaires, mesure d'audience, consentement.",
+    en: "Cookie management on asclion.com: necessary cookies, analytics, consent.",
+  },
+  "seo.legal.terms.title": {
+    fr: "Conditions générales d'utilisation — Asclion",
+    en: "Terms of service — Asclion",
+  },
+  "seo.legal.terms.desc": {
+    fr: "Conditions générales d'utilisation du logiciel Asclion et du site asclion.com.",
+    en: "Terms of service for the Asclion software and the asclion.com website.",
+  },
+  "seo.legal.dpa.title": {
+    fr: "Accord de sous-traitance (DPA) — Asclion",
+    en: "Data Processing Agreement (DPA) — Asclion",
+  },
+  "seo.legal.dpa.desc": {
+    fr: "Accord de sous-traitance RGPD entre Asclion et les pharmacies clientes.",
+    en: "GDPR Data Processing Agreement between Asclion and client pharmacies.",
+  },
+  "seo.legal.pia.title": {
+    fr: "Analyse d'impact (PIA) — Asclion",
+    en: "Data Protection Impact Assessment (DPIA) — Asclion",
+  },
+  "seo.legal.pia.desc": {
+    fr: "Analyse d'impact relative à la protection des données pour le logiciel Asclion.",
+    en: "Data Protection Impact Assessment for the Asclion software.",
+  },
+
+  // ===== AIDE FAQ (structured data) =====
+  "aide.faq.q1": { fr: "Comment installer Asclion ?", en: "How do I install Asclion?" },
+  "aide.faq.a1": {
+    fr: "Téléchargez le logiciel desktop depuis le site et lancez l'installateur Windows en un clic.",
+    en: "Download the desktop app from the website and run the one-click Windows installer.",
+  },
+  "aide.faq.q2": { fr: "Asclion remplace-t-il mon LGO ?", en: "Does Asclion replace my pharmacy management system?" },
+  "aide.faq.a2": {
+    fr: "Non, Asclion est un copilote complémentaire qui s'intègre à votre LGO existant (Winpharma, LGPI, Pharmagest).",
+    en: "No, Asclion is a complementary copilot that integrates with your existing pharmacy management system (Winpharma, LGPI, Pharmagest).",
+  },
+  "aide.faq.q3": { fr: "Les données patient sont-elles protégées ?", en: "Is patient data protected?" },
+  "aide.faq.a3": {
+    fr: "Oui : aucune donnée patient identifiable ne sort de la pharmacie. Seuls des hashes anonymes sont stockés.",
+    en: "Yes: no identifiable patient data leaves the pharmacy. Only anonymous hashes are stored.",
+  },
 } as const;
 
 export type TranslationKey = keyof typeof translations;
