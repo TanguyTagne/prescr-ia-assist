@@ -4,7 +4,17 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, ChevronDown, ChevronRight, CheckCircle2 } from "lucide-react";
+import {
+  Loader2,
+  ChevronDown,
+  ChevronRight,
+  CheckCircle2,
+  TrendingUp,
+  Activity,
+  Target,
+  ShoppingBasket,
+  Percent,
+} from "lucide-react";
 
 interface FeedbackRow {
   id: string;
@@ -13,19 +23,37 @@ interface FeedbackRow {
   pc_nom: string;
   pc_categorie: string | null;
   created_at: string;
+  action: string;
+  analysis_id: string | null;
 }
 
-interface PharmacyGroup {
+interface AnalysisRow {
+  id: string;
+  pharmacy_id: string;
+  suggestions_count: number;
+  medicaments: any;
+}
+
+interface PharmacyStats {
   pharmacy_id: string;
   pharmacy_name: string;
-  total: number;
+  analyses: number;
+  meds_in_analyses: number;
+  suggestions: number;
+  accepted: number;
+  rejected: number;
+  analyses_with_accept: number;
   pcs: Map<string, { count: number; last: string; categorie: string | null; meds: Set<string> }>;
-  recent: FeedbackRow[];
 }
+
+const fmtPct = (n: number, digits = 1) =>
+  isFinite(n) ? `${n.toFixed(digits)}%` : "—";
+const fmtNum = (n: number, digits = 2) =>
+  isFinite(n) ? n.toFixed(digits) : "—";
 
 const AcceptedPcsTab = () => {
   const [loading, setLoading] = useState(true);
-  const [groups, setGroups] = useState<PharmacyGroup[]>([]);
+  const [groups, setGroups] = useState<PharmacyStats[]>([]);
   const [filter, setFilter] = useState("");
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
@@ -35,51 +63,88 @@ const AcceptedPcsTab = () => {
 
   const load = async () => {
     setLoading(true);
-    const [pharmRes, feedbackRes] = await Promise.all([
+    const [pharmRes, feedbackRes, historyRes] = await Promise.all([
       supabase.from("pharmacies").select("id, name"),
       supabase
         .from("pc_feedback")
-        .select("id, pharmacy_id, medicament_nom, pc_nom, pc_categorie, created_at")
-        .eq("action", "accepted")
+        .select("id, pharmacy_id, medicament_nom, pc_nom, pc_categorie, created_at, action, analysis_id")
         .order("created_at", { ascending: false })
-        .limit(5000),
+        .limit(10000),
+      supabase
+        .from("analysis_history")
+        .select("id, pharmacy_id, suggestions_count, medicaments")
+        .order("created_at", { ascending: false })
+        .limit(10000),
     ]);
 
     const pharmMap = new Map<string, string>(
       (pharmRes.data || []).map((p: any) => [p.id, p.name]),
     );
-    const byPharm = new Map<string, PharmacyGroup>();
-
-    for (const fb of (feedbackRes.data || []) as FeedbackRow[]) {
-      let g = byPharm.get(fb.pharmacy_id);
+    const byPharm = new Map<string, PharmacyStats>();
+    const ensure = (id: string): PharmacyStats => {
+      let g = byPharm.get(id);
       if (!g) {
         g = {
-          pharmacy_id: fb.pharmacy_id,
-          pharmacy_name: pharmMap.get(fb.pharmacy_id) || fb.pharmacy_id.slice(0, 8),
-          total: 0,
+          pharmacy_id: id,
+          pharmacy_name: pharmMap.get(id) || id.slice(0, 8),
+          analyses: 0,
+          meds_in_analyses: 0,
+          suggestions: 0,
+          accepted: 0,
+          rejected: 0,
+          analyses_with_accept: 0,
           pcs: new Map(),
-          recent: [],
         };
-        byPharm.set(fb.pharmacy_id, g);
+        byPharm.set(id, g);
       }
-      g.total++;
-      const existing = g.pcs.get(fb.pc_nom);
-      if (existing) {
-        existing.count++;
-        existing.meds.add(fb.medicament_nom);
-      } else {
-        g.pcs.set(fb.pc_nom, {
-          count: 1,
-          last: fb.created_at,
-          categorie: fb.pc_categorie,
-          meds: new Set([fb.medicament_nom]),
-        });
+      return g;
+    };
+
+    const acceptedAnalysesByPharm = new Map<string, Set<string>>();
+
+    for (const h of (historyRes.data || []) as AnalysisRow[]) {
+      const g = ensure(h.pharmacy_id);
+      g.analyses++;
+      g.suggestions += h.suggestions_count || 0;
+      g.meds_in_analyses += Array.isArray(h.medicaments) ? h.medicaments.length : 0;
+    }
+
+    for (const fb of (feedbackRes.data || []) as FeedbackRow[]) {
+      const g = ensure(fb.pharmacy_id);
+      if (fb.action === "accepted") {
+        g.accepted++;
+        if (fb.analysis_id) {
+          let s = acceptedAnalysesByPharm.get(fb.pharmacy_id);
+          if (!s) {
+            s = new Set();
+            acceptedAnalysesByPharm.set(fb.pharmacy_id, s);
+          }
+          s.add(fb.analysis_id);
+        }
+        const existing = g.pcs.get(fb.pc_nom);
+        if (existing) {
+          existing.count++;
+          existing.meds.add(fb.medicament_nom);
+        } else {
+          g.pcs.set(fb.pc_nom, {
+            count: 1,
+            last: fb.created_at,
+            categorie: fb.pc_categorie,
+            meds: new Set([fb.medicament_nom]),
+          });
+        }
+      } else if (fb.action === "rejected" || fb.action === "dismissed") {
+        g.rejected++;
       }
-      if (g.recent.length < 20) g.recent.push(fb);
+    }
+
+    for (const [pid, s] of acceptedAnalysesByPharm.entries()) {
+      const g = byPharm.get(pid);
+      if (g) g.analyses_with_accept = s.size;
     }
 
     setGroups(
-      Array.from(byPharm.values()).sort((a, b) => b.total - a.total),
+      Array.from(byPharm.values()).sort((a, b) => b.accepted - a.accepted),
     );
     setLoading(false);
   };
@@ -101,6 +166,27 @@ const AcceptedPcsTab = () => {
       );
   }, [groups, filter]);
 
+  const global = useMemo(() => {
+    const totals = groups.reduce(
+      (acc, g) => {
+        acc.analyses += g.analyses;
+        acc.meds += g.meds_in_analyses;
+        acc.suggestions += g.suggestions;
+        acc.accepted += g.accepted;
+        acc.rejected += g.rejected;
+        acc.analyses_with_accept += g.analyses_with_accept;
+        return acc;
+      },
+      { analyses: 0, meds: 0, suggestions: 0, accepted: 0, rejected: 0, analyses_with_accept: 0 },
+    );
+    const avgMeds = totals.analyses > 0 ? totals.meds / totals.analyses : 0;
+    const avgAcceptedPerAnalysis = totals.analyses > 0 ? totals.accepted / totals.analyses : 0;
+    const acceptanceRate = totals.suggestions > 0 ? (totals.accepted / totals.suggestions) * 100 : 0;
+    const conversionRate = totals.analyses > 0 ? (totals.analyses_with_accept / totals.analyses) * 100 : 0;
+    const basketUplift = avgMeds > 0 ? (avgAcceptedPerAnalysis / avgMeds) * 100 : 0;
+    return { ...totals, avgMeds, avgAcceptedPerAnalysis, acceptanceRate, conversionRate, basketUplift };
+  }, [groups]);
+
   if (loading) {
     return (
       <div className="flex justify-center py-12">
@@ -112,11 +198,87 @@ const AcceptedPcsTab = () => {
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-2xl font-semibold">PC acceptés par pharmacie</h2>
+        <h2 className="text-2xl font-semibold">PC acceptés &amp; impact panier</h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Tous les produits complémentaires marqués « accepté » (commande / clic) par chaque officine.
+          Suivi des PCs validés (commande / clic) et de leur impact sur le panier moyen.
         </p>
       </div>
+
+      {/* Global KPIs */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <Card className="p-3">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Activity className="h-3.5 w-3.5" /> Analyses
+          </div>
+          <div className="text-xl font-semibold mt-1">{global.analyses}</div>
+          <div className="text-[10px] text-muted-foreground">
+            ø {fmtNum(global.avgMeds)} médic./analyse
+          </div>
+        </Card>
+
+        <Card className="p-3">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Target className="h-3.5 w-3.5" /> PCs proposés
+          </div>
+          <div className="text-xl font-semibold mt-1">{global.suggestions}</div>
+          <div className="text-[10px] text-muted-foreground">
+            ø {fmtNum(global.analyses > 0 ? global.suggestions / global.analyses : 0)} / analyse
+          </div>
+        </Card>
+
+        <Card className="p-3">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" /> PCs acceptés
+          </div>
+          <div className="text-xl font-semibold mt-1 text-emerald-700 dark:text-emerald-500">
+            {global.accepted}
+          </div>
+          <div className="text-[10px] text-muted-foreground">
+            ø {fmtNum(global.avgAcceptedPerAnalysis)} / analyse
+          </div>
+        </Card>
+
+        <Card className="p-3">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Percent className="h-3.5 w-3.5" /> Taux d'acceptation
+          </div>
+          <div className="text-xl font-semibold mt-1">{fmtPct(global.acceptanceRate)}</div>
+          <div className="text-[10px] text-muted-foreground">
+            acceptés / proposés
+          </div>
+        </Card>
+
+        <Card className="p-3">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Target className="h-3.5 w-3.5" /> Conversion analyses
+          </div>
+          <div className="text-xl font-semibold mt-1">{fmtPct(global.conversionRate)}</div>
+          <div className="text-[10px] text-muted-foreground">
+            ≥1 PC accepté / analyse
+          </div>
+        </Card>
+
+        <Card className="p-3 bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200/50">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <TrendingUp className="h-3.5 w-3.5 text-emerald-600" /> Uplift panier
+          </div>
+          <div className="text-xl font-semibold mt-1 text-emerald-700 dark:text-emerald-500">
+            +{fmtPct(global.basketUplift, 1)}
+          </div>
+          <div className="text-[10px] text-muted-foreground">
+            vs ordonnance seule
+          </div>
+        </Card>
+      </div>
+
+      <Card className="p-3 text-xs text-muted-foreground flex items-start gap-2">
+        <ShoppingBasket className="h-4 w-4 mt-0.5 shrink-0" />
+        <div>
+          <strong>Méthode :</strong> Uplift panier = (PCs acceptés ÷ analyses) ÷ (médicaments ÷ analyses).
+          Sur {global.analyses} analyse(s), chaque ordonnance compte en moyenne {fmtNum(global.avgMeds)} médicament(s),
+          et le pharmacien y ajoute ø {fmtNum(global.avgAcceptedPerAnalysis)} PC validé(s) — soit {fmtPct(global.basketUplift)} d'articles en plus.
+        </div>
+      </Card>
 
       <Input
         placeholder="Filtrer par PC ou pharmacie…"
@@ -127,15 +289,20 @@ const AcceptedPcsTab = () => {
 
       {filtered.length === 0 ? (
         <Card className="p-8 text-center text-sm text-muted-foreground">
-          Aucun PC accepté pour le moment.
+          Aucune donnée pour le moment.
         </Card>
       ) : (
         <div className="space-y-3">
           {filtered.map((g) => {
-            const isOpen = expanded[g.pharmacy_id] ?? true;
+            const isOpen = expanded[g.pharmacy_id] ?? false;
             const pcList = Array.from(g.pcs.entries()).sort(
               (a, b) => b[1].count - a[1].count,
             );
+            const avgMeds = g.analyses > 0 ? g.meds_in_analyses / g.analyses : 0;
+            const avgAcc = g.analyses > 0 ? g.accepted / g.analyses : 0;
+            const accRate = g.suggestions > 0 ? (g.accepted / g.suggestions) * 100 : 0;
+            const convRate = g.analyses > 0 ? (g.analyses_with_accept / g.analyses) * 100 : 0;
+            const uplift = avgMeds > 0 ? (avgAcc / avgMeds) * 100 : 0;
             return (
               <Card key={g.pharmacy_id} className="p-4">
                 <button
@@ -148,45 +315,84 @@ const AcceptedPcsTab = () => {
                   }
                   className="w-full flex items-center justify-between gap-3 text-left"
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
                     {isOpen ? (
-                      <ChevronDown className="h-4 w-4" />
+                      <ChevronDown className="h-4 w-4 shrink-0" />
                     ) : (
-                      <ChevronRight className="h-4 w-4" />
+                      <ChevronRight className="h-4 w-4 shrink-0" />
                     )}
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                    <span className="font-medium">{g.pharmacy_name}</span>
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                    <span className="font-medium truncate">{g.pharmacy_name}</span>
                   </div>
-                  <Badge variant="secondary">{g.total} acceptés • {g.pcs.size} PC uniques</Badge>
+                  <div className="flex gap-1.5 flex-wrap justify-end">
+                    <Badge variant="outline">{g.analyses} analyses</Badge>
+                    <Badge variant="secondary">{g.accepted} acceptés</Badge>
+                    <Badge variant="outline">{fmtPct(accRate, 0)} acc.</Badge>
+                    <Badge variant="outline">{fmtPct(convRate, 0)} conv.</Badge>
+                    <Badge className="bg-emerald-600 hover:bg-emerald-600">
+                      +{fmtPct(uplift, 0)} panier
+                    </Badge>
+                  </div>
                 </button>
 
                 {isOpen && (
-                  <div className="mt-4 border-t pt-3 space-y-2">
-                    {pcList.map(([pc, data]) => (
-                      <div
-                        key={pc}
-                        className="flex items-start justify-between gap-3 text-sm py-1.5"
-                      >
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium truncate">{pc}</div>
-                          <div className="text-xs text-muted-foreground truncate">
-                            {data.categorie ? `${data.categorie} • ` : ""}
-                            Suite à : {Array.from(data.meds).slice(0, 3).join(", ")}
-                            {data.meds.size > 3 ? `, +${data.meds.size - 3}` : ""}
-                          </div>
-                        </div>
-                        <div className="text-right shrink-0">
-                          <Badge variant="outline">{data.count}×</Badge>
-                          <div className="text-[10px] text-muted-foreground mt-0.5">
-                            {new Date(data.last).toLocaleDateString("fr-FR", {
-                              day: "2-digit",
-                              month: "2-digit",
-                              year: "2-digit",
-                            })}
-                          </div>
+                  <div className="mt-4 border-t pt-3 space-y-3">
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs">
+                      <div className="rounded border p-2">
+                        <div className="text-muted-foreground">ø médic./analyse</div>
+                        <div className="font-semibold">{fmtNum(avgMeds)}</div>
+                      </div>
+                      <div className="rounded border p-2">
+                        <div className="text-muted-foreground">ø PCs proposés</div>
+                        <div className="font-semibold">
+                          {fmtNum(g.analyses > 0 ? g.suggestions / g.analyses : 0)}
                         </div>
                       </div>
-                    ))}
+                      <div className="rounded border p-2">
+                        <div className="text-muted-foreground">ø PCs acceptés</div>
+                        <div className="font-semibold">{fmtNum(avgAcc)}</div>
+                      </div>
+                      <div className="rounded border p-2">
+                        <div className="text-muted-foreground">PC uniques</div>
+                        <div className="font-semibold">{g.pcs.size}</div>
+                      </div>
+                      <div className="rounded border p-2 bg-emerald-50/50 dark:bg-emerald-950/20">
+                        <div className="text-muted-foreground">Uplift panier</div>
+                        <div className="font-semibold text-emerald-700 dark:text-emerald-500">
+                          +{fmtPct(uplift)}
+                        </div>
+                      </div>
+                    </div>
+
+                    {pcList.length > 0 && (
+                      <div className="space-y-1.5">
+                        {pcList.map(([pc, data]) => (
+                          <div
+                            key={pc}
+                            className="flex items-start justify-between gap-3 text-sm py-1.5"
+                          >
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium truncate">{pc}</div>
+                              <div className="text-xs text-muted-foreground truncate">
+                                {data.categorie ? `${data.categorie} • ` : ""}
+                                Suite à : {Array.from(data.meds).slice(0, 3).join(", ")}
+                                {data.meds.size > 3 ? `, +${data.meds.size - 3}` : ""}
+                              </div>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <Badge variant="outline">{data.count}×</Badge>
+                              <div className="text-[10px] text-muted-foreground mt-0.5">
+                                {new Date(data.last).toLocaleDateString("fr-FR", {
+                                  day: "2-digit",
+                                  month: "2-digit",
+                                  year: "2-digit",
+                                })}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </Card>
