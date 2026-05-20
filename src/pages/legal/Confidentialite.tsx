@@ -1,8 +1,13 @@
 import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
+import Seo from "@/components/Seo";
+import { useI18n } from "@/i18n/I18nProvider";
 
-const Confidentialite = () => (
+const Confidentialite = () => {
+  const { t } = useI18n();
+  return (
   <div className="min-h-screen bg-background">
+    <Seo title={t("seo.legal.privacy.title")} description={t("seo.legal.privacy.desc")} path="/confidentialite" />
     <div className="container max-w-3xl mx-auto px-4 py-10">
       <Link to="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-6">
         <ArrowLeft className="h-4 w-4" /> Retour
