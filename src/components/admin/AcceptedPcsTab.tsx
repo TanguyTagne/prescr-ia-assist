@@ -46,10 +46,16 @@ interface PharmacyStats {
   pcs: Map<string, { count: number; last: string; categorie: string | null; meds: Set<string> }>;
 }
 
+// Hypothèses pricing (sources : panier moyen OTC France ~ 8-10€, ticket moyen officine ~ 42€)
+const AVG_PC_PRICE_EUR = 9;
+const AVG_BASKET_EUR = 42;
+
 const fmtPct = (n: number, digits = 1) =>
   isFinite(n) ? `${n.toFixed(digits)}%` : "—";
 const fmtNum = (n: number, digits = 2) =>
   isFinite(n) ? n.toFixed(digits) : "—";
+const fmtEur = (n: number, digits = 2) =>
+  isFinite(n) ? `${n.toFixed(digits).replace(".", ",")} €` : "—";
 
 const AcceptedPcsTab = () => {
   const [loading, setLoading] = useState(true);
@@ -183,8 +189,11 @@ const AcceptedPcsTab = () => {
     const avgAcceptedPerAnalysis = totals.analyses > 0 ? totals.accepted / totals.analyses : 0;
     const acceptanceRate = totals.suggestions > 0 ? (totals.accepted / totals.suggestions) * 100 : 0;
     const conversionRate = totals.analyses > 0 ? (totals.analyses_with_accept / totals.analyses) * 100 : 0;
-    const basketUplift = avgMeds > 0 ? (avgAcceptedPerAnalysis / avgMeds) * 100 : 0;
-    return { ...totals, avgMeds, avgAcceptedPerAnalysis, acceptanceRate, conversionRate, basketUplift };
+    const basketUpliftItems = avgMeds > 0 ? (avgAcceptedPerAnalysis / avgMeds) * 100 : 0;
+    const upliftEurPerAnalysis = avgAcceptedPerAnalysis * AVG_PC_PRICE_EUR;
+    const basketUpliftEur = (upliftEurPerAnalysis / AVG_BASKET_EUR) * 100;
+    const totalCaGenerated = totals.accepted * AVG_PC_PRICE_EUR;
+    return { ...totals, avgMeds, avgAcceptedPerAnalysis, acceptanceRate, conversionRate, basketUpliftItems, upliftEurPerAnalysis, basketUpliftEur, totalCaGenerated };
   }, [groups]);
 
   if (loading) {
@@ -205,7 +214,7 @@ const AcceptedPcsTab = () => {
       </div>
 
       {/* Global KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-3">
         <Card className="p-3">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Activity className="h-3.5 w-3.5" /> Analyses
@@ -244,29 +253,58 @@ const AcceptedPcsTab = () => {
           </div>
           <div className="text-xl font-semibold mt-1">{fmtPct(global.acceptanceRate)}</div>
           <div className="text-[10px] text-muted-foreground">
-            acceptés / proposés
+            {fmtPct(global.conversionRate, 0)} d'analyses converties
           </div>
         </Card>
+      </div>
 
-        <Card className="p-3">
+      {/* Impact CA – KPIs principaux */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Card className="p-3 bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200/50">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Target className="h-3.5 w-3.5" /> Conversion analyses
+            <TrendingUp className="h-3.5 w-3.5 text-emerald-600" /> Uplift panier
           </div>
-          <div className="text-xl font-semibold mt-1">{fmtPct(global.conversionRate)}</div>
+          <div className="text-2xl font-bold mt-1 text-emerald-700 dark:text-emerald-500">
+            +{fmtPct(global.basketUpliftEur, 1)}
+          </div>
           <div className="text-[10px] text-muted-foreground">
-            ≥1 PC accepté / analyse
+            vs panier moyen {AVG_BASKET_EUR} €
           </div>
         </Card>
 
         <Card className="p-3 bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200/50">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <TrendingUp className="h-3.5 w-3.5 text-emerald-600" /> Uplift panier
+            <ShoppingBasket className="h-3.5 w-3.5 text-emerald-600" /> Panier moyen estimé
           </div>
-          <div className="text-xl font-semibold mt-1 text-emerald-700 dark:text-emerald-500">
-            +{fmtPct(global.basketUplift, 1)}
+          <div className="text-2xl font-bold mt-1 text-emerald-700 dark:text-emerald-500">
+            {fmtEur(AVG_BASKET_EUR + global.upliftEurPerAnalysis)}
           </div>
           <div className="text-[10px] text-muted-foreground">
-            vs ordonnance seule
+            {AVG_BASKET_EUR} € + {fmtEur(global.upliftEurPerAnalysis)} de PCs
+          </div>
+        </Card>
+
+        <Card className="p-3">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <TrendingUp className="h-3.5 w-3.5" /> CA additionnel / analyse
+          </div>
+          <div className="text-2xl font-bold mt-1">
+            {fmtEur(global.upliftEurPerAnalysis)}
+          </div>
+          <div className="text-[10px] text-muted-foreground">
+            ø PCs acceptés × {AVG_PC_PRICE_EUR} €
+          </div>
+        </Card>
+
+        <Card className="p-3">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <TrendingUp className="h-3.5 w-3.5" /> CA total généré
+          </div>
+          <div className="text-2xl font-bold mt-1">
+            {fmtEur(global.totalCaGenerated, 0)}
+          </div>
+          <div className="text-[10px] text-muted-foreground">
+            {global.accepted} PCs × {AVG_PC_PRICE_EUR} €
           </div>
         </Card>
       </div>
@@ -274,11 +312,18 @@ const AcceptedPcsTab = () => {
       <Card className="p-3 text-xs text-muted-foreground flex items-start gap-2">
         <ShoppingBasket className="h-4 w-4 mt-0.5 shrink-0" />
         <div>
-          <strong>Méthode :</strong> Uplift panier = (PCs acceptés ÷ analyses) ÷ (médicaments ÷ analyses).
-          Sur {global.analyses} analyse(s), chaque ordonnance compte en moyenne {fmtNum(global.avgMeds)} médicament(s),
-          et le pharmacien y ajoute ø {fmtNum(global.avgAcceptedPerAnalysis)} PC validé(s) — soit {fmtPct(global.basketUplift)} d'articles en plus.
+          <strong>Méthode :</strong> Uplift € = (ø PCs acceptés/analyse × prix moyen PC {AVG_PC_PRICE_EUR} €) ÷ panier moyen officine {AVG_BASKET_EUR} €.
+          Sur {global.analyses} analyse(s), chaque ordonnance ajoute en moyenne {fmtNum(global.avgAcceptedPerAnalysis)} PC validé(s) ≈ <strong>{fmtEur(global.upliftEurPerAnalysis)}</strong> de CA additionnel,
+          soit <strong>+{fmtPct(global.basketUpliftEur)}</strong> sur le panier moyen.
+          En volume : +{fmtPct(global.basketUpliftItems)} d'articles vs ordonnance seule.
+          <br />
+          <span className="text-[10px] italic">
+            Hypothèses : prix moyen PC OTC France ~ {AVG_PC_PRICE_EUR} € ; ticket moyen officine ~ {AVG_BASKET_EUR} € (source FSPF/Le Moniteur).
+          </span>
         </div>
       </Card>
+
+
 
       <Input
         placeholder="Filtrer par PC ou pharmacie…"
@@ -302,7 +347,10 @@ const AcceptedPcsTab = () => {
             const avgAcc = g.analyses > 0 ? g.accepted / g.analyses : 0;
             const accRate = g.suggestions > 0 ? (g.accepted / g.suggestions) * 100 : 0;
             const convRate = g.analyses > 0 ? (g.analyses_with_accept / g.analyses) * 100 : 0;
-            const uplift = avgMeds > 0 ? (avgAcc / avgMeds) * 100 : 0;
+            const upliftItems = avgMeds > 0 ? (avgAcc / avgMeds) * 100 : 0;
+            const upliftEurAnalysis = avgAcc * AVG_PC_PRICE_EUR;
+            const upliftEurPct = (upliftEurAnalysis / AVG_BASKET_EUR) * 100;
+            const caTotal = g.accepted * AVG_PC_PRICE_EUR;
             return (
               <Card key={g.pharmacy_id} className="p-4">
                 <button
@@ -328,40 +376,49 @@ const AcceptedPcsTab = () => {
                     <Badge variant="outline">{g.analyses} analyses</Badge>
                     <Badge variant="secondary">{g.accepted} acceptés</Badge>
                     <Badge variant="outline">{fmtPct(accRate, 0)} acc.</Badge>
-                    <Badge variant="outline">{fmtPct(convRate, 0)} conv.</Badge>
+                    <Badge variant="outline">{fmtEur(caTotal, 0)}</Badge>
                     <Badge className="bg-emerald-600 hover:bg-emerald-600">
-                      +{fmtPct(uplift, 0)} panier
+                      +{fmtPct(upliftEurPct, 0)} panier
                     </Badge>
                   </div>
                 </button>
 
                 {isOpen && (
                   <div className="mt-4 border-t pt-3 space-y-3">
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs">
+                    <div className="grid grid-cols-2 md:grid-cols-6 gap-2 text-xs">
                       <div className="rounded border p-2">
                         <div className="text-muted-foreground">ø médic./analyse</div>
                         <div className="font-semibold">{fmtNum(avgMeds)}</div>
-                      </div>
-                      <div className="rounded border p-2">
-                        <div className="text-muted-foreground">ø PCs proposés</div>
-                        <div className="font-semibold">
-                          {fmtNum(g.analyses > 0 ? g.suggestions / g.analyses : 0)}
-                        </div>
                       </div>
                       <div className="rounded border p-2">
                         <div className="text-muted-foreground">ø PCs acceptés</div>
                         <div className="font-semibold">{fmtNum(avgAcc)}</div>
                       </div>
                       <div className="rounded border p-2">
-                        <div className="text-muted-foreground">PC uniques</div>
-                        <div className="font-semibold">{g.pcs.size}</div>
+                        <div className="text-muted-foreground">Conversion</div>
+                        <div className="font-semibold">{fmtPct(convRate, 0)}</div>
+                      </div>
+                      <div className="rounded border p-2 bg-emerald-50/50 dark:bg-emerald-950/20">
+                        <div className="text-muted-foreground">+€ / analyse</div>
+                        <div className="font-semibold text-emerald-700 dark:text-emerald-500">
+                          {fmtEur(upliftEurAnalysis)}
+                        </div>
                       </div>
                       <div className="rounded border p-2 bg-emerald-50/50 dark:bg-emerald-950/20">
                         <div className="text-muted-foreground">Uplift panier</div>
                         <div className="font-semibold text-emerald-700 dark:text-emerald-500">
-                          +{fmtPct(uplift)}
+                          +{fmtPct(upliftEurPct)}
                         </div>
                       </div>
+                      <div className="rounded border p-2 bg-emerald-50/50 dark:bg-emerald-950/20">
+                        <div className="text-muted-foreground">CA total</div>
+                        <div className="font-semibold text-emerald-700 dark:text-emerald-500">
+                          {fmtEur(caTotal, 0)}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-[10px] text-muted-foreground italic">
+                      Volume : +{fmtPct(upliftItems, 0)} d'articles ({g.pcs.size} PC uniques).
                     </div>
 
                     {pcList.length > 0 && (
