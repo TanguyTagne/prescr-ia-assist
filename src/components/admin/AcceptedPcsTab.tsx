@@ -189,8 +189,11 @@ const AcceptedPcsTab = () => {
     const avgAcceptedPerAnalysis = totals.analyses > 0 ? totals.accepted / totals.analyses : 0;
     const acceptanceRate = totals.suggestions > 0 ? (totals.accepted / totals.suggestions) * 100 : 0;
     const conversionRate = totals.analyses > 0 ? (totals.analyses_with_accept / totals.analyses) * 100 : 0;
-    const basketUplift = avgMeds > 0 ? (avgAcceptedPerAnalysis / avgMeds) * 100 : 0;
-    return { ...totals, avgMeds, avgAcceptedPerAnalysis, acceptanceRate, conversionRate, basketUplift };
+    const basketUpliftItems = avgMeds > 0 ? (avgAcceptedPerAnalysis / avgMeds) * 100 : 0;
+    const upliftEurPerAnalysis = avgAcceptedPerAnalysis * AVG_PC_PRICE_EUR;
+    const basketUpliftEur = (upliftEurPerAnalysis / AVG_BASKET_EUR) * 100;
+    const totalCaGenerated = totals.accepted * AVG_PC_PRICE_EUR;
+    return { ...totals, avgMeds, avgAcceptedPerAnalysis, acceptanceRate, conversionRate, basketUpliftItems, upliftEurPerAnalysis, basketUpliftEur, totalCaGenerated };
   }, [groups]);
 
   if (loading) {
