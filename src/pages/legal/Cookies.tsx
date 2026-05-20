@@ -2,9 +2,14 @@ import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { resetCookieConsent } from "@/lib/cookieConsent";
+import Seo from "@/components/Seo";
+import { useI18n } from "@/i18n/I18nProvider";
 
-const Cookies = () => (
+const Cookies = () => {
+  const { t } = useI18n();
+  return (
   <div className="min-h-screen bg-background">
+    <Seo title={t("seo.legal.cookies.title")} description={t("seo.legal.cookies.desc")} path="/cookies" />
     <div className="container max-w-3xl mx-auto px-4 py-10">
       <Link to="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-6">
         <ArrowLeft className="h-4 w-4" /> Retour
