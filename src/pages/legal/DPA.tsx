@@ -2,8 +2,11 @@ import SiteFooter from "@/components/SiteFooter";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import { Link } from "react-router-dom";
+import Seo from "@/components/Seo";
+import { useI18n } from "@/i18n/I18nProvider";
 
 const DPA = () => {
+  const { t } = useI18n();
   const handleDownload = () => {
     const content = document.getElementById("dpa-content")?.innerText || "";
     const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
