@@ -376,9 +376,9 @@ const AcceptedPcsTab = () => {
                     <Badge variant="outline">{g.analyses} analyses</Badge>
                     <Badge variant="secondary">{g.accepted} acceptés</Badge>
                     <Badge variant="outline">{fmtPct(accRate, 0)} acc.</Badge>
-                    <Badge variant="outline">{fmtPct(convRate, 0)} conv.</Badge>
+                    <Badge variant="outline">{fmtEur(caTotal, 0)}</Badge>
                     <Badge className="bg-emerald-600 hover:bg-emerald-600">
-                      +{fmtPct(uplift, 0)} panier
+                      +{fmtPct(upliftEurPct, 0)} panier
                     </Badge>
                   </div>
                 </button>
