@@ -20,6 +20,7 @@ const PIA = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      <Seo title={t("seo.legal.pia.title")} description={t("seo.legal.pia.desc")} path="/legal/pia" />
       <header className="border-b border-border px-6 py-4">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <Link to="/" className="text-lg font-semibold">Asclion</Link>
