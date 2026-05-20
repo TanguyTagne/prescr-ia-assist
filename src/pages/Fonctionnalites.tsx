@@ -192,6 +192,8 @@ const sections: { title: string; features: Feature[] }[] = [
 
 const Fonctionnalites = () => {
   const navigate = useNavigate();
+  const { t } = useI18n();
+
 
   return (
     <div className="min-h-screen bg-background">
