@@ -347,7 +347,10 @@ const AcceptedPcsTab = () => {
             const avgAcc = g.analyses > 0 ? g.accepted / g.analyses : 0;
             const accRate = g.suggestions > 0 ? (g.accepted / g.suggestions) * 100 : 0;
             const convRate = g.analyses > 0 ? (g.analyses_with_accept / g.analyses) * 100 : 0;
-            const uplift = avgMeds > 0 ? (avgAcc / avgMeds) * 100 : 0;
+            const upliftItems = avgMeds > 0 ? (avgAcc / avgMeds) * 100 : 0;
+            const upliftEurAnalysis = avgAcc * AVG_PC_PRICE_EUR;
+            const upliftEurPct = (upliftEurAnalysis / AVG_BASKET_EUR) * 100;
+            const caTotal = g.accepted * AVG_PC_PRICE_EUR;
             return (
               <Card key={g.pharmacy_id} className="p-4">
                 <button
