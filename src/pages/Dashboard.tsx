@@ -272,6 +272,17 @@ const Dashboard = () => {
             </div>
           </CardContent>
         </Card>
+        <div className="pt-6 border-t border-border/50">
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={signOut}
+            className="w-full gap-2 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30"
+          >
+            <LogOut className="h-5 w-5" />
+            Se déconnecter
+          </Button>
+        </div>
       </main>
     </div>
   );
