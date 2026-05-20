@@ -195,8 +195,8 @@ const Fonctionnalites = () => {
   return (
     <div className="min-h-screen bg-background">
       <Seo
-        title="Fonctionnalités Asclion — Toutes les capacités du copilote"
-        description="Découvrez toutes les fonctionnalités d'Asclion : scan douchette, analyse clinique IA, recommandations personnalisées, intégration LGO, dashboard KPI."
+        title={t("seo.features.title")}
+        description={t("seo.features.desc")}
         path="/fonctionnalites"
       />
 
