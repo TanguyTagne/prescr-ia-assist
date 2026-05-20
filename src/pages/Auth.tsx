@@ -7,8 +7,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate, Link } from "react-router-dom";
 import Seo from "@/components/Seo";
+import { useI18n } from "@/i18n/I18nProvider";
 
 const Auth = () => {
+  const { t } = useI18n();
   const [isLogin, setIsLogin] = useState(true);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [email, setEmail] = useState("");
