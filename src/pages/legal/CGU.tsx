@@ -107,6 +107,7 @@ const CGU = () => {
       </div>
     </div>
   </div>
-);
+  );
+};
 
 export default CGU;
