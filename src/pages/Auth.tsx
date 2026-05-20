@@ -75,8 +75,8 @@ const Auth = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Seo
-        title="Connexion — Asclion"
-        description="Connectez-vous à votre espace Asclion pour accéder au copilote IA de votre pharmacie."
+        title={t("seo.auth.title")}
+        description={t("seo.auth.desc")}
         path="/auth"
       />
       <header className="pharmacy-gradient px-4 py-4">
