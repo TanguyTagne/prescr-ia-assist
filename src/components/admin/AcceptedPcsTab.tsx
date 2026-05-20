@@ -46,10 +46,16 @@ interface PharmacyStats {
   pcs: Map<string, { count: number; last: string; categorie: string | null; meds: Set<string> }>;
 }
 
+// Hypothèses pricing (sources : panier moyen OTC France ~ 8-10€, ticket moyen officine ~ 42€)
+const AVG_PC_PRICE_EUR = 9;
+const AVG_BASKET_EUR = 42;
+
 const fmtPct = (n: number, digits = 1) =>
   isFinite(n) ? `${n.toFixed(digits)}%` : "—";
 const fmtNum = (n: number, digits = 2) =>
   isFinite(n) ? n.toFixed(digits) : "—";
+const fmtEur = (n: number, digits = 2) =>
+  isFinite(n) ? `${n.toFixed(digits).replace(".", ",")} €` : "—";
 
 const AcceptedPcsTab = () => {
   const [loading, setLoading] = useState(true);
