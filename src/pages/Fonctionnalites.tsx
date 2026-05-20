@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import Seo from "@/components/Seo";
+import { useI18n } from "@/i18n/I18nProvider";
 
 interface Feature {
   icon: any;
