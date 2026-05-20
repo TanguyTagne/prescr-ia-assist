@@ -146,17 +146,25 @@ const PrescriptionInput = ({ onAnalyze, onAnalyzeImage, autoAnalyze = true }: Pr
   const processFile = useCallback(async (file: File) => {
     setIsProcessingFile(true);
     try {
+      const isPdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name);
+      const isImage = file.type.startsWith("image/") || /\.(png|jpe?g|webp|gif|bmp|heic|heif)$/i.test(file.name);
+
       let base64: string;
-      if (file.type === "application/pdf") {
+      if (isPdf) {
         base64 = await pdfToImageBase64(file);
-      } else if (file.type.startsWith("image/")) {
-        base64 = await new Promise<string>((resolve) => {
+      } else if (isImage) {
+        base64 = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
-          reader.onload = (e) => resolve(e.target?.result as string);
+          reader.onload = (e) => {
+            const r = e.target?.result;
+            if (typeof r === "string") resolve(r);
+            else reject(new Error("Lecture du fichier vide"));
+          };
+          reader.onerror = () => reject(reader.error || new Error("Erreur de lecture"));
           reader.readAsDataURL(file);
         });
       } else {
-        toast.error("Format non supporté. Utilisez une image ou un PDF.");
+        toast.error(`Format non supporté${file.type ? ` (${file.type})` : ""}. Utilisez une image (JPG/PNG) ou un PDF.`);
         return;
       }
       setImagePreview(base64);
@@ -164,12 +172,13 @@ const PrescriptionInput = ({ onAnalyze, onAnalyzeImage, autoAnalyze = true }: Pr
         onAnalyzeImage(base64);
       }
     } catch (err) {
-      console.error("File processing error:", err);
-      toast.error("Erreur lors du traitement du fichier");
+      console.error("File processing error:", err, { name: file.name, type: file.type, size: file.size });
+      const msg = err instanceof Error ? err.message : "Erreur inconnue";
+      toast.error(`Erreur lors du traitement du fichier : ${msg}`);
     } finally {
       setIsProcessingFile(false);
     }
-  }, []);
+  }, [autoAnalyze, onAnalyzeImage]);
 
   const handleSubmit = () => {
     if (mode === "image") {
