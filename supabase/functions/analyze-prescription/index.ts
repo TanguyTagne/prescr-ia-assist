@@ -1881,8 +1881,10 @@ serve(async (req) => {
         }
       }
 
-      // Cap to degressive limit
-      const finalRecs = filteredRecs.slice(0, maxPCPerMed);
+      // Final semantic dedupe (same PC must not appear twice for the same med, even
+      // when names differ slightly: "Solution de réhydratation orale" / "Sachets de
+      // réhydratation orale" / "Solution réhydratation"), then cap to degressive limit.
+      const finalRecs = pickDistinctProducts(filteredRecs, maxPCPerMed);
 
 
       // Generate phrase_conseil for each PC: [context/problem] + [simple explanation] + [patient benefit]
