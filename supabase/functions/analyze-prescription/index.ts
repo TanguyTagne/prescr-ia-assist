@@ -868,14 +868,50 @@ function buildFallbackMedical(produit: string, medName: string, classe: string, 
   return `${p} est recommandé en accompagnement pour limiter les effets indésirables du traitement.`;
 }
 
+// Stopwords used to strip form/packaging/grammatical words when building a
+// canonical signature of a product name. Two products whose remaining "core
+// tokens" are equal or overlap heavily (Jaccard ≥ 0.6) are considered the same PC.
+const PRODUCT_STOPWORDS = new Set<string>([
+  "de", "du", "des", "la", "le", "les", "l", "en", "et", "a", "au", "aux", "pour", "avec", "sans",
+  "solution", "sachet", "sachets", "comprime", "comprimes", "gelule", "gelules", "capsule", "capsules",
+  "gouttes", "goutte", "sirop", "spray", "creme", "gel", "poudre", "ampoule", "ampoules", "stick", "sticks",
+  "oral", "orale", "orales", "oraux", "buvable", "buvables", "nasal", "nasale", "nasales",
+  "boite", "flacon", "tube", "format", "pack",
+]);
+
+function productSignature(produit: string): Set<string> {
+  return new Set(
+    normalizeText(produit || "")
+      .replace(/[^a-z0-9\s]/g, " ")
+      .split(/\s+/)
+      .filter((t) => t.length >= 3 && !PRODUCT_STOPWORDS.has(t)),
+  );
+}
+
+function signaturesEquivalent(a: Set<string>, b: Set<string>): boolean {
+  if (!a.size || !b.size) return false;
+  let inter = 0;
+  for (const t of a) if (b.has(t)) inter++;
+  const union = a.size + b.size - inter;
+  if (union === 0) return false;
+  // Same core OR one is subset of the other OR strong overlap
+  if (inter === a.size || inter === b.size) return true;
+  return inter / union >= 0.6;
+}
+
 function pickDistinctProducts(products: any[], max = MAX_RECOMMENDATIONS_PER_MED) {
   const selected: any[] = [];
-  const seen = new Set<string>();
+  const seenKeys = new Set<string>();
+  const seenSigs: Set<string>[] = [];
 
   for (const product of products || []) {
-    const key = normalizeText(product?.produit || "");
-    if (!key || seen.has(key) || !isLowFrictionProduct(product?.produit || "")) continue;
-    seen.add(key);
+    const name = product?.produit || "";
+    const key = normalizeText(name);
+    if (!key || seenKeys.has(key) || !isLowFrictionProduct(name)) continue;
+    const sig = productSignature(name);
+    if (seenSigs.some((existing) => signaturesEquivalent(existing, sig))) continue;
+    seenKeys.add(key);
+    seenSigs.push(sig);
     selected.push(product);
     if (selected.length >= max) break;
   }
@@ -1845,8 +1881,10 @@ serve(async (req) => {
         }
       }
 
-      // Cap to degressive limit
-      const finalRecs = filteredRecs.slice(0, maxPCPerMed);
+      // Final semantic dedupe (same PC must not appear twice for the same med, even
+      // when names differ slightly: "Solution de réhydratation orale" / "Sachets de
+      // réhydratation orale" / "Solution réhydratation"), then cap to degressive limit.
+      const finalRecs = pickDistinctProducts(filteredRecs, maxPCPerMed);
 
 
       // Generate phrase_conseil for each PC: [context/problem] + [simple explanation] + [patient benefit]
