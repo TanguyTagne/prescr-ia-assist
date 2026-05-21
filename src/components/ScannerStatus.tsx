@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
 
 interface ScanNotificationProps {
   scan: ScanEvent;
@@ -90,6 +91,7 @@ interface ScannerStatusProps {
 
 export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: ScannerStatusProps) => {
   const { latestScan, isListening, pharmacyId, dismissScan } = useScanQueue();
+  const { signOut } = useAuth();
   const [showSetup, setShowSetup] = useState(false);
   const [scannerKeys, setScannerKeys] = useState<ScannerKey[]>([]);
   const [loadingKeys, setLoadingKeys] = useState(false);
@@ -436,6 +438,21 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
                   </Button>
                 </div>
               )}
+            </div>
+
+            <div className="border-t border-border pt-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => void signOut()}
+                className="w-full gap-2 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30"
+              >
+                <X className="h-4 w-4" />
+                Se déconnecter de ce poste
+              </Button>
+              <p className="mt-2 text-[11px] text-muted-foreground text-center">
+                Les autres postes de l'officine restent connectés au même compte pharmacie.
+              </p>
             </div>
           </div>
         </DialogContent>
