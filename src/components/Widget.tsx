@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { X, Loader2, Mail, Lock, Eye, EyeOff, Monitor, HelpCircle, Pin, PinOff, Minimize2, Maximize2 } from "lucide-react";
+import { X, Loader2, Mail, Lock, Eye, EyeOff, Monitor, HelpCircle, Pin, PinOff, Minimize2, Maximize2, LogOut } from "lucide-react";
 import OnboardingTour from "@/components/OnboardingTour";
 import AnalysisSkeleton from "@/components/AnalysisSkeleton";
 import { Button } from "@/components/ui/button";
@@ -377,7 +377,7 @@ const Widget = ({ forceOpen = false }: {forceOpen?: boolean;}) => {
 
   // Web: always open so visitors can naturally try the demo. Electron: forceOpen.
   const [open, setOpen] = useState(true);
-  const { user, loading, onboardingCompleted, refreshOnboarding } = useAuth();
+  const { user, loading, signOut, onboardingCompleted, refreshOnboarding } = useAuth();
   const { preset: pharmacyPreset, lgoType: pharmacyLgoType } = useLgoPreset();
   const [previewLgo, setPreviewLgo] = useState<LgoType | null>(null);
   const [showTour, setShowTour] = useState(false);
@@ -437,6 +437,19 @@ const Widget = ({ forceOpen = false }: {forceOpen?: boolean;}) => {
             <WidgetApp />
             }
           </div>
+          {!loading && user && (
+            <div className="shrink-0 border-t border-border bg-background px-3 py-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={signOut}
+                className="w-full gap-2 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30"
+              >
+                <LogOut className="h-4 w-4" />
+                Se déconnecter
+              </Button>
+            </div>
+          )}
         </div>
       </div>);
 
