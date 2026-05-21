@@ -142,8 +142,14 @@ const Landing = () => {
                   </a>
                 </Button>
                 <LanguageToggle />
-                <Button variant="ghost" size="icon" onClick={signOut} className="h-8 w-8" aria-label={t("nav.signout")}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={signOut}
+                  className="gap-1.5 text-xs text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30"
+                >
                   <LogOut className="h-3.5 w-3.5" />
+                  Se déconnecter
                 </Button>
               </>
             ) : (
