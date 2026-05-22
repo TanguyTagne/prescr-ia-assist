@@ -314,7 +314,7 @@ export const translations = {
   "demo.lead.dismiss": { fr: "Fermer", en: "Close" },
 
   // ===== ANALYSIS RESULTS =====
-  "results.empty": { fr: "🔍 Aucun médicament reconnu.", en: "🔍 No medication recognized." },
+  "results.empty": { fr: "Aucun médicament reconnu.", en: "No medication recognized." },
   "results.newAnalysis": { fr: "Nouvelle analyse", en: "New analysis" },
   "results.newPrescription": { fr: "Nouvelle ordonnance", en: "New prescription" },
   "results.interactions": { fr: "Interactions", en: "Interactions" },
