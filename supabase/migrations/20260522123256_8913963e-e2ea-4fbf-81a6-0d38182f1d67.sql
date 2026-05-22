@@ -1,0 +1,1 @@
+ALTER TABLE public.analysis_history DROP COLUMN IF EXISTS patient_name;
