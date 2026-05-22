@@ -1224,6 +1224,22 @@ serve(async (req) => {
     const body = await req.json();
     const { prescriptionText, imageBase64, basketSessionId, blockedProducts } = body;
 
+    // Payload size limits to prevent resource exhaustion / quota abuse
+    const MAX_TEXT_CHARS = 10_000;
+    const MAX_IMAGE_B64_CHARS = 6_700_000; // ~5 MB binary
+    if (typeof prescriptionText === "string" && prescriptionText.length > MAX_TEXT_CHARS) {
+      return new Response(
+        JSON.stringify({ error: "PAYLOAD_TOO_LARGE", message: `prescriptionText dépasse ${MAX_TEXT_CHARS} caractères` }),
+        { status: 413, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    if (typeof imageBase64 === "string" && imageBase64.length > MAX_IMAGE_B64_CHARS) {
+      return new Response(
+        JSON.stringify({ error: "PAYLOAD_TOO_LARGE", message: "Image trop volumineuse (max ~5 MB)" }),
+        { status: 413, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
