@@ -2073,7 +2073,6 @@ serve(async (req) => {
               pharmacy_id: pharmacyId,
               user_id: userId,
               patient_hash: patientHash,
-              patient_name: null,
               prescription_hash: prescriptionHash,
               medicaments: result.medicaments,
               interactions_count: interactions.length,
