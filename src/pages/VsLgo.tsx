@@ -1,13 +1,10 @@
 import { Link } from "react-router-dom";
-import { ArrowLeft, Check, X, Brain, ShieldCheck, MessageSquare, BarChart3, RefreshCw, Layers, Unlock } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import Seo from "@/components/Seo";
 import { useI18n } from "@/i18n/I18nProvider";
 import LanguageToggle from "@/i18n/LanguageToggle";
 import type { TranslationKey } from "@/i18n/translations";
-
-const diffIcons = [ShieldCheck, Brain, MessageSquare, BarChart3, RefreshCw, Layers, Unlock];
 
 export default function VsLgo() {
   const { t, lp } = useI18n();
@@ -15,7 +12,6 @@ export default function VsLgo() {
   const differentiators = Array.from({ length: 7 }, (_, i) => {
     const n = i + 1;
     return {
-      icon: diffIcons[i],
       title: t(`vslgo.d${n}.title` as TranslationKey),
       lgo: t(`vslgo.d${n}.lgo` as TranslationKey),
       asclion: t(`vslgo.d${n}.asclion` as TranslationKey),
@@ -36,174 +32,133 @@ export default function VsLgo() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-accent/30 to-background relative overflow-hidden">
-      <Seo
-        title={t("seo.vslgo.title")}
-        description={t("seo.vslgo.desc")}
-        path="/vs-lgo"
-      />
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 h-[600px] w-[600px] rounded-full bg-primary/25 blur-3xl animate-pulse" style={{ animationDuration: "8s" }} />
-        <div className="absolute top-[35%] -left-40 h-[500px] w-[500px] rounded-full bg-pharmacy-teal/25 blur-3xl animate-pulse" style={{ animationDuration: "10s" }} />
-        <div className="absolute bottom-0 right-1/4 h-[550px] w-[550px] rounded-full bg-pharmacy-warm/20 blur-3xl animate-pulse" style={{ animationDuration: "12s" }} />
-        <div className="absolute top-[60%] right-[10%] h-[350px] w-[350px] rounded-full bg-primary/15 blur-3xl" />
-      </div>
+    <div className="min-h-screen bg-background">
+      <Seo title={t("seo.vslgo.title")} description={t("seo.vslgo.desc")} path="/vs-lgo" />
 
-      <div
-        className="pointer-events-none absolute inset-0 opacity-[0.06]"
-        style={{
-          backgroundImage:
-            "linear-gradient(hsl(var(--foreground)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--foreground)) 1px, transparent 1px)",
-          backgroundSize: "40px 40px",
-        }}
-      />
-
-      <div
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(ellipse 80% 50% at 50% 0%, hsl(var(--primary) / 0.15), transparent 70%)",
-        }}
-      />
-
-      <div className="relative z-10">
-        <header className="border-b border-border/50 bg-background/70 backdrop-blur-md sticky top-0 z-40">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-            <Link to={lp("/")} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
-              <ArrowLeft className="h-4 w-4" />
-              {t("vslgo.back")}
-            </Link>
-            <div className="flex items-center gap-3">
-              <LanguageToggle />
-              <span className="text-lg font-bold tracking-tight">Asclion</span>
-            </div>
+      <header className="border-b border-border">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
+          <Link to={lp("/")} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <ArrowLeft className="h-4 w-4" />
+            {t("vslgo.back")}
+          </Link>
+          <div className="flex items-center gap-3">
+            <LanguageToggle />
+            <span className="font-semibold tracking-tight">Asclion</span>
           </div>
-        </header>
+        </div>
+      </header>
 
-        <section className="max-w-4xl mx-auto px-4 sm:px-6 py-16 sm:py-24 text-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold mb-6 border border-primary/20">
-            {t("vslgo.badge")}
-          </div>
-          <h1 className="text-4xl sm:text-6xl font-bold tracking-tight mb-6">
-            Asclion <span className="text-muted-foreground/60">vs</span>{" "}
-            <span className="bg-gradient-to-r from-primary to-pharmacy-teal bg-clip-text text-transparent">LGO</span>
-          </h1>
-          <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-            {t("vslgo.subtitle")}
+      {/* HERO */}
+      <section className="max-w-3xl mx-auto px-4 sm:px-6 pt-20 pb-16">
+        <p className="mono-label mb-8">{t("vslgo.badge")}</p>
+        <h1 className="text-4xl sm:text-6xl font-semibold tracking-[-0.02em] leading-[1.05]">
+          Asclion <span className="text-muted-foreground/50">vs</span> LGO
+        </h1>
+        <p className="mt-6 text-base sm:text-lg text-muted-foreground max-w-2xl leading-relaxed">
+          {t("vslgo.subtitle")}
+        </p>
+      </section>
+
+      {/* PITCH */}
+      <section className="border-y border-border bg-secondary/40">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-16">
+          <p className="text-lg sm:text-xl leading-relaxed border-l-2 border-primary pl-6 text-foreground/90">
+            {t("vslgo.pitch")}
           </p>
-        </section>
+        </div>
+      </section>
 
-        <section className="max-w-4xl mx-auto px-4 sm:px-6 mb-16">
-          <Card className="p-8 bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
-            <p className="text-xl sm:text-2xl font-medium leading-relaxed text-center italic">
-              {t("vslgo.pitch")}
-            </p>
-          </Card>
-        </section>
+      {/* DIFFERENTIATORS */}
+      <section className="max-w-4xl mx-auto px-4 sm:px-6 py-20">
+        <div className="flex items-baseline justify-between mb-12 border-b border-border pb-3">
+          <h2 className="text-xl font-semibold tracking-tight">{t("vslgo.diff.title")}</h2>
+          <span className="mono-label">07 points</span>
+        </div>
+        <p className="text-sm text-muted-foreground mb-10 max-w-2xl">{t("vslgo.diff.subtitle")}</p>
 
-        <section className="max-w-6xl mx-auto px-4 sm:px-6 py-12">
-          <h2 className="text-3xl sm:text-4xl font-bold text-center mb-4">{t("vslgo.diff.title")}</h2>
-          <p className="text-center text-muted-foreground mb-12 max-w-2xl mx-auto">{t("vslgo.diff.subtitle")}</p>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {differentiators.map((d, i) => {
-              const Icon = d.icon;
-              return (
-                <Card key={i} className="p-6 bg-card/70 backdrop-blur-sm border-border/60 hover:shadow-xl hover:border-primary/30 hover:-translate-y-0.5 transition-all duration-300">
-                  <div className="flex items-start gap-4 mb-4">
-                    <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-primary to-pharmacy-teal flex items-center justify-center shrink-0 shadow-md shadow-primary/20">
-                      <Icon className="h-5 w-5 text-primary-foreground" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="text-xs font-semibold text-primary uppercase tracking-wider mb-1">
-                        {t("vslgo.diff.label")} {i + 1}
-                      </div>
-                      <h3 className="text-lg font-bold leading-tight">{d.title}</h3>
-                    </div>
+        <div className="space-y-12">
+          {differentiators.map((d, i) => (
+            <article key={i} className="grid grid-cols-[48px_1fr] gap-x-4 sm:gap-x-6">
+              <div className="mono-label text-primary pt-1">{String(i + 1).padStart(2, "0")}</div>
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium tracking-tight">{d.title}</h3>
+                <dl className="grid sm:grid-cols-2 gap-px bg-border border border-border">
+                  <div className="bg-background p-4 space-y-1.5">
+                    <dt className="mono-label flex items-center gap-1.5">
+                      <X className="h-3 w-3" /> {t("vslgo.classic")}
+                    </dt>
+                    <dd className="text-sm text-muted-foreground leading-relaxed">{d.lgo}</dd>
                   </div>
-
-                  <div className="space-y-3 text-sm">
-                    <div className="p-3 rounded-md bg-destructive/5 border border-destructive/10">
-                      <div className="flex items-center gap-2 mb-1">
-                        <X className="h-3.5 w-3.5 text-destructive" />
-                        <span className="font-semibold text-destructive">{t("vslgo.classic")}</span>
-                      </div>
-                      <p className="text-muted-foreground">{d.lgo}</p>
-                    </div>
-
-                    <div className="p-3 rounded-md bg-primary/5 border border-primary/20">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Check className="h-3.5 w-3.5 text-primary" />
-                        <span className="font-semibold text-primary">Asclion</span>
-                      </div>
-                      <p className="text-foreground">{d.asclion}</p>
-                    </div>
-
-                    <p className="text-xs italic text-muted-foreground pt-1">💬 {d.pitch}</p>
+                  <div className="bg-background p-4 space-y-1.5">
+                    <dt className="mono-label text-primary flex items-center gap-1.5">
+                      <Check className="h-3 w-3" /> Asclion
+                    </dt>
+                    <dd className="text-sm text-foreground leading-relaxed">{d.asclion}</dd>
                   </div>
-                </Card>
-              );
-            })}
+                </dl>
+                <p className="text-xs text-muted-foreground italic">{d.pitch}</p>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      {/* COMPARISON TABLE */}
+      <section className="border-t border-border bg-secondary/40">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-20">
+          <div className="flex items-baseline justify-between mb-8 border-b border-border pb-3">
+            <h2 className="text-xl font-semibold tracking-tight">{t("vslgo.table.title")}</h2>
+            <span className="mono-label">tableau</span>
           </div>
-        </section>
+          <p className="text-sm text-muted-foreground mb-8">{t("vslgo.table.subtitle")}</p>
 
-        <section className="max-w-5xl mx-auto px-4 sm:px-6 py-16">
-          <h2 className="text-3xl sm:text-4xl font-bold text-center mb-4">{t("vslgo.table.title")}</h2>
-          <p className="text-center text-muted-foreground mb-12">{t("vslgo.table.subtitle")}</p>
-
-          <Card className="overflow-hidden bg-card/70 backdrop-blur-sm border-border/60 shadow-xl">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-gradient-to-r from-muted/60 to-muted/30 border-b border-border">
-                  <tr>
-                    <th className="text-left p-4 font-semibold">{t("vslgo.table.criteria")}</th>
-                    <th className="text-left p-4 font-semibold text-muted-foreground">{t("vslgo.table.lgo")}</th>
-                    <th className="text-left p-4 font-semibold text-primary">Asclion</th>
+          <div className="overflow-x-auto border border-border bg-background">
+            <table className="w-full text-sm">
+              <thead className="border-b border-border">
+                <tr>
+                  <th className="text-left p-4 font-medium mono-label">{t("vslgo.table.criteria")}</th>
+                  <th className="text-left p-4 font-medium mono-label">{t("vslgo.table.lgo")}</th>
+                  <th className="text-left p-4 font-medium mono-label text-primary">Asclion</th>
+                </tr>
+              </thead>
+              <tbody>
+                {comparisonRows.map((row, i) => (
+                  <tr key={i} className="border-b border-border/60 last:border-0">
+                    <td className="p-4 font-medium">{row.criteria}</td>
+                    <td className="p-4 text-muted-foreground">
+                      {typeof row.lgo === "boolean"
+                        ? (row.lgo ? <Check className="h-4 w-4 text-primary" /> : <X className="h-4 w-4 text-muted-foreground/60" />)
+                        : row.lgo}
+                    </td>
+                    <td className="p-4">
+                      {typeof row.asclion === "boolean"
+                        ? (row.asclion ? <Check className="h-4 w-4 text-primary" /> : <X className="h-4 w-4 text-muted-foreground/60" />)
+                        : <span className="font-medium">{row.asclion}</span>}
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {comparisonRows.map((row, i) => (
-                    <tr key={i} className="border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors">
-                      <td className="p-4 font-medium">{row.criteria}</td>
-                      <td className="p-4 text-muted-foreground">
-                        {typeof row.lgo === "boolean" ? (
-                          row.lgo ? <Check className="h-4 w-4 text-primary" /> : <X className="h-4 w-4 text-destructive" />
-                        ) : (
-                          row.lgo
-                        )}
-                      </td>
-                      <td className="p-4">
-                        {typeof row.asclion === "boolean" ? (
-                          row.asclion ? <Check className="h-4 w-4 text-primary" /> : <X className="h-4 w-4 text-destructive" />
-                        ) : (
-                          <span className="font-medium">{row.asclion}</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-        </section>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
 
-        <section className="max-w-3xl mx-auto px-4 sm:px-6 py-20 text-center">
-          <Card className="p-12 bg-gradient-to-br from-primary/10 via-pharmacy-teal/5 to-pharmacy-warm/10 border-primary/20 backdrop-blur-sm shadow-xl">
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4">{t("vslgo.cta.title")}</h2>
-            <p className="text-muted-foreground mb-8 text-lg">{t("vslgo.cta.subtitle")}</p>
-            <Link to={lp("/")}>
-              <Button size="lg" className="pharmacy-gradient border-0 shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-shadow">
-                {t("vslgo.cta.button")}
-                <ArrowLeft className="h-4 w-4 ml-2 rotate-180" />
-              </Button>
-            </Link>
-          </Card>
-        </section>
+      {/* CTA */}
+      <section className="max-w-2xl mx-auto px-4 sm:px-6 py-24 text-center">
+        <p className="mono-label mb-6">Étape suivante</p>
+        <h2 className="text-3xl sm:text-4xl font-semibold tracking-[-0.02em] mb-4">{t("vslgo.cta.title")}</h2>
+        <p className="text-muted-foreground mb-10">{t("vslgo.cta.subtitle")}</p>
+        <Link to={lp("/")}>
+          <Button size="lg" className="h-11 px-6 text-sm font-medium gap-2">
+            {t("vslgo.cta.button")}
+            <ArrowRight className="h-4 w-4" />
+          </Button>
+        </Link>
+      </section>
 
-        <footer className="border-t border-border/50 py-8 text-center text-xs text-muted-foreground">
-          <p>{t("vslgo.footer")}</p>
-        </footer>
-      </div>
+      <footer className="border-t border-border py-8 text-center mono-label">
+        {t("vslgo.footer")}
+      </footer>
     </div>
   );
 }

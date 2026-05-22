@@ -151,7 +151,7 @@ const Index = () => {
         return;
       }
 
-      toast.success(`💊 ${med.nom_commercial} identifié`);
+      toast.success(`${med.nom_commercial} identifié`);
 
       // Lookup pathologies and complementary products
       const { data: pathLinks } = await supabase
