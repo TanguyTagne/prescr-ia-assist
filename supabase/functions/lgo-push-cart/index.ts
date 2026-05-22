@@ -93,6 +93,29 @@ serve(async (req) => {
     let lgoSuccess = false;
 
     if (lgoConfig.api_base_url && lgoConfig.api_base_url.length > 5) {
+      // SSRF guard: only allow https:// public hostnames
+      let parsedUrl: URL | null = null;
+      try { parsedUrl = new URL(lgoConfig.api_base_url); } catch { parsedUrl = null; }
+      const host = parsedUrl?.hostname?.toLowerCase() ?? "";
+      const isPrivate =
+        !parsedUrl ||
+        parsedUrl.protocol !== "https:" ||
+        host === "localhost" ||
+        host === "0.0.0.0" ||
+        /^127\./.test(host) ||
+        /^10\./.test(host) ||
+        /^192\.168\./.test(host) ||
+        /^169\.254\./.test(host) ||
+        /^172\.(1[6-9]|2\d|3[01])\./.test(host) ||
+        host.endsWith(".local") ||
+        host.endsWith(".internal") ||
+        /^\[?(::1|fc00|fd|fe80)/i.test(host);
+      if (isPrivate) {
+        return new Response(
+          JSON.stringify({ error: "URL LGO invalide: HTTPS public requis" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
       try {
         const headers: Record<string, string> = {
           "Content-Type": "application/json",
