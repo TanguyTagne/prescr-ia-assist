@@ -136,7 +136,6 @@ serve(async (req) => {
         .from("analysis_history")
         .update({
           patient_hash: "DELETED",
-          patient_name: null,
           metadata: { anonymized: true, anonymized_at: new Date().toISOString() },
         } as any)
         .eq("pharmacy_id", pharmacyId)
