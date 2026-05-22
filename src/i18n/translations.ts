@@ -9,31 +9,31 @@ export const translations = {
   "nav.signout": { fr: "Déconnexion", en: "Sign out" },
 
   // ===== LANDING =====
-  "landing.badge": { fr: "v0.9 · pharmacies pilotes ouvertes", en: "v0.9 · pilot pharmacies onboarding" },
-  "landing.title.line1": { fr: "Le conseil associé,", en: "The right counter advice," },
-  "landing.title.line2": { fr: "sans le chercher.", en: "without looking for it." },
+  "landing.badge": { fr: "Copilote IA pour l'équipe officinale", en: "AI copilot for the pharmacy team" },
+  "landing.title.line1": { fr: "Le conseil associé,", en: "Companion advice," },
+  "landing.title.line2": { fr: "automatisé et intelligent", en: "automated and intelligent" },
   "landing.subtitle": {
-    fr: "Asclion lit chaque ordonnance ou médicament scanné, repère ce qui manque vraiment au patient, et écrit la phrase à dire — directement au comptoir, en moins de 3 secondes.",
-    en: "Asclion reads every prescription or scanned drug, spots what the patient actually needs, and writes the phrase to say — at the counter, in under 3 seconds.",
+    fr: "Asclion analyse chaque ordonnance et médicament scanné en quelques secondes, identifie les besoins du patient et suggère les produits complémentaires les plus pertinents — accompagnement du traitement, réduction des effets secondaires — directement au comptoir.",
+    en: "Asclion analyzes every prescription in seconds, identifies patient needs and suggests the most relevant complementary products — treatment support, side-effect reduction — right at the counter.",
   },
   "landing.cta.access": { fr: "Demander un accès", en: "Request access" },
   "landing.cta.vsLgo": { fr: "Asclion vs LGO", en: "Asclion vs LGO" },
 
   "landing.how.title": { fr: "Comment ça marche", en: "How it works" },
-  "landing.how.step1.title": { fr: "Vous scannez.", en: "You scan." },
+  "landing.how.step1.title": { fr: "Scannez ou tapez", en: "Scan or type" },
   "landing.how.step1.desc": {
-    fr: "Douchette, dossier surveillé ou saisie clavier. Aucun bouton à cliquer, aucune configuration par poste.",
-    en: "Barcode gun, watched folder or keyboard input. No button to click, no per-machine setup.",
+    fr: "Connectez votre scanner ou l'IA se charge de lire les médicaments prescrits. Asclion détecte automatiquement les nouveaux fichiers.",
+    en: "Connect your scanner or let the AI read the prescribed medications. Asclion automatically detects new files.",
   },
-  "landing.how.step2.title": { fr: "On lit.", en: "We read." },
+  "landing.how.step2.title": { fr: "Analyse IA instantanée", en: "Instant AI analysis" },
   "landing.how.step2.desc": {
-    fr: "Reconnaissance de la molécule, de la pathologie probable et des interactions, en moins de 2,5 s.",
-    en: "Molecule, likely pathology and interactions recognised, in under 2.5 seconds.",
+    fr: "L'IA identifie les interactions, le contexte thérapeutique et génère des questions pertinentes à poser au patient.",
+    en: "The AI identifies interactions, therapeutic context, and generates relevant questions to ask the patient.",
   },
-  "landing.how.step3.title": { fr: "On propose.", en: "We suggest." },
+  "landing.how.step3.title": { fr: "Suggestions au comptoir", en: "Counter suggestions" },
   "landing.how.step3.desc": {
-    fr: "Top produits réellement utiles pour ce patient, avec la phrase mi-technique mi-commerciale à dire.",
-    en: "Top products that actually help this patient, with the half-clinical half-commercial phrase to say.",
+    fr: "Recevez des suggestions de produits complémentaires disponibles dans votre stock, avec des phrases conseils.",
+    en: "Get suggestions for complementary products available in your stock, with ready-to-say advice phrases.",
   },
 
   "landing.access.title": { fr: "Demande de renseignements", en: "Request information" },
@@ -170,7 +170,7 @@ export const translations = {
   "vslgo.cta.title": { fr: "Voir Asclion en action", en: "See Asclion in action" },
   "vslgo.cta.subtitle": { fr: "10 minutes de démo suffisent pour comprendre la différence.", en: "10 minutes of demo is enough to see the difference." },
   "vslgo.cta.button": { fr: "Demander une démo", en: "Request a demo" },
-  "vslgo.footer": { fr: "© Asclion — Le conseil associé au comptoir", en: "© Asclion — Counter advice that works" },
+  "vslgo.footer": { fr: "© Asclion — Le copilote IA des pharmaciens", en: "© Asclion — The AI copilot for pharmacists" },
 
   // Differentiators
   "vslgo.d1.title": { fr: "Indépendance commerciale = confiance clinique", en: "Commercial independence = clinical trust" },
@@ -314,7 +314,7 @@ export const translations = {
   "demo.lead.dismiss": { fr: "Fermer", en: "Close" },
 
   // ===== ANALYSIS RESULTS =====
-  "results.empty": { fr: "Aucun médicament reconnu.", en: "No medication recognized." },
+  "results.empty": { fr: "🔍 Aucun médicament reconnu.", en: "🔍 No medication recognized." },
   "results.newAnalysis": { fr: "Nouvelle analyse", en: "New analysis" },
   "results.newPrescription": { fr: "Nouvelle ordonnance", en: "New prescription" },
   "results.interactions": { fr: "Interactions", en: "Interactions" },
@@ -354,20 +354,20 @@ export const translations = {
 
   // ===== SEO META =====
   "seo.landing.title": {
-    fr: "Asclion — Le conseil associé au comptoir, en moins de 3 secondes",
-    en: "Asclion — Counter advice that works, in under 3 seconds",
+    fr: "Asclion — Copilote pharmacien intelligent au comptoir",
+    en: "Asclion — Smart pharmacist copilot at the counter",
   },
   "seo.landing.desc": {
-    fr: "Asclion lit l'ordonnance ou les médicaments scannés et propose le conseil associé pertinent en moins de 3 secondes. Pour les pharmacies d'officine.",
-    en: "Asclion reads the prescription or scanned drugs and suggests the right counter advice in under 3 seconds. Built for community pharmacies.",
+    fr: "Asclion analyse l'ordonnance en moins de 3s et suggère les produits complémentaires pertinents. Copilote IA pour pharmaciens d'officine.",
+    en: "Asclion analyzes prescriptions in under 3s and suggests relevant complementary products. AI copilot for community pharmacists.",
   },
   "seo.vslgo.title": {
-    fr: "Asclion vs LGO — Comparatif comptoir et conseil associé",
-    en: "Asclion vs pharmacy software — Counter advice comparison",
+    fr: "Asclion vs LGO — Comparatif copilote IA pharmacie",
+    en: "Asclion vs PMS — AI pharmacy copilot comparison",
   },
   "seo.vslgo.desc": {
-    fr: "Asclion vs Winpharma, LGPI, Pharmagest : pourquoi un outil dédié au conseil associé surpasse les modules cross-sell des LGO.",
-    en: "Asclion vs Winpharma, LGPI, Pharmagest: why a dedicated counter-advice tool outperforms the cross-sell modules of traditional pharmacy systems.",
+    fr: "Asclion vs Winpharma, LGPI, Pharmagest : pourquoi un copilote IA dédié au conseil associé surpasse les modules cross-sell des LGO.",
+    en: "Asclion vs Winpharma, LGPI, Pharmagest: why a dedicated AI copilot outperforms the cross-sell modules of traditional pharmacy systems.",
   },
   "seo.aide.title": {
     fr: "Aide — FAQ Asclion pour pharmaciens",
@@ -382,16 +382,16 @@ export const translations = {
     en: "Sign in — Asclion",
   },
   "seo.auth.desc": {
-    fr: "Connectez-vous à votre espace Asclion.",
-    en: "Sign in to your Asclion workspace.",
+    fr: "Connectez-vous à votre espace Asclion pour accéder au copilote IA de votre pharmacie.",
+    en: "Sign in to your Asclion workspace to access your pharmacy's AI copilot.",
   },
   "seo.features.title": {
-    fr: "Fonctionnalités Asclion — Tout ce que l'outil fait au comptoir",
-    en: "Asclion features — Everything the tool does at the counter",
+    fr: "Fonctionnalités Asclion — Toutes les capacités du copilote",
+    en: "Asclion Features — Every copilot capability",
   },
   "seo.features.desc": {
-    fr: "Toutes les fonctionnalités d'Asclion : scan douchette, analyse clinique, recommandations personnalisées, intégration LGO, dashboard KPI.",
-    en: "Every Asclion feature: barcode scan, clinical analysis, tailored recommendations, PMS integration, KPI dashboard.",
+    fr: "Découvrez toutes les fonctionnalités d'Asclion : scan douchette, analyse clinique IA, recommandations personnalisées, intégration LGO, dashboard KPI.",
+    en: "Discover every Asclion feature: barcode scan, AI clinical analysis, tailored recommendations, PMS integration, KPI dashboard.",
   },
   "seo.legal.mentions.title": {
     fr: "Mentions légales — Asclion",
@@ -450,8 +450,8 @@ export const translations = {
   },
   "aide.faq.q2": { fr: "Asclion remplace-t-il mon LGO ?", en: "Does Asclion replace my pharmacy management system?" },
   "aide.faq.a2": {
-    fr: "Non, Asclion vient en complément et s'intègre à votre LGO existant (Winpharma, LGPI, Pharmagest).",
-    en: "No, Asclion is a complement that integrates with your existing pharmacy management system (Winpharma, LGPI, Pharmagest).",
+    fr: "Non, Asclion est un copilote complémentaire qui s'intègre à votre LGO existant (Winpharma, LGPI, Pharmagest).",
+    en: "No, Asclion is a complementary copilot that integrates with your existing pharmacy management system (Winpharma, LGPI, Pharmagest).",
   },
   "aide.faq.q3": { fr: "Les données patient sont-elles protégées ?", en: "Is patient data protected?" },
   "aide.faq.a3": {

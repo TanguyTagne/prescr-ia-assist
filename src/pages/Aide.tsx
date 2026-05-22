@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ArrowLeft, Mail } from "lucide-react";
+import { ArrowLeft, HelpCircle, Mail } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import SiteFooter from "@/components/SiteFooter";
@@ -24,90 +24,97 @@ const Aide = () => {
           ],
         }}
       />
-
-      <header className="border-b border-border">
-        <div className="container max-w-3xl mx-auto px-4 h-14 flex items-center gap-3">
+      <header className="pharmacy-gradient px-4 py-4">
+        <div className="container max-w-3xl mx-auto flex items-center gap-3">
           <Link to={lp("/")}>
-            <Button variant="ghost" size="icon" aria-label={t("aide.back")}>
-              <ArrowLeft className="h-4 w-4" />
+            <Button variant="ghost" size="icon" className="text-primary-foreground hover:bg-primary-foreground/10" aria-label={t("aide.back")}>
+              <ArrowLeft className="h-5 w-5" />
             </Button>
           </Link>
-          <span className="font-semibold tracking-tight">Asclion</span>
-          <span className="mono-label hidden sm:inline">/ aide</span>
+          <div className="flex items-center gap-2">
+            <HelpCircle className="h-5 w-5 text-primary-foreground" />
+            <h1 className="text-xl font-bold text-primary-foreground tracking-tight">{t("aide.title")}</h1>
+          </div>
         </div>
       </header>
 
-      <main className="container max-w-3xl mx-auto px-4 py-16 flex-1 space-y-10">
-        <div className="space-y-3">
-          <p className="mono-label">FAQ</p>
-          <h1 className="text-3xl sm:text-4xl font-semibold tracking-[-0.02em]">{t("aide.title")}</h1>
-          <p className="text-sm text-muted-foreground">
-            {t("aide.intro")}{" "}
-            <a href="mailto:support@asclion.com" className="text-primary underline underline-offset-2">{t("aide.contact")}</a>.
-          </p>
-        </div>
+      <main className="container max-w-3xl mx-auto px-4 py-8 flex-1">
+        <p className="text-sm text-muted-foreground mb-6">
+          {t("aide.intro")}
+          <a href="mailto:support@asclion.com" className="text-primary hover:underline ml-1">{t("aide.contact")}</a>.
+        </p>
 
-        <Accordion type="single" collapsible className="border-t border-border">
-          {[
-            { v: "scanner", q: t("aide.q1"), body: <><p>{t("aide.a1.p1")}</p><p>{t("aide.a1.p2")}</p></> },
-            { v: "lgo", q: t("aide.q2"), body: <><p>{t("aide.a2.p1")}</p><p>{t("aide.a2.p2")}</p></> },
-            {
-              v: "recommendations", q: t("aide.q3"), body: <>
-                <p>{t("aide.a3.p1")}</p>
-                <ul className="space-y-1 mt-2">
-                  <li>— {t("aide.a3.li1")} <a href="mailto:support@asclion.com" className="text-primary underline underline-offset-2">support@asclion.com</a>.</li>
-                  <li>— {t("aide.a3.li2")}</li>
-                </ul>
-              </>
-            },
-            {
-              v: "performance", q: t("aide.q4"), body: <>
-                <p>{t("aide.a4.p1")}</p>
-                <ul className="space-y-1 mt-2">
-                  <li>— {t("aide.a4.li1")}</li>
-                  <li>— {t("aide.a4.li2")}</li>
-                  <li>— {t("aide.a4.li3")}</li>
-                </ul>
-              </>
-            },
-            {
-              v: "shortcuts", q: t("aide.q5"), body: <>
-                <ul className="space-y-1 font-mono text-xs">
-                  <li>{t("aide.a5.k1")}</li>
-                  <li>{t("aide.a5.k2")}</li>
-                  <li>{t("aide.a5.k3")}</li>
-                  <li>{t("aide.a5.k4")}</li>
-                  <li>{t("aide.a5.k5")}</li>
-                </ul>
-                <p className="text-xs text-muted-foreground mt-2">{t("aide.a5.note")}</p>
-              </>
-            },
-            {
-              v: "privacy", q: t("aide.q6"), body: <>
-                <p>{t("aide.a6.p1")}</p>
-                <p className="mt-2">
-                  {t("aide.a6.p2")}{" "}
-                  <Link to={lp("/confidentialite")} className="text-primary underline underline-offset-2">{t("footer.privacy").toLowerCase()}</Link>.
-                </p>
-              </>
-            },
-          ].map((item) => (
-            <AccordionItem key={item.v} value={item.v} className="border-b border-border">
-              <AccordionTrigger className="text-left text-sm font-medium py-4 hover:no-underline">
-                {item.q}
-              </AccordionTrigger>
-              <AccordionContent className="text-sm text-muted-foreground leading-relaxed pb-4 space-y-2">
-                {item.body}
-              </AccordionContent>
-            </AccordionItem>
-          ))}
+        <Accordion type="single" collapsible className="space-y-2">
+          <AccordionItem value="scanner" className="border border-border rounded-lg px-4">
+            <AccordionTrigger className="text-sm font-semibold">{t("aide.q1")}</AccordionTrigger>
+            <AccordionContent className="text-sm text-foreground/80 leading-relaxed space-y-2">
+              <p>{t("aide.a1.p1")}</p>
+              <p>{t("aide.a1.p2")}</p>
+            </AccordionContent>
+          </AccordionItem>
 
-          <AccordionItem value="contact" className="border-b border-border">
-            <AccordionTrigger className="text-left text-sm font-medium py-4 hover:no-underline">{t("aide.q7")}</AccordionTrigger>
-            <AccordionContent className="text-sm text-muted-foreground leading-relaxed pb-4 space-y-3">
+          <AccordionItem value="lgo" className="border border-border rounded-lg px-4">
+            <AccordionTrigger className="text-sm font-semibold">{t("aide.q2")}</AccordionTrigger>
+            <AccordionContent className="text-sm text-foreground/80 leading-relaxed space-y-2">
+              <p>{t("aide.a2.p1")}</p>
+              <p>{t("aide.a2.p2")}</p>
+            </AccordionContent>
+          </AccordionItem>
+
+          <AccordionItem value="recommendations" className="border border-border rounded-lg px-4">
+            <AccordionTrigger className="text-sm font-semibold">{t("aide.q3")}</AccordionTrigger>
+            <AccordionContent className="text-sm text-foreground/80 leading-relaxed space-y-2">
+              <p>{t("aide.a3.p1")}</p>
+              <ul className="list-disc list-inside space-y-1 ml-2">
+                <li>{t("aide.a3.li1")} <a href="mailto:support@asclion.com" className="text-primary hover:underline">support@asclion.com</a>.</li>
+                <li>{t("aide.a3.li2")}</li>
+              </ul>
+            </AccordionContent>
+          </AccordionItem>
+
+          <AccordionItem value="performance" className="border border-border rounded-lg px-4">
+            <AccordionTrigger className="text-sm font-semibold">{t("aide.q4")}</AccordionTrigger>
+            <AccordionContent className="text-sm text-foreground/80 leading-relaxed space-y-2">
+              <p>{t("aide.a4.p1")}</p>
+              <ul className="list-disc list-inside space-y-1 ml-2">
+                <li>{t("aide.a4.li1")}</li>
+                <li>{t("aide.a4.li2")}</li>
+                <li>{t("aide.a4.li3")}</li>
+              </ul>
+            </AccordionContent>
+          </AccordionItem>
+
+          <AccordionItem value="shortcuts" className="border border-border rounded-lg px-4">
+            <AccordionTrigger className="text-sm font-semibold">{t("aide.q5")}</AccordionTrigger>
+            <AccordionContent className="text-sm text-foreground/80 leading-relaxed space-y-2">
+              <ul className="space-y-1">
+                <li>{t("aide.a5.k1")}</li>
+                <li>{t("aide.a5.k2")}</li>
+                <li>{t("aide.a5.k3")}</li>
+                <li>{t("aide.a5.k4")}</li>
+                <li>{t("aide.a5.k5")}</li>
+              </ul>
+              <p className="text-xs text-muted-foreground">{t("aide.a5.note")}</p>
+            </AccordionContent>
+          </AccordionItem>
+
+          <AccordionItem value="privacy" className="border border-border rounded-lg px-4">
+            <AccordionTrigger className="text-sm font-semibold">{t("aide.q6")}</AccordionTrigger>
+            <AccordionContent className="text-sm text-foreground/80 leading-relaxed space-y-2">
+              <p>{t("aide.a6.p1")}</p>
+              <p>
+                {t("aide.a6.p2")}{" "}
+                <Link to={lp("/confidentialite")} className="text-primary hover:underline">{t("footer.privacy").toLowerCase()}</Link>.
+              </p>
+            </AccordionContent>
+          </AccordionItem>
+
+          <AccordionItem value="contact" className="border border-border rounded-lg px-4">
+            <AccordionTrigger className="text-sm font-semibold">{t("aide.q7")}</AccordionTrigger>
+            <AccordionContent className="text-sm text-foreground/80 leading-relaxed space-y-3">
               <p>{t("aide.a7.p1")}</p>
               <a href="mailto:support@asclion.com">
-                <Button size="sm" variant="outline" className="gap-2">
+                <Button className="gap-2 pharmacy-gradient border-0">
                   <Mail className="h-4 w-4" />
                   support@asclion.com
                 </Button>

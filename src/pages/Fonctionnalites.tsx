@@ -1,5 +1,6 @@
-import { ArrowLeft, ScanLine, FileSearch, Brain, ShoppingBag, Keyboard, Package, Monitor, BarChart3, Bell, Users, Network, Sparkles, Wrench, BookOpen, Lock } from "lucide-react";
+import { ArrowLeft, ScanLine, FileSearch, Brain, ShoppingBag, Keyboard, Package, Monitor, Shield, BarChart3, Bell, Users, Network, Sparkles, Wrench, BookOpen, Lock, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import Seo from "@/components/Seo";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -13,14 +14,14 @@ interface Feature {
 
 const sections: { title: string; features: Feature[] }[] = [
   {
-    title: "Au comptoir — lecture instantanée",
+    title: "Au comptoir — analyse instantanée",
     features: [
       {
         icon: ScanLine,
         title: "Scan douchette zéro-config",
-        description: "Branchez la douchette et scannez. Asclion reconnaît le CIP, sans paramétrage par poste.",
+        description: "Branchez la douchette et scannez : Asclion détecte automatiquement le code-barres du médicament, sans configuration.",
         details: [
-          "Compatible toute douchette HID standard (USB ou Bluetooth)",
+          "Compatible avec toute douchette HID standard (USB ou Bluetooth)",
           "Capture globale : fonctionne même si le widget n'a pas le focus",
           "Reconnaissance instantanée du CIP français",
         ],
@@ -28,21 +29,21 @@ const sections: { title: string; features: Feature[] }[] = [
       {
         icon: FileSearch,
         title: "Surveillance de dossier",
-        description: "Le scanner de bureau dépose l'ordonnance dans un dossier, Asclion la prend en charge dès qu'elle apparaît.",
+        description: "Asclion détecte automatiquement chaque ordonnance scannée déposée dans le dossier configuré.",
         details: [
           "PDF et images (JPG, PNG) acceptés",
           "Aucun bouton à cliquer — l'analyse démarre dès la détection",
-          "Compatible avec les scanners de bureau classiques",
+          "Compatible avec scanners de bureau classiques",
         ],
       },
       {
         icon: Brain,
-        title: "Lecture clinique en moins de 2,5 s",
-        description: "Extraction des molécules, identification des pathologies probables et propositions, en temps réel.",
+        title: "Analyse clinique en moins de 2,5 s",
+        description: "L'IA extrait les médicaments, identifie les pathologies et propose des recommandations en temps réel.",
         details: [
-          "Réponse sous 2,5 s, y compris en pic du samedi matin",
+          "Pipeline optimisé Gemini Flash via Lovable AI",
           "Reconnaissance par fuzzy matching (ignore dosage et forme galénique)",
-          "Repli automatique RxNav / OpenFDA si le médicament n'est pas en base locale",
+          "Fallback automatique RxNav et OpenFDA si non trouvé en local",
         ],
       },
     ],
@@ -52,31 +53,31 @@ const sections: { title: string; features: Feature[] }[] = [
     features: [
       {
         icon: ShoppingBag,
-        title: "Produits réellement utiles",
-        description: "Asclion sélectionne les complémentaires pertinents pour ce patient, avec la phrase prête à dire.",
+        title: "Produits complémentaires intelligents",
+        description: "Asclion suggère les meilleurs produits associés à chaque ordonnance, avec phrases de conseil prêtes à dire.",
         details: [
-          "Top 3 si 1 médicament, Top 2 si 2, Top 1 dès 3 — pour rester lisible",
-          "Maximum 1 besoin latent par ordonnance",
-          "Phrases mi-techniques mi-commerciales (15–25 mots)",
+          "Top 3 si 1 médicament, Top 2 si 2 médicaments, Top 1 si 3+",
+          "Maximum 1 besoin latent par ordonnance pour rester pertinent",
+          "Phrases mi-commerciales / mi-techniques (15-25 mots)",
         ],
       },
       {
         icon: Sparkles,
         title: "Détection des besoins latents",
-        description: "Au-delà du traitement : confort, prévention, accompagnement de l'efficacité.",
+        description: "Au-delà du traitement, Asclion identifie les besoins réels du patient (confort, prévention, accompagnement).",
         details: [
-          "Cible la réduction des effets indésirables iatrogènes",
+          "Réduit les effets indésirables iatrogènes",
           "Accompagne l'efficacité du traitement",
-          "Pondération à 20 % du score final pour rester juste",
+          "Score d'impact pondéré (20% du score final)",
         ],
       },
       {
         icon: Package,
         title: "Personnalisation par pharmacie",
-        description: "Substituez les catégories génériques par vos références en stock.",
+        description: "Substituez les catégories génériques par vos propres références en stock LGO.",
         details: [
-          "Mapping personnalisé par produit et par catégorie",
-          "Push direct au panier LGO (Winpharma, LGPI, Pharmagest)",
+          "Mapping personnalisé par produit et catégorie",
+          "Push automatique au panier LGO (Winpharma, LGPI, Pharmagest)",
           "Prix et disponibilité en temps réel",
         ],
       },
@@ -87,18 +88,18 @@ const sections: { title: string; features: Feature[] }[] = [
     features: [
       {
         icon: Keyboard,
-        title: "Raccourcis clavier",
+        title: "Raccourcis clavier configurables",
         description: "Validez, refusez ou commandez sans toucher à la souris.",
         details: [
           "Raccourcis personnalisables par utilisateur",
           "Touche Échap pour réinitialiser instantanément",
-          "Pensé pour la cadence comptoir",
+          "Workflow sans friction pensé pour la cadence comptoir",
         ],
       },
       {
         icon: Bell,
-        title: "Rappels patients",
-        description: "SMS de rappel de fin de traitement programmés depuis l'historique (Twilio requis).",
+        title: "Rappels patients (CRM)",
+        description: "Asclion peut programmer des SMS de rappel de fin de traitement (nécessite Twilio).",
         details: [
           "Détection automatique de la durée de traitement",
           "Hash patient anonymisé (RGPD)",
@@ -122,18 +123,18 @@ const sections: { title: string; features: Feature[] }[] = [
     features: [
       {
         icon: BarChart3,
-        title: "Dashboard KPI",
-        description: "Ordonnances analysées, taux de conversion, top catégories, temps de réponse.",
+        title: "Dashboard KPI temps réel",
+        description: "Suivez ordonnances analysées, taux de conversion, top catégories et temps de réponse.",
         details: [
-          "Comparaison avec la médiane du benchmark anonymisé",
+          "Comparaison avec moyenne du benchmark anonymisé",
           "Filtrage par caisse et par utilisateur",
           "Export pour analyse externe",
         ],
       },
       {
         icon: Users,
-        title: "Rôles gradués",
-        description: "Préparateur, manager, admin — accès conforme RGPD.",
+        title: "Rôles préparateur / manager / admin",
+        description: "Accès gradué selon le rôle, conforme aux exigences RGPD.",
         details: [
           "Préparateur : analyse au comptoir uniquement",
           "Manager : KPI pharmacie + rappels patients",
@@ -143,11 +144,11 @@ const sections: { title: string; features: Feature[] }[] = [
       {
         icon: Network,
         title: "Espace groupement",
-        description: "Pilotage multi-pharmacies, mappings prioritaires et reporting laboratoires.",
+        description: "Pour les groupements : pilotage multi-pharmacies, mappings prioritaires et reporting laboratoires.",
         details: [
           "Insights agrégés sans accès aux données brutes",
           "Mapping de produits prioritaires par catégorie",
-          "Alertes sur anomalies de couverture",
+          "Alertes automatiques sur anomalies de couverture",
         ],
       },
     ],
@@ -157,11 +158,11 @@ const sections: { title: string; features: Feature[] }[] = [
     features: [
       {
         icon: Monitor,
-        title: "Application Windows",
-        description: "Installation un clic, lancement plein écran, mises à jour automatiques.",
+        title: "Application desktop Windows",
+        description: "Installation un clic, lancement en plein écran, mises à jour automatiques.",
         details: [
           "Cache nettoyé à chaque démarrage (toujours la dernière version)",
-          "Tourne en parallèle de votre LGO",
+          "Fonctionne en parallèle de votre LGO",
           "Aucun navigateur requis",
         ],
       },
@@ -178,11 +179,11 @@ const sections: { title: string; features: Feature[] }[] = [
       {
         icon: Wrench,
         title: "Diagnostic hardware intégré",
-        description: "Vérifiez en direct la douchette et le dossier surveillé.",
+        description: "Vérifiez en direct le bon fonctionnement de la douchette et du dossier surveillé.",
         details: [
-          "Test temps réel des entrées clavier",
+          "Test en temps réel des entrées clavier",
           "Validation du dossier de scan",
-          "Export du rapport en cas de ticket support",
+          "Export du rapport en cas de problème support",
         ],
       },
     ],
@@ -193,6 +194,7 @@ const Fonctionnalites = () => {
   const navigate = useNavigate();
   const { t } = useI18n();
 
+
   return (
     <div className="min-h-screen bg-background">
       <Seo
@@ -201,59 +203,63 @@ const Fonctionnalites = () => {
         path="/fonctionnalites"
       />
 
-      <header className="border-b border-border">
-        <div className="container max-w-5xl mx-auto px-4 h-14 flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)} aria-label="Retour">
-            <ArrowLeft className="h-4 w-4" />
+      <header className="pharmacy-gradient px-4 py-4">
+        <div className="container max-w-5xl mx-auto flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="text-primary-foreground hover:bg-primary-foreground/10">
+            <ArrowLeft className="h-5 w-5" />
           </Button>
-          <span className="font-semibold tracking-tight">Asclion</span>
-          <span className="mono-label hidden sm:inline">/ fonctionnalités</span>
+          <div>
+            <h1 className="text-xl font-bold text-primary-foreground tracking-tight">Fonctionnalités Asclion</h1>
+            <p className="text-xs text-primary-foreground/70">Tout ce que votre copilote sait faire</p>
+          </div>
         </div>
       </header>
 
-      <main className="container max-w-4xl mx-auto px-4 py-16 space-y-20">
-        <div className="space-y-4">
-          <p className="mono-label">Vue d'ensemble</p>
-          <h1 className="text-3xl sm:text-4xl font-semibold tracking-[-0.02em] leading-tight">
-            Tout ce que l'outil fait au comptoir.
-          </h1>
-          <p className="text-base text-muted-foreground max-w-2xl leading-relaxed border-l-2 border-primary pl-4">
-            Asclion lit chaque ordonnance en moins de 2,5 secondes, propose les bons produits complémentaires et la phrase à dire — sans changer votre LGO.
-          </p>
+      <main className="container max-w-5xl mx-auto px-4 py-8 space-y-10">
+        <div className="rounded-lg border border-primary/20 bg-primary/5 p-5 flex items-start gap-3">
+          <Zap className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <p className="text-sm font-semibold">Asclion, en une phrase</p>
+            <p className="text-sm text-foreground/80 leading-relaxed">
+              Un copilote invisible qui analyse chaque ordonnance en moins de 2,5 secondes et propose les bons produits complémentaires avec les bonnes phrases de conseil — sans changer votre LGO.
+            </p>
+          </div>
         </div>
 
-        {sections.map((section, sIdx) => (
-          <section key={section.title} className="space-y-8">
-            <div className="flex items-baseline justify-between border-b border-border pb-3">
-              <h2 className="text-lg font-semibold tracking-tight">{section.title}</h2>
-              <span className="mono-label">{String(sIdx + 1).padStart(2, "0")} / {String(sections.length).padStart(2, "0")}</span>
-            </div>
-            <div className="space-y-10">
+        {sections.map((section) => (
+          <section key={section.title} className="space-y-4">
+            <h2 className="text-lg font-bold tracking-tight border-b border-border pb-2">{section.title}</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {section.features.map((f) => (
-                <article key={f.title} className="grid grid-cols-[24px_1fr] gap-x-4 gap-y-2">
-                  <f.icon className="h-5 w-5 text-primary mt-0.5" />
-                  <div className="space-y-2">
-                    <h3 className="text-base font-medium">{f.title}</h3>
-                    <p className="text-sm text-muted-foreground leading-relaxed">{f.description}</p>
-                  </div>
-                  <div />
-                  <ul className="space-y-1.5">
-                    {f.details.map((d) => (
-                      <li key={d} className="text-xs text-muted-foreground leading-relaxed flex gap-2">
-                        <span className="text-primary/60 select-none">—</span>
-                        <span>{d}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </article>
+                <Card key={f.title} className="glass-card">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <f.icon className="h-4 w-4 text-primary flex-shrink-0" />
+                      {f.title}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <p className="text-xs text-foreground/80 leading-relaxed">{f.description}</p>
+                    <ul className="space-y-1">
+                      {f.details.map((d) => (
+                        <li key={d} className="text-[11px] text-muted-foreground leading-relaxed flex items-start gap-1.5">
+                          <span className="text-primary mt-0.5">•</span>
+                          <span>{d}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
               ))}
             </div>
           </section>
         ))}
 
-        <div className="border-t border-border pt-8 text-sm text-muted-foreground">
-          Une question, un bug, une suggestion ?{" "}
-          <a href="mailto:support@asclion.com" className="text-primary underline underline-offset-2">
+        <div className="rounded-lg border border-border p-5 text-center space-y-3">
+          <p className="text-sm text-muted-foreground">
+            Une question, un bug, une suggestion ?
+          </p>
+          <a href="mailto:support@asclion.com" className="text-sm text-primary hover:underline font-medium">
             support@asclion.com
           </a>
         </div>

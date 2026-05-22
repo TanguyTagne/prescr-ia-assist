@@ -206,7 +206,7 @@ const WidgetApp = () => {
         return;
       }
 
-      toast.success(`${med.nom_commercial} identifié`);
+      toast.success(`💊 ${med.nom_commercial} identifié`);
 
       const { data: pathLinks } = await supabase
         .from("medicament_pathologie")

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { ArrowRight, Download, BarChart3, LogOut, Send, Loader2, Settings } from "lucide-react";
+import { ArrowRight, Download, BarChart3, LogOut, Zap, Send, Loader2, Settings, FolderSearch, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -51,10 +51,10 @@ const AccessRequestForm = () => {
   if (submitted) {
     return (
       <div className="text-center space-y-3 py-4">
-        <div className="h-10 w-10 rounded-full border border-primary/30 flex items-center justify-center mx-auto">
-          <Send className="h-4 w-4 text-primary" />
+        <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+          <Send className="h-5 w-5 text-primary" />
         </div>
-        <p className="font-medium text-sm">{t("form.submitted.title")}</p>
+        <p className="font-semibold">{t("form.submitted.title")}</p>
         <p className="text-sm text-muted-foreground">{t("form.submitted.desc")}</p>
       </div>
     );
@@ -74,12 +74,12 @@ const AccessRequestForm = () => {
         <Checkbox checked={accepted} onCheckedChange={(v) => setAccepted(v === true)} className="mt-0.5" />
         <span>
           {t("form.consent")}{" "}
-          <Link to={lp("/confidentialite")} className="text-primary underline underline-offset-2">{t("form.privacy")}</Link>{" "}
+          <Link to={lp("/confidentialite")} className="text-primary underline">{t("form.privacy")}</Link>{" "}
           {t("form.and")}{" "}
-          <Link to={lp("/cgu")} className="text-primary underline underline-offset-2">{t("form.terms")}</Link>.
+          <Link to={lp("/cgu")} className="text-primary underline">{t("form.terms")}</Link>.
         </span>
       </label>
-      <Button type="submit" className="w-full h-11 text-sm font-medium gap-2" disabled={loading || !accepted}>
+      <Button type="submit" className="w-full h-11 text-sm font-semibold pharmacy-gradient border-0 gap-2" disabled={loading || !accepted}>
         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Send className="h-4 w-4" /> {t("form.submit")}</>}
       </Button>
     </form>
@@ -91,14 +91,14 @@ const Landing = () => {
   const navigate = useNavigate();
   const { t, lp } = useI18n();
 
-  const steps = [
-    { n: "01", title: t("landing.how.step1.title"), desc: t("landing.how.step1.desc") },
-    { n: "02", title: t("landing.how.step2.title"), desc: t("landing.how.step2.desc") },
-    { n: "03", title: t("landing.how.step3.title"), desc: t("landing.how.step3.desc") },
+  const features = [
+    { icon: FolderSearch, title: t("landing.how.step1.title"), desc: t("landing.how.step1.desc") },
+    { icon: Zap, title: t("landing.how.step2.title"), desc: t("landing.how.step2.desc") },
+    { icon: ShieldCheck, title: t("landing.how.step3.title"), desc: t("landing.how.step3.desc") },
   ];
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-background">
       <Seo
         title={t("seo.landing.title")}
         description={t("seo.landing.desc")}
@@ -117,17 +117,12 @@ const Landing = () => {
           inLanguage: ["fr-FR", "en"],
         }}
       />
-
-      <nav className="border-b border-border bg-background">
+      <nav className="border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="font-semibold tracking-tight">Asclion</span>
-            <span className="hidden sm:inline-flex items-center gap-1.5 mono-label">
-              <span className="status-dot" aria-hidden />
-              en service
-            </span>
+          <div className="flex items-center gap-2.5">
+            <span className="font-bold text-lg tracking-tight">Asclion</span>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
             {user ? (
               <>
                 {isAdmin && (
@@ -148,10 +143,10 @@ const Landing = () => {
                 </Button>
                 <LanguageToggle />
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
                   onClick={signOut}
-                  className="gap-1.5 text-xs text-muted-foreground hover:text-destructive"
+                  className="gap-1.5 text-xs text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30"
                 >
                   <LogOut className="h-3.5 w-3.5" />
                   Se déconnecter
@@ -160,11 +155,8 @@ const Landing = () => {
             ) : (
               <>
                 <LanguageToggle />
-                <Button variant="ghost" size="sm" onClick={() => navigate(lp("/auth"))} className="text-xs">
+                <Button variant="outline" size="sm" onClick={() => navigate(lp("/auth"))} className="gap-1.5">
                   {t("nav.signin")}
-                </Button>
-                <Button size="sm" asChild className="text-xs ml-1">
-                  <a href="#demande-acces">{t("landing.cta.access")}</a>
                 </Button>
               </>
             )}
@@ -172,67 +164,70 @@ const Landing = () => {
         </div>
       </nav>
 
-      <main className="flex-1">
-        {/* HERO */}
-        <section className="container max-w-3xl mx-auto px-4 pt-24 pb-20 sm:pt-32 sm:pb-24">
-          <p className="mono-label mb-8">{t("landing.badge")}</p>
-          <h1 className="text-[2.5rem] sm:text-6xl font-semibold tracking-[-0.02em] leading-[1.05]">
-            {t("landing.title.line1")}
-            <br />
-            <span className="text-muted-foreground">{t("landing.title.line2")}</span>
-          </h1>
-          <p className="mt-6 text-base sm:text-lg text-muted-foreground max-w-xl leading-relaxed">
-            {t("landing.subtitle")}
-          </p>
-          <div className="mt-10 flex flex-col sm:flex-row items-start sm:items-center gap-4">
-            <Button size="lg" asChild className="h-11 px-6 text-sm font-medium gap-2">
-              <a href="#demande-acces">
-                {t("landing.cta.access")}
-                <ArrowRight className="h-4 w-4" />
-              </a>
-            </Button>
-            <Link
-              to={lp("/vs-lgo")}
-              className="text-sm font-medium text-foreground hover:text-primary underline-offset-4 hover:underline inline-flex items-center gap-1"
-            >
-              {t("landing.cta.vsLgo")}
-              <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
+      <main>
+        <section className="py-20 px-4">
+          <div className="container max-w-3xl mx-auto text-center space-y-6">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent text-accent-foreground text-xs font-medium">
+              <Zap className="h-3 w-3" />
+              {t("landing.badge")}
+            </div>
+            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight leading-tight">
+              {t("landing.title.line1")}
+              <br />
+              <span className="text-primary">{t("landing.title.line2")}</span>
+            </h1>
+            <p className="text-lg text-muted-foreground max-w-xl mx-auto leading-relaxed">
+              {t("landing.subtitle")}
+            </p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+              <Button size="lg" asChild className="h-12 px-8 text-base font-semibold pharmacy-gradient border-0 gap-2">
+                <a href="#demande-acces">
+                  <Send className="h-5 w-5" />
+                  {t("landing.cta.access")}
+                </a>
+              </Button>
+              <Button size="lg" variant="outline" asChild className="h-12 px-6 text-base font-semibold gap-2">
+                <a href={lp("/vs-lgo")}>
+                  {t("landing.cta.vsLgo")}
+                  <ArrowRight className="h-4 w-4" />
+                </a>
+              </Button>
+            </div>
           </div>
         </section>
 
-        {/* HOW IT WORKS */}
-        <section className="border-t border-border">
-          <div className="container max-w-5xl mx-auto px-4 py-20">
-            <div className="flex items-baseline justify-between mb-12">
-              <h2 className="text-xl font-semibold tracking-tight">{t("landing.how.title")}</h2>
-              <span className="mono-label">03 étapes</span>
-            </div>
-            <div className="grid md:grid-cols-3 gap-px bg-border">
-              {steps.map((s) => (
-                <div key={s.n} className="bg-background p-6 sm:p-8 space-y-4">
-                  <p className="mono-label text-primary">{s.n} / 03</p>
-                  <h3 className="text-lg font-medium tracking-tight">{s.title}</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{s.desc}</p>
+        <section className="py-16 px-4 bg-secondary/50">
+          <div className="container max-w-4xl mx-auto">
+            <h2 className="text-2xl font-bold text-center mb-10">{t("landing.how.title")}</h2>
+            <div className="grid md:grid-cols-3 gap-6">
+              {features.map((f, i) => (
+                <div key={i} className="glass-card rounded-xl p-6 space-y-3">
+                  <div className="h-10 w-10 rounded-lg bg-accent flex items-center justify-center">
+                    <f.icon className="h-5 w-5 text-accent-foreground" />
+                  </div>
+                  <h3 className="font-semibold">{f.title}</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        {/* ACCESS REQUEST */}
-        <section id="demande-acces" className="border-t border-border bg-secondary/40">
-          <div className="container max-w-xl mx-auto px-4 py-20">
-            <p className="mono-label mb-4">Démarrer</p>
-            <h2 className="text-2xl font-semibold tracking-tight mb-3">{t("landing.access.title")}</h2>
-            <p className="text-sm text-muted-foreground mb-8 leading-relaxed">{t("landing.access.desc")}</p>
-            <div className="border-y border-border py-8">
+        <section id="demande-acces" className="py-16 px-4">
+          <div className="container max-w-xl mx-auto space-y-6">
+            <div className="text-center space-y-3">
+              <div className="h-14 w-14 rounded-2xl bg-accent flex items-center justify-center mx-auto">
+                <Send className="h-7 w-7 text-accent-foreground" />
+              </div>
+              <h2 className="text-2xl font-bold">{t("landing.access.title")}</h2>
+              <p className="text-muted-foreground leading-relaxed">{t("landing.access.desc")}</p>
+            </div>
+            <div className="rounded-xl border border-border p-6 bg-card">
               <AccessRequestForm />
             </div>
           </div>
         </section>
       </main>
-
       <SiteFooter />
     </div>
   );

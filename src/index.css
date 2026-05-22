@@ -4,35 +4,35 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 220 15% 12%;
+    --background: 150 20% 98%;
+    --foreground: 200 25% 14%;
 
     --card: 0 0% 100%;
-    --card-foreground: 220 15% 12%;
+    --card-foreground: 200 25% 14%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 15% 12%;
+    --popover-foreground: 200 25% 14%;
 
     --primary: 173 58% 32%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 14% 96%;
-    --secondary-foreground: 220 15% 12%;
+    --secondary: 150 20% 94%;
+    --secondary-foreground: 200 25% 14%;
 
-    --muted: 220 14% 96%;
-    --muted-foreground: 220 9% 42%;
+    --muted: 150 15% 93%;
+    --muted-foreground: 200 12% 40%;
 
-    --accent: 220 14% 96%;
-    --accent-foreground: 220 15% 12%;
+    --accent: 173 40% 92%;
+    --accent-foreground: 173 58% 25%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
+    --border: 150 15% 88%;
+    --input: 150 15% 88%;
     --ring: 173 58% 32%;
 
-    --radius: 0.5rem;
+    --radius: 0.75rem;
 
     --pharmacy-green: 173 58% 32%;
     --pharmacy-green-light: 173 40% 92%;
@@ -41,45 +41,44 @@
     --pharmacy-warm-light: 30 60% 95%;
 
     --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 220 9% 26%;
+    --sidebar-foreground: 240 5.3% 26.1%;
     --sidebar-primary: 173 58% 32%;
     --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 220 14% 96%;
-    --sidebar-accent-foreground: 220 15% 12%;
-    --sidebar-border: 220 13% 91%;
+    --sidebar-accent: 173 40% 92%;
+    --sidebar-accent-foreground: 173 58% 25%;
+    --sidebar-border: 150 15% 88%;
     --sidebar-ring: 173 58% 32%;
 
-    font-family: 'Geist', system-ui, -apple-system, sans-serif;
-    font-feature-settings: "ss01", "cv11";
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   }
 
   .dark {
-    --background: 220 20% 8%;
-    --foreground: 220 14% 96%;
-    --card: 220 18% 11%;
-    --card-foreground: 220 14% 96%;
-    --popover: 220 18% 11%;
-    --popover-foreground: 220 14% 96%;
+    --background: 200 25% 8%;
+    --foreground: 150 15% 95%;
+    --card: 200 20% 12%;
+    --card-foreground: 150 15% 95%;
+    --popover: 200 20% 12%;
+    --popover-foreground: 150 15% 95%;
     --primary: 173 58% 42%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 220 15% 16%;
-    --secondary-foreground: 220 14% 96%;
-    --muted: 220 15% 16%;
-    --muted-foreground: 220 9% 60%;
-    --accent: 220 15% 16%;
-    --accent-foreground: 220 14% 96%;
+    --secondary: 200 15% 16%;
+    --secondary-foreground: 150 15% 95%;
+    --muted: 200 15% 18%;
+    --muted-foreground: 150 10% 60%;
+    --accent: 173 30% 18%;
+    --accent-foreground: 173 50% 70%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 100%;
-    --border: 220 15% 20%;
-    --input: 220 15% 20%;
+    --border: 200 15% 20%;
+    --input: 200 15% 20%;
     --ring: 173 58% 42%;
-    --sidebar-background: 220 18% 10%;
-    --sidebar-foreground: 220 14% 90%;
+    --sidebar-background: 200 20% 10%;
+    --sidebar-foreground: 150 15% 90%;
     --sidebar-primary: 173 58% 42%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 15% 16%;
-    --sidebar-accent-foreground: 220 14% 96%;
-    --sidebar-border: 220 15% 20%;
+    --sidebar-accent: 173 30% 18%;
+    --sidebar-accent-foreground: 173 50% 70%;
+    --sidebar-border: 200 15% 20%;
     --sidebar-ring: 173 58% 42%;
   }
 }
@@ -91,34 +90,16 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-feature-settings: "ss01", "cv11";
   }
 }
 
 @layer utilities {
-  /* Kept as flat primary fills — no visible gradient. Preserved for backwards-compat
-     in legacy widget/admin views; new code should prefer plain `bg-primary`. */
   .pharmacy-gradient {
-    background: hsl(var(--primary));
+    background: linear-gradient(135deg, hsl(173 58% 32%), hsl(180 50% 40%));
   }
 
-  /* Solid card with crisp border — no glassmorphism. */
   .glass-card {
-    @apply bg-card border border-border;
-  }
-
-  /* Editorial helpers */
-  .mono-label {
-    font-family: 'Geist Mono', ui-monospace, SFMono-Regular, monospace;
-    @apply text-[11px] uppercase tracking-[0.14em] text-muted-foreground;
-  }
-
-  .status-dot {
-    @apply relative inline-flex h-1.5 w-1.5 rounded-full bg-primary;
-  }
-  .status-dot::after {
-    content: "";
-    @apply absolute inset-0 rounded-full bg-primary animate-ping opacity-60;
+    @apply bg-card/80 backdrop-blur-sm border border-border shadow-sm;
   }
 }
 
