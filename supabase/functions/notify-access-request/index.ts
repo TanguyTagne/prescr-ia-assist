@@ -82,6 +82,54 @@ serve(async (req) => {
       const v = (formData as any)[k];
       safe[k] = typeof v === "string" ? v.slice(0, 200) : "";
     }
+
+    const email = safe.email.toLowerCase().trim();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return new Response(JSON.stringify({ error: "Invalid email" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Rate limit per-email (in-memory, 1 per hour)
+    const now = Date.now();
+    const last = recentEmails.get(email) ?? 0;
+    if (now - last < RATE_LIMIT_MS) {
+      return new Response(JSON.stringify({ error: "Rate limited" }), {
+        status: 429,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Verify a matching access_requests row was inserted recently (last 5 min)
+    // — proves the caller went through the legitimate public form
+    try {
+      const supabase = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      );
+      const since = new Date(now - 5 * 60 * 1000).toISOString();
+      const { data: matches } = await supabase
+        .from("access_requests")
+        .select("id")
+        .eq("email", safe.email)
+        .gte("created_at", since)
+        .limit(1);
+      if (!matches || matches.length === 0) {
+        return new Response(JSON.stringify({ error: "No matching access request" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    } catch (e) {
+      console.error("access_requests verify failed:", e);
+      return new Response(JSON.stringify({ error: "Verification failed" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    recentEmails.set(email, now);
     EdgeRuntime.waitUntil(sendEmail(safe));
     return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
