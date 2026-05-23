@@ -38,6 +38,11 @@
     <priority>0.6</priority>
   </url>
   <url>
+    <loc>https://www.asclion.com/fonctionnalites</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://www.asclion.com/auth</loc>
     <changefreq>yearly</changefreq>
     <priority>0.4</priority>
