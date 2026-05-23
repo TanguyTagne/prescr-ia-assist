@@ -12,6 +12,7 @@ import CookieBanner from "@/components/CookieBanner";
 import LgoAutoDetectPrompt from "@/components/LgoAutoDetectPrompt";
 import WidgetDemoTour from "@/components/WidgetDemoTour";
 import { isAsclionDesktopRuntime } from "@/lib/runtime";
+import { useInstanceHeartbeat } from "@/hooks/useInstanceHeartbeat";
 
 // Retry dynamic import on failure (handles stale Vite chunks / transient network).
 // On second failure, force a hard reload to fetch the latest asset manifest.
@@ -151,6 +152,11 @@ const VisitorTour = () => {
   return <WidgetDemoTour enabled={enabled} />;
 };
 
+const InstanceHeartbeatMount = () => {
+  useInstanceHeartbeat();
+  return null;
+};
+
 const SiteDemoLayer = () => {
   const location = useLocation();
   if (location.pathname !== "/" && location.pathname !== "/en") return null;
@@ -165,6 +171,7 @@ const App = () => {
         <Toaster />
         <Sonner />
         <AuthProvider>
+          <InstanceHeartbeatMount />
           <RegisterProvider>
           <I18nProvider>
           <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}>

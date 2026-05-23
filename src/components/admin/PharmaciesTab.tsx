@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Key, Check, Pause, Play, Trash2, AlertTriangle, UserPlus, Building2, Plus } from "lucide-react";
+import { Key, Check, Pause, Play, Trash2, AlertTriangle, UserPlus, Building2, Plus, Monitor, Globe, Circle } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -44,6 +44,30 @@ const PharmaciesTab = ({ pharmacies, onRefresh }: PharmaciesTabProps) => {
   const [creatingAccount, setCreatingAccount] = useState<string | null>(null);
   const [accountForm, setAccountForm] = useState({ email: "", password: "", full_name: "", role: "preparateur" });
   const [submittingAccount, setSubmittingAccount] = useState(false);
+  const [connections, setConnections] = useState<Record<string, { total: number; desktop: number; web: number; users: number; lastActivity: string | null }>>({});
+
+  // Live connection counts (refresh every 30s)
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      const { data, error } = await supabase.rpc("get_pharmacy_connection_counts");
+      if (cancelled || error || !data) return;
+      const map: Record<string, { total: number; desktop: number; web: number; users: number; lastActivity: string | null }> = {};
+      for (const row of data as any[]) {
+        map[row.pharmacy_id] = {
+          total: row.connected_instances || 0,
+          desktop: row.desktop_instances || 0,
+          web: row.web_instances || 0,
+          users: row.connected_users || 0,
+          lastActivity: row.last_activity || null,
+        };
+      }
+      setConnections(map);
+    };
+    load();
+    const i = setInterval(load, 30_000);
+    return () => { cancelled = true; clearInterval(i); };
+  }, []);
 
   const handleCreateAccount = async (pharmacyId: string) => {
     if (!accountForm.email || !accountForm.password || accountForm.password.length < 6) {
@@ -262,17 +286,45 @@ const PharmaciesTab = ({ pharmacies, onRefresh }: PharmaciesTabProps) => {
       {pharmacies.map((pharm) => {
         const status = (pharm as any).status || "active";
         const isDisabled = loading === pharm.id;
+        const conn = connections[pharm.id];
+        const isOnline = (conn?.total || 0) > 0;
 
         return (
           <div key={pharm.id} className={`rounded-lg border p-4 space-y-3 ${status === "disabled" ? "border-destructive/30 bg-destructive/5 opacity-75" : status === "paused" ? "border-yellow-300 bg-yellow-50/50" : "border-border"}`}>
             <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2 min-w-0">
+              <div className="flex items-center gap-2 min-w-0 flex-wrap">
                 <div className="min-w-0">
                   <p className="font-semibold text-sm truncate">{pharm.name}</p>
                   {pharm.city && <p className="text-xs text-muted-foreground">{pharm.city}</p>}
                 </div>
                 {getStatusBadge(status)}
+                <Badge
+                  variant="outline"
+                  className={`text-[10px] gap-1 ${isOnline ? "border-emerald-300 text-emerald-700 bg-emerald-50" : "border-muted-foreground/30 text-muted-foreground"}`}
+                  title={conn?.lastActivity ? `Dernière activité : ${new Date(conn.lastActivity).toLocaleString("fr-FR")}` : "Aucune activité récente"}
+                >
+                  <Circle className={`h-2 w-2 ${isOnline ? "fill-emerald-500 text-emerald-500" : "fill-muted-foreground/40 text-muted-foreground/40"}`} />
+                  {isOnline ? `${conn.total} en ligne` : "hors ligne"}
+                  {isOnline && conn.users !== conn.total && (
+                    <span className="opacity-70">· {conn.users} utilisateur{conn.users > 1 ? "s" : ""}</span>
+                  )}
+                </Badge>
+                {isOnline && (
+                  <span className="text-[10px] text-muted-foreground flex items-center gap-2">
+                    {conn.desktop > 0 && (
+                      <span className="flex items-center gap-0.5" title="Instances Desktop">
+                        <Monitor className="h-3 w-3" />{conn.desktop}
+                      </span>
+                    )}
+                    {conn.web > 0 && (
+                      <span className="flex items-center gap-0.5" title="Instances Web">
+                        <Globe className="h-3 w-3" />{conn.web}
+                      </span>
+                    )}
+                  </span>
+                )}
               </div>
+
 
               <div className="flex items-center gap-1 flex-shrink-0">
                 {status === "active" && (

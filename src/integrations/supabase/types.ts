@@ -1704,6 +1704,42 @@ export type Database = {
           },
         ]
       }
+      pharmacy_instance_heartbeats: {
+        Row: {
+          app_version: string | null
+          first_seen_at: string
+          id: string
+          instance_id: string
+          last_seen_at: string
+          pharmacy_id: string
+          platform: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          app_version?: string | null
+          first_seen_at?: string
+          id?: string
+          instance_id: string
+          last_seen_at?: string
+          pharmacy_id: string
+          platform?: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          app_version?: string | null
+          first_seen_at?: string
+          id?: string
+          instance_id?: string
+          last_seen_at?: string
+          pharmacy_id?: string
+          platform?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       pharmacy_lgo_config: {
         Row: {
           api_base_url: string
@@ -3039,6 +3075,17 @@ export type Database = {
       check_and_increment_quota: {
         Args: { _pharmacy_id: string; _quota_type: string }
         Returns: Json
+      }
+      get_pharmacy_connection_counts: {
+        Args: never
+        Returns: {
+          connected_instances: number
+          connected_users: number
+          desktop_instances: number
+          last_activity: string
+          pharmacy_id: string
+          web_instances: number
+        }[]
       }
       get_top_produits: {
         Args: { p_limit?: number; p_pathologie_id: string }
