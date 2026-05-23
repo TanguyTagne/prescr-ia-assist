@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Key, Check, Pause, Play, Trash2, AlertTriangle, UserPlus, Building2, Plus } from "lucide-react";
+import { Key, Check, Pause, Play, Trash2, AlertTriangle, UserPlus, Building2, Plus, Monitor, Globe, Circle } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
