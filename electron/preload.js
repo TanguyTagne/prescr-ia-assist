@@ -41,4 +41,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
     bringToFront: () => ipcRenderer.invoke("attention:bring-to-front"),
     isFocused: () => ipcRenderer.invoke("attention:is-focused"),
   },
+
+  // Robust auto-launch (Windows Task Scheduler)
+  autolaunch: {
+    status: () => ipcRenderer.invoke("autolaunch:status"),
+    reinstall: () => ipcRenderer.invoke("autolaunch:reinstall"),
+  },
 });
