@@ -151,6 +151,13 @@ const VisitorTour = () => {
   return <WidgetDemoTour enabled={enabled} />;
 };
 
+const InstanceHeartbeatMount = () => {
+  // Lazy-import to avoid circular deps & keep landing bundle lean
+  const { useInstanceHeartbeat } = require("@/hooks/useInstanceHeartbeat");
+  useInstanceHeartbeat();
+  return null;
+};
+
 const SiteDemoLayer = () => {
   const location = useLocation();
   if (location.pathname !== "/" && location.pathname !== "/en") return null;
