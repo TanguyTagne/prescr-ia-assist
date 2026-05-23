@@ -286,17 +286,45 @@ const PharmaciesTab = ({ pharmacies, onRefresh }: PharmaciesTabProps) => {
       {pharmacies.map((pharm) => {
         const status = (pharm as any).status || "active";
         const isDisabled = loading === pharm.id;
+        const conn = connections[pharm.id];
+        const isOnline = (conn?.total || 0) > 0;
 
         return (
           <div key={pharm.id} className={`rounded-lg border p-4 space-y-3 ${status === "disabled" ? "border-destructive/30 bg-destructive/5 opacity-75" : status === "paused" ? "border-yellow-300 bg-yellow-50/50" : "border-border"}`}>
             <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2 min-w-0">
+              <div className="flex items-center gap-2 min-w-0 flex-wrap">
                 <div className="min-w-0">
                   <p className="font-semibold text-sm truncate">{pharm.name}</p>
                   {pharm.city && <p className="text-xs text-muted-foreground">{pharm.city}</p>}
                 </div>
                 {getStatusBadge(status)}
+                <Badge
+                  variant="outline"
+                  className={`text-[10px] gap-1 ${isOnline ? "border-emerald-300 text-emerald-700 bg-emerald-50" : "border-muted-foreground/30 text-muted-foreground"}`}
+                  title={conn?.lastActivity ? `Dernière activité : ${new Date(conn.lastActivity).toLocaleString("fr-FR")}` : "Aucune activité récente"}
+                >
+                  <Circle className={`h-2 w-2 ${isOnline ? "fill-emerald-500 text-emerald-500" : "fill-muted-foreground/40 text-muted-foreground/40"}`} />
+                  {isOnline ? `${conn.total} en ligne` : "hors ligne"}
+                  {isOnline && conn.users !== conn.total && (
+                    <span className="opacity-70">· {conn.users} utilisateur{conn.users > 1 ? "s" : ""}</span>
+                  )}
+                </Badge>
+                {isOnline && (
+                  <span className="text-[10px] text-muted-foreground flex items-center gap-2">
+                    {conn.desktop > 0 && (
+                      <span className="flex items-center gap-0.5" title="Instances Desktop">
+                        <Monitor className="h-3 w-3" />{conn.desktop}
+                      </span>
+                    )}
+                    {conn.web > 0 && (
+                      <span className="flex items-center gap-0.5" title="Instances Web">
+                        <Globe className="h-3 w-3" />{conn.web}
+                      </span>
+                    )}
+                  </span>
+                )}
               </div>
+
 
               <div className="flex items-center gap-1 flex-shrink-0">
                 {status === "active" && (
