@@ -12,6 +12,7 @@ import CookieBanner from "@/components/CookieBanner";
 import LgoAutoDetectPrompt from "@/components/LgoAutoDetectPrompt";
 import WidgetDemoTour from "@/components/WidgetDemoTour";
 import { isAsclionDesktopRuntime } from "@/lib/runtime";
+import { useInstanceHeartbeat } from "@/hooks/useInstanceHeartbeat";
 
 // Retry dynamic import on failure (handles stale Vite chunks / transient network).
 // On second failure, force a hard reload to fetch the latest asset manifest.
@@ -152,8 +153,6 @@ const VisitorTour = () => {
 };
 
 const InstanceHeartbeatMount = () => {
-  // Lazy-import to avoid circular deps & keep landing bundle lean
-  const { useInstanceHeartbeat } = require("@/hooks/useInstanceHeartbeat");
   useInstanceHeartbeat();
   return null;
 };
