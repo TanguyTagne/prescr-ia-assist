@@ -44,6 +44,30 @@ const PharmaciesTab = ({ pharmacies, onRefresh }: PharmaciesTabProps) => {
   const [creatingAccount, setCreatingAccount] = useState<string | null>(null);
   const [accountForm, setAccountForm] = useState({ email: "", password: "", full_name: "", role: "preparateur" });
   const [submittingAccount, setSubmittingAccount] = useState(false);
+  const [connections, setConnections] = useState<Record<string, { total: number; desktop: number; web: number; users: number; lastActivity: string | null }>>({});
+
+  // Live connection counts (refresh every 30s)
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      const { data, error } = await supabase.rpc("get_pharmacy_connection_counts");
+      if (cancelled || error || !data) return;
+      const map: Record<string, { total: number; desktop: number; web: number; users: number; lastActivity: string | null }> = {};
+      for (const row of data as any[]) {
+        map[row.pharmacy_id] = {
+          total: row.connected_instances || 0,
+          desktop: row.desktop_instances || 0,
+          web: row.web_instances || 0,
+          users: row.connected_users || 0,
+          lastActivity: row.last_activity || null,
+        };
+      }
+      setConnections(map);
+    };
+    load();
+    const i = setInterval(load, 30_000);
+    return () => { cancelled = true; clearInterval(i); };
+  }, []);
 
   const handleCreateAccount = async (pharmacyId: string) => {
     if (!accountForm.email || !accountForm.password || accountForm.password.length < 6) {
