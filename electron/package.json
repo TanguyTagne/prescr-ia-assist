@@ -40,7 +40,8 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "Asclion",
-      "runAfterFinish": true
+      "runAfterFinish": true,
+      "include": "installer.nsh"
     },
     "mac": {
       "target": "dmg",
