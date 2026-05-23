@@ -156,8 +156,8 @@ if (!gotTheLock) {
 
     createWindow();
 
-    // Register Windows daily auto-launch at 08:30
-    registerDailyAutoLaunch();
+    // Register Windows auto-launch tasks (at boot + 08:30 + 09:00 catch-up)
+    registerAutoLaunch();
 
     // Detect installed LGO (Windows only) and forward to renderer when ready
     detectLgoAndNotify();
