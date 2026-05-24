@@ -50,7 +50,7 @@ const CGU = () => {
           <p>
             L'utilisateur est responsable de la confidentialité de ses identifiants. Toute action
             effectuée via son compte est réputée avoir été effectuée par lui. Tout accès non autorisé
-            doit être signalé sans délai à <a href="mailto:contact@asclion.com" className="text-primary underline">contact@asclion.com</a>.
+            doit être signalé sans délai à <a href="mailto:tanguytubert@gmail.com" className="text-primary underline">tanguytubert@gmail.com</a>.
           </p>
         </section>
 
@@ -91,7 +91,7 @@ const CGU = () => {
           <h2 className="text-xl font-semibold mb-2">8. Résiliation</h2>
           <p>
             L'utilisateur peut clôturer son compte à tout moment via une demande à
-            contact@asclion.com. Asclion peut suspendre ou résilier l'accès en cas de non-respect des
+            tanguytubert@gmail.com. Asclion peut suspendre ou résilier l'accès en cas de non-respect des
             présentes CGU, après notification.
           </p>
         </section>

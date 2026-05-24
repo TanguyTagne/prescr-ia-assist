@@ -29,7 +29,7 @@ const MentionsLegales = () => {
               <li>{lang === "en" ? "Registered office" : "Siège social"} : [TBD]</li>
               <li>{lang === "en" ? "EU VAT number" : "Numéro de TVA intracommunautaire"} : [TBD]</li>
               <li>{lang === "en" ? "Publication director" : "Directeur de la publication"} : [TBD]</li>
-              <li>{lang === "en" ? "Contact email" : "Email de contact"} : <a href="mailto:contact@asclion.com" className="text-primary underline">contact@asclion.com</a></li>
+              <li>{lang === "en" ? "Contact email" : "Email de contact"} : <a href="mailto:tanguytubert@gmail.com" className="text-primary underline">tanguytubert@gmail.com</a></li>
             </ul>
           </section>
 
