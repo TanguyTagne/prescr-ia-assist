@@ -21,14 +21,10 @@ const MentionsLegales = () => {
           <section>
             <h2 className="text-xl font-semibold">{t("legal.mentions.editor")}</h2>
             <p>{t("legal.mentions.editorIntro")}</p>
-            <ul>
-              <li>{lang === "en" ? "Company name" : "Raison sociale"} : <strong>[TBD]</strong></li>
-              <li>{lang === "en" ? "Legal form" : "Forme juridique"} : [TBD]</li>
-              <li>{lang === "en" ? "Share capital" : "Capital social"} : [TBD]</li>
-              <li>SIREN / SIRET : [TBD]</li>
-              <li>{lang === "en" ? "Registered office" : "Siège social"} : [TBD]</li>
-              <li>{lang === "en" ? "EU VAT number" : "Numéro de TVA intracommunautaire"} : [TBD]</li>
-              <li>{lang === "en" ? "Publication director" : "Directeur de la publication"} : [TBD]</li>
+            <ul className="my-0 py-[2px]">
+              <li>{lang === "en" ? "Company name" : "Raison sociale"} : <strong>Asclion</strong></li>
+              <li>{lang === "en" ? "SIREN" : "SIREN"} : 904561263</li>
+              <li>{lang === "en" ? "Publication director" : "Directeur de la publication"} : Tanguy Tubert</li>
               <li>{lang === "en" ? "Contact email" : "Email de contact"} : <a href="mailto:tanguytubert@gmail.com" className="text-primary underline">tanguytubert@gmail.com</a></li>
             </ul>
           </section>
