@@ -78,8 +78,8 @@ const DPA = () => {
 
           <h2>6. Localisation des données</h2>
           <p>
-            Toutes les données sont hébergées au sein de l'Union Européenne, sur l'infrastructure
-            Lovable Cloud (Supabase) — région Frankfurt (Allemagne). Aucun transfert hors UE n'est
+            Toutes les données sont hébergées au sein de l'Union Européenne, sur une infrastructure
+            cloud sécurisée — région Frankfurt (Allemagne). Aucun transfert hors UE n'est
             réalisé sans garanties appropriées (Clauses Contractuelles Types).
           </p>
 
@@ -103,7 +103,7 @@ const DPA = () => {
             Asclion fait appel aux sous-traitants ultérieurs suivants, autorisés par le Responsable :
           </p>
           <ul>
-            <li><strong>Supabase / Lovable Cloud</strong> — hébergement infrastructure (UE)</li>
+            <li><strong>Hébergeur cloud (UE)</strong> — hébergement infrastructure</li>
             <li><strong>Resend</strong> — envoi emails transactionnels</li>
             <li><strong>Twilio</strong> — envoi SMS rappels (si fonctionnalité activée)</li>
             <li><strong>Modèle IA propriétaire</strong> — analyse linguistique des ordonnances</li>

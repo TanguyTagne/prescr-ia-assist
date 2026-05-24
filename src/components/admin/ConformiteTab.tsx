@@ -35,7 +35,7 @@ Généré le ${new Date().toLocaleString("fr-FR")}
 ═══════════════════════════════════════════════════
 3. HÉBERGEMENT — ANALYSE HDS
 ═══════════════════════════════════════════════════
-Hébergeur : Lovable Cloud (Supabase EU - Frankfurt, Allemagne)
+Hébergeur : Infrastructure cloud sécurisée (UE - Frankfurt, Allemagne)
 Statut HDS : Non requis (justification ci-dessous)
 
 Asclion ne traite PAS de données de santé directement identifiantes :
@@ -143,7 +143,7 @@ Support sécurité : voir /mentions-legales
         </div>
         <div className="text-sm space-y-3">
           <p>
-            <strong>Hébergeur :</strong> Lovable Cloud (Supabase EU — Frankfurt, Allemagne)
+            <strong>Hébergeur :</strong> Infrastructure cloud sécurisée (UE — Frankfurt, Allemagne)
           </p>
           <p>
             <strong>Statut HDS :</strong> Non requis. Asclion ne traite pas de données de santé

@@ -41,7 +41,7 @@ const sections: { title: string; features: Feature[] }[] = [
         title: "Analyse clinique en moins de 2,5 s",
         description: "L'IA extrait les médicaments, identifie les pathologies et propose des recommandations en temps réel.",
         details: [
-          "Pipeline optimisé Gemini Flash via Lovable AI",
+          "Pipeline IA propriétaire optimisé pour la latence",
           "Reconnaissance par fuzzy matching (ignore dosage et forme galénique)",
           "Fallback automatique RxNav et OpenFDA si non trouvé en local",
         ],
