@@ -56,8 +56,8 @@ const Confidentialite = () => {
             Aucune donnée n'est vendue.
           </p>
           <p className="mt-2">
-            Le traitement à la volée des ordonnances est effectué via Lovable AI Gateway (modèles
-            Google Gemini), sans conservation des prompts par le fournisseur au-delà du temps de
+            Le traitement à la volée des ordonnances est effectué via notre modèle IA,
+            sans conservation des prompts par le fournisseur au-delà du temps de
             traitement.
           </p>
         </section>
