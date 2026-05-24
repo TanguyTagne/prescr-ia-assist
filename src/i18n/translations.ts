@@ -269,8 +269,8 @@ export const translations = {
   },
   "legal.mentions.hosting": { fr: "Hébergement", en: "Hosting" },
   "legal.mentions.hostingText": {
-    fr: "Le site et les données sont hébergés au sein de l'Union Européenne par les prestataires techniques utilisés par Asclion (notamment Lovable, Supabase / AWS Europe). Les serveurs applicables se trouvent dans la zone UE. Une liste détaillée peut être obtenue sur simple demande à contact@asclion.com.",
-    en: "The site and data are hosted within the European Union by the technical providers used by Asclion (notably Lovable, Supabase / AWS Europe). The relevant servers are located in the EU zone. A detailed list is available upon request at contact@asclion.com.",
+    fr: "Le site et les données sont hébergés au sein de l'Union Européenne par les prestataires techniques utilisés par Asclion (notamment Lovable, Supabase / AWS Europe). Les serveurs applicables se trouvent dans la zone UE. Une liste détaillée peut être obtenue sur simple demande à tanguytubert@gmail.com.",
+    en: "The site and data are hosted within the European Union by the technical providers used by Asclion (notably Lovable, Supabase / AWS Europe). The relevant servers are located in the EU zone. A detailed list is available upon request at tanguytubert@gmail.com.",
   },
   "legal.mentions.ip": { fr: "Propriété intellectuelle", en: "Intellectual property" },
   "legal.mentions.ipText": {

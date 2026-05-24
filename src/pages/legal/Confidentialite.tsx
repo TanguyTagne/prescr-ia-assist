@@ -19,8 +19,8 @@ const Confidentialite = () => {
         <section>
           <h2 className="text-xl font-semibold mb-2">1. Responsable de traitement</h2>
           <p>
-            Le responsable de traitement du site asclion.com est <strong>[À COMPLÉTER — éditeur]</strong>.
-            Pour toute question relative à vos données : <a href="mailto:contact@asclion.com" className="text-primary underline">contact@asclion.com</a>.
+            Le responsable de traitement du site asclion.com est <strong>Tanguy Tubert</strong>.
+            Pour toute question relative à vos données : <a href="mailto:tanguytubert@gmail.com" className="text-primary underline">tanguytubert@gmail.com</a>.
           </p>
           <p>
             Lorsque le logiciel Asclion est utilisé en officine, la <strong>pharmacie cliente</strong> est
@@ -88,7 +88,7 @@ const Confidentialite = () => {
             Conformément au RGPD et à la loi Informatique et Libertés, vous disposez des droits
             d'accès, de rectification, d'effacement, de limitation, d'opposition, de portabilité, et
             du droit de définir des directives post‑mortem. Pour exercer ces droits :
-            <a href="mailto:contact@asclion.com" className="text-primary underline ml-1">contact@asclion.com</a>.
+            <a href="mailto:tanguytubert@gmail.com" className="text-primary underline ml-1">tanguytubert@gmail.com</a>.
           </p>
           <p className="mt-2">
             Vous pouvez introduire une réclamation auprès de la CNIL :
