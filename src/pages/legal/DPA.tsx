@@ -106,7 +106,7 @@ const DPA = () => {
             <li><strong>Supabase / Lovable Cloud</strong> — hébergement infrastructure (UE)</li>
             <li><strong>Resend</strong> — envoi emails transactionnels</li>
             <li><strong>Twilio</strong> — envoi SMS rappels (si fonctionnalité activée)</li>
-            <li><strong>Google Cloud (Gemini API via Lovable AI Gateway)</strong> — analyse linguistique des ordonnances</li>
+            <li><strong>Modèle IA propriétaire</strong> — analyse linguistique des ordonnances</li>
           </ul>
 
           <h2>9. Droits des personnes concernées</h2>
