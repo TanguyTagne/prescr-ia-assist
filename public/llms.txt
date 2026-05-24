@@ -37,7 +37,7 @@ conseil associé pharmacie, vente complémentaire officine, cross-selling pharma
 
 ## Technologie
 
-Application web progressive (PWA) + logiciel desktop. Analyse propulsée par intelligence artificielle (Gemini). Base de données clinique couvrant les 300 médicaments les plus prescrits en France, avec mapping ATC, pathologies, protocoles de conseil et produits complémentaires associés.
+Application web progressive (PWA) + logiciel desktop. Analyse propulsée par notre moteur d'intelligence artificielle propriétaire. Base de données clinique couvrant les 300 médicaments les plus prescrits en France, avec mapping ATC, pathologies, protocoles de conseil et produits complémentaires associés.
 
 ## Pages
 
