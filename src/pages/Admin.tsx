@@ -119,6 +119,10 @@ const Admin = () => {
             <BarChart3 className="h-3.5 w-3.5" />
             KPIs
           </Button>
+          <Button variant={tab === "investor" ? "default" : "outline"} size="sm" onClick={() => setTab("investor")} className="gap-1.5">
+            <LineChart className="h-3.5 w-3.5" />
+            Investisseurs
+          </Button>
           <Button variant={tab === "signalements" ? "default" : "outline"} size="sm" onClick={() => setTab("signalements")} className="gap-1.5">
             <Flag className="h-3.5 w-3.5" />
             Signalements
