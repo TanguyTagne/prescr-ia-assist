@@ -41,7 +41,7 @@ const Aide = () => {
       <main className="container max-w-3xl mx-auto px-4 py-8 flex-1">
         <p className="text-sm text-muted-foreground mb-6">
           {t("aide.intro")}
-          <a href="mailto:support@asclion.com" className="text-primary hover:underline ml-1">{t("aide.contact")}</a>.
+          <a href="mailto:tanguytubert@gmail.com" className="text-primary hover:underline ml-1">{t("aide.contact")}</a>.
         </p>
 
         <Accordion type="single" collapsible className="space-y-2">
@@ -66,7 +66,7 @@ const Aide = () => {
             <AccordionContent className="text-sm text-foreground/80 leading-relaxed space-y-2">
               <p>{t("aide.a3.p1")}</p>
               <ul className="list-disc list-inside space-y-1 ml-2">
-                <li>{t("aide.a3.li1")} <a href="mailto:support@asclion.com" className="text-primary hover:underline">support@asclion.com</a>.</li>
+                <li>{t("aide.a3.li1")} <a href="mailto:tanguytubert@gmail.com" className="text-primary hover:underline">tanguytubert@gmail.com</a>.</li>
                 <li>{t("aide.a3.li2")}</li>
               </ul>
             </AccordionContent>
@@ -113,10 +113,10 @@ const Aide = () => {
             <AccordionTrigger className="text-sm font-semibold">{t("aide.q7")}</AccordionTrigger>
             <AccordionContent className="text-sm text-foreground/80 leading-relaxed space-y-3">
               <p>{t("aide.a7.p1")}</p>
-              <a href="mailto:support@asclion.com">
+              <a href="mailto:tanguytubert@gmail.com">
                 <Button className="gap-2 pharmacy-gradient border-0">
                   <Mail className="h-4 w-4" />
-                  support@asclion.com
+                  tanguytubert@gmail.com
                 </Button>
               </a>
             </AccordionContent>

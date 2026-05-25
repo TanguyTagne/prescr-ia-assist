@@ -259,8 +259,8 @@ const Fonctionnalites = () => {
           <p className="text-sm text-muted-foreground">
             Une question, un bug, une suggestion ?
           </p>
-          <a href="mailto:support@asclion.com" className="text-sm text-primary hover:underline font-medium">
-            support@asclion.com
+          <a href="mailto:tanguytubert@gmail.com" className="text-sm text-primary hover:underline font-medium">
+            tanguytubert@gmail.com
           </a>
         </div>
       </main>
