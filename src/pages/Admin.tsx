@@ -206,6 +206,7 @@ const Admin = () => {
         </div>
 
         {tab === "kpis" && <PharmacyKPIs />}
+        {tab === "investor" && <InvestorKpisTab />}
         {tab === "demo-leads" && <DemoLeadsTab />}
         {tab === "demo-sessions" && <DemoSessionsTab />}
         {tab === "tracking-links" && <TrackingLinksTab />}
