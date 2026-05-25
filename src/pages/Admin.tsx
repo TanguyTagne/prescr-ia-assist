@@ -3,7 +3,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { ArrowLeft, Loader2, Mail, Building2, BarChart3, RefreshCw, ShieldCheck, ShoppingCart, Target, Monitor, Trophy, Sparkles, UserPlus, Network, FileSearch, Shield, FileText, Gauge, UserCog, Link2, Flag, Sparkle, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Loader2, Mail, Building2, BarChart3, RefreshCw, ShieldCheck, ShoppingCart, Target, Monitor, Trophy, Sparkles, UserPlus, Network, FileSearch, Shield, FileText, Gauge, UserCog, Link2, Flag, Sparkle, CheckCircle2, LineChart } from "lucide-react";
+import InvestorKpisTab from "@/components/admin/InvestorKpisTab";
 import { useNavigate } from "react-router-dom";
 import RequestsTab from "@/components/admin/RequestsTab";
 import PharmaciesTab from "@/components/admin/PharmaciesTab";
@@ -59,7 +60,7 @@ const Admin = () => {
   const [requests, setRequests] = useState<AccessRequest[]>([]);
   const [pharmacies, setPharmacies] = useState<PharmacyWithLGO[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<"requests" | "pharmacies" | "kpis" | "coverage" | "sales" | "perf" | "benchmark" | "registers" | "demo-sessions" | "demo-leads" | "tracking-links" | "groupements" | "tracabilite" | "conformite" | "rgpd" | "quotas" | "mes-donnees" | "signalements" | "audit-pc" | "accepted-pcs">("kpis");
+  const [tab, setTab] = useState<"requests" | "pharmacies" | "kpis" | "investor" | "coverage" | "sales" | "perf" | "benchmark" | "registers" | "demo-sessions" | "demo-leads" | "tracking-links" | "groupements" | "tracabilite" | "conformite" | "rgpd" | "quotas" | "mes-donnees" | "signalements" | "audit-pc" | "accepted-pcs">("kpis");
 
   useEffect(() => {
     loadData();
@@ -117,6 +118,10 @@ const Admin = () => {
           <Button variant={tab === "kpis" ? "default" : "outline"} size="sm" onClick={() => setTab("kpis")} className="gap-1.5">
             <BarChart3 className="h-3.5 w-3.5" />
             KPIs
+          </Button>
+          <Button variant={tab === "investor" ? "default" : "outline"} size="sm" onClick={() => setTab("investor")} className="gap-1.5">
+            <LineChart className="h-3.5 w-3.5" />
+            Investisseurs
           </Button>
           <Button variant={tab === "signalements" ? "default" : "outline"} size="sm" onClick={() => setTab("signalements")} className="gap-1.5">
             <Flag className="h-3.5 w-3.5" />
@@ -201,6 +206,7 @@ const Admin = () => {
         </div>
 
         {tab === "kpis" && <PharmacyKPIs />}
+        {tab === "investor" && <InvestorKpisTab />}
         {tab === "demo-leads" && <DemoLeadsTab />}
         {tab === "demo-sessions" && <DemoSessionsTab />}
         {tab === "tracking-links" && <TrackingLinksTab />}
