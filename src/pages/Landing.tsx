@@ -196,6 +196,35 @@ const Landing = () => {
           </div>
         </section>
 
+        <section className="py-12 px-4 border-y border-border bg-card">
+          <div className="container max-w-4xl mx-auto">
+            <p className="text-center text-xs uppercase tracking-widest text-muted-foreground mb-6 font-semibold">
+              {t("landing.results.title")}
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              <div className="text-center space-y-1">
+                <div className="text-3xl md:text-4xl font-extrabold text-primary">+18%</div>
+                <div className="text-sm font-semibold">{t("landing.results.basket")}</div>
+                <div className="text-xs text-muted-foreground">{t("landing.results.basket.desc")}</div>
+              </div>
+              <div className="text-center space-y-1">
+                <div className="text-3xl md:text-4xl font-extrabold text-primary">x3</div>
+                <div className="text-sm font-semibold">{t("landing.results.crosssell")}</div>
+                <div className="text-xs text-muted-foreground">{t("landing.results.crosssell.desc")}</div>
+              </div>
+              <div className="text-center space-y-1">
+                <div className="text-3xl md:text-4xl font-extrabold text-primary">&lt; 3s</div>
+                <div className="text-sm font-semibold">{t("landing.results.speed")}</div>
+                <div className="text-xs text-muted-foreground">{t("landing.results.speed.desc")}</div>
+              </div>
+            </div>
+            <p className="text-center text-[10px] text-muted-foreground mt-6 italic">
+              {t("landing.results.disclaimer")}
+            </p>
+          </div>
+        </section>
+
+
         <section className="py-16 px-4 bg-secondary/50">
           <div className="container max-w-4xl mx-auto">
             <h2 className="text-2xl font-bold text-center mb-10">{t("landing.how.title")}</h2>
