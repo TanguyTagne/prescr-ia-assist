@@ -36,6 +36,15 @@ export const translations = {
     en: "Get the right in-stock products to recommend with ready-to-say phrases. Patients feel better cared for, your average basket grows.",
   },
 
+  "landing.results.title": { fr: "Des résultats commerciaux concrets", en: "Concrete business results" },
+  "landing.results.basket": { fr: "Panier moyen", en: "Average basket" },
+  "landing.results.basket.desc": { fr: "Hausse moyenne observée sur les délivrances accompagnées d'Asclion", en: "Average uplift observed on dispensations supported by Asclion" },
+  "landing.results.crosssell": { fr: "Ventes associées", en: "Cross-sells" },
+  "landing.results.crosssell.desc": { fr: "Multiplication du nombre de produits complémentaires proposés au comptoir", en: "Multiplier on complementary products offered at the counter" },
+  "landing.results.speed": { fr: "Par ordonnance", en: "Per prescription" },
+  "landing.results.speed.desc": { fr: "Une opportunité commerciale identifiée sans ralentir l'équipe", en: "A sales opportunity surfaced without slowing the team down" },
+  "landing.results.disclaimer": { fr: "Indicateurs constatés sur nos pharmacies pilotes — variables selon assortiment et usage.", en: "Figures observed on our pilot pharmacies — vary by product mix and usage." },
+
   "landing.access.title": { fr: "Demande de renseignements", en: "Request information" },
   "landing.access.desc": {
     fr: "Remplissez le formulaire ci-dessous, notre équipe vous recontactera dans les plus brefs délais.",
