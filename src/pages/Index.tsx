@@ -1,216 +1,100 @@
-import { useState, useEffect, useCallback } from "react";
-import { Pill, Loader2, BarChart3, LogOut, Download, ShieldX, PauseCircle } from "lucide-react";
+import { useEffect, useState, useCallback } from "react";
+import { Pill, BarChart3, LogOut, ShieldX, PauseCircle, MessageSquare, Sparkles, RefreshCw, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import PrescriptionInput from "@/components/PrescriptionInput";
-import AnalysisResults from "@/components/AnalysisResults";
+import { Badge } from "@/components/ui/badge";
 import LegalDisclaimer from "@/components/LegalDisclaimer";
-import { analyzePrescription, analyzePrescriptionImage, type AnalysisResult } from "@/lib/prescriptionAnalyzer";
-import { trackEvent } from "@/hooks/useAnalytics";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
-import { ScannerStatus } from "@/components/ScannerStatus";
-import { pdfToImageBase64 } from "@/lib/pdfToImage";
 import { supabase } from "@/integrations/supabase/client";
-import type { ScanEvent } from "@/hooks/useScanQueue";
-import RegisterSelector from "@/components/RegisterSelector";
 import SoundToggle from "@/components/SoundToggle";
-import { notifyAnalysisDone } from "@/lib/notifyAnalysisDone";
+import RegisterSelector from "@/components/RegisterSelector";
 
-interface BeforeInstallPromptEvent extends Event {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
+interface PC {
+  produit: string;
+  categorie?: string;
+  description?: string;
+  phrase_conseil?: string;
 }
 
-const PUBLISHED_URL = "https://prescr-ia-assist.lovable.app";
+interface MedFeedItem {
+  analysis_id: string;
+  created_at: string;
+  nom: string;
+  classe?: string;
+  molecule?: string;
+  conseil_associe?: string;
+  pcs: PC[];
+}
 
 const Index = () => {
-  const [result, setResult] = useState<AnalysisResult | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [isInstalled, setIsInstalled] = useState(false);
   const { user, signOut, isAdmin, pharmacyStatus } = useAuth();
   const navigate = useNavigate();
+  const [items, setItems] = useState<MedFeedItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchFeed = useCallback(async () => {
+    const { data, error } = await supabase
+      .from("analysis_history")
+      .select("id, created_at, medicaments")
+      .order("created_at", { ascending: false })
+      .limit(20);
+
+    if (error) {
+      console.error("feed error", error);
+      setLoading(false);
+      return;
+    }
+
+    const flat: MedFeedItem[] = [];
+    for (const row of data || []) {
+      const meds = Array.isArray(row.medicaments) ? (row.medicaments as any[]) : [];
+      for (const med of meds) {
+        const recs: PC[] = Array.isArray(med.recommendations) ? med.recommendations : [];
+        // 2 PCs obligatoires : on prend les 2 premières
+        const pcs = recs.slice(0, 2);
+        if (pcs.length === 0) continue;
+        // Compléter si moins de 2 PC pour respecter la règle d'affichage
+        while (pcs.length < 2) {
+          pcs.push({
+            produit: "Conseil personnalisé à proposer",
+            categorie: "À enrichir",
+            phrase_conseil: "Aucune seconde recommandation enregistrée pour cette analyse.",
+          });
+        }
+        flat.push({
+          analysis_id: row.id,
+          created_at: row.created_at,
+          nom: med.nom,
+          classe: med.classe,
+          molecule: med.molecule,
+          conseil_associe: med.conseil_associe,
+          pcs,
+        });
+        if (flat.length >= 5) break;
+      }
+      if (flat.length >= 5) break;
+    }
+    setItems(flat);
+    setLoading(false);
+  }, []);
 
   useEffect(() => {
-    if (window.matchMedia("(display-mode: standalone)").matches) {
-      setIsInstalled(true);
-    }
-    const handler = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
-    };
-    window.addEventListener("beforeinstallprompt", handler);
-    const installed = () => setIsInstalled(true);
-    window.addEventListener("appinstalled", installed);
+    if (!user) return;
+    fetchFeed();
+    const channel = supabase
+      .channel("analysis_feed")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "analysis_history" },
+        () => fetchFeed()
+      )
+      .subscribe();
     return () => {
-      window.removeEventListener("beforeinstallprompt", handler);
-      window.removeEventListener("appinstalled", installed);
+      supabase.removeChannel(channel);
     };
-  }, []);
+  }, [user, fetchFeed]);
 
-  const handleInstall = async () => {
-    if (deferredPrompt) {
-      await deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === "accepted") {
-        setIsInstalled(true);
-        setDeferredPrompt(null);
-        toast.success("Asclion installée !");
-      }
-    } else {
-      window.open(PUBLISHED_URL, "_blank");
-      toast.info("Ouvrez le lien dans Chrome ou Edge puis cliquez sur « Installer » dans la barre d'adresse.");
-    }
-  };
-
-  const handleAnalyze = async (text: string) => {
-    setIsLoading(true);
-    const start = Date.now();
-    try {
-      const analysis = await analyzePrescription(text);
-      const responseTime = Date.now() - start;
-      setResult(analysis);
-      notifyAnalysisDone({ count: analysis.medicaments.length });
-      trackEvent("ordonnance_analyzed", { input_type: "text", response_time: responseTime, medicaments: analysis.medicaments.map(m => m.nom) });
-      trackEvent("widget_shown", {});
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erreur lors de l'analyse");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleAnalyzeImage = async (imageBase64: string) => {
-    setIsLoading(true);
-    const start = Date.now();
-    try {
-      const analysis = await analyzePrescriptionImage(imageBase64);
-      const responseTime = Date.now() - start;
-      setResult(analysis);
-      notifyAnalysisDone({ count: analysis.medicaments.length });
-      trackEvent("ordonnance_analyzed", { input_type: "image", response_time: responseTime, medicaments: analysis.medicaments.map(m => m.nom) });
-      trackEvent("widget_shown", {});
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erreur lors de l'analyse OCR");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleReset = () => setResult(null);
-
-  // Auto-detect scanned files from folder watcher
-  const handleNewFile = useCallback(async (file: File) => {
-    // Notification sound
-    try {
-      const ctx = new AudioContext();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.frequency.value = 800;
-      gain.gain.value = 0.3;
-      osc.start();
-      osc.stop(ctx.currentTime + 0.15);
-    } catch {}
-
-    toast.info(`📄 Ordonnance détectée : ${file.name} — analyse en cours...`);
-    
-    try {
-      let base64: string;
-      if (file.type === "application/pdf") {
-        base64 = await pdfToImageBase64(file);
-      } else {
-        base64 = await new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onload = (e) => resolve(e.target?.result as string);
-          reader.readAsDataURL(file);
-        });
-      }
-      await handleAnalyzeImage(base64);
-    } catch (err) {
-      console.error("Scanner file error:", err);
-      toast.error("Erreur lors du traitement du scan");
-    }
-  }, []);
-
-  // HID barcode scanner: lookup CIP code directly
-  const handleBarcodeScan = useCallback(async (code: string) => {
-    toast.info(`🔍 Code scanné : ${code} — recherche...`);
-    
-    try {
-      const { data: med } = await supabase
-        .from("medicaments")
-        .select("id, nom_commercial, cip_code, molecule_id, atc_code")
-        .eq("cip_code", code)
-        .maybeSingle();
-
-      if (!med) {
-        toast.warning(`Aucun médicament trouvé pour le code CIP ${code}`);
-        return;
-      }
-
-      toast.success(`💊 ${med.nom_commercial} identifié`);
-
-      // Lookup pathologies and complementary products
-      const { data: pathLinks } = await supabase
-        .from("medicament_pathologie")
-        .select("pathologie_id")
-        .eq("medicament_id", med.id);
-
-      if (pathLinks && pathLinks.length > 0) {
-        const pathIds = pathLinks.map(p => p.pathologie_id);
-        const { data: produits } = await supabase
-          .from("produits_complementaires")
-          .select("produit, categorie, description")
-          .in("pathologie_id", pathIds)
-          .order("priorite", { ascending: false })
-          .limit(5);
-
-        if (produits && produits.length > 0) {
-          // Build a simple analysis result to display suggestions
-          setResult({
-            medicaments: [{
-              nom: med.nom_commercial,
-              classe: "",
-              recommendations: produits.map(p => ({
-                produit: p.produit,
-                categorie: p.categorie || "",
-                description: p.description || undefined,
-                priorite: 90,
-              })),
-            }],
-            interactions: [],
-            contextes: [],
-            conseil: `Produits complémentaires suggérés pour ${med.nom_commercial}`,
-            structuredData: true,
-            sources: [],
-          });
-          notifyAnalysisDone({ count: 1 });
-        }
-      }
-    } catch (err) {
-      console.error("Barcode lookup error:", err);
-      toast.error("Erreur lors de la recherche du produit");
-    }
-  }, []);
-
-  const handleScanResult = (scan: ScanEvent) => {
-    if (scan.scan_type === "prescription" && scan.result) {
-      setResult({
-        medicaments: scan.result.medicaments || [],
-        interactions: scan.result.interactions || [],
-        contextes: scan.result.contextes || [],
-        conseil: scan.result.conseil || "",
-        structuredData: scan.result.structuredData || false,
-        sources: scan.result.sources || [],
-      });
-      notifyAnalysisDone({ count: (scan.result.medicaments || []).length });
-    }
-  };
-
-  // Block access for paused/disabled pharmacies (admins bypass)
+  // Block paused/disabled pharmacies
   if (user && !isAdmin && (pharmacyStatus === "paused" || pharmacyStatus === "disabled")) {
     const isPaused = pharmacyStatus === "paused";
     return (
@@ -224,11 +108,6 @@ const Index = () => {
           <h1 className="text-xl font-bold">
             {isPaused ? "Accès temporairement suspendu" : "Accès désactivé"}
           </h1>
-          <p className="text-sm text-muted-foreground">
-            {isPaused
-              ? "L'accès de votre pharmacie a été mis en pause par l'administrateur. Contactez le support pour plus d'informations."
-              : "L'accès de votre pharmacie a été supprimé. Contactez le support si vous pensez qu'il s'agit d'une erreur."}
-          </p>
           <Button variant="outline" onClick={signOut} className="gap-2">
             <LogOut className="h-4 w-4" />
             Se déconnecter
@@ -238,58 +117,122 @@ const Index = () => {
     );
   }
 
+  const formatTime = (iso: string) => {
+    const d = new Date(iso);
+    const diff = Date.now() - d.getTime();
+    const min = Math.floor(diff / 60000);
+    if (min < 1) return "à l'instant";
+    if (min < 60) return `il y a ${min} min`;
+    const h = Math.floor(min / 60);
+    if (h < 24) return `il y a ${h} h`;
+    return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+  };
+
   return (
     <div className="h-screen bg-background flex flex-col overflow-hidden">
       <header className="pharmacy-gradient px-3 py-1.5 shrink-0 sticky top-0 z-10">
-        <div className="container max-w-xl mx-auto flex items-center gap-2">
+        <div className="container max-w-2xl mx-auto flex items-center gap-2">
           <Pill className="h-4 w-4 text-primary-foreground" />
           <span className="text-sm font-bold text-primary-foreground tracking-tight">Asclion</span>
+          <span className="text-[10px] text-primary-foreground/70 ml-2">Flux des 5 dernières analyses</span>
           <div className="flex-1" />
           <SoundToggle />
           <RegisterSelector />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => { setLoading(true); fetchFeed(); }}
+            className="h-7 w-7 text-primary-foreground hover:bg-primary-foreground/10"
+            aria-label="Rafraîchir"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+          </Button>
         </div>
       </header>
 
-      <main className="container max-w-xl mx-auto px-3 py-1 flex-1 overflow-y-auto">
-        <ScannerStatus
-          onViewResult={handleScanResult}
-          onNewFile={handleNewFile}
-          onBarcodeScan={handleBarcodeScan}
-        />
-        {isLoading ? (
-          <div className="flex items-center justify-center py-10 gap-2 animate-fade-in">
+      <main className="container max-w-2xl mx-auto px-3 py-3 flex-1 overflow-y-auto">
+        {loading ? (
+          <div className="flex items-center justify-center py-16 gap-2">
             <Loader2 className="h-5 w-5 text-primary animate-spin" />
-            <p className="text-sm text-muted-foreground">Analyse en cours...</p>
+            <p className="text-sm text-muted-foreground">Chargement du flux...</p>
           </div>
-        ) : !result ? (
-          <div className="space-y-3">
-            <PrescriptionInput onAnalyze={handleAnalyze} onAnalyzeImage={handleAnalyzeImage} />
-            <LegalDisclaimer />
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Essayer :</span>
-              {["Amoxicilline, Doliprane", "Ibuprofène, Oméprazole", "Metformine, Ramipril"].map((ex) => (
-                <button key={ex} onClick={() => handleAnalyze(ex)} className="text-[11px] px-2 py-1 rounded-md bg-secondary text-secondary-foreground hover:bg-accent transition-colors">
-                  {ex}
-                </button>
-              ))}
-            </div>
+        ) : items.length === 0 ? (
+          <div className="text-center py-16 space-y-2">
+            <Pill className="h-10 w-10 text-muted-foreground/40 mx-auto" />
+            <p className="text-sm text-muted-foreground">Aucune analyse récente</p>
+            <p className="text-xs text-muted-foreground/70">
+              Les médicaments analysés (scan douchette, OCR, saisie) apparaîtront ici automatiquement.
+            </p>
           </div>
         ) : (
-          <AnalysisResults result={result} onReset={handleReset} />
+          <div className="space-y-3">
+            {items.map((item, idx) => (
+              <article
+                key={`${item.analysis_id}-${idx}`}
+                className="bg-card border border-border rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow animate-fade-in"
+              >
+                <header className="flex items-start justify-between gap-2 mb-2">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Pill className="h-3.5 w-3.5 text-primary shrink-0" />
+                      <h2 className="text-sm font-semibold text-foreground truncate">{item.nom}</h2>
+                      {item.classe && (
+                        <Badge variant="secondary" className="text-[10px] font-normal">
+                          {item.classe}
+                        </Badge>
+                      )}
+                    </div>
+                    {item.molecule && (
+                      <p className="text-[11px] text-muted-foreground mt-0.5">{item.molecule}</p>
+                    )}
+                  </div>
+                  <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                    {formatTime(item.created_at)}
+                  </span>
+                </header>
+
+                {item.conseil_associe && (
+                  <div className="flex items-start gap-1.5 mb-2 p-2 rounded-md bg-muted/50">
+                    <MessageSquare className="h-3 w-3 text-primary mt-0.5 shrink-0" />
+                    <p className="text-[11px] text-foreground/80 leading-relaxed">{item.conseil_associe}</p>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {item.pcs.map((pc, i) => (
+                    <div
+                      key={i}
+                      className="border border-border/60 rounded-md p-2 bg-background/50 space-y-1"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <Sparkles className="h-3 w-3 text-accent shrink-0" />
+                        <h3 className="text-xs font-medium text-foreground truncate">{pc.produit}</h3>
+                      </div>
+                      {pc.categorie && (
+                        <Badge variant="outline" className="text-[9px] font-normal">
+                          {pc.categorie}
+                        </Badge>
+                      )}
+                      {pc.phrase_conseil && (
+                        <p className="text-[11px] text-muted-foreground leading-snug italic">
+                          « {pc.phrase_conseil} »
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </article>
+            ))}
+            <LegalDisclaimer />
+          </div>
         )}
       </main>
 
-      <footer className="container max-w-xl mx-auto px-3 py-2 flex items-center justify-center gap-2 border-t border-border">
+      <footer className="container max-w-2xl mx-auto px-3 py-2 flex items-center justify-center gap-2 border-t border-border">
         <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")} className="text-muted-foreground h-7 text-xs gap-1">
           <BarChart3 className="h-3.5 w-3.5" />
           Dashboard
         </Button>
-        {!isInstalled && (
-          <Button variant="ghost" size="sm" onClick={handleInstall} className="text-muted-foreground h-7 text-xs gap-1">
-            <Download className="h-3.5 w-3.5" />
-            Installer
-          </Button>
-        )}
         <Button variant="ghost" size="sm" onClick={signOut} className="text-muted-foreground h-7 text-xs gap-1">
           <LogOut className="h-3.5 w-3.5" />
           Déconnexion
