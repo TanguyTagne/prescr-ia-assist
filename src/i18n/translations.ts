@@ -13,8 +13,8 @@ export const translations = {
   "landing.title.line1": { fr: "Augmentez votre panier moyen,", en: "Grow your average basket," },
   "landing.title.line2": { fr: "sans sacrifier le conseil", en: "without compromising on advice" },
   "landing.subtitle": {
-    fr: "Asclion transforme chaque ordonnance en opportunité de vente associée pertinente. Plus de produits complémentaires délivrés, un panier moyen qui décolle, et un patient mieux accompagné — sans effort supplémentaire pour l'équipe.",
-    en: "Asclion turns every prescription into a relevant cross-sell opportunity. More complementary products delivered, a higher average basket, and better patient care — with zero extra effort for your team.",
+    fr: "Asclion transforme chaque médicament scanné en opportunité de vente associée pertinente. Plus de produits complémentaires délivrés, un panier moyen qui décolle, et un patient mieux accompagné — sans effort supplémentaire pour l'équipe.",
+    en: "Asclion turns every scanned drug into a relevant cross-sell opportunity. More complementary products delivered, a higher average basket, and better patient care — with zero extra effort for your team.",
   },
   "landing.cta.access": { fr: "Booster mon chiffre — Demander une Demo", en: "Boost my revenue — Request a Demo" },
   "landing.cta.vsLgo": { fr: "Asclion vs LGO", en: "Asclion vs LGO" },
