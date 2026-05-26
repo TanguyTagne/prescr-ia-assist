@@ -18,9 +18,13 @@ const Aide = () => {
           "@context": "https://schema.org",
           "@type": "FAQPage",
           mainEntity: [
-            { "@type": "Question", name: t("aide.faq.q1"), acceptedAnswer: { "@type": "Answer", text: t("aide.faq.a1") } },
-            { "@type": "Question", name: t("aide.faq.q2"), acceptedAnswer: { "@type": "Answer", text: t("aide.faq.a2") } },
-            { "@type": "Question", name: t("aide.faq.q3"), acceptedAnswer: { "@type": "Answer", text: t("aide.faq.a3") } },
+            { "@type": "Question", name: t("aide.q1"), acceptedAnswer: { "@type": "Answer", text: `${t("aide.a1.p1")} ${t("aide.a1.p2")}` } },
+            { "@type": "Question", name: t("aide.q2"), acceptedAnswer: { "@type": "Answer", text: `${t("aide.a2.p1")} ${t("aide.a2.p2")}` } },
+            { "@type": "Question", name: t("aide.q3"), acceptedAnswer: { "@type": "Answer", text: `${t("aide.a3.p1")} ${t("aide.a3.li1")} ${t("aide.a3.li2")}` } },
+            { "@type": "Question", name: t("aide.q4"), acceptedAnswer: { "@type": "Answer", text: `${t("aide.a4.p1")} ${t("aide.a4.li1")} ${t("aide.a4.li2")} ${t("aide.a4.li3")}` } },
+            { "@type": "Question", name: t("aide.q5"), acceptedAnswer: { "@type": "Answer", text: `${t("aide.a5.k1")} ${t("aide.a5.k2")} ${t("aide.a5.k3")} ${t("aide.a5.k4")} ${t("aide.a5.k5")} ${t("aide.a5.note")}` } },
+            { "@type": "Question", name: t("aide.q6"), acceptedAnswer: { "@type": "Answer", text: `${t("aide.a6.p1")} ${t("aide.a6.p2")}` } },
+            { "@type": "Question", name: t("aide.q7"), acceptedAnswer: { "@type": "Answer", text: t("aide.a7.p1") } },
           ],
         }}
       />
