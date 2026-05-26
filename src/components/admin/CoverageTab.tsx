@@ -6,10 +6,25 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
-import { Loader2, RefreshCw, Download, AlertTriangle, CheckCircle2, XCircle, Search, Zap } from "lucide-react";
+import { Loader2, RefreshCw, Download, AlertTriangle, CheckCircle2, XCircle, Search, Zap, Database, Pill, Layers, Copy } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
-interface CoverageStats {
+interface MedStats {
+  total_rows: number;
+  with_cip: number;
+  without_cip: number;
+  unique_nom: number;
+  unique_presentations: number;
+  dup_groups: number;
+  dup_extra_rows: number;
+  meds_with_pc: number;
+  meds_without_pc: number;
+  pc_coverage_rate: number;
+  avg_pc_per_med: number;
+  max_pc_per_med: number;
+}
+
+interface AuditStats {
   total: number;
   present: number;
   missing: number;
@@ -34,30 +49,47 @@ interface AuditEntry {
   };
 }
 
+const Stat = ({
+  label, value, sub, accent = "default", icon: Icon,
+}: { label: string; value: string | number; sub?: string; accent?: "default" | "success" | "warning" | "danger"; icon?: any }) => {
+  const colors: Record<string, string> = {
+    default: "text-foreground",
+    success: "text-green-600",
+    warning: "text-amber-500",
+    danger: "text-destructive",
+  };
+  return (
+    <Card>
+      <CardContent className="p-4 space-y-1">
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          {Icon && <Icon className="h-3.5 w-3.5" />}
+          {label}
+        </div>
+        <p className={`text-2xl font-bold ${colors[accent]}`}>{value}</p>
+        {sub && <p className="text-xs text-muted-foreground">{sub}</p>}
+      </CardContent>
+    </Card>
+  );
+};
+
 const CoverageTab = () => {
-  const [stats, setStats] = useState<CoverageStats | null>(null);
+  const [medStats, setMedStats] = useState<MedStats | null>(null);
+  const [auditStats, setAuditStats] = useState<AuditStats | null>(null);
   const [entries, setEntries] = useState<AuditEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | "missing" | "incomplete" | "present">("all");
   const [search, setSearch] = useState("");
-  const [cipStats, setCipStats] = useState<{ total: number; sans_cip: number; avec_cip: number } | null>(null);
 
-  useEffect(() => { loadAuditData(); loadCipStats(); }, []);
+  useEffect(() => { loadAll(); }, []);
 
-  const loadCipStats = async () => {
-    try {
-      const [{ count: total }, { count: sans }] = await Promise.all([
-        supabase.from("medicaments").select("*", { count: "exact", head: true }),
-        supabase.from("medicaments").select("*", { count: "exact", head: true }).or("cip_code.is.null,cip_code.eq."),
-      ]);
-      const t = total || 0; const s = sans || 0;
-      setCipStats({ total: t, sans_cip: s, avec_cip: t - s });
-    } catch (e) { console.error(e); }
+  const loadMedStats = async () => {
+    const { data, error } = await supabase.rpc("get_medicaments_coverage_stats" as any);
+    if (error) { console.error(error); return; }
+    setMedStats(data as unknown as MedStats);
   };
 
   const loadAuditData = async () => {
-    setLoading(true);
     try {
       const { data: audits } = await supabase
         .from("medication_coverage_audit")
@@ -69,7 +101,7 @@ const CoverageTab = () => {
         const present = audits.filter((a: any) => a.status === "present").length;
         const missing = audits.filter((a: any) => a.status === "missing").length;
         const incomplete = audits.filter((a: any) => a.status === "incomplete").length;
-        setStats({
+        setAuditStats({
           total: audits.length,
           present,
           missing,
@@ -78,14 +110,18 @@ const CoverageTab = () => {
           completeness_avg: Math.round(audits.reduce((s: number, a: any) => s + a.completeness_score, 0) / audits.length),
         });
       } else {
-        setStats(null);
+        setAuditStats(null);
         setEntries([]);
       }
     } catch (e) {
       console.error(e);
-    } finally {
-      setLoading(false);
     }
+  };
+
+  const loadAll = async () => {
+    setLoading(true);
+    await Promise.all([loadMedStats(), loadAuditData()]);
+    setLoading(false);
   };
 
   const runAction = async (action: string) => {
@@ -95,45 +131,35 @@ const CoverageTab = () => {
         seed: "Chargement du référentiel Top 300...",
         audit: "Audit de couverture en cours...",
         enrich: "Enrichissement automatique...",
-        "fill-products": "Remplissage produits complémentaires..."
+        "fill-products": "Remplissage produits complémentaires...",
       };
       toast.info(labels[action] || "En cours...");
-
-      const { data, error } = await supabase.functions.invoke("audit-coverage", {
-        body: { action },
-      });
-
+      const { data, error } = await supabase.functions.invoke("audit-coverage", { body: { action } });
       if (error) throw error;
-      
+
       if (action === "seed") toast.success(`Référentiel chargé : ${data.seeded} entrées`);
       else if (action === "audit") {
         toast.success(`Audit terminé — Couverture : ${data.stats.coverage_rate}%`);
-        setStats(data.stats);
+        setAuditStats(data.stats);
       } else if (action === "enrich") {
         toast.success(`Enrichi : ${data.enriched} médicaments — ${data.remaining} restants`);
-        // If there are remaining, auto-continue
         if (data.remaining > 0) {
-          toast.info(`Enrichissement en cours... ${data.remaining} restants. Relance automatique.`);
           await loadAuditData();
-          // Re-run audit to refresh statuses, then continue enriching
           await supabase.functions.invoke("audit-coverage", { body: { action: "audit" } });
           await loadAuditData();
           setRunning(null);
-          // Trigger next batch
           setTimeout(() => runAction("enrich"), 500);
           return;
         }
       } else if (action === "fill-products") {
         toast.success(`${data.filled} pathologies enrichies — ${data.produits_created} produits créés`);
         if (data.remaining > 0) {
-          toast.info(`${data.remaining} pathologies restantes. Relance automatique.`);
           setRunning(null);
           setTimeout(() => runAction("fill-products"), 500);
           return;
         }
       }
-
-      await loadAuditData();
+      await loadAll();
     } catch (e: any) {
       toast.error("Erreur : " + e.message);
     } finally {
@@ -167,174 +193,185 @@ const CoverageTab = () => {
     return <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
   }
 
+  const cipRate = medStats && medStats.total_rows > 0
+    ? Math.round((medStats.with_cip / medStats.total_rows) * 1000) / 10
+    : 0;
+
   return (
-    <div className="space-y-4">
-      {/* Action buttons */}
-      <div className="flex flex-wrap gap-2">
-        <Button size="sm" onClick={() => runAction("seed")} disabled={!!running} className="gap-1.5">
-          {running === "seed" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
-          1. Charger référentiel
-        </Button>
-        <Button size="sm" onClick={() => runAction("audit")} disabled={!!running} className="gap-1.5">
-          {running === "audit" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Search className="h-3.5 w-3.5" />}
-          2. Lancer l'audit
-        </Button>
-        <Button size="sm" onClick={() => runAction("enrich")} disabled={!!running} variant="secondary" className="gap-1.5">
-          {running === "enrich" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
-          3. Enrichir automatiquement
-        </Button>
-        <Button size="sm" onClick={() => runAction("fill-products")} disabled={!!running} variant="secondary" className="gap-1.5">
-          {running === "fill-products" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
-          4. Remplir produits complémentaires
-        </Button>
-        <Button size="sm" variant="ghost" onClick={() => { loadAuditData(); loadCipStats(); }} disabled={!!running} className="ml-auto">
-          <RefreshCw className="h-3.5 w-3.5" />
-        </Button>
-      </div>
+    <div className="space-y-6">
+      {/* SECTION 1 — Base médicaments */}
+      <section className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-semibold flex items-center gap-2">
+            <Database className="h-4 w-4" /> Base médicaments
+          </h2>
+          <Button size="sm" variant="ghost" onClick={loadAll} className="h-7">
+            <RefreshCw className="h-3.5 w-3.5" />
+          </Button>
+        </div>
 
-      {/* CIP Coverage */}
-      {cipStats && (
-        <Card>
-          <CardHeader className="pb-2 pt-3 px-4">
-            <CardTitle className="text-sm">Couverture codes CIP — base médicaments</CardTitle>
-          </CardHeader>
-          <CardContent className="px-4 pb-3 grid grid-cols-3 gap-4">
-            <div>
-              <p className="text-xs text-muted-foreground">Total médicaments</p>
-              <p className="text-2xl font-bold">{cipStats.total}</p>
+        {medStats && (
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <Stat icon={Database} label="Présentations CIP" value={medStats.total_rows.toLocaleString("fr-FR")}
+                sub="1 ligne = 1 code-barres scannable" />
+              <Stat icon={Pill} label="Médicaments uniques" value={medStats.unique_presentations.toLocaleString("fr-FR")}
+                sub={`${medStats.unique_nom.toLocaleString("fr-FR")} noms commerciaux distincts`} />
+              <Stat icon={CheckCircle2} label="Avec code CIP" value={medStats.with_cip.toLocaleString("fr-FR")}
+                sub={`${cipRate}% de couverture`} accent="success" />
+              <Stat icon={XCircle} label="Sans code CIP"
+                value={medStats.without_cip.toLocaleString("fr-FR")}
+                accent={medStats.without_cip === 0 ? "success" : "warning"}
+                sub="Non scannables par douchette" />
             </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Avec code CIP</p>
-              <p className="text-2xl font-bold text-green-600">{cipStats.avec_cip}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Sans code CIP</p>
-              <p className={`text-2xl font-bold ${cipStats.sans_cip === 0 ? "text-green-600" : "text-amber-500"}`}>{cipStats.sans_cip}</p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
-      {/* Stats cards */}
-      {stats && (
-        <>
+            {medStats.dup_extra_rows > 0 && (
+              <Card className="border-amber-500/40 bg-amber-50/40 dark:bg-amber-950/10">
+                <CardContent className="py-3 px-4 flex items-start gap-3 text-sm">
+                  <Copy className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+                  <div className="space-y-0.5">
+                    <p>
+                      <strong>{medStats.dup_extra_rows.toLocaleString("fr-FR")}</strong> lignes partagent le même nom+dosage+forme qu'une autre présentation
+                      ({medStats.dup_groups.toLocaleString("fr-FR")} groupes).
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Comportement attendu : chaque présentation commerciale (boîte 30, 60, 90…) possède son propre CIP.
+                      Les conseils sont partagés via le nom de base.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </>
+        )}
+      </section>
+
+      {/* SECTION 2 — Couverture conseils (PC) */}
+      <section className="space-y-3">
+        <h2 className="text-base font-semibold flex items-center gap-2">
+          <Layers className="h-4 w-4" /> Produits Conseils (PC) associés
+        </h2>
+
+        {medStats && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <Card>
-              <CardHeader className="pb-2 pt-3 px-4">
-                <CardTitle className="text-xs text-muted-foreground">Taux de couverture</CardTitle>
-              </CardHeader>
-              <CardContent className="px-4 pb-3">
-                <p className={`text-2xl font-bold ${stats.coverage_rate === 100 ? "text-green-600" : stats.coverage_rate >= 80 ? "text-amber-500" : "text-destructive"}`}>
-                  {stats.coverage_rate}%
-                </p>
-                <Progress value={stats.coverage_rate} className="mt-2 h-2" />
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2 pt-3 px-4">
-                <CardTitle className="text-xs text-muted-foreground">Présents</CardTitle>
-              </CardHeader>
-              <CardContent className="px-4 pb-3">
-                <p className="text-2xl font-bold text-green-600">{stats.present}</p>
-                <p className="text-xs text-muted-foreground">/ {stats.total}</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2 pt-3 px-4">
-                <CardTitle className="text-xs text-muted-foreground">Manquants</CardTitle>
-              </CardHeader>
-              <CardContent className="px-4 pb-3">
-                <p className="text-2xl font-bold text-destructive">{stats.missing}</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2 pt-3 px-4">
-                <CardTitle className="text-xs text-muted-foreground">Score moyen</CardTitle>
-              </CardHeader>
-              <CardContent className="px-4 pb-3">
-                <p className="text-2xl font-bold">{stats.completeness_avg}/100</p>
-              </CardContent>
-            </Card>
+            <Stat label="Médicaments avec PC" value={medStats.meds_with_pc.toLocaleString("fr-FR")}
+              sub={`/ ${medStats.unique_nom.toLocaleString("fr-FR")} noms uniques`}
+              accent="success" />
+            <Stat label="Sans PC" value={medStats.meds_without_pc.toLocaleString("fr-FR")}
+              accent={medStats.meds_without_pc === 0 ? "success" : "warning"} />
+            <Stat label="Taux de couverture PC" value={`${medStats.pc_coverage_rate}%`}
+              accent={medStats.pc_coverage_rate >= 95 ? "success" : medStats.pc_coverage_rate >= 70 ? "warning" : "danger"} />
+            <Stat label="PC moyens / médicament" value={medStats.avg_pc_per_med}
+              sub={`max ${medStats.max_pc_per_med}`} />
           </div>
+        )}
 
-          {/* Alert */}
-          {(stats.coverage_rate < 100 || stats.completeness_avg < 70) && (
-            <Card className="border-amber-500/50 bg-amber-50 dark:bg-amber-950/20">
-              <CardContent className="py-3 px-4 flex items-center gap-3">
-                <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0" />
-                <div className="text-sm">
-                  {stats.coverage_rate < 100 && (
-                    <p><strong>Couverture incomplète :</strong> {stats.missing} médicaments du Top 300 sont absents de la base Asclion.</p>
-                  )}
-                  {stats.completeness_avg < 70 && (
-                    <p><strong>Complétude faible :</strong> score moyen {stats.completeness_avg}/100. Lancez l'enrichissement automatique.</p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </>
-      )}
-
-      {!stats && entries.length === 0 && (
-        <Card>
-          <CardContent className="py-8 text-center text-muted-foreground">
-            <p className="text-sm">Aucun audit effectué. Cliquez sur <strong>"1. Charger référentiel"</strong> puis <strong>"2. Lancer l'audit"</strong>.</p>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Filter & search */}
-      {entries.length > 0 && (
-        <>
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex gap-1">
-              {(["all", "missing", "incomplete", "present"] as const).map(f => (
-                <Button key={f} size="sm" variant={filter === f ? "default" : "outline"} onClick={() => setFilter(f)} className="text-xs h-7">
-                  {f === "all" ? "Tous" : f === "missing" ? `Manquants (${stats?.missing || 0})` : f === "incomplete" ? `Incomplets (${stats?.incomplete || 0})` : `Présents (${stats?.present || 0})`}
-                </Button>
-              ))}
-            </div>
-            <Input placeholder="Rechercher..." value={search} onChange={e => setSearch(e.target.value)} className="h-7 w-48 text-xs ml-auto" />
-          </div>
-
-          {/* Table */}
+        {medStats && (
           <Card>
-            <div className="max-h-[400px] overflow-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-12">#</TableHead>
-                    <TableHead>ATC5</TableHead>
-                    <TableHead>Molécule</TableHead>
-                    <TableHead>Spécialité</TableHead>
-                    <TableHead>Classe</TableHead>
-                    <TableHead>Statut</TableHead>
-                    <TableHead className="text-right">Score</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredEntries.map(entry => (
-                    <TableRow key={entry.id}>
-                      <TableCell className="text-xs text-muted-foreground">{entry.reference?.rang}</TableCell>
-                      <TableCell className="font-mono text-xs">{entry.reference?.atc5_code}</TableCell>
-                      <TableCell className="text-sm font-medium">{entry.reference?.molecule}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{entry.reference?.nom_commercial_ref}</TableCell>
-                      <TableCell className="text-xs">{entry.reference?.classe_therapeutique}</TableCell>
-                      <TableCell>{statusBadge(entry.status)}</TableCell>
-                      <TableCell className="text-right">
-                        <span className={`text-sm font-semibold ${entry.completeness_score >= 70 ? "text-green-600" : entry.completeness_score >= 30 ? "text-amber-500" : "text-destructive"}`}>
-                          {entry.completeness_score}
-                        </span>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
+                <span>Couverture PC</span>
+                <span>{medStats.pc_coverage_rate}%</span>
+              </div>
+              <Progress value={medStats.pc_coverage_rate} className="h-2" />
+            </CardContent>
           </Card>
-        </>
-      )}
+        )}
+      </section>
+
+      {/* SECTION 3 — Audit Top 300 */}
+      <section className="space-y-3">
+        <h2 className="text-base font-semibold flex items-center gap-2">
+          <Search className="h-4 w-4" /> Audit référentiel Top 300
+        </h2>
+
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" onClick={() => runAction("seed")} disabled={!!running} className="gap-1.5">
+            {running === "seed" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+            1. Charger référentiel
+          </Button>
+          <Button size="sm" onClick={() => runAction("audit")} disabled={!!running} className="gap-1.5">
+            {running === "audit" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Search className="h-3.5 w-3.5" />}
+            2. Lancer l'audit
+          </Button>
+          <Button size="sm" onClick={() => runAction("enrich")} disabled={!!running} variant="secondary" className="gap-1.5">
+            {running === "enrich" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
+            3. Enrichir automatiquement
+          </Button>
+          <Button size="sm" onClick={() => runAction("fill-products")} disabled={!!running} variant="secondary" className="gap-1.5">
+            {running === "fill-products" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
+            4. Remplir produits complémentaires
+          </Button>
+        </div>
+
+        {auditStats && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <Stat label="Taux de couverture" value={`${auditStats.coverage_rate}%`}
+              accent={auditStats.coverage_rate === 100 ? "success" : auditStats.coverage_rate >= 80 ? "warning" : "danger"} />
+            <Stat label="Présents" value={auditStats.present} sub={`/ ${auditStats.total}`} accent="success" />
+            <Stat label="Manquants" value={auditStats.missing} accent={auditStats.missing === 0 ? "success" : "danger"} />
+            <Stat label="Score moyen" value={`${auditStats.completeness_avg}/100`} />
+          </div>
+        )}
+
+        {!auditStats && (
+          <Card>
+            <CardContent className="py-8 text-center text-sm text-muted-foreground">
+              Aucun audit effectué. Cliquez sur <strong>"1. Charger référentiel"</strong> puis <strong>"2. Lancer l'audit"</strong>.
+            </CardContent>
+          </Card>
+        )}
+
+        {entries.length > 0 && (
+          <>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex gap-1">
+                {(["all", "missing", "incomplete", "present"] as const).map(f => (
+                  <Button key={f} size="sm" variant={filter === f ? "default" : "outline"} onClick={() => setFilter(f)} className="text-xs h-7">
+                    {f === "all" ? "Tous" : f === "missing" ? `Manquants (${auditStats?.missing || 0})` : f === "incomplete" ? `Incomplets (${auditStats?.incomplete || 0})` : `Présents (${auditStats?.present || 0})`}
+                  </Button>
+                ))}
+              </div>
+              <Input placeholder="Rechercher..." value={search} onChange={e => setSearch(e.target.value)} className="h-7 w-48 text-xs ml-auto" />
+            </div>
+
+            <Card>
+              <div className="max-h-[400px] overflow-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-12">#</TableHead>
+                      <TableHead>ATC5</TableHead>
+                      <TableHead>Molécule</TableHead>
+                      <TableHead>Spécialité</TableHead>
+                      <TableHead>Classe</TableHead>
+                      <TableHead>Statut</TableHead>
+                      <TableHead className="text-right">Score</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredEntries.map(entry => (
+                      <TableRow key={entry.id}>
+                        <TableCell className="text-xs text-muted-foreground">{entry.reference?.rang}</TableCell>
+                        <TableCell className="font-mono text-xs">{entry.reference?.atc5_code}</TableCell>
+                        <TableCell className="text-sm font-medium">{entry.reference?.molecule}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">{entry.reference?.nom_commercial_ref}</TableCell>
+                        <TableCell className="text-xs">{entry.reference?.classe_therapeutique}</TableCell>
+                        <TableCell>{statusBadge(entry.status)}</TableCell>
+                        <TableCell className="text-right">
+                          <span className={`text-sm font-semibold ${entry.completeness_score >= 70 ? "text-green-600" : entry.completeness_score >= 30 ? "text-amber-500" : "text-destructive"}`}>
+                            {entry.completeness_score}
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </Card>
+          </>
+        )}
+      </section>
     </div>
   );
 };
