@@ -4,6 +4,19 @@ const path = require("path");
 const fs = require("fs");
 const { exec } = require("child_process");
 
+// Load uiohook-napi lazily — if the native binary fails to load (rare),
+// the app keeps working without the global scanner.
+let uIOhook = null;
+let UiohookKey = null;
+try {
+  const mod = require("uiohook-napi");
+  uIOhook = mod.uIOhook;
+  UiohookKey = mod.UiohookKey;
+} catch (e) {
+  console.error("[ASCLION-SCAN] uiohook-napi unavailable:", e && e.message);
+}
+
+
 // ────────────────────────────────────────────────────────────
 // Picture-in-Picture state (always-on-top + compact mode)
 // ────────────────────────────────────────────────────────────
