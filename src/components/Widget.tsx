@@ -369,6 +369,45 @@ const LgoPreviewPicker = ({
   </DropdownMenu>
 );
 
+const ScannerIndicator = () => {
+  const [detected, setDetected] = useState<boolean>(() => {
+    try { return localStorage.getItem("asclion_scanner_detected") === "1"; } catch { return false; }
+  });
+  const [pulse, setPulse] = useState(false);
+
+  useEffect(() => {
+    const handler = () => {
+      setDetected(true);
+      setPulse(true);
+      setTimeout(() => setPulse(false), 1200);
+    };
+    window.addEventListener("asclion:global-barcode", handler);
+    return () => window.removeEventListener("asclion:global-barcode", handler);
+  }, []);
+
+  // Hide entirely on web (no global listener possible) to keep the header clean
+  const hasBridge = typeof window !== "undefined" && !!window.electronAPI?.onGlobalBarcode;
+  if (!hasBridge) return null;
+
+  return (
+    <div
+      className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium text-primary-foreground/90"
+      title={
+        detected
+          ? "Douchette détectée — interception automatique active"
+          : "En attente d'un premier scan douchette"
+      }
+    >
+      <ScanLine className="h-2.5 w-2.5" />
+      <span
+        className={`h-1.5 w-1.5 rounded-full ${
+          detected ? "bg-green-400" : "bg-primary-foreground/40"
+        } ${pulse ? "animate-ping" : ""}`}
+      />
+    </div>
+  );
+};
+
 const PipControls = () => {
   const api = (typeof window !== "undefined" ? (window as any).electronAPI?.pip : null) as
     | { getState: () => Promise<{ alwaysOnTop: boolean; compact: boolean }>; toggle: () => Promise<{ alwaysOnTop: boolean; compact: boolean }>; setCompact: (c: boolean) => Promise<{ alwaysOnTop: boolean; compact: boolean }> }
