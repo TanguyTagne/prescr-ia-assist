@@ -59,3 +59,27 @@ jobs:
           name: Asclion v${{ github.run_number }}
           files: electron/dist/*.exe
           generate_release_notes: true
+
+      # Garde uniquement la dernière release (supprime les anciennes + leurs tags)
+      - name: Cleanup old releases (keep only latest)
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $current = "v${{ github.run_number }}"
+          $releases = gh release list --repo $env:GITHUB_REPOSITORY --limit 100 --json tagName | ConvertFrom-Json
+          foreach ($r in $releases) {
+            if ($r.tagName -ne $current) {
+              Write-Host "Suppression release $($r.tagName)"
+              gh release delete $r.tagName --repo $env:GITHUB_REPOSITORY --yes --cleanup-tag
+            }
+          }
+
+      # Upload artifact temporaire (7 jours, écrase le précédent)
+      - name: Upload installer as artifact (7-day retention)
+        uses: actions/upload-artifact@v4
+        with:
+          name: asclion-windows-installer
+          path: electron/dist/*.exe
+          retention-days: 7
+          overwrite: true
