@@ -70,6 +70,27 @@ export interface NotifyOptions {
   message?: string;
 }
 
+/**
+ * Voix TTS très courte (FR) — gated par le toggle son.
+ * Pour le pharmacien arrière-comptoir qui ne regarde pas l'écran.
+ */
+export function speakText(text: string) {
+  if (!isSoundEnabled()) return;
+  try {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+    const synth = window.speechSynthesis;
+    synth.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = "fr-FR";
+    u.rate = 1.05;
+    u.volume = 0.6;
+    u.pitch = 1.0;
+    synth.speak(u);
+  } catch {
+    /* ignore */
+  }
+}
+
 export function notifyAnalysisDone(opts: NotifyOptions = {}) {
   const { count, message } = opts;
   const label =
