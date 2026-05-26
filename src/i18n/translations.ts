@@ -9,31 +9,31 @@ export const translations = {
   "nav.signout": { fr: "Déconnexion", en: "Sign out" },
 
   // ===== LANDING =====
-  "landing.badge": { fr: "Copilote IA pour l'équipe officinale", en: "AI copilot for the pharmacy team" },
-  "landing.title.line1": { fr: "Le conseil associé,", en: "Companion advice," },
-  "landing.title.line2": { fr: "automatisé et intelligent", en: "automated and intelligent" },
+  "landing.badge": { fr: "Copilote IA — Plus de ventes associées, meilleur conseil", en: "AI copilot — More cross-sells, better advice" },
+  "landing.title.line1": { fr: "Augmentez votre panier moyen,", en: "Grow your average basket," },
+  "landing.title.line2": { fr: "sans sacrifier le conseil", en: "without compromising on advice" },
   "landing.subtitle": {
-    fr: "Asclion analyse chaque ordonnance et médicament scanné en quelques secondes, identifie les besoins du patient et suggère les produits complémentaires les plus pertinents — accompagnement du traitement, réduction des effets secondaires — directement au comptoir.",
-    en: "Asclion analyzes every prescription in seconds, identifies patient needs and suggests the most relevant complementary products — treatment support, side-effect reduction — right at the counter.",
+    fr: "Asclion transforme chaque ordonnance en opportunité de vente associée pertinente. Plus de produits complémentaires délivrés, un panier moyen qui décolle, et un patient mieux accompagné — sans effort supplémentaire pour l'équipe.",
+    en: "Asclion turns every prescription into a relevant cross-sell opportunity. More complementary products delivered, a higher average basket, and better patient care — with zero extra effort for your team.",
   },
-  "landing.cta.access": { fr: "Demander un accès", en: "Request access" },
+  "landing.cta.access": { fr: "Booster mon chiffre — Demander un accès", en: "Boost my revenue — Request access" },
   "landing.cta.vsLgo": { fr: "Asclion vs LGO", en: "Asclion vs LGO" },
 
-  "landing.how.title": { fr: "Comment ça marche", en: "How it works" },
+  "landing.how.title": { fr: "Comment Asclion fait grimper votre panier moyen", en: "How Asclion grows your average basket" },
   "landing.how.step1.title": { fr: "Scannez ou tapez", en: "Scan or type" },
   "landing.how.step1.desc": {
-    fr: "Connectez votre scanner ou l'IA se charge de lire les médicaments prescrits. Asclion détecte automatiquement les nouveaux fichiers.",
-    en: "Connect your scanner or let the AI read the prescribed medications. Asclion automatically detects new files.",
+    fr: "Connectez votre scanner ou l'IA lit l'ordonnance. Chaque délivrance devient une opportunité commerciale identifiée en quelques secondes.",
+    en: "Connect your scanner or let the AI read the prescription. Every dispensation becomes a sales opportunity identified in seconds.",
   },
-  "landing.how.step2.title": { fr: "Analyse IA instantanée", en: "Instant AI analysis" },
+  "landing.how.step2.title": { fr: "L'IA repère les ventes associées", en: "AI spots cross-sell opportunities" },
   "landing.how.step2.desc": {
-    fr: "L'IA identifie les interactions, le contexte thérapeutique et génère des questions pertinentes à poser au patient.",
-    en: "The AI identifies interactions, therapeutic context, and generates relevant questions to ask the patient.",
+    fr: "Interactions, effets secondaires, besoins latents : Asclion détecte tout ce qu'une équipe surchargée pourrait manquer — et le traduit en produits à proposer.",
+    en: "Interactions, side effects, latent needs: Asclion catches what a busy team could miss — and turns it into products to offer.",
   },
-  "landing.how.step3.title": { fr: "Suggestions au comptoir", en: "Counter suggestions" },
+  "landing.how.step3.title": { fr: "Vendez plus, mieux, au comptoir", en: "Sell more, sell better, at the counter" },
   "landing.how.step3.desc": {
-    fr: "Recevez des suggestions de produits complémentaires disponibles dans votre stock, avec des phrases conseils.",
-    en: "Get suggestions for complementary products available in your stock, with ready-to-say advice phrases.",
+    fr: "Recevez les produits à conseiller dans votre stock, avec la phrase prête à dire. Le patient se sent mieux pris en charge, votre panier moyen progresse.",
+    en: "Get the right in-stock products to recommend with ready-to-say phrases. Patients feel better cared for, your average basket grows.",
   },
 
   "landing.access.title": { fr: "Demande de renseignements", en: "Request information" },
