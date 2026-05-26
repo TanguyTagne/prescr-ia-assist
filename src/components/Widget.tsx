@@ -192,68 +192,75 @@ const WidgetApp = () => {
     }
   }, []);
 
-  // ===== Multi-scan basket =====
-  // Les codes scannés en rafale (<1.5s entre eux) sont regroupés en un seul "panier"
-  // pour une analyse cliniquement pertinente (interactions, besoin latent).
-  const scanQueueRef = useRef<string[]>([]);
-  const scanTimerRef = useRef<number | null>(null);
-  const BATCH_WINDOW_MS = 1500;
+  // ===== Streaming scans =====
+  // Chaque code scanné est analysé indépendamment et ajouté en tête du résultat
+  // (le plus récent en premier). Aucun skeleton ne réapparaît si un résultat
+  // précédent est déjà affiché : le nouveau s'insère dès qu'il est prêt.
+  const resultRef = useRef<AnalysisResult | null>(null);
+  useEffect(() => { resultRef.current = result; }, [result]);
 
-  const lookupSinglePc = useCallback(async (code: string) => {
-    const ts = new Date().toISOString();
-    const { data: med } = await supabase
-      .from("medicaments")
-      .select("id, nom_commercial, cip_code, molecule_id, atc_code")
-      .eq("cip_code", code)
-      .maybeSingle();
-
-    if (med) {
-      console.log(`[ASCLION-SCAN] ${ts} ean=${code} match=db name=${med.nom_commercial}`);
-      const { data: pathLinks } = await supabase
-        .from("medicament_pathologie")
-        .select("pathologie_id")
-        .eq("medicament_id", med.id);
-
-      if (pathLinks && pathLinks.length > 0) {
-        const pathIds = pathLinks.map((p) => p.pathologie_id);
-        const { data: produits } = await supabase
-          .from("produits_complementaires")
-          .select("produit, categorie, description")
-          .in("pathologie_id", pathIds)
-          .order("priorite", { ascending: false })
-          .limit(5);
-
-        if (produits && produits.length > 0) {
-          setResult({
-            medicaments: [{
-              nom: med.nom_commercial,
-              classe: "",
-              recommendations: produits.map((p) => ({
-                produit: p.produit,
-                categorie: p.categorie || "",
-                description: p.description || undefined,
-                priorite: 90,
-              })),
-            }],
-            interactions: [],
-            contextes: [],
-            conseil: `Produits complémentaires suggérés pour ${med.nom_commercial}`,
-            structuredData: true,
-            sources: [],
-          });
-          notifyAnalysisDone({ count: 1 });
-          return true;
+  const prependMedicament = useCallback((med: AnalysisResult["medicaments"][number]) => {
+    const prev = resultRef.current;
+    const next: AnalysisResult = prev
+      ? {
+          ...prev,
+          // dédoublonne sur le nom (re-scan du même produit → on bouge en tête)
+          medicaments: [med, ...prev.medicaments.filter((m) => m.nom !== med.nom)],
         }
-      }
-      toast.success(`💊 ${med.nom_commercial} — aucun PC associé`);
-      return true;
-    }
+      : {
+          medicaments: [med],
+          interactions: [],
+          contextes: [],
+          conseil: "",
+          structuredData: true,
+          sources: [],
+        };
+    setResult(next);
+  }, []);
 
-    const mock = lookupEanMock(code);
-    if (mock) {
-      console.log(`[ASCLION-SCAN] ${ts} ean=${code} match=mock name=${mock.nom}`);
-      setResult({
-        medicaments: [{
+  const lookupAndStream = useCallback(async (code: string) => {
+    const ts = new Date().toISOString();
+    try {
+      const { data: med } = await supabase
+        .from("medicaments")
+        .select("id, nom_commercial, cip_code, molecule_id, atc_code")
+        .eq("cip_code", code)
+        .maybeSingle();
+
+      if (med) {
+        console.log(`[ASCLION-SCAN] ${ts} ean=${code} match=db name=${med.nom_commercial}`);
+        const { data: pathLinks } = await supabase
+          .from("medicament_pathologie")
+          .select("pathologie_id")
+          .eq("medicament_id", med.id);
+
+        let recommendations: AnalysisResult["medicaments"][number]["recommendations"] = [];
+        if (pathLinks && pathLinks.length > 0) {
+          const pathIds = pathLinks.map((p) => p.pathologie_id);
+          const { data: produits } = await supabase
+            .from("produits_complementaires")
+            .select("produit, categorie, description")
+            .in("pathologie_id", pathIds)
+            .order("priorite", { ascending: false })
+            .limit(5);
+          if (produits) {
+            recommendations = produits.map((p) => ({
+              produit: p.produit,
+              categorie: p.categorie || "",
+              description: p.description || undefined,
+              priorite: 90,
+            }));
+          }
+        }
+        prependMedicament({ nom: med.nom_commercial, classe: "", recommendations });
+        notifyAnalysisDone({ count: 1 });
+        return;
+      }
+
+      const mock = lookupEanMock(code);
+      if (mock) {
+        console.log(`[ASCLION-SCAN] ${ts} ean=${code} match=mock name=${mock.nom}`);
+        prependMedicament({
           nom: mock.nom,
           classe: "",
           recommendations: mock.complementaires.map((c) => ({
@@ -262,72 +269,32 @@ const WidgetApp = () => {
             description: c.raison,
             priorite: 90,
           })),
-        }],
-        interactions: [],
-        contextes: [],
-        conseil: `Produits complémentaires suggérés pour ${mock.nom}`,
-        structuredData: true,
-        sources: [],
-      });
-      notifyAnalysisDone({ count: 1 });
-      return true;
-    }
-
-    console.log(`[ASCLION-SCAN] ${ts} ean=${code} match=none`);
-    return false;
-  }, []);
-
-  const processScanBatch = useCallback(async (codes: string[]) => {
-    if (codes.length === 0) return;
-    try {
-      // 1 code → chemin rapide DB (PCs directs, pas d'appel IA)
-      if (codes.length === 1) {
-        const ok = await lookupSinglePc(codes[0]);
-        if (!ok) toast.warning(`Aucun produit trouvé pour le code ${codes[0]}`);
+        });
+        notifyAnalysisDone({ count: 1 });
         return;
       }
 
-      // 2+ codes → "panier ordonnance" : on retrouve les noms et on lance l'analyse complète
-      const { data: meds } = await supabase
-        .from("medicaments")
-        .select("nom_commercial, cip_code")
-        .in("cip_code", codes);
-
-      if (!meds || meds.length === 0) {
-        toast.warning(`Aucun produit trouvé (${codes.length} scans)`);
-        return;
-      }
-
-      toast.info(`🧺 Panier de ${meds.length} médicaments — analyse...`);
-      setBlockedProducts([]);
-      const text = meds.map((m) => m.nom_commercial).join("\n");
-      const analysis = await analyzePrescription(text, { basketSessionId, blockedProducts: [] });
-      setResult(analysis);
-      const proposed = analysis.medicaments.flatMap((m) => (m.recommendations || []).map((r) => r.produit));
-      setBlockedProducts(proposed);
-      notifyAnalysisDone({ count: analysis.medicaments.length });
-      trackEvent("ordonnance_analyzed", { input_type: "barcode_batch", medicaments: analysis.medicaments.map((m) => m.nom) });
+      console.log(`[ASCLION-SCAN] ${ts} ean=${code} match=none`);
+      toast.warning(`Aucun produit trouvé pour le code ${code}`);
     } catch (err) {
-      console.error("Scan batch error:", err);
-      toast.error("Erreur lors de l'analyse du panier scanné");
-    } finally {
-      setIsLoading(false);
+      console.error("Barcode lookup error:", err);
+      toast.error("Erreur lors de la recherche du produit");
     }
-  }, [basketSessionId, lookupSinglePc]);
+  }, [prependMedicament]);
 
   const handleBarcodeScan = useCallback((code: string) => {
-    toast.info(`🔍 Code scanné : ${code}`);
-    // Pré-fetch : skeleton immédiat pour latence perçue ~0
-    setIsLoading(true);
-    scanQueueRef.current.push(code);
-    if (scanTimerRef.current) window.clearTimeout(scanTimerRef.current);
-    scanTimerRef.current = window.setTimeout(() => {
-      const codes = [...scanQueueRef.current];
-      scanQueueRef.current = [];
-      scanTimerRef.current = null;
-      processScanBatch(codes);
-    }, BATCH_WINDOW_MS);
-  }, [processScanBatch]);
+    toast.info(`🔍 ${code}`);
+    // Skeleton uniquement pour le tout premier scan (avant qu'un résultat ne soit affiché).
+    // Les scans suivants se streament sans flash visuel.
+    if (!resultRef.current) setIsLoading(true);
+    lookupAndStream(code).finally(() => {
+      if (!resultRef.current || resultRef.current.medicaments.length === 0) {
+        setIsLoading(false);
+      } else {
+        setIsLoading(false);
+      }
+    });
+  }, [lookupAndStream]);
 
   // Listen for global HID scans (system-wide, dispatched by the Electron bridge)
   useEffect(() => {
