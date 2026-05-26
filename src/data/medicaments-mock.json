@@ -1,0 +1,42 @@
+[
+  {
+    "ean": "3400930000017",
+    "nom": "Doliprane 1000mg",
+    "complementaires": [
+      { "nom": "Vitamine C 500mg", "raison": "Soutien immunitaire en cas d'épisode fébrile" },
+      { "nom": "Probiotiques Lactibiane", "raison": "Protection de la flore intestinale" }
+    ]
+  },
+  {
+    "ean": "3400930000024",
+    "nom": "Spasfon Lyoc 80mg",
+    "complementaires": [
+      { "nom": "Tisane camomille bio", "raison": "Apaisement digestif complémentaire" },
+      { "nom": "Argile verte buvable", "raison": "Confort gastrique en cas de spasme" }
+    ]
+  },
+  {
+    "ean": "3400930000031",
+    "nom": "Smecta 3g",
+    "complementaires": [
+      { "nom": "Ultra-Levure 200mg", "raison": "Restauration de la flore intestinale" },
+      { "nom": "Solution de réhydratation orale", "raison": "Compensation des pertes hydriques" }
+    ]
+  },
+  {
+    "ean": "3400930000048",
+    "nom": "Augmentin 1g",
+    "complementaires": [
+      { "nom": "Lactibiane Référence", "raison": "Protection flore pendant l'antibiothérapie" },
+      { "nom": "Probiolog Fort", "raison": "Prévention des diarrhées sous antibiotique" }
+    ]
+  },
+  {
+    "ean": "3400930000055",
+    "nom": "Levothyrox 100µg",
+    "complementaires": [
+      { "nom": "Sélénium 50µg", "raison": "Cofacteur thyroïdien essentiel" },
+      { "nom": "Magnésium marin", "raison": "Confort nerveux complémentaire" }
+    ]
+  }
+]

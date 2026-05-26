@@ -28,6 +28,13 @@ contextBridge.exposeInMainWorld("electronAPI", {
     return () => ipcRenderer.removeListener("lgo-detected", handler);
   },
 
+  // Receive a globally captured HID barcode scan (system-wide, no focus required)
+  onGlobalBarcode: (callback) => {
+    const handler = (_e, payload) => callback(payload);
+    ipcRenderer.on("global-barcode", handler);
+    return () => ipcRenderer.removeListener("global-barcode", handler);
+  },
+
   // Picture-in-Picture (always-on-top + compact mode)
   pip: {
     getState: () => ipcRenderer.invoke("pip:get-state"),

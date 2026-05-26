@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { X, Loader2, Mail, Lock, Eye, EyeOff, Monitor, HelpCircle, Pin, PinOff, Minimize2, Maximize2, LogOut } from "lucide-react";
+import { X, Loader2, Mail, Lock, Eye, EyeOff, Monitor, HelpCircle, Pin, PinOff, Minimize2, Maximize2, LogOut, ScanLine } from "lucide-react";
 import OnboardingTour from "@/components/OnboardingTour";
 import AnalysisSkeleton from "@/components/AnalysisSkeleton";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ import { pdfToImageBase64 } from "@/lib/pdfToImage";
 import RegisterSelector from "@/components/RegisterSelector";
 import SoundToggle from "@/components/SoundToggle";
 import { notifyAnalysisDone } from "@/lib/notifyAnalysisDone";
+import { lookupEanMock } from "@/lib/eanLookup";
 import { useLgoPreset } from "@/hooks/useLgoPreset";
 import { getPresetClasses, getPresetClassesElectron, LGO_PRESETS, type LgoType } from "@/lib/lgoPresets";
 import { isAsclionDesktopRuntime } from "@/lib/runtime";
@@ -192,7 +193,8 @@ const WidgetApp = () => {
   }, []);
 
   const handleBarcodeScan = useCallback(async (code: string) => {
-    toast.info(`🔍 Code scanné : ${code} — recherche...`);
+    const ts = new Date().toISOString();
+    toast.info(`🔍 Code scanné : ${code}`);
 
     try {
       const { data: med } = await supabase
@@ -201,53 +203,94 @@ const WidgetApp = () => {
         .eq("cip_code", code)
         .maybeSingle();
 
-      if (!med) {
-        toast.warning(`Aucun médicament trouvé pour le code CIP ${code}`);
+      if (med) {
+        toast.success(`💊 ${med.nom_commercial} identifié`);
+        console.log(`[ASCLION-SCAN] ${ts} ean=${code} match=db name=${med.nom_commercial}`);
+
+        const { data: pathLinks } = await supabase
+          .from("medicament_pathologie")
+          .select("pathologie_id")
+          .eq("medicament_id", med.id);
+
+        if (pathLinks && pathLinks.length > 0) {
+          const pathIds = pathLinks.map((p) => p.pathologie_id);
+          const { data: produits } = await supabase
+            .from("produits_complementaires")
+            .select("produit, categorie, description")
+            .in("pathologie_id", pathIds)
+            .order("priorite", { ascending: false })
+            .limit(5);
+
+          if (produits && produits.length > 0) {
+            setResult({
+              medicaments: [{
+                nom: med.nom_commercial,
+                classe: "",
+                recommendations: produits.map((p) => ({
+                  produit: p.produit,
+                  categorie: p.categorie || "",
+                  description: p.description || undefined,
+                  priorite: 90,
+                })),
+              }],
+              interactions: [],
+              contextes: [],
+              conseil: `Produits complémentaires suggérés pour ${med.nom_commercial}`,
+              structuredData: true,
+              sources: [],
+            });
+            notifyAnalysisDone({ count: 1 });
+            return;
+          }
+        }
         return;
       }
 
-      toast.success(`💊 ${med.nom_commercial} identifié`);
-
-      const { data: pathLinks } = await supabase
-        .from("medicament_pathologie")
-        .select("pathologie_id")
-        .eq("medicament_id", med.id);
-
-      if (pathLinks && pathLinks.length > 0) {
-        const pathIds = pathLinks.map((p) => p.pathologie_id);
-        const { data: produits } = await supabase
-          .from("produits_complementaires")
-          .select("produit, categorie, description")
-          .in("pathologie_id", pathIds)
-          .order("priorite", { ascending: false })
-          .limit(5);
-
-        if (produits && produits.length > 0) {
-          setResult({
-            medicaments: [{
-              nom: med.nom_commercial,
-              classe: "",
-              recommendations: produits.map((p) => ({
-                produit: p.produit,
-                categorie: p.categorie || "",
-                description: p.description || undefined,
-                priorite: 90,
-              })),
-            }],
-            interactions: [],
-            contextes: [],
-            conseil: `Produits complémentaires suggérés pour ${med.nom_commercial}`,
-            structuredData: true,
-            sources: [],
-          });
-          notifyAnalysisDone({ count: 1 });
-        }
+      // Fallback: local mock JSON (5 test products)
+      const mock = lookupEanMock(code);
+      if (mock) {
+        toast.success(`💊 ${mock.nom} (mock)`);
+        console.log(`[ASCLION-SCAN] ${ts} ean=${code} match=mock name=${mock.nom}`);
+        setResult({
+          medicaments: [{
+            nom: mock.nom,
+            classe: "",
+            recommendations: mock.complementaires.map((c) => ({
+              produit: c.nom,
+              categorie: "",
+              description: c.raison,
+              priorite: 90,
+            })),
+          }],
+          interactions: [],
+          contextes: [],
+          conseil: `Produits complémentaires suggérés pour ${mock.nom}`,
+          structuredData: true,
+          sources: [],
+        });
+        notifyAnalysisDone({ count: 1 });
+        return;
       }
+
+      console.log(`[ASCLION-SCAN] ${ts} ean=${code} match=none`);
+      toast.warning(`Aucun produit trouvé pour le code ${code}`);
     } catch (err) {
       console.error("Barcode lookup error:", err);
       toast.error("Erreur lors de la recherche du produit");
     }
   }, []);
+
+  // Listen for global HID scans (system-wide, dispatched by the Electron bridge)
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ ean: string; at: number }>).detail;
+      if (!detail?.ean) return;
+      handleBarcodeScan(detail.ean);
+    };
+    window.addEventListener("asclion:global-barcode", handler);
+    return () => window.removeEventListener("asclion:global-barcode", handler);
+  }, [handleBarcodeScan]);
+
 
   return (
     <div className="p-4 space-y-3 py-0">
@@ -325,6 +368,45 @@ const LgoPreviewPicker = ({
     </DropdownMenuContent>
   </DropdownMenu>
 );
+
+const ScannerIndicator = () => {
+  const [detected, setDetected] = useState<boolean>(() => {
+    try { return localStorage.getItem("asclion_scanner_detected") === "1"; } catch { return false; }
+  });
+  const [pulse, setPulse] = useState(false);
+
+  useEffect(() => {
+    const handler = () => {
+      setDetected(true);
+      setPulse(true);
+      setTimeout(() => setPulse(false), 1200);
+    };
+    window.addEventListener("asclion:global-barcode", handler);
+    return () => window.removeEventListener("asclion:global-barcode", handler);
+  }, []);
+
+  // Hide entirely on web (no global listener possible) to keep the header clean
+  const hasBridge = typeof window !== "undefined" && !!window.electronAPI?.onGlobalBarcode;
+  if (!hasBridge) return null;
+
+  return (
+    <div
+      className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium text-primary-foreground/90"
+      title={
+        detected
+          ? "Douchette détectée — interception automatique active"
+          : "En attente d'un premier scan douchette"
+      }
+    >
+      <ScanLine className="h-2.5 w-2.5" />
+      <span
+        className={`h-1.5 w-1.5 rounded-full ${
+          detected ? "bg-green-400" : "bg-primary-foreground/40"
+        } ${pulse ? "animate-ping" : ""}`}
+      />
+    </div>
+  );
+};
 
 const PipControls = () => {
   const api = (typeof window !== "undefined" ? (window as any).electronAPI?.pip : null) as
@@ -420,6 +502,7 @@ const Widget = ({ forceOpen = false }: {forceOpen?: boolean;}) => {
         <div className="flex flex-col h-full w-full bg-background overflow-hidden">
           <div className="pharmacy-gradient px-3 py-1.5 flex items-center gap-2 shrink-0">
             <span className="text-sm font-bold text-primary-foreground tracking-tight">Asclion</span>
+            <ScannerIndicator />
             <LgoPreviewPicker current={lgoType} onChange={setPreviewLgo} isOverride={isPreview} />
             <div className="flex-1" />
             <PipControls />
