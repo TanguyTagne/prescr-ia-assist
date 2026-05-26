@@ -186,41 +186,7 @@ const Landing = () => {
                   {t("landing.cta.access")}
                 </a>
               </Button>
-              <Button size="lg" variant="outline" asChild className="h-12 px-6 text-base font-semibold gap-2">
-                <a href={lp("/vs-lgo")}>
-                  {t("landing.cta.vsLgo")}
-                  <ArrowRight className="h-4 w-4" />
-                </a>
-              </Button>
             </div>
-          </div>
-        </section>
-
-        <section className="py-12 px-4 border-y border-border bg-card">
-          <div className="container max-w-4xl mx-auto">
-            <p className="text-center text-xs uppercase tracking-widest text-muted-foreground mb-6 font-semibold">
-              {t("landing.results.title")}
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-              <div className="text-center space-y-1">
-                <div className="text-3xl md:text-4xl font-extrabold text-primary">+18%</div>
-                <div className="text-sm font-semibold">{t("landing.results.basket")}</div>
-                <div className="text-xs text-muted-foreground">{t("landing.results.basket.desc")}</div>
-              </div>
-              <div className="text-center space-y-1">
-                <div className="text-3xl md:text-4xl font-extrabold text-primary">x3</div>
-                <div className="text-sm font-semibold">{t("landing.results.crosssell")}</div>
-                <div className="text-xs text-muted-foreground">{t("landing.results.crosssell.desc")}</div>
-              </div>
-              <div className="text-center space-y-1">
-                <div className="text-3xl md:text-4xl font-extrabold text-primary">&lt; 3s</div>
-                <div className="text-sm font-semibold">{t("landing.results.speed")}</div>
-                <div className="text-xs text-muted-foreground">{t("landing.results.speed.desc")}</div>
-              </div>
-            </div>
-            <p className="text-center text-[10px] text-muted-foreground mt-6 italic">
-              {t("landing.results.disclaimer")}
-            </p>
           </div>
         </section>
 
