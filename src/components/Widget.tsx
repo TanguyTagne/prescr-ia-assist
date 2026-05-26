@@ -192,93 +192,142 @@ const WidgetApp = () => {
     }
   }, []);
 
-  const handleBarcodeScan = useCallback(async (code: string) => {
+  // ===== Multi-scan basket =====
+  // Les codes scannés en rafale (<1.5s entre eux) sont regroupés en un seul "panier"
+  // pour une analyse cliniquement pertinente (interactions, besoin latent).
+  const scanQueueRef = useRef<string[]>([]);
+  const scanTimerRef = useRef<number | null>(null);
+  const BATCH_WINDOW_MS = 1500;
+
+  const lookupSinglePc = useCallback(async (code: string) => {
     const ts = new Date().toISOString();
-    toast.info(`🔍 Code scanné : ${code}`);
+    const { data: med } = await supabase
+      .from("medicaments")
+      .select("id, nom_commercial, cip_code, molecule_id, atc_code")
+      .eq("cip_code", code)
+      .maybeSingle();
 
-    try {
-      const { data: med } = await supabase
-        .from("medicaments")
-        .select("id, nom_commercial, cip_code, molecule_id, atc_code")
-        .eq("cip_code", code)
-        .maybeSingle();
+    if (med) {
+      console.log(`[ASCLION-SCAN] ${ts} ean=${code} match=db name=${med.nom_commercial}`);
+      const { data: pathLinks } = await supabase
+        .from("medicament_pathologie")
+        .select("pathologie_id")
+        .eq("medicament_id", med.id);
 
-      if (med) {
-        toast.success(`💊 ${med.nom_commercial} identifié`);
-        console.log(`[ASCLION-SCAN] ${ts} ean=${code} match=db name=${med.nom_commercial}`);
+      if (pathLinks && pathLinks.length > 0) {
+        const pathIds = pathLinks.map((p) => p.pathologie_id);
+        const { data: produits } = await supabase
+          .from("produits_complementaires")
+          .select("produit, categorie, description")
+          .in("pathologie_id", pathIds)
+          .order("priorite", { ascending: false })
+          .limit(5);
 
-        const { data: pathLinks } = await supabase
-          .from("medicament_pathologie")
-          .select("pathologie_id")
-          .eq("medicament_id", med.id);
-
-        if (pathLinks && pathLinks.length > 0) {
-          const pathIds = pathLinks.map((p) => p.pathologie_id);
-          const { data: produits } = await supabase
-            .from("produits_complementaires")
-            .select("produit, categorie, description")
-            .in("pathologie_id", pathIds)
-            .order("priorite", { ascending: false })
-            .limit(5);
-
-          if (produits && produits.length > 0) {
-            setResult({
-              medicaments: [{
-                nom: med.nom_commercial,
-                classe: "",
-                recommendations: produits.map((p) => ({
-                  produit: p.produit,
-                  categorie: p.categorie || "",
-                  description: p.description || undefined,
-                  priorite: 90,
-                })),
-              }],
-              interactions: [],
-              contextes: [],
-              conseil: `Produits complémentaires suggérés pour ${med.nom_commercial}`,
-              structuredData: true,
-              sources: [],
-            });
-            notifyAnalysisDone({ count: 1 });
-            return;
-          }
+        if (produits && produits.length > 0) {
+          setResult({
+            medicaments: [{
+              nom: med.nom_commercial,
+              classe: "",
+              recommendations: produits.map((p) => ({
+                produit: p.produit,
+                categorie: p.categorie || "",
+                description: p.description || undefined,
+                priorite: 90,
+              })),
+            }],
+            interactions: [],
+            contextes: [],
+            conseil: `Produits complémentaires suggérés pour ${med.nom_commercial}`,
+            structuredData: true,
+            sources: [],
+          });
+          notifyAnalysisDone({ count: 1 });
+          return true;
         }
-        return;
       }
-
-      // Fallback: local mock JSON (5 test products)
-      const mock = lookupEanMock(code);
-      if (mock) {
-        toast.success(`💊 ${mock.nom} (mock)`);
-        console.log(`[ASCLION-SCAN] ${ts} ean=${code} match=mock name=${mock.nom}`);
-        setResult({
-          medicaments: [{
-            nom: mock.nom,
-            classe: "",
-            recommendations: mock.complementaires.map((c) => ({
-              produit: c.nom,
-              categorie: "",
-              description: c.raison,
-              priorite: 90,
-            })),
-          }],
-          interactions: [],
-          contextes: [],
-          conseil: `Produits complémentaires suggérés pour ${mock.nom}`,
-          structuredData: true,
-          sources: [],
-        });
-        notifyAnalysisDone({ count: 1 });
-        return;
-      }
-
-      console.log(`[ASCLION-SCAN] ${ts} ean=${code} match=none`);
-      toast.warning(`Aucun produit trouvé pour le code ${code}`);
-    } catch (err) {
-      console.error("Barcode lookup error:", err);
-      toast.error("Erreur lors de la recherche du produit");
+      toast.success(`💊 ${med.nom_commercial} — aucun PC associé`);
+      return true;
     }
+
+    const mock = lookupEanMock(code);
+    if (mock) {
+      console.log(`[ASCLION-SCAN] ${ts} ean=${code} match=mock name=${mock.nom}`);
+      setResult({
+        medicaments: [{
+          nom: mock.nom,
+          classe: "",
+          recommendations: mock.complementaires.map((c) => ({
+            produit: c.nom,
+            categorie: "",
+            description: c.raison,
+            priorite: 90,
+          })),
+        }],
+        interactions: [],
+        contextes: [],
+        conseil: `Produits complémentaires suggérés pour ${mock.nom}`,
+        structuredData: true,
+        sources: [],
+      });
+      notifyAnalysisDone({ count: 1 });
+      return true;
+    }
+
+    console.log(`[ASCLION-SCAN] ${ts} ean=${code} match=none`);
+    return false;
   }, []);
+
+  const processScanBatch = useCallback(async (codes: string[]) => {
+    if (codes.length === 0) return;
+    try {
+      // 1 code → chemin rapide DB (PCs directs, pas d'appel IA)
+      if (codes.length === 1) {
+        const ok = await lookupSinglePc(codes[0]);
+        if (!ok) toast.warning(`Aucun produit trouvé pour le code ${codes[0]}`);
+        return;
+      }
+
+      // 2+ codes → "panier ordonnance" : on retrouve les noms et on lance l'analyse complète
+      const { data: meds } = await supabase
+        .from("medicaments")
+        .select("nom_commercial, cip_code")
+        .in("cip_code", codes);
+
+      if (!meds || meds.length === 0) {
+        toast.warning(`Aucun produit trouvé (${codes.length} scans)`);
+        return;
+      }
+
+      toast.info(`🧺 Panier de ${meds.length} médicaments — analyse...`);
+      setBlockedProducts([]);
+      const text = meds.map((m) => m.nom_commercial).join("\n");
+      const analysis = await analyzePrescription(text, { basketSessionId, blockedProducts: [] });
+      setResult(analysis);
+      const proposed = analysis.medicaments.flatMap((m) => (m.recommendations || []).map((r) => r.produit));
+      setBlockedProducts(proposed);
+      notifyAnalysisDone({ count: analysis.medicaments.length });
+      trackEvent("ordonnance_analyzed", { input_type: "barcode_batch", medicaments: analysis.medicaments.map((m) => m.nom) });
+    } catch (err) {
+      console.error("Scan batch error:", err);
+      toast.error("Erreur lors de l'analyse du panier scanné");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [basketSessionId, lookupSinglePc]);
+
+  const handleBarcodeScan = useCallback((code: string) => {
+    toast.info(`🔍 Code scanné : ${code}`);
+    // Pré-fetch : skeleton immédiat pour latence perçue ~0
+    setIsLoading(true);
+    scanQueueRef.current.push(code);
+    if (scanTimerRef.current) window.clearTimeout(scanTimerRef.current);
+    scanTimerRef.current = window.setTimeout(() => {
+      const codes = [...scanQueueRef.current];
+      scanQueueRef.current = [];
+      scanTimerRef.current = null;
+      processScanBatch(codes);
+    }, BATCH_WINDOW_MS);
+  }, [processScanBatch]);
 
   // Listen for global HID scans (system-wide, dispatched by the Electron bridge)
   useEffect(() => {
