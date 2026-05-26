@@ -16,7 +16,7 @@ export const translations = {
     fr: "Asclion transforme chaque ordonnance en opportunité de vente associée pertinente. Plus de produits complémentaires délivrés, un panier moyen qui décolle, et un patient mieux accompagné — sans effort supplémentaire pour l'équipe.",
     en: "Asclion turns every prescription into a relevant cross-sell opportunity. More complementary products delivered, a higher average basket, and better patient care — with zero extra effort for your team.",
   },
-  "landing.cta.access": { fr: "Booster mon chiffre — Demander un accès", en: "Boost my revenue — Request access" },
+  "landing.cta.access": { fr: "Booster mon chiffre — Demander une Demo", en: "Boost my revenue — Request a Demo" },
   "landing.cta.vsLgo": { fr: "Asclion vs LGO", en: "Asclion vs LGO" },
 
   "landing.how.title": { fr: "Comment Asclion fait grimper votre panier moyen", en: "How Asclion grows your average basket" },
