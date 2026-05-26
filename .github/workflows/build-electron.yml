@@ -21,6 +21,12 @@ jobs:
         with:
           node-version: 20
 
+      # Python 3.11 requis pour node-gyp (uiohook-napi).
+      # Python 3.12+ a supprimé distutils => build natif échoue sous Windows.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
       # Build the web app
       - name: Install web dependencies
         run: npm install --legacy-peer-deps
