@@ -13,6 +13,7 @@ import LgoAutoDetectPrompt from "@/components/LgoAutoDetectPrompt";
 import WidgetDemoTour from "@/components/WidgetDemoTour";
 import { isAsclionDesktopRuntime } from "@/lib/runtime";
 import { useInstanceHeartbeat } from "@/hooks/useInstanceHeartbeat";
+import { useGlobalBarcodeBridge } from "@/hooks/useGlobalBarcodeBridge";
 
 // Retry dynamic import on failure (handles stale Vite chunks / transient network).
 // On second failure, force a hard reload to fetch the latest asset manifest.
@@ -157,6 +158,11 @@ const InstanceHeartbeatMount = () => {
   return null;
 };
 
+const GlobalBarcodeBridgeMount = () => {
+  useGlobalBarcodeBridge();
+  return null;
+};
+
 const SiteDemoLayer = () => {
   const location = useLocation();
   if (location.pathname !== "/" && location.pathname !== "/en") return null;
@@ -177,6 +183,7 @@ const App = () => {
           <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}>
             {isStandalone ? (
               <>
+                <GlobalBarcodeBridgeMount />
                 <DeferredWidget forceOpen mountImmediately />
                 <LgoAutoDetectPrompt />
               </>
