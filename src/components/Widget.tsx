@@ -193,7 +193,8 @@ const WidgetApp = () => {
   }, []);
 
   const handleBarcodeScan = useCallback(async (code: string) => {
-    toast.info(`🔍 Code scanné : ${code} — recherche...`);
+    const ts = new Date().toISOString();
+    toast.info(`🔍 Code scanné : ${code}`);
 
     try {
       const { data: med } = await supabase
@@ -202,53 +203,94 @@ const WidgetApp = () => {
         .eq("cip_code", code)
         .maybeSingle();
 
-      if (!med) {
-        toast.warning(`Aucun médicament trouvé pour le code CIP ${code}`);
+      if (med) {
+        toast.success(`💊 ${med.nom_commercial} identifié`);
+        console.log(`[ASCLION-SCAN] ${ts} ean=${code} match=db name=${med.nom_commercial}`);
+
+        const { data: pathLinks } = await supabase
+          .from("medicament_pathologie")
+          .select("pathologie_id")
+          .eq("medicament_id", med.id);
+
+        if (pathLinks && pathLinks.length > 0) {
+          const pathIds = pathLinks.map((p) => p.pathologie_id);
+          const { data: produits } = await supabase
+            .from("produits_complementaires")
+            .select("produit, categorie, description")
+            .in("pathologie_id", pathIds)
+            .order("priorite", { ascending: false })
+            .limit(5);
+
+          if (produits && produits.length > 0) {
+            setResult({
+              medicaments: [{
+                nom: med.nom_commercial,
+                classe: "",
+                recommendations: produits.map((p) => ({
+                  produit: p.produit,
+                  categorie: p.categorie || "",
+                  description: p.description || undefined,
+                  priorite: 90,
+                })),
+              }],
+              interactions: [],
+              contextes: [],
+              conseil: `Produits complémentaires suggérés pour ${med.nom_commercial}`,
+              structuredData: true,
+              sources: [],
+            });
+            notifyAnalysisDone({ count: 1 });
+            return;
+          }
+        }
         return;
       }
 
-      toast.success(`💊 ${med.nom_commercial} identifié`);
-
-      const { data: pathLinks } = await supabase
-        .from("medicament_pathologie")
-        .select("pathologie_id")
-        .eq("medicament_id", med.id);
-
-      if (pathLinks && pathLinks.length > 0) {
-        const pathIds = pathLinks.map((p) => p.pathologie_id);
-        const { data: produits } = await supabase
-          .from("produits_complementaires")
-          .select("produit, categorie, description")
-          .in("pathologie_id", pathIds)
-          .order("priorite", { ascending: false })
-          .limit(5);
-
-        if (produits && produits.length > 0) {
-          setResult({
-            medicaments: [{
-              nom: med.nom_commercial,
-              classe: "",
-              recommendations: produits.map((p) => ({
-                produit: p.produit,
-                categorie: p.categorie || "",
-                description: p.description || undefined,
-                priorite: 90,
-              })),
-            }],
-            interactions: [],
-            contextes: [],
-            conseil: `Produits complémentaires suggérés pour ${med.nom_commercial}`,
-            structuredData: true,
-            sources: [],
-          });
-          notifyAnalysisDone({ count: 1 });
-        }
+      // Fallback: local mock JSON (5 test products)
+      const mock = lookupEanMock(code);
+      if (mock) {
+        toast.success(`💊 ${mock.nom} (mock)`);
+        console.log(`[ASCLION-SCAN] ${ts} ean=${code} match=mock name=${mock.nom}`);
+        setResult({
+          medicaments: [{
+            nom: mock.nom,
+            classe: "",
+            recommendations: mock.complementaires.map((c) => ({
+              produit: c.nom,
+              categorie: "",
+              description: c.raison,
+              priorite: 90,
+            })),
+          }],
+          interactions: [],
+          contextes: [],
+          conseil: `Produits complémentaires suggérés pour ${mock.nom}`,
+          structuredData: true,
+          sources: [],
+        });
+        notifyAnalysisDone({ count: 1 });
+        return;
       }
+
+      console.log(`[ASCLION-SCAN] ${ts} ean=${code} match=none`);
+      toast.warning(`Aucun produit trouvé pour le code ${code}`);
     } catch (err) {
       console.error("Barcode lookup error:", err);
       toast.error("Erreur lors de la recherche du produit");
     }
   }, []);
+
+  // Listen for global HID scans (system-wide, dispatched by the Electron bridge)
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ ean: string; at: number }>).detail;
+      if (!detail?.ean) return;
+      handleBarcodeScan(detail.ean);
+    };
+    window.addEventListener("asclion:global-barcode", handler);
+    return () => window.removeEventListener("asclion:global-barcode", handler);
+  }, [handleBarcodeScan]);
+
 
   return (
     <div className="p-4 space-y-3 py-0">
