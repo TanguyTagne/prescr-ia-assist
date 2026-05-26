@@ -495,3 +495,162 @@ autoUpdater.on("update-downloaded", () => {
 autoUpdater.on("error", (err) => {
   console.error("Auto-updater error:", err);
 });
+
+// ────────────────────────────────────────────────────────────
+// Global HID barcode scanner listener (uiohook-napi)
+//
+// Captures keystrokes system-wide, even when Asclion is not the focused
+// window. Detects EAN-13 / CIP-13 (13 digits typed in <80ms, terminated by
+// Enter). Does NOT consume the events → the LGO keeps receiving the scan.
+// On valid scan, forwards the code to the renderer and brings the window
+// to front WITHOUT stealing focus (showInactive + flashFrame).
+// ────────────────────────────────────────────────────────────
+const SCAN_MAX_KEY_INTERVAL_MS = 80;
+const SCAN_MIN_LENGTH = 7;
+const SCAN_MAX_LENGTH = 13;
+const SCAN_DEDUP_WINDOW_MS = 800;
+const SCAN_RESET_INACTIVITY_MS = 300;
+
+let scanBuffer = "";
+let scanLastKeyAt = 0;
+let scanResetTimer = null;
+let scanLastEmitted = { code: "", at: 0 };
+
+function digitFromKeycode(keycode) {
+  if (!UiohookKey) return null;
+  const map = {
+    [UiohookKey["0"]]: "0",
+    [UiohookKey["1"]]: "1",
+    [UiohookKey["2"]]: "2",
+    [UiohookKey["3"]]: "3",
+    [UiohookKey["4"]]: "4",
+    [UiohookKey["5"]]: "5",
+    [UiohookKey["6"]]: "6",
+    [UiohookKey["7"]]: "7",
+    [UiohookKey["8"]]: "8",
+    [UiohookKey["9"]]: "9",
+    [UiohookKey.Numpad0]: "0",
+    [UiohookKey.Numpad1]: "1",
+    [UiohookKey.Numpad2]: "2",
+    [UiohookKey.Numpad3]: "3",
+    [UiohookKey.Numpad4]: "4",
+    [UiohookKey.Numpad5]: "5",
+    [UiohookKey.Numpad6]: "6",
+    [UiohookKey.Numpad7]: "7",
+    [UiohookKey.Numpad8]: "8",
+    [UiohookKey.Numpad9]: "9",
+  };
+  return map[keycode] || null;
+}
+
+function isEnterKey(keycode) {
+  if (!UiohookKey) return false;
+  return keycode === UiohookKey.Enter || keycode === UiohookKey.Tab;
+}
+
+function resetScanBuffer() {
+  scanBuffer = "";
+  if (scanResetTimer) {
+    clearTimeout(scanResetTimer);
+    scanResetTimer = null;
+  }
+}
+
+function emitGlobalScan(code) {
+  const now = Date.now();
+  if (
+    scanLastEmitted.code === code &&
+    now - scanLastEmitted.at < SCAN_DEDUP_WINDOW_MS
+  ) {
+    console.log(`[ASCLION-SCAN] dedup ean=${code} elapsedMs=${now - scanLastEmitted.at}`);
+    return;
+  }
+  scanLastEmitted = { code, at: now };
+  console.log(`[ASCLION-SCAN] ts=${new Date(now).toISOString()} ean=${code}`);
+
+  if (!mainWindow) return;
+
+  try {
+    mainWindow.webContents.send("global-barcode", { ean: code, at: now });
+  } catch (e) {
+    console.error("[ASCLION-SCAN] send failed:", e);
+  }
+
+  // Pop the window in front of LGO WITHOUT stealing focus.
+  try {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.showInactive();
+    mainWindow.moveTop();
+    mainWindow.setAlwaysOnTop(true, "floating");
+    mainWindow.flashFrame(true);
+    setTimeout(() => {
+      try {
+        if (!mainWindow) return;
+        mainWindow.flashFrame(false);
+        // Restore the user's PiP preference (do NOT force always-on-top forever)
+        mainWindow.setAlwaysOnTop(pipState.alwaysOnTop, "floating");
+      } catch { /* noop */ }
+    }, 1500);
+  } catch (e) {
+    console.error("[ASCLION-SCAN] pop-to-front failed:", e);
+  }
+}
+
+function startGlobalBarcodeListener() {
+  if (!uIOhook) {
+    console.error("[ASCLION-SCAN] cannot start — uiohook-napi not loaded");
+    return;
+  }
+
+  try {
+    uIOhook.on("keydown", (event) => {
+      const now = Date.now();
+      const elapsed = now - scanLastKeyAt;
+      scanLastKeyAt = now;
+
+      if (scanResetTimer) {
+        clearTimeout(scanResetTimer);
+        scanResetTimer = null;
+      }
+
+      if (isEnterKey(event.keycode)) {
+        const code = scanBuffer;
+        if (
+          code.length >= SCAN_MIN_LENGTH &&
+          code.length <= SCAN_MAX_LENGTH &&
+          /^\d+$/.test(code)
+        ) {
+          emitGlobalScan(code);
+        }
+        resetScanBuffer();
+        return;
+      }
+
+      const digit = digitFromKeycode(event.keycode);
+      if (digit !== null) {
+        // First digit OR fast rafale = scanner. Slow = human, restart buffer.
+        if (scanBuffer.length === 0 || elapsed < SCAN_MAX_KEY_INTERVAL_MS) {
+          scanBuffer += digit;
+        } else {
+          scanBuffer = digit;
+        }
+        scanResetTimer = setTimeout(resetScanBuffer, SCAN_RESET_INACTIVITY_MS);
+      } else if (scanBuffer.length > 0) {
+        // Non-digit, non-Enter breaks the scan sequence
+        resetScanBuffer();
+      }
+    });
+
+    uIOhook.start();
+    console.log("[ASCLION-SCAN] Global HID listener started.");
+  } catch (e) {
+    console.error("[ASCLION-SCAN] failed to start:", e);
+  }
+}
+
+app.on("will-quit", () => {
+  try {
+    if (uIOhook) uIOhook.stop();
+  } catch { /* noop */ }
+});
+
