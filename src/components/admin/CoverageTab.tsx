@@ -41,8 +41,20 @@ const CoverageTab = () => {
   const [running, setRunning] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | "missing" | "incomplete" | "present">("all");
   const [search, setSearch] = useState("");
+  const [cipStats, setCipStats] = useState<{ total: number; sans_cip: number; avec_cip: number } | null>(null);
 
-  useEffect(() => { loadAuditData(); }, []);
+  useEffect(() => { loadAuditData(); loadCipStats(); }, []);
+
+  const loadCipStats = async () => {
+    try {
+      const [{ count: total }, { count: sans }] = await Promise.all([
+        supabase.from("medicaments").select("*", { count: "exact", head: true }),
+        supabase.from("medicaments").select("*", { count: "exact", head: true }).or("cip_code.is.null,cip_code.eq."),
+      ]);
+      const t = total || 0; const s = sans || 0;
+      setCipStats({ total: t, sans_cip: s, avec_cip: t - s });
+    } catch (e) { console.error(e); }
+  };
 
   const loadAuditData = async () => {
     setLoading(true);
@@ -175,10 +187,33 @@ const CoverageTab = () => {
           {running === "fill-products" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
           4. Remplir produits complémentaires
         </Button>
-        <Button size="sm" variant="ghost" onClick={loadAuditData} disabled={!!running} className="ml-auto">
+        <Button size="sm" variant="ghost" onClick={() => { loadAuditData(); loadCipStats(); }} disabled={!!running} className="ml-auto">
           <RefreshCw className="h-3.5 w-3.5" />
         </Button>
       </div>
+
+      {/* CIP Coverage */}
+      {cipStats && (
+        <Card>
+          <CardHeader className="pb-2 pt-3 px-4">
+            <CardTitle className="text-sm">Couverture codes CIP — base médicaments</CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pb-3 grid grid-cols-3 gap-4">
+            <div>
+              <p className="text-xs text-muted-foreground">Total médicaments</p>
+              <p className="text-2xl font-bold">{cipStats.total}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Avec code CIP</p>
+              <p className="text-2xl font-bold text-green-600">{cipStats.avec_cip}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Sans code CIP</p>
+              <p className={`text-2xl font-bold ${cipStats.sans_cip === 0 ? "text-green-600" : "text-amber-500"}`}>{cipStats.sans_cip}</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Stats cards */}
       {stats && (
