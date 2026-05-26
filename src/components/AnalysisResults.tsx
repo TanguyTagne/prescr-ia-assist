@@ -248,33 +248,11 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
                         />
                       )}
                     </div>
-                    {rec.phrase_conseil && (() => {
-                      const pcKey = `${i}-${j}`;
-                      const isOpen = expandedPCConseils.has(pcKey);
-                      return (
-                        <>
-                          <button
-                            onClick={() => setExpandedPCConseils((prev) => {
-                              const next = new Set(prev);
-                              if (next.has(pcKey)) next.delete(pcKey); else next.add(pcKey);
-                              return next;
-                            })}
-                            aria-expanded={isOpen}
-                            aria-label={`${isOpen ? t("results.hide") : t("results.show")} ${t("results.patientAdviceFor")} ${rec.produit}`}
-                            className="text-[11px] text-primary/80 hover:text-primary transition-colors flex items-center gap-0.5 pl-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
-                          >
-                            {isOpen ? <ChevronDown className="h-2.5 w-2.5" /> : <ChevronRight className="h-2.5 w-2.5" />}
-                            {t("results.advice")}
-                          </button>
-                          {isOpen &&
-                            <p className="text-xs text-foreground/80 italic leading-snug pl-3 animate-fade-in">
-                              💬 "{rec.phrase_conseil}"
-                            </p>
-                          }
-                        </>
-                      );
-                    })()
-                    }
+                    {rec.phrase_conseil && (
+                      <p className="text-[13px] font-medium text-foreground leading-snug pl-0.5 pt-0.5 animate-fade-in">
+                        💬 « {rec.phrase_conseil} »
+                      </p>
+                    )}
                     {/* Badge de traçabilité (source officielle, validation) */}
                     <div className="pt-0.5">
                       <LineageBadge
