@@ -463,6 +463,7 @@ const Widget = ({ forceOpen = false }: {forceOpen?: boolean;}) => {
         <div className="flex flex-col h-full w-full bg-background overflow-hidden">
           <div className="pharmacy-gradient px-3 py-1.5 flex items-center gap-2 shrink-0">
             <span className="text-sm font-bold text-primary-foreground tracking-tight">Asclion</span>
+            <ScannerIndicator />
             <LgoPreviewPicker current={lgoType} onChange={setPreviewLgo} isOverride={isPreview} />
             <div className="flex-1" />
             <PipControls />
