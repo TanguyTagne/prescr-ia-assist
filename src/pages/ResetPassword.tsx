@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Pill, Loader2, Lock, Eye, EyeOff } from "lucide-react";
+import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
@@ -94,6 +95,11 @@ const ResetPassword = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      <Helmet>
+        <title>Réinitialiser le mot de passe — Asclion</title>
+        <meta name="description" content="Définissez un nouveau mot de passe sécurisé pour votre compte Asclion." />
+        <meta name="robots" content="noindex, nofollow" />
+      </Helmet>
       <header className="pharmacy-gradient px-4 py-4">
         <div className="container max-w-md mx-auto flex items-center gap-3">
           <div className="h-10 w-10 rounded-xl bg-primary-foreground/20 flex items-center justify-center">
