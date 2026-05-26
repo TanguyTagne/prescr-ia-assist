@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Pill, Loader2, Lock, Eye, EyeOff } from "lucide-react";
+import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
