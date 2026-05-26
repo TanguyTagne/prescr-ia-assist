@@ -279,6 +279,14 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
           </Badge>
         }
       </div>
+      {flatRecs.length > 0 && (
+        <p className="text-[10px] text-foreground/60 leading-tight">
+          <kbd className="px-1 py-0.5 rounded bg-secondary font-mono">F1</kbd>
+          {flatRecs.length > 1 && <> · <kbd className="px-1 py-0.5 rounded bg-secondary font-mono">F2</kbd></>}
+          {flatRecs.length > 2 && <> · <kbd className="px-1 py-0.5 rounded bg-secondary font-mono">F3</kbd></>}
+          {" "}accepter · <kbd className="px-1 py-0.5 rounded bg-secondary font-mono">Échap</kbd> nouvelle
+        </p>
+      )}
       {demoMode &&
         <div className="rounded-md border border-primary/30 bg-primary/5 px-2 py-1.5 text-[11px] text-foreground/80 leading-snug">
           <span className="font-semibold text-primary">{t("results.demoBannerLabel")}</span>
