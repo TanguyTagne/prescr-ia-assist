@@ -3076,6 +3076,7 @@ export type Database = {
         Args: { _pharmacy_id: string; _quota_type: string }
         Returns: Json
       }
+      get_medicaments_coverage_stats: { Args: never; Returns: Json }
       get_pharmacy_connection_counts: {
         Args: never
         Returns: {
