@@ -13,6 +13,7 @@ import { useProductLineage } from "@/hooks/useProductLineage";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/i18n/I18nProvider";
+import { speakText } from "@/lib/notifyAnalysisDone";
 
 interface AnalysisResultsProps {
   result: AnalysisResult;
