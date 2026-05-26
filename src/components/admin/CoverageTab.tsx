@@ -41,8 +41,20 @@ const CoverageTab = () => {
   const [running, setRunning] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | "missing" | "incomplete" | "present">("all");
   const [search, setSearch] = useState("");
+  const [cipStats, setCipStats] = useState<{ total: number; sans_cip: number; avec_cip: number } | null>(null);
 
-  useEffect(() => { loadAuditData(); }, []);
+  useEffect(() => { loadAuditData(); loadCipStats(); }, []);
+
+  const loadCipStats = async () => {
+    try {
+      const [{ count: total }, { count: sans }] = await Promise.all([
+        supabase.from("medicaments").select("*", { count: "exact", head: true }),
+        supabase.from("medicaments").select("*", { count: "exact", head: true }).or("cip_code.is.null,cip_code.eq."),
+      ]);
+      const t = total || 0; const s = sans || 0;
+      setCipStats({ total: t, sans_cip: s, avec_cip: t - s });
+    } catch (e) { console.error(e); }
+  };
 
   const loadAuditData = async () => {
     setLoading(true);
