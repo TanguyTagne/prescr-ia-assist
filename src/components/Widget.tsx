@@ -587,7 +587,9 @@ const Widget = ({ forceOpen = false }: {forceOpen?: boolean;}) => {
 
   }
 
-  const panelPos = getPresetClasses(preset.position);
+  // Position web : toujours bas-droite (coin le moins encombré sur Windows/LGO,
+  // zone "notification" standard que les utilisateurs scannent en dernier recours).
+  const panelPos = getPresetClasses("bottom-right");
 
   return (
     <>
