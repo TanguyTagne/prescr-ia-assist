@@ -358,8 +358,8 @@ export const translations = {
     en: "Asclion — Smart pharmacist copilot at the counter",
   },
   "seo.landing.desc": {
-    fr: "Asclion analyse l'ordonnance en moins de 3s et suggère les produits complémentaires pertinents. Copilote IA pour pharmaciens d'officine.",
-    en: "Asclion analyzes prescriptions in under 3s and suggests relevant complementary products. AI copilot for community pharmacists.",
+    fr: "Asclion booste le panier moyen en pharmacie : l'IA transforme chaque ordonnance en vente associée pertinente, avec la phrase conseil adaptée au patient.",
+    en: "Asclion grows pharmacy basket size: AI turns every prescription into a relevant cross-sell, with the right advice phrase for each patient.",
   },
   "seo.vslgo.title": {
     fr: "Asclion vs LGO — Comparatif copilote IA pharmacie",
