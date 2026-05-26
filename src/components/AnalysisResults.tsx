@@ -47,16 +47,6 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
     return all.sort((a, b) => (b.rec.priorite || 0) - (a.rec.priorite || 0)).slice(0, 3);
   }, [result.medicaments]);
 
-  // TTS court : annonce la 1ère phrase conseil ou le 1er PC (pour pharmacien arrière-comptoir).
-  useEffect(() => {
-    const first = flatRecs[0];
-    if (!first) return;
-    const phrase = first.rec.phrase_conseil || `Pensez à proposer ${first.rec.produit}`;
-    // Tronque pour rester sous ~10 mots audibles
-    const short = phrase.split(/[.!?]/)[0].slice(0, 120);
-    speakText(short);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   // Raccourcis : Esc = nouvelle ordonnance, F1/F2/F3 = accepter top 1/2/3
   useEffect(() => {
