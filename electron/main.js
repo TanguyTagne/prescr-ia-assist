@@ -175,6 +175,9 @@ if (!gotTheLock) {
     // Detect installed LGO (Windows only) and forward to renderer when ready
     detectLgoAndNotify();
 
+    // Start global HID barcode listener (works even when Asclion is NOT focused)
+    startGlobalBarcodeListener();
+
     // Check for updates silently
     autoUpdater.checkForUpdatesAndNotify();
   });
