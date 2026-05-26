@@ -40,17 +40,49 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
   );
   const { lineage } = useProductLineage(allProductNames);
 
-  // Escape key resets to new prescription
+  // Flatten recommandations triées par priorité — utilisé pour raccourcis F1/F2/F3.
+  const flatRecs = useMemo(() => {
+    const all = result.medicaments.flatMap((m) =>
+      (m.recommendations || []).map((r) => ({ medNom: m.nom, rec: r }))
+    );
+    return all.sort((a, b) => (b.rec.priorite || 0) - (a.rec.priorite || 0)).slice(0, 3);
+  }, [result.medicaments]);
+
+  // TTS court : annonce la 1ère phrase conseil ou le 1er PC (pour pharmacien arrière-comptoir).
+  useEffect(() => {
+    const first = flatRecs[0];
+    if (!first) return;
+    const phrase = first.rec.phrase_conseil || `Pensez à proposer ${first.rec.produit}`;
+    // Tronque pour rester sous ~10 mots audibles
+    const short = phrase.split(/[.!?]/)[0].slice(0, 120);
+    speakText(short);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Raccourcis : Esc = nouvelle ordonnance, F1/F2/F3 = accepter top 1/2/3
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const inField = target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || (target as any)?.isContentEditable;
       if (e.key === "Escape") {
         e.preventDefault();
         onReset();
+        return;
+      }
+      if (inField) return;
+      const map: Record<string, number> = { F1: 0, F2: 1, F3: 2 };
+      if (e.key in map) {
+        const item = flatRecs[map[e.key]];
+        if (item) {
+          e.preventDefault();
+          handleOrder(item.medNom, item.rec.produit, item.rec.categorie);
+        }
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onReset]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onReset, flatRecs]);
 
   const toggleConseil = (index: number) => {
     setExpandedConseils((prev) => {
