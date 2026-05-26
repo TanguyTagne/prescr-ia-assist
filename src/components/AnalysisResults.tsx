@@ -25,7 +25,6 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
   const { t } = useI18n();
   const [orderedItems, setOrderedItems] = useState<Set<string>>(new Set());
   const [expandedConseils, setExpandedConseils] = useState<Set<number>>(new Set());
-  const [expandedPCConseils, setExpandedPCConseils] = useState<Set<string>>(new Set());
   const [conseilGlobalOpen, setConseilGlobalOpen] = useState(false);
   const { recordFeedback } = usePcFeedback();
 
