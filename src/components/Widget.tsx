@@ -218,6 +218,49 @@ const WidgetApp = () => {
     setResult(next);
   }, []);
 
+  // Logge un scan HID dans analysis_history (fire-and-forget) pour qu'il
+  // apparaisse dans les KPIs. Le chemin scan ne passe pas par l'edge function
+  // analyze-prescription qui s'occupe normalement de ce logging.
+  const logHidScan = useCallback(async (
+    code: string,
+    med: { nom: string; recommendations: AnalysisResult["medicaments"][number]["recommendations"] }
+  ) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("pharmacy_id")
+        .eq("id", user.id)
+        .maybeSingle();
+      const pharmacyId = (profile as any)?.pharmacy_id;
+      if (!pharmacyId) return;
+
+      const enc = new TextEncoder().encode(`hid:${code}:${Date.now()}`);
+      const buf = await crypto.subtle.digest("SHA-256", enc);
+      const hash = Array.from(new Uint8Array(buf))
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("");
+      const registerId = localStorage.getItem("asclion_register_id") || null;
+
+      await supabase.from("analysis_history").insert({
+        pharmacy_id: pharmacyId,
+        user_id: user.id,
+        register_id: registerId,
+        patient_hash: hash.slice(0, 32),
+        prescription_hash: hash,
+        medicaments: [{ nom: med.nom, classe: "", recommendations: med.recommendations }] as any,
+        interactions_count: 0,
+        suggestions_count: med.recommendations?.length || 0,
+        has_major_interaction: false,
+        metadata: { source: "hid_scan", ean: code } as any,
+      } as any);
+    } catch (err) {
+      console.error("[ASCLION-SCAN] logHidScan failed:", err);
+    }
+    trackEvent("ordonnance_analyzed", { input_type: "barcode_hid", medicaments: [med.nom], ean: code });
+  }, []);
+
   const lookupAndStream = useCallback(async (code: string) => {
     const ts = new Date().toISOString();
     try {
@@ -254,23 +297,22 @@ const WidgetApp = () => {
         }
         prependMedicament({ nom: med.nom_commercial, classe: "", recommendations });
         notifyAnalysisDone({ count: 1 });
+        void logHidScan(code, { nom: med.nom_commercial, recommendations });
         return;
       }
 
       const mock = lookupEanMock(code);
       if (mock) {
         console.log(`[ASCLION-SCAN] ${ts} ean=${code} match=mock name=${mock.nom}`);
-        prependMedicament({
-          nom: mock.nom,
-          classe: "",
-          recommendations: mock.complementaires.map((c) => ({
-            produit: c.nom,
-            categorie: "",
-            description: c.raison,
-            priorite: 90,
-          })),
-        });
+        const recommendations = mock.complementaires.map((c) => ({
+          produit: c.nom,
+          categorie: "",
+          description: c.raison,
+          priorite: 90,
+        }));
+        prependMedicament({ nom: mock.nom, classe: "", recommendations });
         notifyAnalysisDone({ count: 1 });
+        void logHidScan(code, { nom: mock.nom, recommendations });
         return;
       }
 
@@ -280,7 +322,7 @@ const WidgetApp = () => {
       console.error("Barcode lookup error:", err);
       toast.error("Erreur lors de la recherche du produit");
     }
-  }, [prependMedicament]);
+  }, [prependMedicament, logHidScan]);
 
   const handleBarcodeScan = useCallback((code: string) => {
     toast.info(`🔍 ${code}`);
