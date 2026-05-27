@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 jobs:
   build-windows:
@@ -20,14 +21,20 @@ jobs:
       # Supprime tous les artefacts existants du repo avant le nouveau build
       - name: Delete all existing artifacts
         shell: pwsh
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          $artifacts = gh api "repos/$env:GITHUB_REPOSITORY/actions/artifacts" --paginate | ConvertFrom-Json
-          foreach ($a in $artifacts.artifacts) {
-            Write-Host "Suppression artefact $($a.name) (id=$($a.id))"
-            gh api -X DELETE "repos/$env:GITHUB_REPOSITORY/actions/artifacts/$($a.id)" | Out-Null
+          try {
+            $artifacts = gh api "repos/$env:GITHUB_REPOSITORY/actions/artifacts" --paginate | ConvertFrom-Json
+            foreach ($a in $artifacts.artifacts) {
+              Write-Host "Suppression artefact $($a.name) (id=$($a.id))"
+              gh api -X DELETE "repos/$env:GITHUB_REPOSITORY/actions/artifacts/$($a.id)" 2>$null | Out-Null
+            }
+          } catch {
+            Write-Host "Purge ignorée: $_"
           }
+
 
       - uses: actions/setup-node@v5
         with:
