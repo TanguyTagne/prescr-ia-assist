@@ -249,12 +249,12 @@ const WidgetApp = () => {
         register_id: registerId,
         patient_hash: hash.slice(0, 32),
         prescription_hash: hash,
-        medicaments: [{ nom: med.nom, classe: "", recommendations: med.recommendations }],
+        medicaments: [{ nom: med.nom, classe: "", recommendations: med.recommendations }] as any,
         interactions_count: 0,
         suggestions_count: med.recommendations?.length || 0,
         has_major_interaction: false,
-        metadata: { source: "hid_scan", ean: code },
-      });
+        metadata: { source: "hid_scan", ean: code } as any,
+      } as any);
     } catch (err) {
       console.error("[ASCLION-SCAN] logHidScan failed:", err);
     }
