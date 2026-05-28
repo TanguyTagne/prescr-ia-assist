@@ -1,4 +1,5 @@
 import { useEffect, useRef, useCallback } from "react";
+import { parseBarcodeToCip } from "@/lib/barcodeParser";
 
 export interface BarcodeDebugEvent {
   type: "key" | "scan" | "rejected" | "dedup" | "reset";
@@ -14,6 +15,7 @@ interface BarcodeScannerOptions {
   onScan: (code: string) => void;
   enabled?: boolean;
   minLength?: number;
+  /** Max buffer length — kept large to accept GS1 DataMatrix payloads */
   maxLength?: number;
   maxKeyInterval?: number;
   /** Window (ms) during which an identical code is ignored (anti-rebond). 0 = disabled */
@@ -24,19 +26,20 @@ interface BarcodeScannerOptions {
 
 /**
  * Detects HID barcode scanner input (USB/Bluetooth douchette).
- * Scanners emulate keyboard: they type digits very fast (<60ms) then press Enter.
- * Human typing is much slower, so we distinguish by keystroke speed.
  *
- * Robustness:
- * - Dedup window prevents the same EAN being fired twice (some scanners double-trigger)
- * - Optional debug callback for the Hardware Diagnostic page
+ * Supports:
+ * - EAN-13 / CIP-13 (13 digits + Enter)
+ * - CIP-7 ancien (7 digits + Enter)
+ * - GS1 DataMatrix 2D : long payload with AI `01` + GTIN-14 → extracted to CIP-13
+ * - AZERTY/QWERTY layouts (we read e.key, so digits work regardless of Shift)
+ * - Numpad without NumLock fallback via e.code
  */
 export function useBarcodeScanner({
   onScan,
   enabled = true,
   minLength = 7,
-  maxLength = 13,
-  maxKeyInterval = 60,
+  maxLength = 60,
+  maxKeyInterval = 80,
   dedupeWindowMs = 800,
   onDebug,
 }: BarcodeScannerOptions) {
@@ -66,7 +69,6 @@ export function useBarcodeScanner({
       const elapsed = now - lastKeyTimeRef.current;
       lastKeyTimeRef.current = now;
 
-      // Clear any pending reset
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
         timeoutRef.current = null;
@@ -75,52 +77,58 @@ export function useBarcodeScanner({
       emit({ type: "key", key: e.key, elapsedMs: elapsed, bufferLen: bufferRef.current.length, at: now });
 
       if (e.key === "Enter" || e.key === "Tab") {
-        const code = bufferRef.current;
-        if (
-          code.length >= minLength &&
-          code.length <= maxLength &&
-          /^\d+$/.test(code)
-        ) {
-          // Anti-rebond: ignore identical scan within dedup window
-          if (
-            dedupeWindowMs > 0 &&
-            lastScanRef.current &&
-            lastScanRef.current.code === code &&
-            now - lastScanRef.current.at < dedupeWindowMs
-          ) {
-            emit({ type: "dedup", code, elapsedMs: now - lastScanRef.current.at, at: now });
+        const raw = bufferRef.current;
+        if (raw.length >= minLength) {
+          const parsed = parseBarcodeToCip(raw);
+          if (parsed) {
+            if (
+              dedupeWindowMs > 0 &&
+              lastScanRef.current &&
+              lastScanRef.current.code === parsed &&
+              now - lastScanRef.current.at < dedupeWindowMs
+            ) {
+              emit({ type: "dedup", code: parsed, elapsedMs: now - lastScanRef.current.at, at: now });
+              e.preventDefault();
+              e.stopPropagation();
+              resetBuffer();
+              return;
+            }
             e.preventDefault();
             e.stopPropagation();
-            resetBuffer();
-            return;
+            lastScanRef.current = { code: parsed, at: now };
+            emit({ type: "scan", code: parsed, at: now });
+            onScan(parsed);
+          } else {
+            emit({ type: "rejected", code: raw, reason: `cannot parse to CIP (len=${raw.length})`, at: now });
           }
-          e.preventDefault();
-          e.stopPropagation();
-          lastScanRef.current = { code, at: now };
-          emit({ type: "scan", code, at: now });
-          onScan(code);
-        } else if (code.length > 0) {
-          emit({ type: "rejected", code, reason: `length=${code.length} not in [${minLength},${maxLength}] or non-digit`, at: now });
+        } else if (raw.length > 0) {
+          emit({ type: "rejected", code: raw, reason: `length=${raw.length} < min=${minLength}`, at: now });
         }
         resetBuffer();
         return;
       }
 
-      // Only accumulate digits
-      if (/^\d$/.test(e.key)) {
+      // Accept digits AND GS1 punctuation (parens, GS char) AND letters (for LOT/AI codes in DataMatrix)
+      const isAccepted = e.key.length === 1 && /[0-9A-Za-z()\x1d]/.test(e.key);
+      // Numpad fallback when NumLock off
+      const numpadDigit =
+        !isAccepted && /^Numpad[0-9]$/.test(e.code) ? e.code.slice(-1) : null;
+
+      const charToAdd = isAccepted ? e.key : numpadDigit;
+
+      if (charToAdd) {
         if (bufferRef.current.length === 0 || elapsed < maxKeyInterval) {
-          bufferRef.current += e.key;
+          if (bufferRef.current.length < maxLength) {
+            bufferRef.current += charToAdd;
+          }
         } else {
-          // Too slow — human typing, reset
-          bufferRef.current = e.key;
+          bufferRef.current = charToAdd;
         }
-      } else if (bufferRef.current.length > 0) {
-        // Non-digit key breaks the sequence
+      } else if (bufferRef.current.length > 0 && e.key.length === 1) {
         resetBuffer();
       }
 
-      // Auto-reset after inactivity
-      timeoutRef.current = setTimeout(resetBuffer, 300);
+      timeoutRef.current = setTimeout(resetBuffer, 400);
     };
 
     window.addEventListener("keydown", handleKeyDown, true);
