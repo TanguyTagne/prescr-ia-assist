@@ -55,7 +55,7 @@ const ResetPassword = lazyWithRetry(() => import("./pages/ResetPassword"));
 const VsLgo = lazyWithRetry(() => import("./pages/VsLgo"));
 const Aide = lazyWithRetry(() => import("./pages/Aide"));
 const Fonctionnalites = lazyWithRetry(() => import("./pages/Fonctionnalites"));
-const HardwareDiagnostic = lazyWithRetry(() => import("./pages/HardwareDiagnostic"));
+
 const Widget = lazyWithRetry(() => import("./components/Widget"));
 const SiteDemoWidget = lazyWithRetry(() => import("./components/SiteDemoWidget"));
 const MentionsLegales = lazyWithRetry(() => import("./pages/legal/MentionsLegales"));
