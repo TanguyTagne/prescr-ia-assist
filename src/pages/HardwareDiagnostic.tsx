@@ -1,6 +1,5 @@
 import { useCallback, useMemo, useRef, useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { ArrowLeft, ScanLine, FolderSearch, Download, Trash2, FileText, AlertCircle, CheckCircle2, Keyboard } from "lucide-react";
+import { ScanLine, FolderSearch, Download, Trash2, FileText, AlertCircle, CheckCircle2, Keyboard } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,8 +16,7 @@ const formatTime = (ts: number) => {
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}:${String(d.getSeconds()).padStart(2, "0")}.${String(d.getMilliseconds()).padStart(3, "0")}`;
 };
 
-const HardwareDiagnostic = () => {
-  const navigate = useNavigate();
+const HardwareDiagnosticTab = () => {
 
   // ---- Barcode scanner ----
   const [scannerEvents, setScannerEvents] = useState<BarcodeDebugEvent[]>([]);
