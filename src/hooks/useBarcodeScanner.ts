@@ -111,6 +111,22 @@ export function useBarcodeScanner({
         return;
       }
 
+      // Detect AZERTY-corrupted input: douchette en mode US-QWERTY → digits sortent en é"'(-è_çà
+      if (
+        e.key.length === 1 &&
+        AZERTY_CORRUPTION_CHARS.has(e.key) &&
+        elapsed < maxKeyInterval &&
+        bufferRef.current.length > 0
+      ) {
+        emit({
+          type: "azerty-corruption",
+          key: e.key,
+          reason: "Douchette en mode US-QWERTY — reconfigurez en clavier français (FR-AZERTY)",
+          bufferLen: bufferRef.current.length,
+          at: now,
+        });
+      }
+
       // Accept digits AND GS1 punctuation (parens, GS char) AND letters (for LOT/AI codes in DataMatrix)
       const isAccepted = e.key.length === 1 && /[0-9A-Za-z()\x1d]/.test(e.key);
       // Numpad fallback when NumLock off
