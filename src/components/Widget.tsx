@@ -1,5 +1,20 @@
 import { useState, useCallback, useEffect, useRef } from "react";
-import { X, Loader2, Mail, Lock, Eye, EyeOff, Monitor, HelpCircle, Pin, PinOff, Minimize2, Maximize2, LogOut, ScanLine } from "lucide-react";
+import {
+  X,
+  Loader2,
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  Monitor,
+  HelpCircle,
+  Pin,
+  PinOff,
+  Minimize2,
+  Maximize2,
+  LogOut,
+  ScanLine,
+} from "lucide-react";
 import OnboardingTour from "@/components/OnboardingTour";
 import AnalysisSkeleton from "@/components/AnalysisSkeleton";
 import { Button } from "@/components/ui/button";
@@ -47,8 +62,9 @@ const WidgetAuth = () => {
         if (error) throw error;
       } else {
         const { error } = await supabase.auth.signUp({
-          email, password,
-          options: { data: { full_name: fullName }, emailRedirectTo: window.location.origin }
+          email,
+          password,
+          options: { data: { full_name: fullName }, emailRedirectTo: window.location.origin },
         });
         if (error) throw error;
         toast.success("Vérifiez votre email pour confirmer.");
@@ -64,24 +80,53 @@ const WidgetAuth = () => {
     <div className="p-4 space-y-3">
       <p className="text-sm font-semibold text-center">{isLogin ? "Connexion" : "Inscription"}</p>
       <form onSubmit={handleSubmit} className="space-y-3">
-        {!isLogin &&
-        <div className="relative">
-            <Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Nom complet" className="h-10 text-sm pl-8" required />
+        {!isLogin && (
+          <div className="relative">
+            <Input
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              placeholder="Nom complet"
+              className="h-10 text-sm pl-8"
+              required
+            />
             <Mail className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
           </div>
-        }
+        )}
         <div className="relative">
-          <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" className="h-10 text-sm pl-8" required />
+          <Input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Email"
+            className="h-10 text-sm pl-8"
+            required
+          />
           <Mail className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
         </div>
         <div className="relative">
-          <Input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Mot de passe" className="h-10 text-sm pl-8 pr-8" minLength={6} required />
+          <Input
+            type={showPassword ? "text" : "password"}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Mot de passe"
+            className="h-10 text-sm pl-8 pr-8"
+            minLength={6}
+            required
+          />
           <Lock className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-          <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground">
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+          >
             {showPassword ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
           </button>
         </div>
-        <Button type="submit" className="w-full h-10 text-sm font-semibold pharmacy-gradient border-0" disabled={loading}>
+        <Button
+          type="submit"
+          className="w-full h-10 text-sm font-semibold pharmacy-gradient border-0"
+          disabled={loading}
+        >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : isLogin ? "Se connecter" : "Créer mon compte"}
         </Button>
       </form>
@@ -91,8 +136,8 @@ const WidgetAuth = () => {
           {isLogin ? "S'inscrire" : "Se connecter"}
         </button>
       </p>
-    </div>);
-
+    </div>
+  );
 };
 
 const WidgetApp = () => {
@@ -102,6 +147,10 @@ const WidgetApp = () => {
   // Basket memory (anti-loop)
   const [basketSessionId] = useState(() => crypto.randomUUID());
   const [blockedProducts, setBlockedProducts] = useState<string[]>([]);
+  // CIP codes of products suggested by the system — skip analysis when scanned
+  const blockedCipsRef = useRef<Set<string>>(new Set());
+  // Dedup guard: keyboard path + IPC global path fire simultaneously on focused window
+  const lastBarcodeScanRef = useRef<{ code: string; at: number }>({ code: "", at: 0 });
 
   const handleReset = () => {
     setResult(null);
@@ -109,12 +158,12 @@ const WidgetApp = () => {
 
   const handleAnalyze = async (text: string) => {
     setIsLoading(true);
-    // Reset anti-loop for each new prescription
     setBlockedProducts([]);
+    blockedCipsRef.current = new Set();
     try {
       const analysis = await analyzePrescription(text, { basketSessionId, blockedProducts: [] });
       setResult(analysis);
-      const proposed = analysis.medicaments.flatMap(m => (m.recommendations || []).map(r => r.produit));
+      const proposed = analysis.medicaments.flatMap((m) => (m.recommendations || []).map((r) => r.produit));
       setBlockedProducts(proposed);
       notifyAnalysisDone({ count: analysis.medicaments.length });
       trackEvent("ordonnance_analyzed", { input_type: "text", medicaments: analysis.medicaments.map((m) => m.nom) });
@@ -128,10 +177,11 @@ const WidgetApp = () => {
   const handleAnalyzeImage = async (imageBase64: string) => {
     setIsLoading(true);
     setBlockedProducts([]);
+    blockedCipsRef.current = new Set();
     try {
       const analysis = await analyzePrescriptionImage(imageBase64, { basketSessionId, blockedProducts: [] });
       setResult(analysis);
-      const proposed = analysis.medicaments.flatMap(m => (m.recommendations || []).map(r => r.produit));
+      const proposed = analysis.medicaments.flatMap((m) => (m.recommendations || []).map((r) => r.produit));
       setBlockedProducts(proposed);
       notifyAnalysisDone({ count: analysis.medicaments.length });
       trackEvent("ordonnance_analyzed", { input_type: "image", medicaments: analysis.medicaments.map((m) => m.nom) });
@@ -197,7 +247,9 @@ const WidgetApp = () => {
   // (le plus récent en premier). Aucun skeleton ne réapparaît si un résultat
   // précédent est déjà affiché : le nouveau s'insère dès qu'il est prêt.
   const resultRef = useRef<AnalysisResult | null>(null);
-  useEffect(() => { resultRef.current = result; }, [result]);
+  useEffect(() => {
+    resultRef.current = result;
+  }, [result]);
 
   const prependMedicament = useCallback((med: AnalysisResult["medicaments"][number]) => {
     const prev = resultRef.current;
@@ -221,125 +273,168 @@ const WidgetApp = () => {
   // Logge un scan HID dans analysis_history (fire-and-forget) pour qu'il
   // apparaisse dans les KPIs. Le chemin scan ne passe pas par l'edge function
   // analyze-prescription qui s'occupe normalement de ce logging.
-  const logHidScan = useCallback(async (
-    code: string,
-    med: { nom: string; recommendations: AnalysisResult["medicaments"][number]["recommendations"] }
-  ) => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("pharmacy_id")
-        .eq("id", user.id)
-        .maybeSingle();
-      const pharmacyId = (profile as any)?.pharmacy_id;
-      if (!pharmacyId) return;
-
-      const enc = new TextEncoder().encode(`hid:${code}:${Date.now()}`);
-      const buf = await crypto.subtle.digest("SHA-256", enc);
-      const hash = Array.from(new Uint8Array(buf))
-        .map((b) => b.toString(16).padStart(2, "0"))
-        .join("");
-      const registerId = localStorage.getItem("asclion_register_id") || null;
-
-      await supabase.from("analysis_history").insert({
-        pharmacy_id: pharmacyId,
-        user_id: user.id,
-        register_id: registerId,
-        patient_hash: hash.slice(0, 32),
-        prescription_hash: hash,
-        medicaments: [{ nom: med.nom, classe: "", recommendations: med.recommendations }] as any,
-        interactions_count: 0,
-        suggestions_count: med.recommendations?.length || 0,
-        has_major_interaction: false,
-        metadata: { source: "hid_scan", ean: code } as any,
-      } as any);
-    } catch (err) {
-      console.error("[ASCLION-SCAN] logHidScan failed:", err);
-    }
-    trackEvent("ordonnance_analyzed", { input_type: "barcode_hid", medicaments: [med.nom], ean: code });
-  }, []);
-
-  const lookupAndStream = useCallback(async (code: string) => {
-    const ts = new Date().toISOString();
-    try {
-      const { data: med } = await supabase
-        .from("medicaments")
-        .select("id, nom_commercial, cip_code, molecule_id, atc_code")
-        .eq("cip_code", code)
-        .maybeSingle();
-
-      if (med) {
-        console.log(`[ASCLION-SCAN] ${ts} ean=${code} match=db name=${med.nom_commercial}`);
-        const { data: pathLinks } = await supabase
-          .from("medicament_pathologie")
-          .select("pathologie_id")
-          .eq("medicament_id", med.id);
-
-        let recommendations: AnalysisResult["medicaments"][number]["recommendations"] = [];
-        if (pathLinks && pathLinks.length > 0) {
-          const pathIds = pathLinks.map((p) => p.pathologie_id);
-          const { data: produits } = await supabase
-            .from("produits_complementaires")
-            .select("produit, categorie, description")
-            .in("pathologie_id", pathIds)
-            .order("priorite", { ascending: false })
-            .limit(5);
-          if (produits) {
-            recommendations = produits.map((p) => ({
-              produit: p.produit,
-              categorie: p.categorie || "",
-              description: p.description || undefined,
-              priorite: 90,
-            }));
-          }
+  const logHidScan = useCallback(
+    async (
+      code: string,
+      med: { nom: string; recommendations: AnalysisResult["medicaments"][number]["recommendations"] },
+    ) => {
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!user) {
+          console.warn("[ASCLION-LOG] logHidScan: utilisateur non connecté");
+          return;
         }
-        prependMedicament({ nom: med.nom_commercial, classe: "", recommendations });
-        notifyAnalysisDone({ count: 1 });
-        void logHidScan(code, { nom: med.nom_commercial, recommendations });
+        const { data: profile } = await supabase.from("profiles").select("pharmacy_id").eq("id", user.id).maybeSingle();
+        const pharmacyId = (profile as any)?.pharmacy_id;
+        if (!pharmacyId) {
+          console.warn(
+            "[ASCLION-LOG] logHidScan: pharmacy_id manquant — vérifiez que le compte est bien rattaché à une pharmacie",
+          );
+          toast.warning("Compte non rattaché à une pharmacie — scan non enregistré");
+          return;
+        }
+
+        const enc = new TextEncoder().encode(`hid:${code}:${Date.now()}`);
+        const buf = await crypto.subtle.digest("SHA-256", enc);
+        const hash = Array.from(new Uint8Array(buf))
+          .map((b) => b.toString(16).padStart(2, "0"))
+          .join("");
+        const registerId = localStorage.getItem("asclion_register_id") || null;
+
+        const { error } = await supabase.from("analysis_history").insert({
+          pharmacy_id: pharmacyId,
+          user_id: user.id,
+          register_id: registerId,
+          patient_hash: hash.slice(0, 32),
+          prescription_hash: hash,
+          medicaments: [{ nom: med.nom, classe: "", recommendations: med.recommendations }] as any,
+          interactions_count: 0,
+          suggestions_count: med.recommendations?.length || 0,
+          has_major_interaction: false,
+          metadata: { source: "hid_scan", ean: code } as any,
+        } as any);
+        if (error) {
+          console.error("[ASCLION-LOG] logHidScan insert échoué:", error.message);
+        }
+      } catch (err) {
+        console.error("[ASCLION-LOG] logHidScan exception:", err);
+      }
+      trackEvent("ordonnance_analyzed", { input_type: "barcode_hid", medicaments: [med.nom], ean: code });
+    },
+    [],
+  );
+
+  const lookupAndStream = useCallback(
+    async (code: string) => {
+      const ts = new Date().toISOString();
+      try {
+        const { data: med } = await supabase
+          .from("medicaments")
+          .select("id, nom_commercial, cip_code, molecule_id, atc_code")
+          .eq("cip_code", code)
+          .maybeSingle();
+
+        if (med) {
+          console.log(`[ASCLION-SCAN] ${ts} ean=${code} match=db name=${med.nom_commercial}`);
+          const { data: pathLinks } = await supabase
+            .from("medicament_pathologie")
+            .select("pathologie_id")
+            .eq("medicament_id", med.id);
+
+          let recommendations: AnalysisResult["medicaments"][number]["recommendations"] = [];
+          if (pathLinks && pathLinks.length > 0) {
+            const pathIds = pathLinks.map((p) => p.pathologie_id);
+            // Include medicaments join to get CIP codes for anti-loop blocking
+            const { data: produits } = await supabase
+              .from("produits_complementaires")
+              .select("produit, categorie, description, medicaments(cip_code)")
+              .in("pathologie_id", pathIds)
+              .order("priorite", { ascending: false })
+              .limit(5);
+            if (produits) {
+              recommendations = (produits as any[]).map((p) => ({
+                produit: p.produit,
+                categorie: p.categorie || "",
+                description: p.description || undefined,
+                priorite: 90,
+              }));
+              // Register CIP codes of suggested products so they are skipped if scanned
+              const newNames: string[] = [];
+              for (const p of produits as any[]) {
+                const cip = p.medicaments?.cip_code;
+                if (cip) blockedCipsRef.current.add(cip);
+                newNames.push(p.produit);
+              }
+              if (newNames.length > 0) {
+                setBlockedProducts((prev) => [...new Set([...prev, ...newNames])]);
+              }
+            }
+          }
+          prependMedicament({ nom: med.nom_commercial, classe: "", recommendations });
+          notifyAnalysisDone({ count: 1 });
+          void logHidScan(code, { nom: med.nom_commercial, recommendations });
+          return;
+        }
+
+        const mock = lookupEanMock(code);
+        if (mock) {
+          console.log(`[ASCLION-SCAN] ${ts} ean=${code} match=mock name=${mock.nom}`);
+          const recommendations = mock.complementaires.map((c) => ({
+            produit: c.nom,
+            categorie: "",
+            description: c.raison,
+            priorite: 90,
+          }));
+          // Mock products don't have CIP codes — block by name only
+          if (recommendations.length > 0) {
+            setBlockedProducts((prev) => [...new Set([...prev, ...recommendations.map((r) => r.produit)])]);
+          }
+          prependMedicament({ nom: mock.nom, classe: "", recommendations });
+          notifyAnalysisDone({ count: 1 });
+          void logHidScan(code, { nom: mock.nom, recommendations });
+          return;
+        }
+
+        console.log(`[ASCLION-SCAN] ${ts} ean=${code} match=none`);
+        // Trace côté DB même si le CIP est inconnu — sinon on ne sait pas
+        // distinguer "douchette muette" de "CIP absent du référentiel".
+        void logHidScan(code, { nom: `EAN ${code} (non référencé)`, recommendations: [] });
+        toast.warning(`Aucun produit trouvé pour le code ${code}`);
+      } catch (err) {
+        console.error("Barcode lookup error:", err);
+        toast.error("Erreur lors de la recherche du produit");
+      }
+    },
+    [prependMedicament, logHidScan],
+  );
+
+  const handleBarcodeScan = useCallback(
+    (code: string) => {
+      const now = Date.now();
+
+      // Guard 1 — dedup: keyboard path + IPC global path fire simultaneously when window is focused
+      if (lastBarcodeScanRef.current.code === code && now - lastBarcodeScanRef.current.at < 1000) {
+        console.log(`[ASCLION-DEDUP] ${code} ignoré — double déclenchement clavier/IPC`);
+        return;
+      }
+      lastBarcodeScanRef.current = { code, at: now };
+
+      // Guard 2 — anti-boucle: ce code correspond à un produit proposé par le système
+      if (blockedCipsRef.current.has(code)) {
+        console.log(`[ASCLION-ANTI-LOOP] ${code} ignoré — produit proposé`);
+        toast.success("Produit complémentaire scanné", { duration: 1500 });
         return;
       }
 
-      const mock = lookupEanMock(code);
-      if (mock) {
-        console.log(`[ASCLION-SCAN] ${ts} ean=${code} match=mock name=${mock.nom}`);
-        const recommendations = mock.complementaires.map((c) => ({
-          produit: c.nom,
-          categorie: "",
-          description: c.raison,
-          priorite: 90,
-        }));
-        prependMedicament({ nom: mock.nom, classe: "", recommendations });
-        notifyAnalysisDone({ count: 1 });
-        void logHidScan(code, { nom: mock.nom, recommendations });
-        return;
-      }
-
-      console.log(`[ASCLION-SCAN] ${ts} ean=${code} match=none`);
-      // Trace côté DB même si le CIP est inconnu — sinon on ne sait pas
-      // distinguer "douchette muette" de "CIP absent du référentiel".
-      void logHidScan(code, { nom: `EAN ${code} (non référencé)`, recommendations: [] });
-      toast.warning(`Aucun produit trouvé pour le code ${code}`);
-    } catch (err) {
-      console.error("Barcode lookup error:", err);
-      toast.error("Erreur lors de la recherche du produit");
-    }
-  }, [prependMedicament, logHidScan]);
-
-  const handleBarcodeScan = useCallback((code: string) => {
-    toast.info(`🔍 ${code}`);
-    // Skeleton uniquement pour le tout premier scan (avant qu'un résultat ne soit affiché).
-    // Les scans suivants se streament sans flash visuel.
-    if (!resultRef.current) setIsLoading(true);
-    lookupAndStream(code).finally(() => {
-      if (!resultRef.current || resultRef.current.medicaments.length === 0) {
-        setIsLoading(false);
-      } else {
-        setIsLoading(false);
-      }
-    });
-  }, [lookupAndStream]);
+      toast.info(`🔍 ${code}`);
+      // Skeleton only on the very first scan (before any result is displayed)
+      if (!resultRef.current) setIsLoading(true);
+      lookupAndStream(code).finally(() => setIsLoading(false));
+    },
+    [lookupAndStream],
+  );
 
   // Listen for global HID scans (system-wide, dispatched by the Electron bridge)
   useEffect(() => {
@@ -352,28 +447,29 @@ const WidgetApp = () => {
     return () => window.removeEventListener("asclion:global-barcode", handler);
   }, [handleBarcodeScan]);
 
-
   return (
     <div className="p-4 space-y-3 py-0">
       <ScannerStatus onViewResult={handleScanResult} onNewFile={handleNewFile} onBarcodeScan={handleBarcodeScan} />
 
-      {isLoading ?
-      <AnalysisSkeleton /> :
-      !result ?
-      <div className="space-y-3">
+      {isLoading ? (
+        <AnalysisSkeleton />
+      ) : !result ? (
+        <div className="space-y-3">
           <PrescriptionInput onAnalyze={handleAnalyze} onAnalyzeImage={handleAnalyzeImage} />
           <LegalDisclaimer />
           <p className="text-[10px] text-foreground/60 text-center pt-1">
-            <kbd className="px-1 py-0.5 rounded bg-secondary font-mono">Échap</kbd> · <kbd className="px-1 py-0.5 rounded bg-secondary font-mono">Entrée</kbd> · <kbd className="px-1 py-0.5 rounded bg-secondary font-mono">?</kbd> aide
+            <kbd className="px-1 py-0.5 rounded bg-secondary font-mono">Échap</kbd> ·{" "}
+            <kbd className="px-1 py-0.5 rounded bg-secondary font-mono">Entrée</kbd> ·{" "}
+            <kbd className="px-1 py-0.5 rounded bg-secondary font-mono">?</kbd> aide
           </p>
-        </div> :
-
-      <>
-        <AnalysisResults result={result} onReset={handleReset} />
-      </>
-      }
-    </div>);
-
+        </div>
+      ) : (
+        <>
+          <AnalysisResults result={result} onReset={handleReset} />
+        </>
+      )}
+    </div>
+  );
 };
 
 const LgoPreviewPicker = ({
@@ -418,10 +514,7 @@ const LgoPreviewPicker = ({
       {isOverride && (
         <>
           <DropdownMenuSeparator />
-          <DropdownMenuItem
-            onClick={() => onChange(null)}
-            className="text-xs text-muted-foreground cursor-pointer"
-          >
+          <DropdownMenuItem onClick={() => onChange(null)} className="text-xs text-muted-foreground cursor-pointer">
             Revenir au LGO de la pharmacie
           </DropdownMenuItem>
         </>
@@ -432,7 +525,11 @@ const LgoPreviewPicker = ({
 
 const ScannerIndicator = () => {
   const [detected, setDetected] = useState<boolean>(() => {
-    try { return localStorage.getItem("asclion_scanner_detected") === "1"; } catch { return false; }
+    try {
+      return localStorage.getItem("asclion_scanner_detected") === "1";
+    } catch {
+      return false;
+    }
   });
   const [pulse, setPulse] = useState(false);
 
@@ -454,9 +551,7 @@ const ScannerIndicator = () => {
     <div
       className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium text-primary-foreground/90"
       title={
-        detected
-          ? "Douchette détectée — interception automatique active"
-          : "En attente d'un premier scan douchette"
+        detected ? "Douchette détectée — interception automatique active" : "En attente d'un premier scan douchette"
       }
     >
       <ScanLine className="h-2.5 w-2.5" />
@@ -470,14 +565,19 @@ const ScannerIndicator = () => {
 };
 
 const PipControls = () => {
-  const api = (typeof window !== "undefined" ? (window as any).electronAPI?.pip : null) as
-    | { getState: () => Promise<{ alwaysOnTop: boolean; compact: boolean }>; toggle: () => Promise<{ alwaysOnTop: boolean; compact: boolean }>; setCompact: (c: boolean) => Promise<{ alwaysOnTop: boolean; compact: boolean }> }
-    | null;
+  const api = (typeof window !== "undefined" ? (window as any).electronAPI?.pip : null) as {
+    getState: () => Promise<{ alwaysOnTop: boolean; compact: boolean }>;
+    toggle: () => Promise<{ alwaysOnTop: boolean; compact: boolean }>;
+    setCompact: (c: boolean) => Promise<{ alwaysOnTop: boolean; compact: boolean }>;
+  } | null;
   const [state, setState] = useState<{ alwaysOnTop: boolean; compact: boolean } | null>(null);
 
   useEffect(() => {
     if (!api) return;
-    api.getState().then(setState).catch(() => {});
+    api
+      .getState()
+      .then(setState)
+      .catch(() => {});
   }, [api]);
 
   if (!api || !state) return null;
@@ -515,7 +615,7 @@ const PipControls = () => {
   );
 };
 
-const Widget = ({ forceOpen = false }: {forceOpen?: boolean;}) => {
+const Widget = ({ forceOpen = false }: { forceOpen?: boolean }) => {
   const isDesktopRuntime = forceOpen || isAsclionDesktopRuntime();
 
   // Web: always open so visitors can naturally try the demo. Electron: forceOpen.
@@ -571,15 +671,15 @@ const Widget = ({ forceOpen = false }: {forceOpen?: boolean;}) => {
             <RegisterSelector />
           </div>
           <div className="flex-1 overflow-y-auto">
-            {loading ?
-            <div className="flex items-center justify-center py-8">
+            {loading ? (
+              <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-5 w-5 animate-spin text-primary" />
-              </div> :
-            !user ?
-            <WidgetAuth /> :
-
-            <WidgetApp />
-            }
+              </div>
+            ) : !user ? (
+              <WidgetAuth />
+            ) : (
+              <WidgetApp />
+            )}
           </div>
           {!loading && user && (
             <div className="shrink-0 border-t border-border bg-background px-3 py-2">
@@ -595,8 +695,8 @@ const Widget = ({ forceOpen = false }: {forceOpen?: boolean;}) => {
             </div>
           )}
         </div>
-      </div>);
-
+      </div>
+    );
   }
 
   // Position web : toujours bas-droite (coin le moins encombré sur Windows/LGO,
@@ -608,45 +708,50 @@ const Widget = ({ forceOpen = false }: {forceOpen?: boolean;}) => {
       <button
         onClick={() => setOpen(!open)}
         aria-label={open ? "Fermer le widget Asclion" : "Ouvrir le widget Asclion"}
-        className="fixed bottom-4 right-4 z-[9999] h-12 w-12 rounded-full pharmacy-gradient shadow-lg flex items-center justify-center hover:scale-105 transition-transform">
-        
-        {open ? <X className="h-5 w-5 text-primary-foreground" /> : <span className="text-xs font-bold text-primary-foreground">A</span>}
+        className="fixed bottom-4 right-4 z-[9999] h-12 w-12 rounded-full pharmacy-gradient shadow-lg flex items-center justify-center hover:scale-105 transition-transform"
+      >
+        {open ? (
+          <X className="h-5 w-5 text-primary-foreground" />
+        ) : (
+          <span className="text-xs font-bold text-primary-foreground">A</span>
+        )}
       </button>
 
-      {open &&
-      <div
-        data-tour-target="widget"
-        className={`fixed ${panelPos} z-[9998] rounded-xl border border-border bg-background shadow-2xl animate-in fade-in duration-300 py-0 transition-all overflow-visible`}
-        style={{ width: `${preset.width}px`, maxHeight: `calc(100vh - 6rem)` }}>
+      {open && (
+        <div
+          data-tour-target="widget"
+          className={`fixed ${panelPos} z-[9998] rounded-xl border border-border bg-background shadow-2xl animate-in fade-in duration-300 py-0 transition-all overflow-visible`}
+          style={{ width: `${preset.width}px`, maxHeight: `calc(100vh - 6rem)` }}
+        >
           <div className="overflow-y-auto max-h-[inherit] rounded-xl">
-          <div className="pharmacy-gradient px-3 py-1.5 rounded-t-xl flex items-center gap-1.5 sticky top-0 z-10">
-            <span className="text-[11px] font-bold text-primary-foreground tracking-tight">Asclion</span>
-            <LgoPreviewPicker current={lgoType} onChange={setPreviewLgo} isOverride={isPreview} />
-            <div className="flex-1" />
-            <button
-              onClick={() => window.open("/aide", "_blank", "noopener")}
-              aria-label="Ouvrir l'aide"
-              className="text-primary-foreground/80 hover:text-primary-foreground transition-colors p-0.5 focus-visible:ring-2 focus-visible:ring-primary-foreground/50 rounded"
-            >
-              <HelpCircle className="h-3.5 w-3.5" />
-            </button>
-            <RegisterSelector />
-          </div>
-          {loading ?
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-5 w-5 animate-spin text-primary" />
-            </div> :
-          !user ?
-            <WidgetAuth /> :
-            <WidgetApp />
-          }
-
+            <div className="pharmacy-gradient px-3 py-1.5 rounded-t-xl flex items-center gap-1.5 sticky top-0 z-10">
+              <span className="text-[11px] font-bold text-primary-foreground tracking-tight">Asclion</span>
+              <LgoPreviewPicker current={lgoType} onChange={setPreviewLgo} isOverride={isPreview} />
+              <div className="flex-1" />
+              <button
+                onClick={() => window.open("/aide", "_blank", "noopener")}
+                aria-label="Ouvrir l'aide"
+                className="text-primary-foreground/80 hover:text-primary-foreground transition-colors p-0.5 focus-visible:ring-2 focus-visible:ring-primary-foreground/50 rounded"
+              >
+                <HelpCircle className="h-3.5 w-3.5" />
+              </button>
+              <RegisterSelector />
+            </div>
+            {loading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-5 w-5 animate-spin text-primary" />
+              </div>
+            ) : !user ? (
+              <WidgetAuth />
+            ) : (
+              <WidgetApp />
+            )}
           </div>
         </div>
-      }
+      )}
       <OnboardingTour open={showTour} onClose={tourClose} />
-    </>);
-
+    </>
+  );
 };
 
 export default Widget;
