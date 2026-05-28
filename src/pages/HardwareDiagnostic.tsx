@@ -162,26 +162,19 @@ const HardwareDiagnosticTab = () => {
   }, [scanCount, scannerEvents]);
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border px-4 py-4">
-        <div className="container max-w-5xl mx-auto flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")} className="h-8 w-8">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <h1 className="text-xl font-bold tracking-tight">Diagnostic Hardware</h1>
-            <p className="text-xs text-muted-foreground">Scanner code-barres et surveillance du dossier de scans</p>
-          </div>
-          <div className="ml-auto">
-            <Button variant="outline" size="sm" onClick={exportReport} className="gap-2">
-              <Download className="h-4 w-4" />
-              Exporter le rapport
-            </Button>
-          </div>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-bold tracking-tight">Diagnostic Hardware</h2>
+          <p className="text-xs text-muted-foreground">Scanner code-barres et surveillance du dossier de scans</p>
         </div>
-      </header>
+        <Button variant="outline" size="sm" onClick={exportReport} className="gap-2">
+          <Download className="h-4 w-4" />
+          Exporter le rapport
+        </Button>
+      </div>
 
-      <main className="container max-w-5xl mx-auto px-4 py-6 space-y-6">
+      <div className="space-y-6">
         {/* Scanner */}
         <Card>
           <CardHeader>
