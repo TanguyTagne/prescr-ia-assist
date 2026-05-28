@@ -215,9 +215,27 @@ const HardwareDiagnostic = () => {
             </div>
 
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Branchez votre douchette et scannez n'importe quel code-barres. Les frappes clavier sont écoutées globalement
-              et un code valide (7 à 13 chiffres saisis en moins de 60 ms) déclenche une détection.
+              Branchez votre douchette et scannez n'importe quel code-barres. Les frappes clavier sont écoutées
+              globalement. Asclion accepte EAN-13, CIP-7, et DataMatrix 2D (GS1).
             </p>
+
+            {/* Raw capture — what the douchette ACTUALLY sends, before any parsing */}
+            <div className="rounded-lg border-2 border-dashed border-primary/30 bg-primary/5 p-3">
+              <div className="flex items-center gap-2 mb-1.5">
+                <Keyboard className="h-4 w-4 text-primary" />
+                <span className="text-xs font-semibold uppercase tracking-wide">Capture brute clavier</span>
+                <span className="text-xs text-muted-foreground">(ce que la douchette envoie, sans filtre)</span>
+              </div>
+              <div className="font-mono text-sm break-all min-h-[1.5rem] select-all">
+                {rawCapture || <span className="text-muted-foreground italic">Scannez un code pour voir la trame brute…</span>}
+              </div>
+              {rawCapture && /[éèçà&"'_()-]/.test(rawCapture) && !/^\d+/.test(rawCapture) && (
+                <div className="mt-2 text-xs text-destructive font-semibold">
+                  ⚠ Caractères non-numériques détectés → douchette probablement en mode US-QWERTY.
+                  Reconfigurez-la en clavier français (livret constructeur, code "French keyboard").
+                </div>
+              )}
+            </div>
 
             <div>
               <div className="flex items-center justify-between mb-2">
