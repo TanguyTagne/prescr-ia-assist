@@ -317,6 +317,9 @@ const WidgetApp = () => {
       }
 
       console.log(`[ASCLION-SCAN] ${ts} ean=${code} match=none`);
+      // Trace côté DB même si le CIP est inconnu — sinon on ne sait pas
+      // distinguer "douchette muette" de "CIP absent du référentiel".
+      void logHidScan(code, { nom: `EAN ${code} (non référencé)`, recommendations: [] });
       toast.warning(`Aucun produit trouvé pour le code ${code}`);
     } catch (err) {
       console.error("Barcode lookup error:", err);
