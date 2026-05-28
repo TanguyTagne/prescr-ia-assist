@@ -400,9 +400,9 @@ const HardwareDiagnosticTab = () => {
             </div>
           </CardContent>
         </Card>
-      </main>
+      </div>
     </div>
   );
 };
 
-export default HardwareDiagnostic;
+export default HardwareDiagnosticTab;
