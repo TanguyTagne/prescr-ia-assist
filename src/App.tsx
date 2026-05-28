@@ -22,13 +22,22 @@ const lazyWithRetry = <T,>(factory: () => Promise<T>) =>
     (factory() as Promise<any>).catch(async (err) => {
       console.warn("Dynamic import failed, retrying...", err);
       await new Promise((r) => setTimeout(r, 500));
-      return (factory() as Promise<any>).catch((err2) => {
-        console.error("Dynamic import failed twice, reloading...", err2);
+      return (factory() as Promise<any>).catch(async (err2) => {
+        console.error("Dynamic import failed twice, purging caches and reloading...", err2);
         const key = "__chunk_reload_at";
         const last = Number(sessionStorage.getItem(key) || 0);
-        // Avoid infinite reload loops: only reload once per 10s
         if (Date.now() - last > 10_000) {
           sessionStorage.setItem(key, String(Date.now()));
+          try {
+            if ("serviceWorker" in navigator) {
+              const regs = await navigator.serviceWorker.getRegistrations();
+              await Promise.all(regs.map((r) => r.unregister()));
+            }
+            if ("caches" in window) {
+              const keys = await caches.keys();
+              await Promise.all(keys.map((k) => caches.delete(k)));
+            }
+          } catch {}
           window.location.reload();
         }
         throw err2;
