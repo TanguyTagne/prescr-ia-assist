@@ -26,6 +26,7 @@ import TrackingLinksTab from "@/components/admin/TrackingLinksTab";
 import SignalementsTab from "@/components/admin/SignalementsTab";
 import AuditPcTab from "@/components/admin/AuditPcTab";
 import AcceptedPcsTab from "@/components/admin/AcceptedPcsTab";
+import HardwareDiagnosticTab from "@/components/admin/HardwareDiagnosticTab";
 
 interface AccessRequest {
   id: string;
