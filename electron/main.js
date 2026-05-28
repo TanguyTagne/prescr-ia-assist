@@ -184,7 +184,11 @@ if (!gotTheLock) {
 }
 
 app.on("window-all-closed", () => {
-  app.quit();
+  // Keep the global HID listener alive even if the user closes the window.
+  // The window will be re-created automatically on the next scan or on activate.
+  // On macOS we follow the convention of staying in the dock; on Windows/Linux
+  // we also stay alive so scans can pop the widget back to front.
+  // The user can fully quit via the tray / Task Manager.
 });
 
 app.on("activate", () => {
@@ -507,18 +511,20 @@ autoUpdater.on("error", (err) => {
 // ────────────────────────────────────────────────────────────
 const SCAN_MAX_KEY_INTERVAL_MS = 80;
 const SCAN_MIN_LENGTH = 7;
-const SCAN_MAX_LENGTH = 13;
+const SCAN_MAX_LENGTH = 60; // GS1 DataMatrix payloads can be long
 const SCAN_DEDUP_WINDOW_MS = 800;
-const SCAN_RESET_INACTIVITY_MS = 300;
+const SCAN_RESET_INACTIVITY_MS = 400;
 
 let scanBuffer = "";
 let scanLastKeyAt = 0;
 let scanResetTimer = null;
 let scanLastEmitted = { code: "", at: 0 };
 
-function digitFromKeycode(keycode) {
+function charFromKeycode(keycode, rawKeychar) {
   if (!UiohookKey) return null;
-  const map = {
+  // 1) Numbers — top row + numpad (works whether NumLock is on or off,
+  //    because we map the physical keycode, not the resulting char)
+  const digitMap = {
     [UiohookKey["0"]]: "0",
     [UiohookKey["1"]]: "1",
     [UiohookKey["2"]]: "2",
@@ -540,12 +546,24 @@ function digitFromKeycode(keycode) {
     [UiohookKey.Numpad8]: "8",
     [UiohookKey.Numpad9]: "9",
   };
-  return map[keycode] || null;
+  if (digitMap[keycode]) return digitMap[keycode];
+
+  // 2) Letters & GS1 chars (parens, FNC1/GS=\x1d) — accept any printable
+  //    single char emitted by uiohook for DataMatrix payloads.
+  if (typeof rawKeychar === "number" && rawKeychar > 0) {
+    const ch = String.fromCharCode(rawKeychar);
+    if (/[A-Za-z()]/.test(ch) || rawKeychar === 29) return ch;
+  }
+  return null;
 }
 
 function isEnterKey(keycode) {
   if (!UiohookKey) return false;
-  return keycode === UiohookKey.Enter || keycode === UiohookKey.Tab;
+  return (
+    keycode === UiohookKey.Enter ||
+    keycode === UiohookKey.NumpadEnter ||
+    keycode === UiohookKey.Tab
+  );
 }
 
 function resetScanBuffer() {
@@ -553,6 +571,36 @@ function resetScanBuffer() {
   if (scanResetTimer) {
     clearTimeout(scanResetTimer);
     scanResetTimer = null;
+  }
+}
+
+/**
+ * Robust barcode → CIP-13 extractor (mirrors src/lib/barcodeParser.ts).
+ * Returns null when no usable code can be extracted.
+ */
+function parseBarcodeToCip(raw) {
+  if (!raw) return null;
+  const cleaned = raw.replace(/[\x1d()]/g, "").trim();
+  if (/^\d{13}$/.test(cleaned)) return cleaned;
+  const gs1 = cleaned.match(/01(\d{14})/);
+  if (gs1) {
+    const gtin = gs1[1];
+    const cip13 = gtin.startsWith("0") ? gtin.slice(1) : gtin.slice(-13);
+    if (/^\d{13}$/.test(cip13)) return cip13;
+  }
+  if (/^\d{7}$/.test(cleaned)) return cleaned;
+  if (/^\d{8,14}$/.test(cleaned)) return cleaned;
+  return null;
+}
+
+function ensureWindowAlive() {
+  // If the user closed the widget, re-create it so scans are not lost.
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    try {
+      createWindow();
+    } catch (e) {
+      console.error("[ASCLION-SCAN] could not recreate window:", e);
+    }
   }
 }
 
@@ -568,12 +616,20 @@ function emitGlobalScan(code) {
   scanLastEmitted = { code, at: now };
   console.log(`[ASCLION-SCAN] ts=${new Date(now).toISOString()} ean=${code}`);
 
+  ensureWindowAlive();
   if (!mainWindow) return;
 
-  try {
-    mainWindow.webContents.send("global-barcode", { ean: code, at: now });
-  } catch (e) {
-    console.error("[ASCLION-SCAN] send failed:", e);
+  const send = () => {
+    try {
+      mainWindow.webContents.send("global-barcode", { ean: code, at: now });
+    } catch (e) {
+      console.error("[ASCLION-SCAN] send failed:", e);
+    }
+  };
+  if (mainWindow.webContents.isLoading()) {
+    mainWindow.webContents.once("did-finish-load", send);
+  } else {
+    send();
   }
 
   // Pop the window in front of LGO WITHOUT stealing focus.
@@ -587,7 +643,6 @@ function emitGlobalScan(code) {
       try {
         if (!mainWindow) return;
         mainWindow.flashFrame(false);
-        // Restore the user's PiP preference (do NOT force always-on-top forever)
         mainWindow.setAlwaysOnTop(pipState.alwaysOnTop, "floating");
       } catch { /* noop */ }
     }, 1500);
@@ -614,30 +669,44 @@ function startGlobalBarcodeListener() {
       }
 
       if (isEnterKey(event.keycode)) {
-        const code = scanBuffer;
-        if (
-          code.length >= SCAN_MIN_LENGTH &&
-          code.length <= SCAN_MAX_LENGTH &&
-          /^\d+$/.test(code)
-        ) {
-          emitGlobalScan(code);
+        const raw = scanBuffer;
+        if (raw.length >= SCAN_MIN_LENGTH) {
+          const parsed = parseBarcodeToCip(raw);
+          if (parsed) {
+            emitGlobalScan(parsed);
+          } else {
+            console.log(`[ASCLION-SCAN] rejected raw="${raw}" reason=cannot-parse`);
+          }
         }
         resetScanBuffer();
         return;
       }
 
-      const digit = digitFromKeycode(event.keycode);
-      if (digit !== null) {
-        // First digit OR fast rafale = scanner. Slow = human, restart buffer.
+      const ch = charFromKeycode(event.keycode, event.keychar);
+      if (ch !== null) {
         if (scanBuffer.length === 0 || elapsed < SCAN_MAX_KEY_INTERVAL_MS) {
-          scanBuffer += digit;
+          if (scanBuffer.length < SCAN_MAX_LENGTH) {
+            scanBuffer += ch;
+          }
         } else {
-          scanBuffer = digit;
+          scanBuffer = ch;
         }
         scanResetTimer = setTimeout(resetScanBuffer, SCAN_RESET_INACTIVITY_MS);
       } else if (scanBuffer.length > 0) {
-        // Non-digit, non-Enter breaks the scan sequence
-        resetScanBuffer();
+        // Unknown key breaks the sequence (modifiers, arrows, function keys)
+        // but only if not a simple modifier — avoid resetting on Shift/Ctrl/Alt
+        const isModifier =
+          event.keycode === UiohookKey.Shift ||
+          event.keycode === UiohookKey.ShiftRight ||
+          event.keycode === UiohookKey.Ctrl ||
+          event.keycode === UiohookKey.CtrlRight ||
+          event.keycode === UiohookKey.Alt ||
+          event.keycode === UiohookKey.AltRight ||
+          event.keycode === UiohookKey.Meta ||
+          event.keycode === UiohookKey.MetaRight;
+        if (!isModifier) {
+          resetScanBuffer();
+        }
       }
     });
 
