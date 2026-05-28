@@ -151,6 +151,24 @@ const WidgetApp = () => {
   const blockedCipsRef = useRef<Set<string>>(new Set());
   // Dedup guard: keyboard path + IPC global path fire simultaneously on focused window
   const lastBarcodeScanRef = useRef<{ code: string; at: number }>({ code: "", at: 0 });
+  // Cached user/pharmacy context — populated once on mount to avoid a DB query on every scan
+  const scanContextRef = useRef<{ userId: string; pharmacyId: string | null } | null>(null);
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return;
+      supabase
+        .from("profiles")
+        .select("pharmacy_id")
+        .eq("id", user.id)
+        .maybeSingle()
+        .then(({ data }) => {
+          scanContextRef.current = {
+            userId: user.id,
+            pharmacyId: (data as any)?.pharmacy_id ?? null,
+          };
+        });
+    });
+  }, []);
 
   const handleReset = () => {
     setResult(null);
@@ -242,10 +260,6 @@ const WidgetApp = () => {
     }
   }, []);
 
-  // ===== Streaming scans =====
-  // Chaque code scanné est analysé indépendamment et ajouté en tête du résultat
-  // (le plus récent en premier). Aucun skeleton ne réapparaît si un résultat
-  // précédent est déjà affiché : le nouveau s'insère dès qu'il est prêt.
   const resultRef = useRef<AnalysisResult | null>(null);
   useEffect(() => {
     resultRef.current = result;
@@ -256,7 +270,6 @@ const WidgetApp = () => {
     const next: AnalysisResult = prev
       ? {
           ...prev,
-          // dédoublonne sur le nom (re-scan du même produit → on bouge en tête)
           medicaments: [med, ...prev.medicaments.filter((m) => m.nom !== med.nom)],
         }
       : {
@@ -270,32 +283,53 @@ const WidgetApp = () => {
     setResult(next);
   }, []);
 
-  // Logge un scan HID dans analysis_history (fire-and-forget) pour qu'il
-  // apparaisse dans les KPIs. Le chemin scan ne passe pas par l'edge function
-  // analyze-prescription qui s'occupe normalement de ce logging.
+  // Écrit un événement dans scan_events (table admin-only, toutes pharmacies).
+  // Fire-and-forget — n'affecte jamais l'UX du pharmacien.
+  const logScanEvent = useCallback(
+    async (
+      ean: string,
+      status: "success" | "no_match" | "no_pharmacy" | "error" | "anti_loop",
+      opts?: { productName?: string; suggestionsCount?: number; errorMessage?: string },
+    ) => {
+      try {
+        await (supabase as any).from("scan_events").insert({
+          pharmacy_id: scanContextRef.current?.pharmacyId ?? null,
+          register_id: localStorage.getItem("asclion_register_id") || null,
+          ean_code: ean,
+          status,
+          product_name: opts?.productName ?? null,
+          suggestions_count: opts?.suggestionsCount ?? 0,
+          error_message: opts?.errorMessage ?? null,
+        });
+      } catch {
+        // best-effort — never throw
+      }
+    },
+    [],
+  );
+
+  // Logge un scan HID dans analysis_history pour les KPIs.
   const logHidScan = useCallback(
     async (
       code: string,
       med: { nom: string; recommendations: AnalysisResult["medicaments"][number]["recommendations"] },
     ) => {
-      try {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        if (!user) {
-          console.warn("[ASCLION-LOG] logHidScan: utilisateur non connecté");
-          return;
-        }
-        const { data: profile } = await supabase.from("profiles").select("pharmacy_id").eq("id", user.id).maybeSingle();
-        const pharmacyId = (profile as any)?.pharmacy_id;
-        if (!pharmacyId) {
-          console.warn(
-            "[ASCLION-LOG] logHidScan: pharmacy_id manquant — vérifiez que le compte est bien rattaché à une pharmacie",
-          );
-          toast.warning("Compte non rattaché à une pharmacie — scan non enregistré");
-          return;
-        }
+      if (!scanContextRef.current?.userId) {
+        console.warn("[ASCLION-LOG] logHidScan: utilisateur non connecté");
+        void logScanEvent(code, "no_pharmacy", { productName: med.nom });
+        return;
+      }
+      const { userId, pharmacyId } = scanContextRef.current;
+      if (!pharmacyId) {
+        console.warn(
+          "[ASCLION-LOG] logHidScan: pharmacy_id manquant — vérifiez que le compte est bien rattaché à une pharmacie",
+        );
+        toast.warning("Compte non rattaché à une pharmacie — scan non enregistré");
+        void logScanEvent(code, "no_pharmacy", { productName: med.nom });
+        return;
+      }
 
+      try {
         const enc = new TextEncoder().encode(`hid:${code}:${Date.now()}`);
         const buf = await crypto.subtle.digest("SHA-256", enc);
         const hash = Array.from(new Uint8Array(buf))
@@ -305,7 +339,7 @@ const WidgetApp = () => {
 
         const { error } = await supabase.from("analysis_history").insert({
           pharmacy_id: pharmacyId,
-          user_id: user.id,
+          user_id: userId,
           register_id: registerId,
           patient_hash: hash.slice(0, 32),
           prescription_hash: hash,
@@ -315,15 +349,25 @@ const WidgetApp = () => {
           has_major_interaction: false,
           metadata: { source: "hid_scan", ean: code } as any,
         } as any);
+
         if (error) {
           console.error("[ASCLION-LOG] logHidScan insert échoué:", error.message);
+          void logScanEvent(code, "error", { productName: med.nom, errorMessage: error.message });
+        } else {
+          void logScanEvent(code, "success", {
+            productName: med.nom,
+            suggestionsCount: med.recommendations?.length || 0,
+          });
         }
       } catch (err) {
-        console.error("[ASCLION-LOG] logHidScan exception:", err);
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error("[ASCLION-LOG] logHidScan exception:", msg);
+        void logScanEvent(code, "error", { productName: med.nom, errorMessage: msg });
       }
+
       trackEvent("ordonnance_analyzed", { input_type: "barcode_hid", medicaments: [med.nom], ean: code });
     },
-    [],
+    [logScanEvent],
   );
 
   const lookupAndStream = useCallback(
@@ -346,7 +390,6 @@ const WidgetApp = () => {
           let recommendations: AnalysisResult["medicaments"][number]["recommendations"] = [];
           if (pathLinks && pathLinks.length > 0) {
             const pathIds = pathLinks.map((p) => p.pathologie_id);
-            // Include medicaments join to get CIP codes for anti-loop blocking
             const { data: produits } = await supabase
               .from("produits_complementaires")
               .select("produit, categorie, description, medicaments(cip_code)")
@@ -360,7 +403,6 @@ const WidgetApp = () => {
                 description: p.description || undefined,
                 priorite: 90,
               }));
-              // Register CIP codes of suggested products so they are skipped if scanned
               const newNames: string[] = [];
               for (const p of produits as any[]) {
                 const cip = p.medicaments?.cip_code;
@@ -387,7 +429,6 @@ const WidgetApp = () => {
             description: c.raison,
             priorite: 90,
           }));
-          // Mock products don't have CIP codes — block by name only
           if (recommendations.length > 0) {
             setBlockedProducts((prev) => [...new Set([...prev, ...recommendations.map((r) => r.produit)])]);
           }
@@ -398,8 +439,7 @@ const WidgetApp = () => {
         }
 
         console.log(`[ASCLION-SCAN] ${ts} ean=${code} match=none`);
-        // Trace côté DB même si le CIP est inconnu — sinon on ne sait pas
-        // distinguer "douchette muette" de "CIP absent du référentiel".
+        void logScanEvent(code, "no_match");
         void logHidScan(code, { nom: `EAN ${code} (non référencé)`, recommendations: [] });
         toast.warning(`Aucun produit trouvé pour le code ${code}`);
       } catch (err) {
@@ -407,7 +447,7 @@ const WidgetApp = () => {
         toast.error("Erreur lors de la recherche du produit");
       }
     },
-    [prependMedicament, logHidScan],
+    [prependMedicament, logHidScan, logScanEvent],
   );
 
   const handleBarcodeScan = useCallback(
@@ -425,15 +465,15 @@ const WidgetApp = () => {
       if (blockedCipsRef.current.has(code)) {
         console.log(`[ASCLION-ANTI-LOOP] ${code} ignoré — produit proposé`);
         toast.success("Produit complémentaire scanné", { duration: 1500 });
+        void logScanEvent(code, "anti_loop");
         return;
       }
 
       toast.info(`🔍 ${code}`);
-      // Skeleton only on the very first scan (before any result is displayed)
       if (!resultRef.current) setIsLoading(true);
       lookupAndStream(code).finally(() => setIsLoading(false));
     },
-    [lookupAndStream],
+    [lookupAndStream, logScanEvent],
   );
 
   // Listen for global HID scans (system-wide, dispatched by the Electron bridge)
@@ -543,7 +583,6 @@ const ScannerIndicator = () => {
     return () => window.removeEventListener("asclion:global-barcode", handler);
   }, []);
 
-  // Hide entirely on web (no global listener possible) to keep the header clean
   const hasBridge = typeof window !== "undefined" && !!window.electronAPI?.onGlobalBarcode;
   if (!hasBridge) return null;
 
@@ -618,7 +657,6 @@ const PipControls = () => {
 const Widget = ({ forceOpen = false }: { forceOpen?: boolean }) => {
   const isDesktopRuntime = forceOpen || isAsclionDesktopRuntime();
 
-  // Web: always open so visitors can naturally try the demo. Electron: forceOpen.
   const [open, setOpen] = useState(true);
   const { user, loading, signOut, onboardingCompleted, refreshOnboarding } = useAuth();
   const { preset: pharmacyPreset, lgoType: pharmacyLgoType } = useLgoPreset();
@@ -629,7 +667,6 @@ const Widget = ({ forceOpen = false }: { forceOpen?: boolean }) => {
   const preset = previewLgo ? LGO_PRESETS[previewLgo] : pharmacyPreset;
   const isPreview = previewLgo !== null;
 
-  // Trigger onboarding on first login
   useEffect(() => {
     if (user && !loading && !onboardingCompleted) {
       const t = setTimeout(() => setShowTour(true), 600);
@@ -637,7 +674,6 @@ const Widget = ({ forceOpen = false }: { forceOpen?: boolean }) => {
     }
   }, [user, loading, onboardingCompleted]);
 
-  // Global "?" shortcut to open help
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
@@ -657,7 +693,6 @@ const Widget = ({ forceOpen = false }: { forceOpen?: boolean }) => {
   };
 
   if (isDesktopRuntime) {
-    // Electron full-window mode: the panel fills the entire native window.
     return (
       <div className="h-screen w-screen bg-background overflow-hidden flex flex-col">
         <div className="flex flex-col h-full w-full bg-background overflow-hidden">
@@ -699,8 +734,6 @@ const Widget = ({ forceOpen = false }: { forceOpen?: boolean }) => {
     );
   }
 
-  // Position web : toujours bas-droite (coin le moins encombré sur Windows/LGO,
-  // zone "notification" standard que les utilisateurs scannent en dernier recours).
   const panelPos = getPresetClasses("bottom-right");
 
   return (
