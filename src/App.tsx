@@ -210,7 +210,7 @@ const App = () => {
                   <Route path="/groupement" element={<GroupRoute><Groupement /></GroupRoute>} />
                   <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                   <Route path="/quiz" element={<ProtectedRoute><Quiz /></ProtectedRoute>} />
-                  <Route path="/settings/hardware" element={<ProtectedRoute><HardwareDiagnostic /></ProtectedRoute>} />
+                  
                   <Route path="/mentions-legales" element={<MentionsLegales />} />
                   <Route path="/confidentialite" element={<Confidentialite />} />
                   <Route path="/cookies" element={<CookiesPage />} />
