@@ -42,7 +42,7 @@ export function useBarcodeScanner({
   enabled = true,
   minLength = 7,
   maxLength = 60,
-  maxKeyInterval = 80,
+  maxKeyInterval = 150,
   dedupeWindowMs = 800,
   onDebug,
 }: BarcodeScannerOptions) {
