@@ -184,7 +184,11 @@ if (!gotTheLock) {
 }
 
 app.on("window-all-closed", () => {
-  app.quit();
+  // Keep the global HID listener alive even if the user closes the window.
+  // The window will be re-created automatically on the next scan or on activate.
+  // On macOS we follow the convention of staying in the dock; on Windows/Linux
+  // we also stay alive so scans can pop the widget back to front.
+  // The user can fully quit via the tray / Task Manager.
 });
 
 app.on("activate", () => {
