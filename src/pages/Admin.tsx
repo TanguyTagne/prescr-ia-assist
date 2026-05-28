@@ -231,6 +231,7 @@ const Admin = () => {
         {tab === "signalements" && <SignalementsTab />}
         {tab === "audit-pc" && <AuditPcTab />}
         {tab === "accepted-pcs" && <AcceptedPcsTab />}
+        {tab === "hardware" && <HardwareDiagnosticTab />}
       </div>
     </div>
   );
