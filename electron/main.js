@@ -3,7 +3,6 @@ const { autoUpdater } = require("electron-updater");
 const path = require("path");
 const fs = require("fs");
 const { exec } = require("child_process");
-
 // Load uiohook-napi lazily — if the native binary fails to load (rare),
 // the app keeps working without the global scanner.
 let uIOhook = null;
@@ -15,15 +14,12 @@ try {
 } catch (e) {
   console.error("[ASCLION-SCAN] uiohook-napi unavailable:", e && e.message);
 }
-
-
 // ────────────────────────────────────────────────────────────
 // Picture-in-Picture state (always-on-top + compact mode)
 // ────────────────────────────────────────────────────────────
 const SIZE_NORMAL = { width: 380, height: 580 };
 const SIZE_COMPACT = { width: 300, height: 440 };
 let pipState = { alwaysOnTop: true, compact: false };
-
 function getStateFile() {
   return path.join(app.getPath("userData"), "pip-state.json");
 }
@@ -33,31 +29,33 @@ function loadPipState() {
     const parsed = JSON.parse(raw);
     if (typeof parsed.alwaysOnTop === "boolean") pipState.alwaysOnTop = parsed.alwaysOnTop;
     if (typeof parsed.compact === "boolean") pipState.compact = parsed.compact;
-  } catch { /* first run */ }
+  } catch {
+    /* first run */
+  }
 }
 function savePipState() {
   try {
     fs.writeFileSync(getStateFile(), JSON.stringify(pipState));
-  } catch (e) { console.error("PiP state save failed:", e); }
+  } catch (e) {
+    console.error("PiP state save failed:", e);
+  }
 }
 function applyPipState() {
   if (!mainWindow) return;
   mainWindow.setAlwaysOnTop(pipState.alwaysOnTop, "floating");
   try {
     mainWindow.setVisibleOnAllWorkspaces(pipState.alwaysOnTop, { visibleOnFullScreen: true });
-  } catch { /* not supported on all platforms */ }
+  } catch {
+    /* not supported on all platforms */
+  }
   const size = pipState.compact ? SIZE_COMPACT : SIZE_NORMAL;
   mainWindow.setSize(size.width, size.height);
 }
-
 // Disable hardware acceleration for compatibility
 app.disableHardwareAcceleration();
-
 let mainWindow;
-
 const APP_URL = "https://prescr-ia-assist.lovable.app";
 const LOCAL_PATH = path.join(__dirname, "web", "index.html");
-
 function createWindow() {
   loadPipState();
   const initSize = pipState.compact ? SIZE_COMPACT : SIZE_NORMAL;
@@ -80,29 +78,26 @@ function createWindow() {
       nodeIntegration: false,
     },
   });
-
   if (pipState.alwaysOnTop) {
     mainWindow.setAlwaysOnTop(true, "floating");
     try {
       mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
-    } catch { /* not supported */ }
+    } catch {
+      /* not supported */
+    }
   }
-
   // Remove the menu bar entirely
   mainWindow.setMenuBarVisibility(false);
   mainWindow.webContents.setUserAgent(`${mainWindow.webContents.getUserAgent()} AsclionDesktop`);
-
   // Force the window title to "Asclion" and prevent the loaded page from changing it
   mainWindow.setTitle("Asclion");
   mainWindow.on("page-title-updated", (event) => {
     event.preventDefault();
     mainWindow.setTitle("Asclion");
   });
-
   // Always load remote URL with desktop flag + cache-buster to bypass any stale SW
   const getDesktopUrl = () => `${APP_URL}/?desktop=1&v=${Date.now()}`;
   mainWindow.loadURL(getDesktopUrl());
-
   mainWindow.webContents.on("will-navigate", (event, url) => {
     if (!url.startsWith(APP_URL)) return;
     const next = new URL(url);
@@ -112,7 +107,6 @@ function createWindow() {
     next.searchParams.set("v", String(Date.now()));
     mainWindow.loadURL(next.toString());
   });
-
   // Handle load failures — retry after a delay
   mainWindow.webContents.on("did-fail-load", (_event, _code, _desc, url) => {
     console.error("Failed to load:", url);
@@ -120,12 +114,10 @@ function createWindow() {
       mainWindow.loadURL(getDesktopUrl());
     }, 3000);
   });
-
   // Show window when ready to avoid white flash
   mainWindow.once("ready-to-show", () => {
     mainWindow.show();
   });
-
   // Open external links in the default browser
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     if (!url.startsWith(APP_URL)) {
@@ -134,12 +126,10 @@ function createWindow() {
     }
     return { action: "allow" };
   });
-
   mainWindow.on("closed", () => {
     mainWindow = null;
   });
 }
-
 // Single instance lock — prevent multiple windows
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
@@ -151,7 +141,6 @@ if (!gotTheLock) {
       mainWindow.focus();
     }
   });
-
   app.whenReady().then(async () => {
     // Aggressively clear all caches to always load the latest version
     const { session } = require("electron");
@@ -160,29 +149,25 @@ if (!gotTheLock) {
       await session.defaultSession.clearStorageData({
         storages: ["cachestorage", "serviceworkers", "shadercache", "websql"],
       });
-      await session.defaultSession.clearData({
-        dataTypes: ["serviceWorkerRegistrations", "cache"],
-      }).catch(() => {});
+      await session.defaultSession
+        .clearData({
+          dataTypes: ["serviceWorkerRegistrations", "cache"],
+        })
+        .catch(() => {});
     } catch (e) {
       console.error("Cache clear failed:", e);
     }
-
     createWindow();
-
     // Register Windows auto-launch tasks (at boot + 08:30 + 09:00 catch-up)
     registerAutoLaunch();
-
     // Detect installed LGO (Windows only) and forward to renderer when ready
     detectLgoAndNotify();
-
     // Start global HID barcode listener (works even when Asclion is NOT focused)
     startGlobalBarcodeListener();
-
     // Check for updates silently
     autoUpdater.checkForUpdatesAndNotify();
   });
 }
-
 app.on("window-all-closed", () => {
   // Keep the global HID listener alive even if the user closes the window.
   // The window will be re-created automatically on the next scan or on activate.
@@ -190,13 +175,11 @@ app.on("window-all-closed", () => {
   // we also stay alive so scans can pop the widget back to front.
   // The user can fully quit via the tray / Task Manager.
 });
-
 app.on("activate", () => {
   if (BrowserWindow.getAllWindows().length === 0) {
     createWindow();
   }
 });
-
 // ────────────────────────────────────────────────────────────
 // IPC: Native notification (called from renderer via preload)
 // ────────────────────────────────────────────────────────────
@@ -213,7 +196,6 @@ ipcMain.handle("pip:set-compact", (_e, compact) => {
   savePipState();
   return { ...pipState };
 });
-
 ipcMain.handle("notify", (_event, { title, body }) => {
   if (!Notification.isSupported()) return false;
   const notif = new Notification({
@@ -233,7 +215,6 @@ ipcMain.handle("notify", (_event, { title, body }) => {
   notif.show();
   return true;
 });
-
 // ────────────────────────────────────────────────────────────
 // Attention IPC: flash taskbar icon + bring window to front
 // ────────────────────────────────────────────────────────────
@@ -242,7 +223,11 @@ ipcMain.handle("attention:flash", () => {
   try {
     mainWindow.flashFrame(true);
     const stop = () => {
-      try { mainWindow && mainWindow.flashFrame(false); } catch { /* noop */ }
+      try {
+        mainWindow && mainWindow.flashFrame(false);
+      } catch {
+        /* noop */
+      }
     };
     mainWindow.once("focus", stop);
   } catch (e) {
@@ -250,7 +235,6 @@ ipcMain.handle("attention:flash", () => {
   }
   return true;
 });
-
 ipcMain.handle("attention:bring-to-front", () => {
   if (!mainWindow) return false;
   try {
@@ -269,18 +253,18 @@ ipcMain.handle("attention:bring-to-front", () => {
         if (!pipState.alwaysOnTop && wasOnTop === false) {
           mainWindow.setAlwaysOnTop(false);
         }
-      } catch { /* noop */ }
+      } catch {
+        /* noop */
+      }
     }, 250);
   } catch (e) {
     console.error("bring-to-front failed:", e);
   }
   return true;
 });
-
 ipcMain.handle("attention:is-focused", () => {
   return !!(mainWindow && mainWindow.isFocused());
 });
-
 // ────────────────────────────────────────────────────────────
 // Robust auto-launch (Windows Task Scheduler via XML)
 // 3 tasks: at boot, daily 08:30, daily 09:00 (catch-up)
@@ -292,12 +276,8 @@ const AUTOLAUNCH_TASKS = [
   { name: "AsclionDaily0830", kind: "daily", time: "08:30:00" },
   { name: "AsclionDaily0900", kind: "daily", time: "09:00:00" },
 ];
-
 function buildTaskXml({ kind, time, exePath }) {
-  const exeEscaped = exePath
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
+  const exeEscaped = exePath.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   const trigger =
     kind === "boot"
       ? `<BootTrigger><Enabled>true</Enabled><Delay>PT30S</Delay></BootTrigger>`
@@ -347,7 +327,6 @@ function buildTaskXml({ kind, time, exePath }) {
   </Actions>
 </Task>`;
 }
-
 function buildTaskXmlUser({ kind, time, exePath }) {
   // Fallback: same XML but principal = current interactive user (no SYSTEM)
   const xml = buildTaskXml({ kind, time, exePath });
@@ -355,7 +334,6 @@ function buildTaskXmlUser({ kind, time, exePath }) {
     .replace(/<UserId>S-1-5-18<\/UserId>/, `<GroupId>S-1-5-32-545</GroupId>`)
     .replace(/<RunLevel>HighestAvailable<\/RunLevel>/, `<RunLevel>LeastPrivilege</RunLevel>`);
 }
-
 function execAsync(cmd) {
   return new Promise((resolve) => {
     exec(cmd, { windowsHide: true, timeout: 10000 }, (err, stdout, stderr) => {
@@ -363,44 +341,38 @@ function execAsync(cmd) {
     });
   });
 }
-
 function writeAutolaunchState(state) {
   try {
     fs.writeFileSync(
       path.join(app.getPath("userData"), "autolaunch-state.json"),
-      JSON.stringify({ ...state, updatedAt: new Date().toISOString() }, null, 2)
+      JSON.stringify({ ...state, updatedAt: new Date().toISOString() }, null, 2),
     );
   } catch (e) {
     console.error("autolaunch state save failed:", e);
   }
 }
-
 async function registerAutoLaunch() {
   if (process.platform !== "win32") return;
   const exePath = process.execPath;
   const tmpDir = app.getPath("temp");
   const results = [];
-
   for (const task of AUTOLAUNCH_TASKS) {
     const xmlPath = path.join(tmpDir, `${task.name}.xml`);
     let registered = false;
     let mode = "system";
     let lastError = "";
-
     try {
       // 1st attempt: SYSTEM principal (runs without logged-in user)
       const xml = buildTaskXml({ kind: task.kind, time: task.time, exePath });
-      fs.writeFileSync(xmlPath, "\uFEFF" + xml, { encoding: "utf16le" });
-      let r = await execAsync(
-        `schtasks /Create /TN "${task.name}" /XML "${xmlPath}" /F /RU SYSTEM`
-      );
+      fs.writeFileSync(xmlPath, "﻿" + xml, { encoding: "utf16le" });
+      let r = await execAsync(`schtasks /Create /TN "${task.name}" /XML "${xmlPath}" /F /RU SYSTEM`);
       if (r.code === 0) {
         registered = true;
       } else {
         lastError = r.stderr || r.stdout;
         // 2nd attempt: current user fallback (no UAC needed, but requires session)
         const xmlUser = buildTaskXmlUser({ kind: task.kind, time: task.time, exePath });
-        fs.writeFileSync(xmlPath, "\uFEFF" + xmlUser, { encoding: "utf16le" });
+        fs.writeFileSync(xmlPath, "﻿" + xmlUser, { encoding: "utf16le" });
         r = await execAsync(`schtasks /Create /TN "${task.name}" /XML "${xmlPath}" /F`);
         if (r.code === 0) {
           registered = true;
@@ -412,21 +384,29 @@ async function registerAutoLaunch() {
     } catch (e) {
       lastError = String(e && e.message ? e.message : e);
     } finally {
-      try { fs.unlinkSync(xmlPath); } catch { /* ignore */ }
+      try {
+        fs.unlinkSync(xmlPath);
+      } catch {
+        /* ignore */
+      }
     }
-
-    results.push({ name: task.name, kind: task.kind, time: task.time || null, registered, mode, error: registered ? null : lastError.trim().slice(0, 500) });
+    results.push({
+      name: task.name,
+      kind: task.kind,
+      time: task.time || null,
+      registered,
+      mode,
+      error: registered ? null : lastError.trim().slice(0, 500),
+    });
     if (registered) {
       console.log(`Auto-launch task "${task.name}" registered (${mode}).`);
     } else {
       console.error(`Auto-launch task "${task.name}" failed:`, lastError);
     }
   }
-
   writeAutolaunchState({ tasks: results });
   return results;
 }
-
 async function queryAutoLaunchStatus() {
   if (process.platform !== "win32") return { platform: process.platform, tasks: [] };
   const tasks = [];
@@ -450,33 +430,29 @@ async function queryAutoLaunchStatus() {
   }
   return { platform: "win32", tasks };
 }
-
 ipcMain.handle("autolaunch:status", async () => queryAutoLaunchStatus());
 ipcMain.handle("autolaunch:reinstall", async () => {
   const results = await registerAutoLaunch();
   return { results, status: await queryAutoLaunchStatus() };
 });
-
 function detectLgoAndNotify() {
   if (process.platform !== "win32") return;
-
   exec("tasklist /FO CSV /NH", { timeout: 5000 }, (err, stdout) => {
     if (err || !stdout) return;
     const lower = stdout.toLowerCase();
-
     let detected = null;
     if (/winpharma|wp\.exe|wpgest/.test(lower)) detected = "winpharma";
     else if (/lgpi/.test(lower)) detected = "lgpi";
     else if (/pharmagest|leo\.exe|leo_/.test(lower)) detected = "pharmagest";
     else if (/smartrx|smart_rx/.test(lower)) detected = "smart_rx";
     else if (/leopharm/.test(lower)) detected = "leo";
-
     if (!detected || !mainWindow) return;
-
     const send = () => {
       try {
         mainWindow.webContents.send("lgo-detected", { lgo: detected });
-      } catch (_) { /* ignore */ }
+      } catch (_) {
+        /* ignore */
+      }
     };
     if (mainWindow.webContents.isLoading()) {
       mainWindow.webContents.once("did-finish-load", send);
@@ -485,21 +461,17 @@ function detectLgoAndNotify() {
     }
   });
 }
-
 // Auto-updater events
 autoUpdater.on("update-available", () => {
   console.log("Update available, downloading...");
 });
-
 autoUpdater.on("update-downloaded", () => {
   console.log("Update downloaded. Will install on restart.");
   autoUpdater.quitAndInstall();
 });
-
 autoUpdater.on("error", (err) => {
   console.error("Auto-updater error:", err);
 });
-
 // ────────────────────────────────────────────────────────────
 // Global HID barcode scanner listener (uiohook-napi)
 //
@@ -514,12 +486,10 @@ const SCAN_MIN_LENGTH = 7;
 const SCAN_MAX_LENGTH = 60; // GS1 DataMatrix payloads can be long
 const SCAN_DEDUP_WINDOW_MS = 800;
 const SCAN_RESET_INACTIVITY_MS = 400;
-
 let scanBuffer = "";
 let scanLastKeyAt = 0;
 let scanResetTimer = null;
 let scanLastEmitted = { code: "", at: 0 };
-
 function charFromKeycode(keycode, rawKeychar) {
   if (!UiohookKey) return null;
   // 1) Numbers — top row + numpad (works whether NumLock is on or off,
@@ -546,26 +516,27 @@ function charFromKeycode(keycode, rawKeychar) {
     [UiohookKey.Numpad8]: "8",
     [UiohookKey.Numpad9]: "9",
   };
-  if (digitMap[keycode]) return digitMap[keycode];
-
-  // 2) Letters & GS1 chars (parens, FNC1/GS=\x1d) — accept any printable
+  if (digitMap[keycode] !== undefined) return digitMap[keycode];
+  // 2) Letters, digits & GS1 chars (parens, FNC1/GS=\x1d) — accept any printable
   //    single char emitted by uiohook for DataMatrix payloads.
+  //    FIX: digits (ASCII 48-57) are now included so douchettes that route
+  //    chiffres via keychar (ex. certains HID configurés en mode virtual COM)
+  //    sont correctement capturées même si le keycode physique ne matche pas.
   if (typeof rawKeychar === "number" && rawKeychar > 0) {
     const ch = String.fromCharCode(rawKeychar);
-    if (/[A-Za-z()]/.test(ch) || rawKeychar === 29) return ch;
+    if (/[A-Za-z0-9()]/.test(ch) || rawKeychar === 29) return ch;
   }
   return null;
 }
-
+// FIX: Tab retiré des terminateurs de scan.
+// La quasi-totalité des douchettes HID envoient Enter (ou NumpadEnter) comme
+// suffixe de fin de code-barres. Inclure Tab causait des faux positifs quand
+// l'utilisateur naviguait dans un formulaire du LGO avec quelques touches en
+// buffer (ex. saisie rapide dans Winpharma juste avant un scan).
 function isEnterKey(keycode) {
   if (!UiohookKey) return false;
-  return (
-    keycode === UiohookKey.Enter ||
-    keycode === UiohookKey.NumpadEnter ||
-    keycode === UiohookKey.Tab
-  );
+  return keycode === UiohookKey.Enter || keycode === UiohookKey.NumpadEnter;
 }
-
 function resetScanBuffer() {
   scanBuffer = "";
   if (scanResetTimer) {
@@ -573,7 +544,6 @@ function resetScanBuffer() {
     scanResetTimer = null;
   }
 }
-
 /**
  * Robust barcode → CIP-13 extractor (mirrors src/lib/barcodeParser.ts).
  * Returns null when no usable code can be extracted.
@@ -585,14 +555,24 @@ function parseBarcodeToCip(raw) {
   const gs1 = cleaned.match(/01(\d{14})/);
   if (gs1) {
     const gtin = gs1[1];
-    const cip13 = gtin.startsWith("0") ? gtin.slice(1) : gtin.slice(-13);
+    // GTIN-14 pharmaceutique : l'indicateur de packaging est toujours 0 → slice(1)
+    // FIX: log warning si on tombe sur le fallback slice(-13) pour faciliter le debug
+    //      en cas de GTIN avec indicateur non-zéro (conditionnement multiple, etc.)
+    let cip13;
+    if (gtin.startsWith("0")) {
+      cip13 = gtin.slice(1);
+    } else {
+      cip13 = gtin.slice(-13);
+      console.warn(
+        `[ASCLION-SCAN] parseBarcodeToCip: GTIN ne commence pas par 0 — raw="${raw}" gtin="${gtin}" fallback cip13="${cip13}". Vérifier le code-barres source.`,
+      );
+    }
     if (/^\d{13}$/.test(cip13)) return cip13;
   }
   if (/^\d{7}$/.test(cleaned)) return cleaned;
   if (/^\d{8,14}$/.test(cleaned)) return cleaned;
   return null;
 }
-
 function ensureWindowAlive() {
   // If the user closed the widget, re-create it so scans are not lost.
   if (!mainWindow || mainWindow.isDestroyed()) {
@@ -603,22 +583,16 @@ function ensureWindowAlive() {
     }
   }
 }
-
 function emitGlobalScan(code) {
   const now = Date.now();
-  if (
-    scanLastEmitted.code === code &&
-    now - scanLastEmitted.at < SCAN_DEDUP_WINDOW_MS
-  ) {
+  if (scanLastEmitted.code === code && now - scanLastEmitted.at < SCAN_DEDUP_WINDOW_MS) {
     console.log(`[ASCLION-SCAN] dedup ean=${code} elapsedMs=${now - scanLastEmitted.at}`);
     return;
   }
   scanLastEmitted = { code, at: now };
   console.log(`[ASCLION-SCAN] ts=${new Date(now).toISOString()} ean=${code}`);
-
   ensureWindowAlive();
   if (!mainWindow) return;
-
   const send = () => {
     try {
       mainWindow.webContents.send("global-barcode", { ean: code, at: now });
@@ -631,7 +605,6 @@ function emitGlobalScan(code) {
   } else {
     send();
   }
-
   // Pop the window in front of LGO WITHOUT stealing focus.
   try {
     if (mainWindow.isMinimized()) mainWindow.restore();
@@ -644,30 +617,28 @@ function emitGlobalScan(code) {
         if (!mainWindow) return;
         mainWindow.flashFrame(false);
         mainWindow.setAlwaysOnTop(pipState.alwaysOnTop, "floating");
-      } catch { /* noop */ }
+      } catch {
+        /* noop */
+      }
     }, 1500);
   } catch (e) {
     console.error("[ASCLION-SCAN] pop-to-front failed:", e);
   }
 }
-
 function startGlobalBarcodeListener() {
   if (!uIOhook) {
     console.error("[ASCLION-SCAN] cannot start — uiohook-napi not loaded");
     return;
   }
-
   try {
     uIOhook.on("keydown", (event) => {
       const now = Date.now();
       const elapsed = now - scanLastKeyAt;
       scanLastKeyAt = now;
-
       if (scanResetTimer) {
         clearTimeout(scanResetTimer);
         scanResetTimer = null;
       }
-
       if (isEnterKey(event.keycode)) {
         const raw = scanBuffer;
         if (raw.length >= SCAN_MIN_LENGTH) {
@@ -681,7 +652,6 @@ function startGlobalBarcodeListener() {
         resetScanBuffer();
         return;
       }
-
       const ch = charFromKeycode(event.keycode, event.keychar);
       if (ch !== null) {
         if (scanBuffer.length === 0 || elapsed < SCAN_MAX_KEY_INTERVAL_MS) {
@@ -709,17 +679,16 @@ function startGlobalBarcodeListener() {
         }
       }
     });
-
     uIOhook.start();
     console.log("[ASCLION-SCAN] Global HID listener started.");
   } catch (e) {
     console.error("[ASCLION-SCAN] failed to start:", e);
   }
 }
-
 app.on("will-quit", () => {
   try {
     if (uIOhook) uIOhook.stop();
-  } catch { /* noop */ }
+  } catch {
+    /* noop */
+  }
 });
-
