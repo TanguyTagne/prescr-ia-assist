@@ -37,7 +37,7 @@ function savePipState() {
   try {
     fs.writeFileSync(getStateFile(), JSON.stringify(pipState));
   } catch (e) {
-    console.error("PiP state save failed:", e);
+    devWarn("PiP state save failed:", e);
   }
 }
 function applyPipState() {
@@ -53,6 +53,11 @@ function applyPipState() {
 }
 // Disable hardware acceleration for compatibility
 app.disableHardwareAcceleration();
+
+// Dev-only logger — avoids leaking internal state in production builds
+const isDev = process.env.NODE_ENV !== "production";
+const devLog = (...args) => isDev && console.log(...args);
+const devWarn = (...args) => isDev && console.warn(...args);
 let mainWindow;
 const APP_URL = "https://prescr-ia-assist.lovable.app";
 const LOCAL_PATH = path.join(__dirname, "web", "index.html");
@@ -76,6 +81,7 @@ function createWindow() {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
+      sandbox: true,
     },
   });
   if (pipState.alwaysOnTop) {
@@ -109,7 +115,7 @@ function createWindow() {
   });
   // Handle load failures — retry after a delay
   mainWindow.webContents.on("did-fail-load", (_event, _code, _desc, url) => {
-    console.error("Failed to load:", url);
+    devWarn("Failed to load:", url);
     setTimeout(() => {
       mainWindow.loadURL(getDesktopUrl());
     }, 3000);
@@ -155,7 +161,7 @@ if (!gotTheLock) {
         })
         .catch(() => {});
     } catch (e) {
-      console.error("Cache clear failed:", e);
+      devWarn("Cache clear failed:", e);
     }
     createWindow();
     // Register Windows auto-launch tasks (at boot + 08:30 + 09:00 catch-up)
@@ -231,7 +237,7 @@ ipcMain.handle("attention:flash", () => {
     };
     mainWindow.once("focus", stop);
   } catch (e) {
-    console.error("flashFrame failed:", e);
+    devWarn("flashFrame failed:", e);
   }
   return true;
 });
@@ -258,7 +264,7 @@ ipcMain.handle("attention:bring-to-front", () => {
       }
     }, 250);
   } catch (e) {
-    console.error("bring-to-front failed:", e);
+    devWarn("bring-to-front failed:", e);
   }
   return true;
 });
@@ -296,7 +302,7 @@ function buildTaskXml({ kind, time, exePath }) {
   <Principals>
     <Principal id="Author">
       <UserId>S-1-5-18</UserId>
-      <RunLevel>HighestAvailable</RunLevel>
+      <RunLevel>LeastPrivilege</RunLevel>
     </Principal>
   </Principals>
   <Settings>
@@ -348,7 +354,7 @@ function writeAutolaunchState(state) {
       JSON.stringify({ ...state, updatedAt: new Date().toISOString() }, null, 2),
     );
   } catch (e) {
-    console.error("autolaunch state save failed:", e);
+    devWarn("autolaunch state save failed:", e);
   }
 }
 async function registerAutoLaunch() {
@@ -399,7 +405,7 @@ async function registerAutoLaunch() {
       error: registered ? null : lastError.trim().slice(0, 500),
     });
     if (registered) {
-      console.log(`Auto-launch task "${task.name}" registered (${mode}).`);
+      devLog(`Auto-launch task "${task.name}" registered (${mode}).`);
     } else {
       console.error(`Auto-launch task "${task.name}" failed:`, lastError);
     }
@@ -463,10 +469,10 @@ function detectLgoAndNotify() {
 }
 // Auto-updater events
 autoUpdater.on("update-available", () => {
-  console.log("Update available, downloading...");
+  devLog("Update available, downloading...");
 });
 autoUpdater.on("update-downloaded", () => {
-  console.log("Update downloaded. Will install on restart.");
+  devLog("Update downloaded. Will install on restart.");
   autoUpdater.quitAndInstall();
 });
 autoUpdater.on("error", (err) => {
@@ -586,18 +592,18 @@ function ensureWindowAlive() {
 function emitGlobalScan(code) {
   const now = Date.now();
   if (scanLastEmitted.code === code && now - scanLastEmitted.at < SCAN_DEDUP_WINDOW_MS) {
-    console.log(`[ASCLION-SCAN] dedup ean=${code} elapsedMs=${now - scanLastEmitted.at}`);
+    devLog(`[SCAN] dedup ean=${code} elapsedMs=${now - scanLastEmitted.at}`);
     return;
   }
   scanLastEmitted = { code, at: now };
-  console.log(`[ASCLION-SCAN] ts=${new Date(now).toISOString()} ean=${code}`);
+  devLog(`[SCAN] ts=${new Date(now).toISOString()} ean=${code}`);
   ensureWindowAlive();
   if (!mainWindow) return;
   const send = () => {
     try {
       mainWindow.webContents.send("global-barcode", { ean: code, at: now });
     } catch (e) {
-      console.error("[ASCLION-SCAN] send failed:", e);
+      devWarn("[SCAN] send failed:", e);
     }
   };
   if (mainWindow.webContents.isLoading()) {
@@ -622,12 +628,12 @@ function emitGlobalScan(code) {
       }
     }, 1500);
   } catch (e) {
-    console.error("[ASCLION-SCAN] pop-to-front failed:", e);
+    devWarn("[SCAN] pop-to-front failed:", e);
   }
 }
 function startGlobalBarcodeListener() {
   if (!uIOhook) {
-    console.error("[ASCLION-SCAN] cannot start — uiohook-napi not loaded");
+    console.error("[SCAN] cannot start — uiohook-napi not loaded");
     return;
   }
   try {
@@ -646,7 +652,7 @@ function startGlobalBarcodeListener() {
           if (parsed) {
             emitGlobalScan(parsed);
           } else {
-            console.log(`[ASCLION-SCAN] rejected raw="${raw}" reason=cannot-parse`);
+            devLog(`[SCAN] rejected raw="${raw}" reason=cannot-parse`);
           }
         }
         resetScanBuffer();
@@ -680,7 +686,7 @@ function startGlobalBarcodeListener() {
       }
     });
     uIOhook.start();
-    console.log("[ASCLION-SCAN] Global HID listener started.");
+    devLog("[SCAN] HID listener started.");
   } catch (e) {
     console.error("[ASCLION-SCAN] failed to start:", e);
   }
