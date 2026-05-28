@@ -198,25 +198,6 @@ const Dashboard = () => {
           </CardContent>
         </Card>
 
-        {/* Hardware Diagnostic */}
-        <Card className="glass-card border-primary/20">
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Wrench className="h-5 w-5 text-primary" />
-              Diagnostic hardware
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              Vérifiez en direct le bon fonctionnement de votre douchette et de la surveillance du dossier de scans.
-              Exportez un rapport en cas de problème.
-            </p>
-            <Button onClick={() => navigate("/settings/hardware")} variant="outline" className="w-full sm:w-auto gap-2">
-              <Wrench className="h-4 w-4" />
-              Lancer le diagnostic
-            </Button>
-          </CardContent>
-        </Card>
 
         {/* Quiz Section */}
         <Card className="glass-card border-primary/20">
