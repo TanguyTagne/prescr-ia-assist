@@ -6,7 +6,7 @@ import "./index.css";
 import { isAsclionDesktopRuntime } from "@/lib/runtime";
 import { processIncomingTrackingLink } from "@/lib/trackingAttribution";
 
-const SW_VERSION = "v6";
+const SW_VERSION = "v7";
 const isDesktopRuntime = isAsclionDesktopRuntime();
 
 // Process ?r=<slug> trackable links on every page load (web only)
