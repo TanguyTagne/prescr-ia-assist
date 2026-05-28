@@ -1,16 +1,7 @@
 import { useCallback, useMemo, useRef, useState, useEffect } from "react";
 import {
-  ScanLine,
-  FolderSearch,
-  Download,
-  Trash2,
-  FileText,
-  AlertCircle,
-  CheckCircle2,
-  Keyboard,
-  Activity,
-  RefreshCw,
-  Loader2,
+  ScanLine, FolderSearch, Download, Trash2, FileText, AlertCircle,
+  CheckCircle2, Keyboard, Activity, RefreshCw, Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -21,6 +12,7 @@ import { useBarcodeScanner, type BarcodeDebugEvent } from "@/hooks/useBarcodeSca
 import { useFolderWatcher, type WatcherDebugEvent } from "@/hooks/useFolderWatcher";
 import { isAsclionDesktopRuntime } from "@/lib/runtime";
 import { supabase } from "@/integrations/supabase/client";
+import { useEnsureTables } from "@/hooks/useEnsureTables";
 
 const MAX_LOG = 200;
 
@@ -36,14 +28,11 @@ const formatDateTime = (iso: string) => {
 
 // ── Status badge ────────────────────────────────────────────────────────────
 const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
-  success: { label: "Succès", className: "bg-green-500/10 text-green-700 border border-green-500/30" },
-  no_match: { label: "Non reconnu", className: "bg-orange-500/10 text-orange-700 border border-orange-500/30" },
-  no_pharmacy: {
-    label: "Sans pharmacie",
-    className: "bg-destructive/10 text-destructive border border-destructive/30",
-  },
-  error: { label: "Erreur DB", className: "bg-destructive/10 text-destructive border border-destructive/30" },
-  anti_loop: { label: "Anti-boucle", className: "bg-blue-500/10 text-blue-700 border border-blue-500/30" },
+  success:     { label: "Succès",          className: "bg-green-500/10 text-green-700 border border-green-500/30" },
+  no_match:    { label: "Non reconnu",     className: "bg-orange-500/10 text-orange-700 border border-orange-500/30" },
+  no_pharmacy: { label: "Sans pharmacie",  className: "bg-destructive/10 text-destructive border border-destructive/30" },
+  error:       { label: "Erreur DB",       className: "bg-destructive/10 text-destructive border border-destructive/30" },
+  anti_loop:   { label: "Anti-boucle",     className: "bg-blue-500/10 text-blue-700 border border-blue-500/30" },
 };
 
 const StatusBadge = ({ status }: { status: string }) => {
@@ -71,6 +60,9 @@ type ScanFilter = "all" | "errors" | "no_match" | "success" | "anti_loop";
 
 // ── Main component ──────────────────────────────────────────────────────────
 const HardwareDiagnosticTab = () => {
+  // Crée les tables manquantes au premier chargement
+  useEnsureTables();
+
   // ---- Barcode scanner (local) ----
   const [scannerEvents, setScannerEvents] = useState<BarcodeDebugEvent[]>([]);
   const [lastScan, setLastScan] = useState<string | null>(null);
@@ -113,19 +105,16 @@ const HardwareDiagnosticTab = () => {
     toast.success(`Code lu : ${code}`);
   }, []);
 
-  const onScannerDebug = useCallback(
-    (ev: BarcodeDebugEvent) => {
-      setScannerEvents((prev) => [ev, ...prev].slice(0, MAX_LOG));
-      if (ev.type === "azerty-corruption" && !azertyWarned) {
-        setAzertyWarned(true);
-        toast.error("Douchette mal configurée", {
-          description: "Mode US-QWERTY détecté. Reconfigurez-la en clavier français (livret constructeur).",
-          duration: 10000,
-        });
-      }
-    },
-    [azertyWarned],
-  );
+  const onScannerDebug = useCallback((ev: BarcodeDebugEvent) => {
+    setScannerEvents((prev) => [ev, ...prev].slice(0, MAX_LOG));
+    if (ev.type === "azerty-corruption" && !azertyWarned) {
+      setAzertyWarned(true);
+      toast.error("Douchette mal configurée", {
+        description: "Mode US-QWERTY détecté. Reconfigurez-la en clavier français (livret constructeur).",
+        duration: 10000,
+      });
+    }
+  }, [azertyWarned]);
 
   useBarcodeScanner({ onScan, onDebug: onScannerDebug });
 
@@ -166,9 +155,7 @@ const HardwareDiagnosticTab = () => {
       const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
       const { data, error } = await (supabase as any)
         .from("scan_events")
-        .select(
-          "id, created_at, ean_code, status, product_name, suggestions_count, error_message, pharmacies(name, city)",
-        )
+        .select("id, created_at, ean_code, status, product_name, suggestions_count, error_message, pharmacies(name, city)")
         .gte("created_at", since)
         .order("created_at", { ascending: false })
         .limit(300);
@@ -194,16 +181,13 @@ const HardwareDiagnosticTab = () => {
     return scanEvents.filter((e) => e.status === scanFilter);
   }, [scanEvents, scanFilter]);
 
-  const scanStats = useMemo(
-    () => ({
-      total: scanEvents.length,
-      success: scanEvents.filter((e) => e.status === "success").length,
-      noMatch: scanEvents.filter((e) => e.status === "no_match").length,
-      errors: scanEvents.filter((e) => e.status === "error" || e.status === "no_pharmacy").length,
-      antiLoop: scanEvents.filter((e) => e.status === "anti_loop").length,
-    }),
-    [scanEvents],
-  );
+  const scanStats = useMemo(() => ({
+    total:    scanEvents.length,
+    success:  scanEvents.filter((e) => e.status === "success").length,
+    noMatch:  scanEvents.filter((e) => e.status === "no_match").length,
+    errors:   scanEvents.filter((e) => e.status === "error" || e.status === "no_pharmacy").length,
+    antiLoop: scanEvents.filter((e) => e.status === "anti_loop").length,
+  }), [scanEvents]);
 
   // ---- Export report ----
   const exportReport = () => {
@@ -219,19 +203,16 @@ const HardwareDiagnosticTab = () => {
     lines.push(`Scans réussis: ${scanCount}`);
     lines.push(`Dernier code: ${lastScan ?? "—"}`);
     lines.push(`Événements (${scannerEvents.length}):`);
-    scannerEvents
-      .slice()
-      .reverse()
-      .forEach((e) => {
-        lines.push(
-          `  [${formatTime(e.at)}] ${e.type}` +
-            (e.key ? ` key="${e.key}"` : "") +
-            (e.code ? ` code=${e.code}` : "") +
-            (e.elapsedMs !== undefined ? ` Δ=${e.elapsedMs}ms` : "") +
-            (e.bufferLen !== undefined ? ` buf=${e.bufferLen}` : "") +
-            (e.reason ? ` (${e.reason})` : ""),
-        );
-      });
+    scannerEvents.slice().reverse().forEach((e) => {
+      lines.push(
+        `  [${formatTime(e.at)}] ${e.type}` +
+        (e.key ? ` key="${e.key}"` : "") +
+        (e.code ? ` code=${e.code}` : "") +
+        (e.elapsedMs !== undefined ? ` Δ=${e.elapsedMs}ms` : "") +
+        (e.bufferLen !== undefined ? ` buf=${e.bufferLen}` : "") +
+        (e.reason ? ` (${e.reason})` : "")
+      );
+    });
     lines.push(``);
     lines.push(`## Watcher dossier`);
     lines.push(`Statut: ${watcher.isWatching ? "actif" : "inactif"}`);
@@ -240,28 +221,23 @@ const HardwareDiagnosticTab = () => {
     lines.push(`Fichiers détectés: ${detectedFiles.length}`);
     detectedFiles.forEach((f) => lines.push(`  - ${f.name} (${f.size} o) @ ${formatTime(f.at)}`));
     lines.push(`Événements (${watcherEvents.length}):`);
-    watcherEvents
-      .slice()
-      .reverse()
-      .forEach((e) => {
-        lines.push(
-          `  [${formatTime(e.at)}] ${e.type}` +
-            (e.fileName ? ` "${e.fileName}"` : "") +
-            (e.size !== undefined ? ` (${e.size} o)` : "") +
-            (e.reason ? ` — ${e.reason}` : ""),
-        );
-      });
+    watcherEvents.slice().reverse().forEach((e) => {
+      lines.push(
+        `  [${formatTime(e.at)}] ${e.type}` +
+        (e.fileName ? ` "${e.fileName}"` : "") +
+        (e.size !== undefined ? ` (${e.size} o)` : "") +
+        (e.reason ? ` — ${e.reason}` : "")
+      );
+    });
     lines.push(``);
     lines.push(`## Scans toutes pharmacies (24h)`);
-    lines.push(
-      `Total: ${scanStats.total} | Succès: ${scanStats.success} | Non reconnus: ${scanStats.noMatch} | Erreurs: ${scanStats.errors}`,
-    );
+    lines.push(`Total: ${scanStats.total} | Succès: ${scanStats.success} | Non reconnus: ${scanStats.noMatch} | Erreurs: ${scanStats.errors}`);
     scanEvents.forEach((e) => {
       lines.push(
         `  [${formatDateTime(e.created_at)}] ${e.status.toUpperCase()} ean=${e.ean_code}` +
-          (e.pharmacies?.name ? ` pharmacie="${e.pharmacies.name}"` : "") +
-          (e.product_name ? ` produit="${e.product_name}"` : "") +
-          (e.error_message ? ` erreur="${e.error_message}"` : ""),
+        (e.pharmacies?.name ? ` pharmacie="${e.pharmacies.name}"` : "") +
+        (e.product_name ? ` produit="${e.product_name}"` : "") +
+        (e.error_message ? ` erreur="${e.error_message}"` : "")
       );
     });
 
@@ -276,8 +252,7 @@ const HardwareDiagnosticTab = () => {
 
   const scannerStatus = useMemo(() => {
     if (scanCount > 0) return { label: "OK", variant: "default" as const, icon: CheckCircle2 };
-    if (scannerEvents.some((e) => e.type === "rejected"))
-      return { label: "Codes rejetés", variant: "destructive" as const, icon: AlertCircle };
+    if (scannerEvents.some((e) => e.type === "rejected")) return { label: "Codes rejetés", variant: "destructive" as const, icon: AlertCircle };
     return { label: "En attente d'un scan", variant: "secondary" as const, icon: ScanLine };
   }, [scanCount, scannerEvents]);
 
@@ -286,9 +261,7 @@ const HardwareDiagnosticTab = () => {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold tracking-tight">Diagnostic Hardware</h2>
-          <p className="text-xs text-muted-foreground">
-            Scanner code-barres, surveillance dossier et logs de toutes les pharmacies
-          </p>
+          <p className="text-xs text-muted-foreground">Scanner code-barres, surveillance dossier et logs de toutes les pharmacies</p>
         </div>
         <Button variant="outline" size="sm" onClick={exportReport} className="gap-2">
           <Download className="h-4 w-4" />
@@ -341,10 +314,10 @@ const HardwareDiagnosticTab = () => {
           <div className="flex flex-wrap items-center gap-2">
             {(
               [
-                { value: "all", label: "Tous" },
-                { value: "errors", label: "Erreurs" },
-                { value: "no_match", label: "Non reconnus" },
-                { value: "success", label: "Succès" },
+                { value: "all",       label: "Tous" },
+                { value: "errors",    label: "Erreurs" },
+                { value: "no_match",  label: "Non reconnus" },
+                { value: "success",   label: "Succès" },
                 { value: "anti_loop", label: "Anti-boucle" },
               ] as { value: ScanFilter; label: string }[]
             ).map((f) => (
@@ -365,7 +338,9 @@ const HardwareDiagnosticTab = () => {
             ))}
             <div className="flex-1" />
             {lastRefresh && (
-              <span className="text-[10px] text-muted-foreground">Mis à jour à {formatTime(lastRefresh)}</span>
+              <span className="text-[10px] text-muted-foreground">
+                Mis à jour à {formatTime(lastRefresh)}
+              </span>
             )}
           </div>
 
@@ -403,10 +378,7 @@ const HardwareDiagnosticTab = () => {
                           </td>
                           <td className="px-3 py-2 max-w-[160px]">
                             {e.pharmacies?.name ? (
-                              <span
-                                className="truncate block"
-                                title={`${e.pharmacies.name}${e.pharmacies.city ? ` — ${e.pharmacies.city}` : ""}`}
-                              >
+                              <span className="truncate block" title={`${e.pharmacies.name}${e.pharmacies.city ? ` — ${e.pharmacies.city}` : ""}`}>
                                 {e.pharmacies.name}
                               </span>
                             ) : (
@@ -419,21 +391,15 @@ const HardwareDiagnosticTab = () => {
                           </td>
                           <td className="px-3 py-2 max-w-[180px]">
                             {e.product_name ? (
-                              <span className="truncate block" title={e.product_name}>
-                                {e.product_name}
-                              </span>
+                              <span className="truncate block" title={e.product_name}>{e.product_name}</span>
                             ) : (
                               <span className="text-muted-foreground">—</span>
                             )}
                           </td>
                           <td className="px-3 py-2 max-w-[200px] text-destructive">
                             {e.error_message ? (
-                              <span className="truncate block font-mono" title={e.error_message}>
-                                {e.error_message}
-                              </span>
-                            ) : (
-                              ""
-                            )}
+                              <span className="truncate block font-mono" title={e.error_message}>{e.error_message}</span>
+                            ) : ""}
                           </td>
                         </tr>
                       ))
@@ -450,8 +416,8 @@ const HardwareDiagnosticTab = () => {
               <div>
                 <span className="font-semibold text-destructive">
                   {scanStats.errors} erreur{scanStats.errors > 1 ? "s" : ""} détectée{scanStats.errors > 1 ? "s" : ""}
-                </span>{" "}
-                — vérifiez les colonnes <em>Statut</em> et <em>Erreur</em> ci-dessus.
+                </span>
+                {" "}— vérifiez les colonnes <em>Statut</em> et <em>Erreur</em> ci-dessus.
                 <br />
                 <span className="text-xs text-muted-foreground">
                   <strong>no_pharmacy</strong> = compte non rattaché à une pharmacie dans Supabase.&ensp;
@@ -505,14 +471,12 @@ const HardwareDiagnosticTab = () => {
               <span className="text-xs text-muted-foreground">(ce que la douchette envoie, sans filtre)</span>
             </div>
             <div className="font-mono text-sm break-all min-h-[1.5rem] select-all">
-              {rawCapture || (
-                <span className="text-muted-foreground italic">Scannez un code pour voir la trame brute…</span>
-              )}
+              {rawCapture || <span className="text-muted-foreground italic">Scannez un code pour voir la trame brute…</span>}
             </div>
             {rawCapture && /[éèçà&"'_()-]/.test(rawCapture) && !/^\d+/.test(rawCapture) && (
               <div className="mt-2 text-xs text-destructive font-semibold">
-                ⚠ Caractères non-numériques détectés → douchette probablement en mode US-QWERTY. Reconfigurez-la en
-                clavier français (livret constructeur, code "French keyboard").
+                ⚠ Caractères non-numériques détectés → douchette probablement en mode US-QWERTY.
+                Reconfigurez-la en clavier français (livret constructeur, code "French keyboard").
               </div>
             )}
           </div>
@@ -537,8 +501,8 @@ const HardwareDiagnosticTab = () => {
                         e.type === "scan"
                           ? "text-primary font-semibold"
                           : e.type === "rejected" || e.type === "dedup"
-                            ? "text-destructive"
-                            : "text-foreground"
+                          ? "text-destructive"
+                          : "text-foreground"
                       }
                     >
                       {e.type}
@@ -574,8 +538,8 @@ const HardwareDiagnosticTab = () => {
             <div className="rounded-lg bg-destructive/10 text-destructive p-3 text-sm flex items-start gap-2">
               <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
               <span>
-                Votre navigateur ne supporte pas l'API File System Access. Utilisez Chrome, Edge ou l'application
-                desktop Asclion.
+                Votre navigateur ne supporte pas l'API File System Access. Utilisez Chrome, Edge ou
+                l'application desktop Asclion.
               </span>
             </div>
           ) : (
@@ -642,10 +606,7 @@ const HardwareDiagnosticTab = () => {
                 </div>
               ) : (
                 detectedFiles.map((f, i) => (
-                  <div
-                    key={i}
-                    className="flex justify-between gap-2 px-3 py-1.5 border-b border-border/50 last:border-0"
-                  >
+                  <div key={i} className="flex justify-between gap-2 px-3 py-1.5 border-b border-border/50 last:border-0">
                     <span className="font-mono text-xs truncate">{f.name}</span>
                     <span className="text-muted-foreground text-xs shrink-0">
                       {(f.size / 1024).toFixed(1)} Ko · {formatTime(f.at)}
@@ -676,8 +637,8 @@ const HardwareDiagnosticTab = () => {
                         e.type === "detected"
                           ? "text-primary font-semibold"
                           : e.type === "error"
-                            ? "text-destructive"
-                            : "text-foreground"
+                          ? "text-destructive"
+                          : "text-foreground"
                       }
                     >
                       {e.type}
