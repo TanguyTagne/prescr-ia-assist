@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { logger } from "@/lib/logger";
 
 export interface Interaction {
   medicaments: string[];
@@ -61,7 +62,7 @@ export interface AnalysisResult {
 
 export async function analyzePrescription(
   input: string,
-  options?: { basketSessionId?: string; blockedProducts?: string[] }
+  options?: { basketSessionId?: string; blockedProducts?: string[] },
 ): Promise<AnalysisResult> {
   const { data, error } = await supabase.functions.invoke("analyze-prescription", {
     body: {
@@ -72,15 +73,18 @@ export async function analyzePrescription(
   });
 
   if (error) {
-    console.error("Edge function error:", error);
+    logger.error("Edge function error:", error);
     // Supabase invoke wraps non-2xx responses; try to surface server quota message
     const ctx: any = (error as any).context;
     if (ctx?.body) {
+      let parsed: any = null;
       try {
-        const parsed = typeof ctx.body === "string" ? JSON.parse(ctx.body) : ctx.body;
-        if (parsed?.error === "QUOTA_EXCEEDED") throw new Error(parsed.message || "Quota journalier atteint");
-        if (parsed?.message || parsed?.error) throw new Error(parsed.message || parsed.error);
-      } catch (_) { /* fallthrough */ }
+        parsed = typeof ctx.body === "string" ? JSON.parse(ctx.body) : ctx.body;
+      } catch {
+        /* not JSON */
+      }
+      if (parsed?.error === "QUOTA_EXCEEDED") throw new Error(parsed.message || "Quota journalier atteint");
+      if (parsed?.message || parsed?.error) throw new Error(parsed.message || parsed.error);
     }
     throw new Error(error.message || "Erreur lors de l'analyse");
   }
@@ -93,7 +97,7 @@ export async function analyzePrescription(
 
 export async function analyzePrescriptionImage(
   imageBase64: string,
-  options?: { basketSessionId?: string; blockedProducts?: string[] }
+  options?: { basketSessionId?: string; blockedProducts?: string[] },
 ): Promise<AnalysisResult> {
   const { data, error } = await supabase.functions.invoke("analyze-prescription", {
     body: {
@@ -104,14 +108,17 @@ export async function analyzePrescriptionImage(
   });
 
   if (error) {
-    console.error("Edge function error:", error);
+    logger.error("Edge function error:", error);
     const ctx: any = (error as any).context;
     if (ctx?.body) {
+      let parsed: any = null;
       try {
-        const parsed = typeof ctx.body === "string" ? JSON.parse(ctx.body) : ctx.body;
-        if (parsed?.error === "QUOTA_EXCEEDED") throw new Error(parsed.message || "Quota journalier atteint");
-        if (parsed?.message || parsed?.error) throw new Error(parsed.message || parsed.error);
-      } catch (_) { /* fallthrough */ }
+        parsed = typeof ctx.body === "string" ? JSON.parse(ctx.body) : ctx.body;
+      } catch {
+        /* not JSON */
+      }
+      if (parsed?.error === "QUOTA_EXCEEDED") throw new Error(parsed.message || "Quota journalier atteint");
+      if (parsed?.message || parsed?.error) throw new Error(parsed.message || parsed.error);
     }
     throw new Error(error.message || "Erreur lors de l'analyse OCR");
   }
@@ -125,7 +132,7 @@ export async function analyzePrescriptionImage(
 export async function trackRecommendationClick(
   pharmacyId: string,
   medicamentSource: string,
-  pcProposed: string
+  pcProposed: string,
 ): Promise<void> {
   try {
     const { data: existing } = await supabase
@@ -137,19 +144,20 @@ export async function trackRecommendationClick(
       .maybeSingle();
 
     if (existing) {
-      await supabase.from("recommendation_metrics")
+      await supabase
+        .from("recommendation_metrics")
         .update({ times_clicked: (existing.times_clicked || 0) + 1, updated_at: new Date().toISOString() })
         .eq("id", existing.id);
     }
   } catch (e) {
-    console.error("Failed to track click:", e);
+    logger.error("Failed to track click:", e);
   }
 }
 
 export async function trackRecommendationUsage(
   eventType: string,
   questionId?: string,
-  otcSuggestionId?: string
+  otcSuggestionId?: string,
 ): Promise<void> {
   try {
     await supabase.from("recommendation_usage").insert({
@@ -159,7 +167,7 @@ export async function trackRecommendationUsage(
       user_id: (await supabase.auth.getUser()).data.user?.id || null,
     });
   } catch (e) {
-    console.error("Failed to track usage:", e);
+    logger.error("Failed to track usage:", e);
   }
 }
 

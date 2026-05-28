@@ -41,11 +41,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [onboardingCompleted, setOnboardingCompleted] = useState(true);
 
   const fetchRole = async (userId: string) => {
-    const { data: roles } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userId);
-    const roleList = (roles || []).map((r: any) => r.role);
+    const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", userId);
+    const roleList = (roles ?? []).map((r) => r.role);
     setIsAdmin(roleList.includes("admin"));
     setIsGroupManager(roleList.includes("group_manager"));
   };
@@ -57,8 +54,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       .eq("id", userId)
       .maybeSingle();
 
-    setOnboardingCompleted((profile as any)?.onboarding_completed ?? true);
-    setManagedGroupementId((profile as any)?.managed_groupement_id ?? null);
+    setOnboardingCompleted(profile?.onboarding_completed ?? true);
+    setManagedGroupementId(profile?.managed_groupement_id ?? null);
 
     if (profile?.pharmacy_id) {
       const { data: pharmacy } = await supabase
@@ -66,7 +63,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .select("status")
         .eq("id", profile.pharmacy_id)
         .maybeSingle();
-      setPharmacyStatus((pharmacy as any)?.status || "active");
+      setPharmacyStatus(pharmacy?.status || "active");
     } else {
       setPharmacyStatus(null);
     }
@@ -74,25 +71,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const refreshOnboarding = async () => {
     if (!user) return;
-    const { data } = await supabase
-      .from("profiles")
-      .select("onboarding_completed")
-      .eq("id", user.id)
-      .maybeSingle();
-    setOnboardingCompleted((data as any)?.onboarding_completed ?? true);
+    const { data } = await supabase.from("profiles").select("onboarding_completed").eq("id", user.id).maybeSingle();
+    setOnboardingCompleted(data?.onboarding_completed ?? true);
   };
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
         // Defer to avoid deadlock inside the auth callback, then await role load
         setTimeout(async () => {
-          await Promise.all([
-            fetchRole(session.user.id),
-            fetchPharmacyStatus(session.user.id),
-          ]);
+          await Promise.all([fetchRole(session.user.id), fetchPharmacyStatus(session.user.id)]);
           setLoading(false);
         }, 0);
       } else {
@@ -109,10 +101,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        await Promise.all([
-          fetchRole(session.user.id),
-          fetchPharmacyStatus(session.user.id),
-        ]);
+        await Promise.all([fetchRole(session.user.id), fetchPharmacyStatus(session.user.id)]);
       }
       setLoading(false);
     });
@@ -125,7 +114,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, isAdmin, isGroupManager, managedGroupementId, pharmacyStatus, onboardingCompleted, refreshOnboarding, signOut }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        session,
+        loading,
+        isAdmin,
+        isGroupManager,
+        managedGroupementId,
+        pharmacyStatus,
+        onboardingCompleted,
+        refreshOnboarding,
+        signOut,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
