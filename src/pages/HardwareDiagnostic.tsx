@@ -24,15 +24,55 @@ const HardwareDiagnostic = () => {
   const [scannerEvents, setScannerEvents] = useState<BarcodeDebugEvent[]>([]);
   const [lastScan, setLastScan] = useState<string | null>(null);
   const [scanCount, setScanCount] = useState(0);
+  const [rawCapture, setRawCapture] = useState<string>("");
+  const [azertyWarned, setAzertyWarned] = useState(false);
+  const rawBufferRef = useRef<string>("");
+  const rawTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Raw keystroke capture (independent of scanner parser) — shows EXACTLY what the douchette sends
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Enter" || e.key === "Tab") {
+        if (rawBufferRef.current.length > 0) {
+          setRawCapture(rawBufferRef.current + `  [${e.key}]`);
+          rawBufferRef.current = "";
+        }
+        return;
+      }
+      if (e.key.length === 1) {
+        rawBufferRef.current += e.key;
+        if (rawTimeoutRef.current) clearTimeout(rawTimeoutRef.current);
+        rawTimeoutRef.current = setTimeout(() => {
+          if (rawBufferRef.current.length > 0) {
+            setRawCapture(rawBufferRef.current);
+            rawBufferRef.current = "";
+          }
+        }, 500);
+      }
+    };
+    window.addEventListener("keydown", handler, true);
+    return () => {
+      window.removeEventListener("keydown", handler, true);
+      if (rawTimeoutRef.current) clearTimeout(rawTimeoutRef.current);
+    };
+  }, []);
 
   const onScan = useCallback((code: string) => {
     setLastScan(code);
     setScanCount((c) => c + 1);
+    toast.success(`Code lu : ${code}`);
   }, []);
 
   const onScannerDebug = useCallback((ev: BarcodeDebugEvent) => {
     setScannerEvents((prev) => [ev, ...prev].slice(0, MAX_LOG));
-  }, []);
+    if (ev.type === "azerty-corruption" && !azertyWarned) {
+      setAzertyWarned(true);
+      toast.error("Douchette mal configurée", {
+        description: "Mode US-QWERTY détecté. Reconfigurez en clavier FR-AZERTY (voir livret constructeur).",
+        duration: 10000,
+      });
+    }
+  }, [azertyWarned]);
 
   useBarcodeScanner({ onScan, onDebug: onScannerDebug });
 
