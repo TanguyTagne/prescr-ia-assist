@@ -1,8 +1,11 @@
 import { useEffect, useRef, useCallback } from "react";
 import { parseBarcodeToCip } from "@/lib/barcodeParser";
 
+/** AZERTY digit row chars produced when douchette is mis-configured in US-QWERTY mode */
+const AZERTY_CORRUPTION_CHARS = new Set(["&", "é", "\"", "'", "(", "-", "è", "_", "ç", "à"]);
+
 export interface BarcodeDebugEvent {
-  type: "key" | "scan" | "rejected" | "dedup" | "reset";
+  type: "key" | "scan" | "rejected" | "dedup" | "reset" | "azerty-corruption";
   key?: string;
   code?: string;
   reason?: string;
@@ -39,7 +42,7 @@ export function useBarcodeScanner({
   enabled = true,
   minLength = 7,
   maxLength = 60,
-  maxKeyInterval = 80,
+  maxKeyInterval = 150,
   dedupeWindowMs = 800,
   onDebug,
 }: BarcodeScannerOptions) {
@@ -106,6 +109,22 @@ export function useBarcodeScanner({
         }
         resetBuffer();
         return;
+      }
+
+      // Detect AZERTY-corrupted input: douchette en mode US-QWERTY → digits sortent en é"'(-è_çà
+      if (
+        e.key.length === 1 &&
+        AZERTY_CORRUPTION_CHARS.has(e.key) &&
+        elapsed < maxKeyInterval &&
+        bufferRef.current.length > 0
+      ) {
+        emit({
+          type: "azerty-corruption",
+          key: e.key,
+          reason: "Douchette en mode US-QWERTY — reconfigurez en clavier français (FR-AZERTY)",
+          bufferLen: bufferRef.current.length,
+          at: now,
+        });
       }
 
       // Accept digits AND GS1 punctuation (parens, GS char) AND letters (for LOT/AI codes in DataMatrix)

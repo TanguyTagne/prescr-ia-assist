@@ -1,6 +1,7 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, ScanLine, FolderSearch, Download, Trash2, FileText, AlertCircle, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, ScanLine, FolderSearch, Download, Trash2, FileText, AlertCircle, CheckCircle2, Keyboard } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -23,15 +24,55 @@ const HardwareDiagnostic = () => {
   const [scannerEvents, setScannerEvents] = useState<BarcodeDebugEvent[]>([]);
   const [lastScan, setLastScan] = useState<string | null>(null);
   const [scanCount, setScanCount] = useState(0);
+  const [rawCapture, setRawCapture] = useState<string>("");
+  const [azertyWarned, setAzertyWarned] = useState(false);
+  const rawBufferRef = useRef<string>("");
+  const rawTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Raw keystroke capture (independent of scanner parser) — shows EXACTLY what the douchette sends
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Enter" || e.key === "Tab") {
+        if (rawBufferRef.current.length > 0) {
+          setRawCapture(rawBufferRef.current + `  [${e.key}]`);
+          rawBufferRef.current = "";
+        }
+        return;
+      }
+      if (e.key.length === 1) {
+        rawBufferRef.current += e.key;
+        if (rawTimeoutRef.current) clearTimeout(rawTimeoutRef.current);
+        rawTimeoutRef.current = setTimeout(() => {
+          if (rawBufferRef.current.length > 0) {
+            setRawCapture(rawBufferRef.current);
+            rawBufferRef.current = "";
+          }
+        }, 500);
+      }
+    };
+    window.addEventListener("keydown", handler, true);
+    return () => {
+      window.removeEventListener("keydown", handler, true);
+      if (rawTimeoutRef.current) clearTimeout(rawTimeoutRef.current);
+    };
+  }, []);
 
   const onScan = useCallback((code: string) => {
     setLastScan(code);
     setScanCount((c) => c + 1);
+    toast.success(`Code lu : ${code}`);
   }, []);
 
   const onScannerDebug = useCallback((ev: BarcodeDebugEvent) => {
     setScannerEvents((prev) => [ev, ...prev].slice(0, MAX_LOG));
-  }, []);
+    if (ev.type === "azerty-corruption" && !azertyWarned) {
+      setAzertyWarned(true);
+      toast.error("Douchette mal configurée", {
+        description: "Mode US-QWERTY détecté. Reconfigurez en clavier FR-AZERTY (voir livret constructeur).",
+        duration: 10000,
+      });
+    }
+  }, [azertyWarned]);
 
   useBarcodeScanner({ onScan, onDebug: onScannerDebug });
 
@@ -174,9 +215,27 @@ const HardwareDiagnostic = () => {
             </div>
 
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Branchez votre douchette et scannez n'importe quel code-barres. Les frappes clavier sont écoutées globalement
-              et un code valide (7 à 13 chiffres saisis en moins de 60 ms) déclenche une détection.
+              Branchez votre douchette et scannez n'importe quel code-barres. Les frappes clavier sont écoutées
+              globalement. Asclion accepte EAN-13, CIP-7, et DataMatrix 2D (GS1).
             </p>
+
+            {/* Raw capture — what the douchette ACTUALLY sends, before any parsing */}
+            <div className="rounded-lg border-2 border-dashed border-primary/30 bg-primary/5 p-3">
+              <div className="flex items-center gap-2 mb-1.5">
+                <Keyboard className="h-4 w-4 text-primary" />
+                <span className="text-xs font-semibold uppercase tracking-wide">Capture brute clavier</span>
+                <span className="text-xs text-muted-foreground">(ce que la douchette envoie, sans filtre)</span>
+              </div>
+              <div className="font-mono text-sm break-all min-h-[1.5rem] select-all">
+                {rawCapture || <span className="text-muted-foreground italic">Scannez un code pour voir la trame brute…</span>}
+              </div>
+              {rawCapture && /[éèçà&"'_()-]/.test(rawCapture) && !/^\d+/.test(rawCapture) && (
+                <div className="mt-2 text-xs text-destructive font-semibold">
+                  ⚠ Caractères non-numériques détectés → douchette probablement en mode US-QWERTY.
+                  Reconfigurez-la en clavier français (livret constructeur, code "French keyboard").
+                </div>
+              )}
+            </div>
 
             <div>
               <div className="flex items-center justify-between mb-2">
