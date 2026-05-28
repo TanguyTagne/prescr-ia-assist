@@ -1,8 +1,11 @@
 import { useEffect, useRef, useCallback } from "react";
 import { parseBarcodeToCip } from "@/lib/barcodeParser";
 
+/** AZERTY digit row chars produced when douchette is mis-configured in US-QWERTY mode */
+const AZERTY_CORRUPTION_CHARS = new Set(["&", "é", "\"", "'", "(", "-", "è", "_", "ç", "à"]);
+
 export interface BarcodeDebugEvent {
-  type: "key" | "scan" | "rejected" | "dedup" | "reset";
+  type: "key" | "scan" | "rejected" | "dedup" | "reset" | "azerty-corruption";
   key?: string;
   code?: string;
   reason?: string;
