@@ -186,8 +186,43 @@ const MedicamentsManquantsTab = () => {
             <Download className="h-3.5 w-3.5" />
             Export CSV
           </Button>
+          <Button
+            variant="default"
+            size="sm"
+            onClick={recoverCips}
+            disabled={recovering}
+            className="gap-2"
+          >
+            {recovering ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Wand2 className="h-3.5 w-3.5" />
+            )}
+            Récupérer CIPs manquants
+          </Button>
         </div>
       </div>
+
+      {recoverResult && (
+        <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 text-sm">
+          <div className="font-semibold mb-2">Résultat récupération CIP</div>
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <div className="text-xs text-muted-foreground">Sans CIP (total)</div>
+              <div className="text-2xl font-bold tabular-nums">{recoverResult.sans_cip_total ?? 0}</div>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground">Mappés</div>
+              <div className="text-2xl font-bold tabular-nums">{recoverResult.mappes ?? 0}</div>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground">Mis à jour</div>
+              <div className="text-2xl font-bold tabular-nums text-primary">{recoverResult.mis_a_jour ?? 0}</div>
+            </div>
+          </div>
+          <pre className="mt-3 text-[10px] bg-background/60 p-2 rounded overflow-auto max-h-40">{JSON.stringify(recoverResult, null, 2)}</pre>
+        </div>
+      )}
 
       {/* ── Stats ───────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-3">
