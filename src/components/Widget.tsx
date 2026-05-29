@@ -324,11 +324,36 @@ const WidgetApp = () => {
   const lookupAndStream = useCallback(async (code: string) => {
     const ts = new Date().toISOString();
     try {
-      const { data: med } = await supabase
+      // ── Pass 1 : lookup direct sur medicaments.cip_code ──────────────────
+      const { data: directMed } = await supabase
         .from("medicaments")
         .select("id, nom_commercial, cip_code, molecule_id, atc_code")
         .eq("cip_code", code)
         .maybeSingle();
+
+      // ── Pass 2 : fallback via medicament_cip (37 607 CIPs BDPM) ─────────
+      let med: typeof directMed = directMed;
+      if (!med) {
+        const { data: cipRow } = await supabase
+          .from("medicament_cip")
+          .select("medicament_nom")
+          .eq("cip13", code)
+          .maybeSingle();
+
+        if (cipRow?.medicament_nom) {
+          const { data: fallbackMed } = await supabase
+            .from("medicaments")
+            .select("id, nom_commercial, cip_code, molecule_id, atc_code")
+            .ilike("nom_commercial", `${cipRow.medicament_nom}%`)
+            .order("nom_commercial", { ascending: true })
+            .limit(1)
+            .maybeSingle();
+          if (fallbackMed) {
+            logger.log(`[SCAN] ${ts} ean=${code} match=medicament_cip name=${fallbackMed.nom_commercial}`);
+            med = fallbackMed;
+          }
+        }
+      }
 
       if (med) {
         logger.log(`[SCAN] ${ts} ean=${code} match=db name=${med.nom_commercial}`);
