@@ -123,6 +123,7 @@ const PharmacyDetailDialog = ({ pharmacyId, pharmacyName, open, onOpenChange }: 
         });
         setScans(sc as ScanRow[]);
         setAccepted(ac as AcceptedRow[]);
+        setAnalyses(((recentHistRes.data as any[]) || []) as AnalysisRow[]);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -162,6 +163,53 @@ const PharmacyDetailDialog = ({ pharmacyId, pharmacyName, open, onOpenChange }: 
                 </Card>
               ))}
             </div>
+
+            {/* Analyses récentes */}
+            <section className="space-y-2">
+              <h3 className="text-sm font-semibold flex items-center gap-1.5">
+                <FileText className="h-3.5 w-3.5" />
+                20 dernières analyses
+              </h3>
+              {analyses.length === 0 ? (
+                <p className="text-xs text-muted-foreground py-4 text-center">Aucune analyse</p>
+              ) : (
+                <div className="rounded-md border overflow-hidden">
+                  <table className="w-full text-xs">
+                    <thead className="bg-secondary">
+                      <tr>
+                        <th className="text-left px-2 py-1.5">Date</th>
+                        <th className="text-left px-2 py-1.5">Médicaments</th>
+                        <th className="text-right px-2 py-1.5">Sugg.</th>
+                        <th className="text-right px-2 py-1.5">Inter.</th>
+                        <th className="text-right px-2 py-1.5">Majeure</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {analyses.map((a) => {
+                        const meds = Array.isArray(a.medicaments) ? a.medicaments : [];
+                        const names = meds.map((m: any) => m.nom || m.nom_commercial || "?");
+                        const display = names.slice(0, 4).join(", ") + (names.length > 4 ? ` +${names.length - 4}` : "");
+                        return (
+                          <tr key={a.id} className="border-t hover:bg-secondary/50">
+                            <td className="px-2 py-1.5 text-muted-foreground whitespace-nowrap">
+                              {new Date(a.created_at).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                            </td>
+                            <td className="px-2 py-1.5 font-medium max-w-[420px] truncate" title={names.join(", ")}>
+                              {display || "—"}
+                            </td>
+                            <td className="px-2 py-1.5 text-right">{a.suggestions_count || 0}</td>
+                            <td className="px-2 py-1.5 text-right">{a.interactions_count || 0}</td>
+                            <td className="px-2 py-1.5 text-right">
+                              {a.has_major_interaction ? <Badge variant="destructive" className="text-[10px]">⚠</Badge> : <span className="text-muted-foreground">—</span>}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
 
             {/* Scans */}
             <section className="space-y-2">
