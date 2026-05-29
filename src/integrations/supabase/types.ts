@@ -885,6 +885,39 @@ export type Database = {
         }
         Relationships: []
       }
+      medicament_cip: {
+        Row: {
+          cip13: string
+          cis: string | null
+          created_at: string
+          denomination: string | null
+          forme: string | null
+          id: string
+          medicament_nom: string
+          statut: string | null
+        }
+        Insert: {
+          cip13: string
+          cis?: string | null
+          created_at?: string
+          denomination?: string | null
+          forme?: string | null
+          id?: string
+          medicament_nom: string
+          statut?: string | null
+        }
+        Update: {
+          cip13?: string
+          cis?: string | null
+          created_at?: string
+          denomination?: string | null
+          forme?: string | null
+          id?: string
+          medicament_nom?: string
+          statut?: string | null
+        }
+        Relationships: []
+      }
       medicament_pathologie: {
         Row: {
           id: string
@@ -2606,6 +2639,56 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "sales_transactions_pharmacy_id_fkey"
+            columns: ["pharmacy_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scan_events: {
+        Row: {
+          created_at: string
+          ean_code: string
+          error_message: string | null
+          id: string
+          metadata: Json | null
+          pharmacy_id: string | null
+          product_name: string | null
+          register_id: string | null
+          status: string
+          suggestions_count: number
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          ean_code: string
+          error_message?: string | null
+          id?: string
+          metadata?: Json | null
+          pharmacy_id?: string | null
+          product_name?: string | null
+          register_id?: string | null
+          status: string
+          suggestions_count?: number
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          ean_code?: string
+          error_message?: string | null
+          id?: string
+          metadata?: Json | null
+          pharmacy_id?: string | null
+          product_name?: string | null
+          register_id?: string | null
+          status?: string
+          suggestions_count?: number
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scan_events_pharmacy_id_fkey"
             columns: ["pharmacy_id"]
             isOneToOne: false
             referencedRelation: "pharmacies"
