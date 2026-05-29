@@ -226,6 +226,22 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
     }
   };
 
+  const handleCancelAuto = (medNom: string, produit: string, categorie: string | undefined, ean: string) => {
+    const key = `${medNom}::${produit}`;
+    // On n'annule que les auto-détections (le clic manuel reste prioritaire)
+    if (orderedItems.get(key) !== "hid_auto") return;
+    setOrderedItems((prev) => {
+      const next = new Map(prev);
+      next.delete(key);
+      return next;
+    });
+    autoDetectedEansRef.current.delete(ean);
+    trackEvent("product_auto_cancelled", { medicament: medNom, produit, ean });
+    // Log feedback "refused" pour invalider la conversion dans les KPI
+    recordFeedback(medNom, produit, "refused", categorie, "cancelled_by_rescan", undefined, "hid_auto");
+    toast.info(`Annulé : ${produit}`, { duration: 1500 });
+  };
+
   const isOrdered = (medNom: string, produit: string) => orderedItems.has(`${medNom}::${produit}`);
   const getOrderSource = (medNom: string, produit: string) => orderedItems.get(`${medNom}::${produit}`);
 
