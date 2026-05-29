@@ -82,9 +82,29 @@ function groupByEan(data: RawScanEvent[]): MissingMed[] {
 const MedicamentsManquantsTab = () => {
   // Crée les tables manquantes au premier chargement
   useEnsureTables();
-
   const [rows, setRows] = useState<MissingMed[]>([]);
   const [loading, setLoading] = useState(false);
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
+  const [recovering, setRecovering] = useState(false);
+  const [recoverResult, setRecoverResult] = useState<{ sans_cip_total?: number; mappes?: number; mis_a_jour?: number } | null>(null);
+
+  const recoverCips = useCallback(async () => {
+    setRecovering(true);
+    setRecoverResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("recover-cip-codes");
+      if (error) {
+        toast.error("Erreur : " + error.message);
+        return;
+      }
+      setRecoverResult(data);
+      toast.success(`Récupération terminée : ${data?.mis_a_jour ?? 0} CIP mis à jour`);
+    } catch (e: any) {
+      toast.error("Erreur : " + (e?.message ?? String(e)));
+    } finally {
+      setRecovering(false);
+    }
+  }, []);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
 
   const load = useCallback(async () => {
