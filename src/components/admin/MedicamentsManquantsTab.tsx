@@ -105,7 +105,6 @@ const MedicamentsManquantsTab = () => {
       setRecovering(false);
     }
   }, []);
-  const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
