@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, Activity, Users, AlertTriangle, ScanLine, Keyboard, Camera, Globe, ShoppingCart } from "lucide-react";
+import { Loader2, Activity, Users, AlertTriangle, ScanLine, Keyboard, Camera, Globe, ShoppingCart, FileText } from "lucide-react";
 
 interface Props {
   pharmacyId: string | null;
@@ -40,6 +40,15 @@ interface AcceptedRow {
   medicament_source: string | null;
   medicaments_analyses: string[];
   pcs_proposes: string[];
+}
+
+interface AnalysisRow {
+  id: string;
+  created_at: string;
+  medicaments: any;
+  suggestions_count: number;
+  interactions_count: number;
+  has_major_interaction: boolean;
 }
 
 const SOURCE_META: Record<string, { label: string; icon: any; cls: string }> = {
@@ -86,6 +95,7 @@ const PharmacyDetailDialog = ({ pharmacyId, pharmacyName, open, onOpenChange }: 
   const [kpi, setKpi] = useState<KPI | null>(null);
   const [scans, setScans] = useState<ScanRow[]>([]);
   const [accepted, setAccepted] = useState<AcceptedRow[]>([]);
+  const [analyses, setAnalyses] = useState<AnalysisRow[]>([]);
 
   useEffect(() => {
     if (!open || !pharmacyId) return;
@@ -93,8 +103,9 @@ const PharmacyDetailDialog = ({ pharmacyId, pharmacyName, open, onOpenChange }: 
     (async () => {
       setLoading(true);
       try {
-        const [histRes, scanRes, accRes] = await Promise.all([
+        const [histRes, recentHistRes, scanRes, accRes] = await Promise.all([
           supabase.from("analysis_history" as any).select("patient_hash, has_major_interaction, suggestions_count").eq("pharmacy_id", pharmacyId),
+          supabase.from("analysis_history" as any).select("id, created_at, medicaments, suggestions_count, interactions_count, has_major_interaction").eq("pharmacy_id", pharmacyId).order("created_at", { ascending: false }).limit(20),
           supabase.from("scan_queue" as any).select("id, created_at, scan_type, source, status, device_id, input_data, result").eq("pharmacy_id", pharmacyId).order("created_at", { ascending: false }).limit(100),
           supabase.from("accepted_combinations" as any).select("id, created_at, pc_accepte, pc_categorie, medicament_source, medicaments_analyses, pcs_proposes").eq("pharmacy_id", pharmacyId).order("created_at", { ascending: false }).limit(100),
         ]);
@@ -112,6 +123,7 @@ const PharmacyDetailDialog = ({ pharmacyId, pharmacyName, open, onOpenChange }: 
         });
         setScans(sc as ScanRow[]);
         setAccepted(ac as AcceptedRow[]);
+        setAnalyses(((recentHistRes.data as any[]) || []) as AnalysisRow[]);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -151,6 +163,53 @@ const PharmacyDetailDialog = ({ pharmacyId, pharmacyName, open, onOpenChange }: 
                 </Card>
               ))}
             </div>
+
+            {/* Analyses récentes */}
+            <section className="space-y-2">
+              <h3 className="text-sm font-semibold flex items-center gap-1.5">
+                <FileText className="h-3.5 w-3.5" />
+                20 dernières analyses
+              </h3>
+              {analyses.length === 0 ? (
+                <p className="text-xs text-muted-foreground py-4 text-center">Aucune analyse</p>
+              ) : (
+                <div className="rounded-md border overflow-hidden">
+                  <table className="w-full text-xs">
+                    <thead className="bg-secondary">
+                      <tr>
+                        <th className="text-left px-2 py-1.5">Date</th>
+                        <th className="text-left px-2 py-1.5">Médicaments</th>
+                        <th className="text-right px-2 py-1.5">Sugg.</th>
+                        <th className="text-right px-2 py-1.5">Inter.</th>
+                        <th className="text-right px-2 py-1.5">Majeure</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {analyses.map((a) => {
+                        const meds = Array.isArray(a.medicaments) ? a.medicaments : [];
+                        const names = meds.map((m: any) => m.nom || m.nom_commercial || "?");
+                        const display = names.slice(0, 4).join(", ") + (names.length > 4 ? ` +${names.length - 4}` : "");
+                        return (
+                          <tr key={a.id} className="border-t hover:bg-secondary/50">
+                            <td className="px-2 py-1.5 text-muted-foreground whitespace-nowrap">
+                              {new Date(a.created_at).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                            </td>
+                            <td className="px-2 py-1.5 font-medium max-w-[420px] truncate" title={names.join(", ")}>
+                              {display || "—"}
+                            </td>
+                            <td className="px-2 py-1.5 text-right">{a.suggestions_count || 0}</td>
+                            <td className="px-2 py-1.5 text-right">{a.interactions_count || 0}</td>
+                            <td className="px-2 py-1.5 text-right">
+                              {a.has_major_interaction ? <Badge variant="destructive" className="text-[10px]">⚠</Badge> : <span className="text-muted-foreground">—</span>}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
 
             {/* Scans */}
             <section className="space-y-2">
