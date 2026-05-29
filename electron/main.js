@@ -7,12 +7,30 @@ const { exec } = require("child_process");
 // the app keeps working without the global scanner.
 let uIOhook = null;
 let UiohookKey = null;
+let uiohookLoadError = null;
 try {
   const mod = require("uiohook-napi");
   uIOhook = mod.uIOhook;
   UiohookKey = mod.UiohookKey;
 } catch (e) {
-  console.error("[ASCLION-SCAN] uiohook-napi unavailable:", e && e.message);
+  uiohookLoadError = e && e.message;
+  console.error("[ASCLION-SCAN] uiohook-napi unavailable:", uiohookLoadError);
+}
+// Load node-hid lazily — direct HID device reader (not blocked by antivirus
+// because it does NOT install a low-level keyboard hook).
+let HID = null;
+let hidLoadError = null;
+try {
+  HID = require("node-hid");
+  try {
+    if (process.platform === "win32" && typeof HID.setDriverType === "function") {
+      // hidraw allows opening the keyboard collection of a scanner non-exclusively
+      HID.setDriverType("hidraw");
+    }
+  } catch (_) { /* noop */ }
+} catch (e) {
+  hidLoadError = e && e.message;
+  console.error("[ASCLION-SCAN] node-hid unavailable:", hidLoadError);
 }
 // ────────────────────────────────────────────────────────────
 // Picture-in-Picture state (always-on-top + compact mode)
