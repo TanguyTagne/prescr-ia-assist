@@ -539,6 +539,12 @@ const PharmaciesTab = ({ pharmacies, onRefresh }: PharmaciesTabProps) => {
         );
       })}
       </div>
+      <PharmacyDetailDialog
+        pharmacyId={detailPharmacy?.id || null}
+        pharmacyName={detailPharmacy?.name || ""}
+        open={!!detailPharmacy}
+        onOpenChange={(o) => { if (!o) setDetailPharmacy(null); }}
+      />
     </div>
   );
 };
