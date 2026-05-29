@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
-import { Pill, RotateCcw, AlertTriangle, MessageSquare, Loader2, Sparkles, Database, Check } from "lucide-react";
+import { Pill, RotateCcw, AlertTriangle, MessageSquare, Loader2, Sparkles, Database, Check, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { AnalysisResult } from "@/lib/prescriptionAnalyzer";
@@ -13,6 +13,7 @@ import { useProductLineage } from "@/hooks/useProductLineage";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/i18n/I18nProvider";
+import { SCANNER } from "@/constants/scanner";
 
 
 interface AnalysisResultsProps {
@@ -21,12 +22,17 @@ interface AnalysisResultsProps {
   demoMode?: boolean;
 }
 
+// Fenêtre d'attribution HID : un scan dans les 5 min suivant l'analyse
+// est considéré comme une vente du PC correspondant.
+const HID_ATTRIBUTION_WINDOW_MS = 5 * 60 * 1000;
+
 const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsProps) => {
   const { t } = useI18n();
-  const [orderedItems, setOrderedItems] = useState<Set<string>>(new Set());
+  const [orderedItems, setOrderedItems] = useState<Map<string, "manual_click" | "hid_auto">>(new Map());
   const [expandedConseils, setExpandedConseils] = useState<Set<number>>(new Set());
   const [conseilGlobalOpen, setConseilGlobalOpen] = useState(false);
   const { recordFeedback } = usePcFeedback();
+
 
   // Lineage : précharge la traçabilité (source officielle, validation) pour
   // tous les produits affichés afin d'alimenter le badge "Source" sous chaque PC.
