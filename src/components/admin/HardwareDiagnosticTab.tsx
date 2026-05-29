@@ -13,6 +13,7 @@ import { useFolderWatcher, type WatcherDebugEvent } from "@/hooks/useFolderWatch
 import { isAsclionDesktopRuntime } from "@/lib/runtime";
 import { supabase } from "@/integrations/supabase/client";
 import { useEnsureTables } from "@/hooks/useEnsureTables";
+import ScannerDetectionPanel from "./ScannerDetectionPanel";
 
 const MAX_LOG = 200;
 
@@ -268,6 +269,9 @@ const HardwareDiagnosticTab = () => {
           Exporter le rapport
         </Button>
       </div>
+
+      {/* ── Détection matérielle (HID direct via node-hid) ────────────────── */}
+      <ScannerDetectionPanel />
 
       {/* ── Monitoring scans — toutes les pharmacies ─────────────────────── */}
       <Card>
