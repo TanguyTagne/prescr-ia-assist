@@ -2,6 +2,8 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { buildCorsHeaders } from "../_shared/cors.ts";
 
+const PAGE = 1000;
+
 serve(async (req) => {
   const corsHeaders = buildCorsHeaders(req);
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -19,29 +21,53 @@ serve(async (req) => {
   if (!isAdmin) return new Response(JSON.stringify({ error: "Admin requis" }), { status: 403, headers: corsHeaders });
 
   try {
-    // 1. Charger tous les médicaments sans CIP
-    const { data: meds } = await supabase
-      .from("medicaments").select("id, nom_commercial").is("cip_code", null).limit(20000);
-    if (!meds?.length) return new Response(JSON.stringify({ message: "Rien à récupérer", count: 0 }), {
+    // 1. Tous les médicaments sans CIP (pagination)
+    const allMeds: any[] = [];
+    let from = 0;
+    while (true) {
+      const { data } = await supabase
+        .from("medicaments").select("id, nom_commercial").is("cip_code", null).range(from, from + PAGE - 1);
+      if (!data?.length) break;
+      allMeds.push(...data);
+      if (data.length < PAGE) break;
+      from += PAGE;
+    }
+    if (!allMeds.length) return new Response(JSON.stringify({ message: "Rien à récupérer", count: 0 }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
 
-    // 2. CIPs déjà pris
-    const { data: takenRaw } = await supabase
-      .from("medicaments").select("cip_code").not("cip_code", "is", null).limit(30000);
-    const usedCips = new Set((takenRaw || []).map((r: any) => r.cip_code as string));
+    // 2. CIPs déjà pris (pagination)
+    const takenRows: any[] = [];
+    from = 0;
+    while (true) {
+      const { data } = await supabase
+        .from("medicaments").select("cip_code").not("cip_code", "is", null).range(from, from + PAGE - 1);
+      if (!data?.length) break;
+      takenRows.push(...data);
+      if (data.length < PAGE) break;
+      from += PAGE;
+    }
+    const usedCips = new Set(takenRows.map((r: any) => r.cip_code as string));
 
-    // 3. Toutes les entrées medicament_cip
-    const { data: cipEntries } = await supabase
-      .from("medicament_cip").select("cip13, medicament_nom").limit(50000);
-    if (!cipEntries?.length) throw new Error("medicament_cip vide");
+    // 3. Toutes les entrées medicament_cip (pagination)
+    const cipEntries: any[] = [];
+    from = 0;
+    while (true) {
+      const { data } = await supabase
+        .from("medicament_cip").select("cip13, medicament_nom").range(from, from + PAGE - 1);
+      if (!data?.length) break;
+      cipEntries.push(...data);
+      if (data.length < PAGE) break;
+      from += PAGE;
+    }
+    if (!cipEntries.length) throw new Error("medicament_cip vide");
 
-    // Trier par longueur DESC = préférer le nom le plus spécifique en premier
+    // Trier par longueur DESC = nom le plus spécifique en premier
     cipEntries.sort((a: any, b: any) => b.medicament_nom.length - a.medicament_nom.length);
 
-    // 4. Calculer le mapping : pour chaque médicament sans CIP, trouver le meilleur CIP disponible
+    // 4. Calculer le mapping
     const updates: Array<{ id: string; cip: string }> = [];
-    for (const med of meds) {
+    for (const med of allMeds) {
       const nomLower = med.nom_commercial.toLowerCase().trim();
       for (const entry of cipEntries) {
         const prefix = (entry.medicament_nom as string).toLowerCase().trim();
@@ -53,9 +79,9 @@ serve(async (req) => {
       }
     }
 
-    // 5. Appliquer en batches de 100 en parallèle
+    // 5. Appliquer en batches de 50 en parallèle
     let updated = 0;
-    const BATCH = 100;
+    const BATCH = 50;
     for (let i = 0; i < updates.length; i += BATCH) {
       const results = await Promise.all(
         updates.slice(i, i + BATCH).map(({ id, cip }) =>
@@ -67,7 +93,8 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({
       success: true,
-      sans_cip_total: meds.length,
+      sans_cip_total: allMeds.length,
+      cip_entries_loaded: cipEntries.length,
       mappes: updates.length,
       mis_a_jour: updated,
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
