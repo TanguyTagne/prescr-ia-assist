@@ -44,7 +44,7 @@ async function lookupMedicamentsByCip(
   const { data: resolvedMeds } = await supabase
     .from("medicaments")
     .select("id, nom_commercial, atc_code, molecule_id, cip_code")
-    .or(nomSet.map((n: string) => `nom_commercial.ilike.${n}%`).join(","))
+    .or(nomSet.map((n: string) => `nom_commercial.ilike.${n}%`).join(","));
 
   const nomToMed = new Map((resolvedMeds || []).map((m: any) => [m.nom_commercial, m]));
 
