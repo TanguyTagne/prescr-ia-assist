@@ -16,6 +16,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import PharmacyDetailDialog from "./PharmacyDetailDialog";
 
 interface PharmacyWithLGO {
   id: string;
@@ -45,6 +46,7 @@ const PharmaciesTab = ({ pharmacies, onRefresh }: PharmaciesTabProps) => {
   const [accountForm, setAccountForm] = useState({ email: "", password: "", full_name: "", role: "preparateur" });
   const [submittingAccount, setSubmittingAccount] = useState(false);
   const [connections, setConnections] = useState<Record<string, { total: number; desktop: number; web: number; users: number; lastActivity: string | null }>>({});
+  const [detailPharmacy, setDetailPharmacy] = useState<{ id: string; name: string } | null>(null);
 
   // Live connection counts (refresh every 30s)
   useEffect(() => {
@@ -293,10 +295,15 @@ const PharmaciesTab = ({ pharmacies, onRefresh }: PharmaciesTabProps) => {
           <div key={pharm.id} className={`rounded-lg border p-4 space-y-3 ${status === "disabled" ? "border-destructive/30 bg-destructive/5 opacity-75" : status === "paused" ? "border-yellow-300 bg-yellow-50/50" : "border-border"}`}>
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2 min-w-0 flex-wrap">
-                <div className="min-w-0">
+                <button
+                  type="button"
+                  onClick={() => setDetailPharmacy({ id: pharm.id, name: pharm.name })}
+                  className="min-w-0 text-left hover:underline focus:outline-none focus:underline"
+                  title="Voir les KPIs, scans et PC acceptés"
+                >
                   <p className="font-semibold text-sm truncate">{pharm.name}</p>
                   {pharm.city && <p className="text-xs text-muted-foreground">{pharm.city}</p>}
-                </div>
+                </button>
                 {getStatusBadge(status)}
                 <Badge
                   variant="outline"
@@ -532,6 +539,12 @@ const PharmaciesTab = ({ pharmacies, onRefresh }: PharmaciesTabProps) => {
         );
       })}
       </div>
+      <PharmacyDetailDialog
+        pharmacyId={detailPharmacy?.id || null}
+        pharmacyName={detailPharmacy?.name || ""}
+        open={!!detailPharmacy}
+        onOpenChange={(o) => { if (!o) setDetailPharmacy(null); }}
+      />
     </div>
   );
 };
