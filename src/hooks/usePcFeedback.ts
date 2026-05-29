@@ -40,7 +40,9 @@ export const usePcFeedback = () => {
         pc_categorie: pcCategorie || null,
         action,
         reason: reason || null,
-      });
+        detection_source: detectionSource,
+      } as any);
+
 
       // Update recommendation_metrics
       if (action === "accepted") {
