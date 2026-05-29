@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+import {
   PackageSearch, RefreshCw, Download, Loader2,
-  ExternalLink, AlertTriangle,
+  ExternalLink, AlertTriangle, Wand2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
