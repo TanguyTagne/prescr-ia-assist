@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   PackageSearch, RefreshCw, Download, Loader2,
-  ExternalLink, AlertTriangle,
+  ExternalLink, AlertTriangle, Wand2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -82,10 +82,29 @@ function groupByEan(data: RawScanEvent[]): MissingMed[] {
 const MedicamentsManquantsTab = () => {
   // Crée les tables manquantes au premier chargement
   useEnsureTables();
-
   const [rows, setRows] = useState<MissingMed[]>([]);
   const [loading, setLoading] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
+  const [recovering, setRecovering] = useState(false);
+  const [recoverResult, setRecoverResult] = useState<{ sans_cip_total?: number; mappes?: number; mis_a_jour?: number } | null>(null);
+
+  const recoverCips = useCallback(async () => {
+    setRecovering(true);
+    setRecoverResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("recover-cip-codes");
+      if (error) {
+        toast.error("Erreur : " + error.message);
+        return;
+      }
+      setRecoverResult(data);
+      toast.success(`Récupération terminée : ${data?.mis_a_jour ?? 0} CIP mis à jour`);
+    } catch (e: any) {
+      toast.error("Erreur : " + (e?.message ?? String(e)));
+    } finally {
+      setRecovering(false);
+    }
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -167,8 +186,43 @@ const MedicamentsManquantsTab = () => {
             <Download className="h-3.5 w-3.5" />
             Export CSV
           </Button>
+          <Button
+            variant="default"
+            size="sm"
+            onClick={recoverCips}
+            disabled={recovering}
+            className="gap-2"
+          >
+            {recovering ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Wand2 className="h-3.5 w-3.5" />
+            )}
+            Récupérer CIPs manquants
+          </Button>
         </div>
       </div>
+
+      {recoverResult && (
+        <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 text-sm">
+          <div className="font-semibold mb-2">Résultat récupération CIP</div>
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <div className="text-xs text-muted-foreground">Sans CIP (total)</div>
+              <div className="text-2xl font-bold tabular-nums">{recoverResult.sans_cip_total ?? 0}</div>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground">Mappés</div>
+              <div className="text-2xl font-bold tabular-nums">{recoverResult.mappes ?? 0}</div>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground">Mis à jour</div>
+              <div className="text-2xl font-bold tabular-nums text-primary">{recoverResult.mis_a_jour ?? 0}</div>
+            </div>
+          </div>
+          <pre className="mt-3 text-[10px] bg-background/60 p-2 rounded overflow-auto max-h-40">{JSON.stringify(recoverResult, null, 2)}</pre>
+        </div>
+      )}
 
       {/* ── Stats ───────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-3">
