@@ -22,9 +22,10 @@ interface AnalysisResultsProps {
   demoMode?: boolean;
 }
 
-// Fenêtre d'attribution HID : un scan dans les 5 min suivant l'analyse
-// est considéré comme une vente du PC correspondant.
-const HID_ATTRIBUTION_WINDOW_MS = 5 * 60 * 1000;
+// Fenêtre d'attribution HID : un scan dans les 10 min suivant l'analyse
+// est considéré comme une vente du PC correspondant. La fenêtre est aussi
+// réinitialisée automatiquement à chaque nouvelle ordonnance (changement de `result`).
+const HID_ATTRIBUTION_WINDOW_MS = 10 * 60 * 1000;
 
 const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsProps) => {
   const { t } = useI18n();
