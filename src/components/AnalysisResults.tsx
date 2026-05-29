@@ -108,35 +108,57 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
     }
   };
 
-  const handleOrder = (medNom: string, produit: string, categorie?: string) => {
+  const handleOrder = (
+    medNom: string,
+    produit: string,
+    categorie?: string,
+    source: "manual_click" | "hid_auto" = "manual_click"
+  ) => {
     const key = `${medNom}::${produit}`;
-    setOrderedItems((prev) => new Set(prev).add(key));
+    // Anti double-comptage : si déjà accepté (clic ou auto), on ignore
+    if (orderedItems.has(key)) return;
+    setOrderedItems((prev) => {
+      const next = new Map(prev);
+      next.set(key, source);
+      return next;
+    });
 
     if (demoMode) {
       toast.info(t("results.demoToast"));
       return;
     }
 
-    trackEvent("product_accepted", { medicament: medNom, produit });
+    trackEvent("product_accepted", { medicament: medNom, produit, source });
 
     const medicaments_analyses = result.medicaments.map((m) => m.nom);
     const pcs_proposes = result.medicaments.flatMap((m) =>
       (m.recommendations || []).map((r) => r.produit)
     );
-    recordFeedback(medNom, produit, "accepted", categorie, undefined, {
-      medicaments_analyses,
-      pcs_proposes,
-    });
+    recordFeedback(
+      medNom,
+      produit,
+      "accepted",
+      categorie,
+      undefined,
+      { medicaments_analyses, pcs_proposes },
+      source
+    );
 
-    // Push silencieux au LGO si configuré (best-effort)
-    supabase.functions.invoke("lgo-push-cart", {
-      body: { products: [{ name: produit, category: categorie }] },
-    }).catch(() => {});
-
-    toast.success(`${produit} ${t("results.acceptedToast")}`);
+    // Push silencieux au LGO si configuré (best-effort) — uniquement pour clic manuel
+    if (source === "manual_click") {
+      supabase.functions.invoke("lgo-push-cart", {
+        body: { products: [{ name: produit, category: categorie }] },
+      }).catch(() => {});
+      toast.success(`${produit} ${t("results.acceptedToast")}`);
+    } else {
+      // Auto-détecté via scan douchette : toast discret 1.5s
+      toast.success(`⚡ ${produit} détecté via scan`, { duration: 1500 });
+    }
   };
 
   const isOrdered = (medNom: string, produit: string) => orderedItems.has(`${medNom}::${produit}`);
+  const getOrderSource = (medNom: string, produit: string) => orderedItems.get(`${medNom}::${produit}`);
+
 
   return (
     <div className="space-y-2 animate-fade-in">
