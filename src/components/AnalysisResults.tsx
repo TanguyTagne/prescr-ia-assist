@@ -53,6 +53,65 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
     return all.sort((a, b) => (b.rec.priorite || 0) - (a.rec.priorite || 0)).slice(0, 3);
   }, [result.medicaments]);
 
+  // ── Auto-attribution HID ────────────────────────────────────────────────
+  // Charge les CIP des PC proposés. Pendant 5 min après l'analyse, tout
+  // scan douchette dont le CIP correspond à un PC proposé est marqué
+  // accepté automatiquement (source = hid_auto). Évite la sous-attribution
+  // quand le pharmacien oublie de cliquer sur "Accepter".
+  const proposedCipMapRef = useRef<Map<string, { medNom: string; produit: string; categorie?: string }>>(new Map());
+  const mountedAtRef = useRef<number>(Date.now());
+
+  useEffect(() => {
+    mountedAtRef.current = Date.now();
+    proposedCipMapRef.current = new Map();
+
+    if (demoMode || allProductNames.length === 0) return;
+
+    // Récupère les CIP via medicaments.nom_commercial (match exact prioritaire)
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("medicaments")
+        .select("nom_commercial, cip_code")
+        .in("nom_commercial", allProductNames)
+        .not("cip_code", "is", null);
+      if (cancelled || !data) return;
+      const nameToCip = new Map<string, string>();
+      for (const row of data as any[]) {
+        if (row.cip_code) nameToCip.set(row.nom_commercial, row.cip_code);
+      }
+      const cipMap = new Map<string, { medNom: string; produit: string; categorie?: string }>();
+      for (const med of result.medicaments) {
+        for (const rec of med.recommendations || []) {
+          const cip = nameToCip.get(rec.produit);
+          if (cip) cipMap.set(cip, { medNom: med.nom, produit: rec.produit, categorie: rec.categorie });
+        }
+      }
+      proposedCipMapRef.current = cipMap;
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [result, demoMode]);
+
+  useEffect(() => {
+    if (demoMode) return;
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ ean: string; at: number }>).detail;
+      if (!detail?.ean) return;
+      // Fenêtre d'attribution 5 min
+      if (Date.now() - mountedAtRef.current > HID_ATTRIBUTION_WINDOW_MS) return;
+      const match = proposedCipMapRef.current.get(detail.ean);
+      if (!match) return;
+      handleOrder(match.medNom, match.produit, match.categorie, "hid_auto");
+    };
+    window.addEventListener(SCANNER.DOM_EVENT, handler);
+    return () => window.removeEventListener(SCANNER.DOM_EVENT, handler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [demoMode]);
+
 
   // Raccourcis : Esc = nouvelle ordonnance, F1/F2/F3 = accepter top 1/2/3
   useEffect(() => {
