@@ -54,4 +54,14 @@ contextBridge.exposeInMainWorld("electronAPI", {
     status: () => ipcRenderer.invoke("autolaunch:status"),
     reinstall: () => ipcRenderer.invoke("autolaunch:reinstall"),
   },
+
+  // Direct HID scanner control (node-hid based, antivirus-friendly)
+  scanner: {
+    list: () => ipcRenderer.invoke("scanner:list"),
+    status: () => ipcRenderer.invoke("scanner:status"),
+    bind: (devicePath) => ipcRenderer.invoke("scanner:bind", devicePath),
+    unbind: () => ipcRenderer.invoke("scanner:unbind"),
+    testCapture: (ms) => ipcRenderer.invoke("scanner:test-capture", ms),
+    reload: () => ipcRenderer.invoke("scanner:reload"),
+  },
 });
