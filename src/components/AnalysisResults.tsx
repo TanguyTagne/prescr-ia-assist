@@ -281,14 +281,24 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
               </div>
               {med.recommendations.map((rec, j) => {
             const ordered = isOrdered(med.nom, rec.produit);
+            const orderSource = getOrderSource(med.nom, rec.produit);
+            const isAuto = orderSource === "hid_auto";
             return (
               <div key={j} className="px-1.5 rounded-md bg-secondary/50 py-[3px] space-y-0.5">
                     <div className="flex items-center gap-2">
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1 flex-wrap">
                           <span className="font-medium text-xs">{rec.produit}</span>
                           {rec.priorite >= 80 &&
                       <Badge className="bg-primary/20 text-primary text-[10px] px-1 py-0">{t("results.priority")}</Badge>
+                      }
+                          {isAuto &&
+                      <Badge
+                        className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 text-[10px] px-1 py-0 gap-0.5"
+                        title="Vente détectée automatiquement via scan douchette"
+                      >
+                              <Zap className="h-2 w-2" />auto
+                            </Badge>
                       }
                         </div>
                       </div>
@@ -314,6 +324,7 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
                           </>
                     }
                       </button>
+
                       {!demoMode && (
                         <ReportButton
                           type="pc_inadapte"
