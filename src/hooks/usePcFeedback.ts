@@ -13,8 +13,10 @@ export const usePcFeedback = () => {
     action: "accepted" | "refused" | "ignored",
     pcCategorie?: string,
     reason?: string,
-    context?: { medicaments_analyses?: string[]; pcs_proposes?: string[] }
+    context?: { medicaments_analyses?: string[]; pcs_proposes?: string[] },
+    detectionSource: "manual_click" | "hid_auto" | "lgo_sale" | "inferred" = "manual_click"
   ) => {
+
     if (!user) return;
 
     try {
