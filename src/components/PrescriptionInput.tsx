@@ -430,8 +430,12 @@ const PrescriptionInput = ({ onAnalyze, onAnalyzeImage, autoAnalyze = true }: Pr
             </div>
           ) : (
             <div className="relative rounded-lg overflow-hidden border border-border">
-              <img src={imagePreview} alt="Aperçu" className="w-full max-h-[120px] object-contain bg-secondary" />
-              <button onClick={clearImage} className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-foreground/70 text-background flex items-center justify-center">
+              <img src={imagePreview} alt="Aperçu de l'ordonnance importée" className="w-full max-h-[120px] object-contain bg-secondary" />
+              <button
+                onClick={clearImage}
+                aria-label="Supprimer l'image importée"
+                className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-foreground/70 text-background flex items-center justify-center"
+              >
                 <X className="h-3 w-3" />
               </button>
             </div>

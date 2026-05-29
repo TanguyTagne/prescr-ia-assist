@@ -87,7 +87,9 @@ const Auth = () => {
             <Pill className="h-5 w-5 text-primary-foreground" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-primary-foreground tracking-tight">Asclion</h1>
+            <h1 className="text-xl font-bold text-primary-foreground tracking-tight">
+              Asclion — {isForgotPassword ? "Mot de passe oublié" : isLogin ? "Connexion" : "Créer un compte"}
+            </h1>
             <p className="text-xs text-primary-foreground/70">Assistant pharmacie intelligent</p>
           </div>
         </div>
@@ -186,6 +188,7 @@ const Auth = () => {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
+                    aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
