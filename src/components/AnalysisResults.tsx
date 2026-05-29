@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
-import { Pill, RotateCcw, AlertTriangle, MessageSquare, Loader2, Sparkles, Database, Check } from "lucide-react";
+import { Pill, RotateCcw, AlertTriangle, MessageSquare, Loader2, Sparkles, Database, Check, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { AnalysisResult } from "@/lib/prescriptionAnalyzer";
@@ -13,6 +13,7 @@ import { useProductLineage } from "@/hooks/useProductLineage";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/i18n/I18nProvider";
+import { SCANNER } from "@/constants/scanner";
 
 
 interface AnalysisResultsProps {
@@ -21,12 +22,17 @@ interface AnalysisResultsProps {
   demoMode?: boolean;
 }
 
+// Fenêtre d'attribution HID : un scan dans les 5 min suivant l'analyse
+// est considéré comme une vente du PC correspondant.
+const HID_ATTRIBUTION_WINDOW_MS = 5 * 60 * 1000;
+
 const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsProps) => {
   const { t } = useI18n();
-  const [orderedItems, setOrderedItems] = useState<Set<string>>(new Set());
+  const [orderedItems, setOrderedItems] = useState<Map<string, "manual_click" | "hid_auto">>(new Map());
   const [expandedConseils, setExpandedConseils] = useState<Set<number>>(new Set());
   const [conseilGlobalOpen, setConseilGlobalOpen] = useState(false);
   const { recordFeedback } = usePcFeedback();
+
 
   // Lineage : précharge la traçabilité (source officielle, validation) pour
   // tous les produits affichés afin d'alimenter le badge "Source" sous chaque PC.
@@ -46,6 +52,65 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
     );
     return all.sort((a, b) => (b.rec.priorite || 0) - (a.rec.priorite || 0)).slice(0, 3);
   }, [result.medicaments]);
+
+  // ── Auto-attribution HID ────────────────────────────────────────────────
+  // Charge les CIP des PC proposés. Pendant 5 min après l'analyse, tout
+  // scan douchette dont le CIP correspond à un PC proposé est marqué
+  // accepté automatiquement (source = hid_auto). Évite la sous-attribution
+  // quand le pharmacien oublie de cliquer sur "Accepter".
+  const proposedCipMapRef = useRef<Map<string, { medNom: string; produit: string; categorie?: string }>>(new Map());
+  const mountedAtRef = useRef<number>(Date.now());
+
+  useEffect(() => {
+    mountedAtRef.current = Date.now();
+    proposedCipMapRef.current = new Map();
+
+    if (demoMode || allProductNames.length === 0) return;
+
+    // Récupère les CIP via medicaments.nom_commercial (match exact prioritaire)
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("medicaments")
+        .select("nom_commercial, cip_code")
+        .in("nom_commercial", allProductNames)
+        .not("cip_code", "is", null);
+      if (cancelled || !data) return;
+      const nameToCip = new Map<string, string>();
+      for (const row of data as any[]) {
+        if (row.cip_code) nameToCip.set(row.nom_commercial, row.cip_code);
+      }
+      const cipMap = new Map<string, { medNom: string; produit: string; categorie?: string }>();
+      for (const med of result.medicaments) {
+        for (const rec of med.recommendations || []) {
+          const cip = nameToCip.get(rec.produit);
+          if (cip) cipMap.set(cip, { medNom: med.nom, produit: rec.produit, categorie: rec.categorie });
+        }
+      }
+      proposedCipMapRef.current = cipMap;
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [result, demoMode]);
+
+  useEffect(() => {
+    if (demoMode) return;
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ ean: string; at: number }>).detail;
+      if (!detail?.ean) return;
+      // Fenêtre d'attribution 5 min
+      if (Date.now() - mountedAtRef.current > HID_ATTRIBUTION_WINDOW_MS) return;
+      const match = proposedCipMapRef.current.get(detail.ean);
+      if (!match) return;
+      handleOrder(match.medNom, match.produit, match.categorie, "hid_auto");
+    };
+    window.addEventListener(SCANNER.DOM_EVENT, handler);
+    return () => window.removeEventListener(SCANNER.DOM_EVENT, handler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [demoMode]);
 
 
   // Raccourcis : Esc = nouvelle ordonnance, F1/F2/F3 = accepter top 1/2/3
@@ -102,35 +167,57 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
     }
   };
 
-  const handleOrder = (medNom: string, produit: string, categorie?: string) => {
+  const handleOrder = (
+    medNom: string,
+    produit: string,
+    categorie?: string,
+    source: "manual_click" | "hid_auto" = "manual_click"
+  ) => {
     const key = `${medNom}::${produit}`;
-    setOrderedItems((prev) => new Set(prev).add(key));
+    // Anti double-comptage : si déjà accepté (clic ou auto), on ignore
+    if (orderedItems.has(key)) return;
+    setOrderedItems((prev) => {
+      const next = new Map(prev);
+      next.set(key, source);
+      return next;
+    });
 
     if (demoMode) {
       toast.info(t("results.demoToast"));
       return;
     }
 
-    trackEvent("product_accepted", { medicament: medNom, produit });
+    trackEvent("product_accepted", { medicament: medNom, produit, source });
 
     const medicaments_analyses = result.medicaments.map((m) => m.nom);
     const pcs_proposes = result.medicaments.flatMap((m) =>
       (m.recommendations || []).map((r) => r.produit)
     );
-    recordFeedback(medNom, produit, "accepted", categorie, undefined, {
-      medicaments_analyses,
-      pcs_proposes,
-    });
+    recordFeedback(
+      medNom,
+      produit,
+      "accepted",
+      categorie,
+      undefined,
+      { medicaments_analyses, pcs_proposes },
+      source
+    );
 
-    // Push silencieux au LGO si configuré (best-effort)
-    supabase.functions.invoke("lgo-push-cart", {
-      body: { products: [{ name: produit, category: categorie }] },
-    }).catch(() => {});
-
-    toast.success(`${produit} ${t("results.acceptedToast")}`);
+    // Push silencieux au LGO si configuré (best-effort) — uniquement pour clic manuel
+    if (source === "manual_click") {
+      supabase.functions.invoke("lgo-push-cart", {
+        body: { products: [{ name: produit, category: categorie }] },
+      }).catch(() => {});
+      toast.success(`${produit} ${t("results.acceptedToast")}`);
+    } else {
+      // Auto-détecté via scan douchette : toast discret 1.5s
+      toast.success(`⚡ ${produit} détecté via scan`, { duration: 1500 });
+    }
   };
 
   const isOrdered = (medNom: string, produit: string) => orderedItems.has(`${medNom}::${produit}`);
+  const getOrderSource = (medNom: string, produit: string) => orderedItems.get(`${medNom}::${produit}`);
+
 
   return (
     <div className="space-y-2 animate-fade-in">
@@ -194,14 +281,24 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
               </div>
               {med.recommendations.map((rec, j) => {
             const ordered = isOrdered(med.nom, rec.produit);
+            const orderSource = getOrderSource(med.nom, rec.produit);
+            const isAuto = orderSource === "hid_auto";
             return (
               <div key={j} className="px-1.5 rounded-md bg-secondary/50 py-[3px] space-y-0.5">
                     <div className="flex items-center gap-2">
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1 flex-wrap">
                           <span className="font-medium text-xs">{rec.produit}</span>
                           {rec.priorite >= 80 &&
                       <Badge className="bg-primary/20 text-primary text-[10px] px-1 py-0">{t("results.priority")}</Badge>
+                      }
+                          {isAuto &&
+                      <Badge
+                        className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 text-[10px] px-1 py-0 gap-0.5"
+                        title="Vente détectée automatiquement via scan douchette"
+                      >
+                              <Zap className="h-2 w-2" />auto
+                            </Badge>
                       }
                         </div>
                       </div>
@@ -227,6 +324,7 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
                           </>
                     }
                       </button>
+
                       {!demoMode && (
                         <ReportButton
                           type="pc_inadapte"

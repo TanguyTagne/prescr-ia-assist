@@ -1546,6 +1546,7 @@ export type Database = {
           action: string
           analysis_id: string | null
           created_at: string
+          detection_source: string
           id: string
           medicament_nom: string
           pc_categorie: string | null
@@ -1559,6 +1560,7 @@ export type Database = {
           action?: string
           analysis_id?: string | null
           created_at?: string
+          detection_source?: string
           id?: string
           medicament_nom: string
           pc_categorie?: string | null
@@ -1572,6 +1574,7 @@ export type Database = {
           action?: string
           analysis_id?: string | null
           created_at?: string
+          detection_source?: string
           id?: string
           medicament_nom?: string
           pc_categorie?: string | null
@@ -2602,6 +2605,48 @@ export type Database = {
           ordre?: number
           transferts_hors_ue?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      sales_attribution_monthly: {
+        Row: {
+          category: string
+          clicked_count: number
+          computed_at: string
+          hid_auto_count: number
+          id: string
+          inferred_count: number
+          month: string
+          pharmacy_id: string
+          proposed_count: number
+          revenue_estimate: number
+          total_attributed: number
+        }
+        Insert: {
+          category?: string
+          clicked_count?: number
+          computed_at?: string
+          hid_auto_count?: number
+          id?: string
+          inferred_count?: number
+          month: string
+          pharmacy_id: string
+          proposed_count?: number
+          revenue_estimate?: number
+          total_attributed?: number
+        }
+        Update: {
+          category?: string
+          clicked_count?: number
+          computed_at?: string
+          hid_auto_count?: number
+          id?: string
+          inferred_count?: number
+          month?: string
+          pharmacy_id?: string
+          proposed_count?: number
+          revenue_estimate?: number
+          total_attributed?: number
         }
         Relationships: []
       }

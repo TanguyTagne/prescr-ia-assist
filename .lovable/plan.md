@@ -1,67 +1,81 @@
-## Diagnostic
 
-Sur le terrain, **aucun keystroke n'arrive** dans l'onglet Diagnostic Hardware en Desktop Electron. Cela exclut un problème de focus (la capture est déjà globale via `uiohook-napi`) et pointe vers la cause réelle :
+# Tracking automatique des ventes additionnelles Asclion
 
-- `uiohook-napi` installe un **hook clavier bas-niveau Windows** (`SetWindowsHookEx WH_KEYBOARD_LL`). C'est exactement la signature d'un **keylogger** → bloqué par la majorité des antivirus pros en pharmacie (ESET, Bitdefender, Kaspersky, Sophos, Trend Micro), souvent sans alerte visible.
-- Même si l'AV laisse passer, `uiohook` échoue silencieusement si le binaire natif ne charge pas (cas réel : `console.error("uiohook-napi unavailable")` non remonté à l'UI).
-- Quelques douchettes (Newland, certaines Honeywell) sortent d'usine en **USB-COM série** et non en HID clavier → uiohook ne verra jamais rien.
+Deux mécanismes complémentaires pour capter les ventes additionnelles **même quand le pharmacien oublie de cliquer Accepter**.
 
-La consigne « il faut que chaque code scanné soit reçu par Asclion » impose donc de **ne plus dépendre du clavier** et de lire la douchette **directement comme périphérique USB HID**.
+---
 
-## Solution — lecture HID directe via `node-hid`
+## 1. Auto-match HID ↔ suggestions (temps réel)
 
-`node-hid` utilise **HIDAPI** (lecture de rapports HID bruts, pas de hook clavier). Ce n'est pas un keylogger → **non bloqué par les antivirus**. Il lit les *HID Input Reports* envoyés par la douchette, exactement ce que reçoit le driver clavier Windows, mais avant qu'il les transforme en touches. Avantages :
+### Principe
+Après chaque analyse, on garde en session les PC proposés avec leurs CIP. Chaque code-barres scanné par la douchette HID dans les **5 minutes** suivantes est comparé : si match → PC marqué `accepted` automatiquement (source = `hid_auto`).
 
-- Fonctionne sans aucun focus, indépendamment de l'application au premier plan (LGO inclus).
-- Insensible à la disposition clavier → **plus de corruption AZERTY/QWERTY**.
-- Identifie la douchette par VID/PID → on sait qui scanne quoi.
-- Ne « vole » pas le scan : on lit en parallèle du driver clavier, donc le LGO continue à recevoir le code dans son champ actif si besoin.
+### Flux
+```text
+Analyse ordonnance
+   ↓
+basket_context.proposed_pcs = [{nom, cip, categorie}, ...]
+   ↓
+Scan HID (EAN/CIP) ───┐
+                       ├─ lookup medicament_cip → nom produit
+                       ├─ match avec proposed_pcs ?
+                       │     ├─ oui → pc_feedback (action=accepted, detection_source=hid_auto)
+                       │     │       + recommendation_metrics.times_sold++
+                       │     │       + badge "auto-détecté" sur la carte PC
+                       │     └─ non → ignoré (peut être le médicament d'ordonnance)
+                       └─ fenêtre expirée (>5min ou Esc/nouvelle analyse) → reset
+```
 
-`uiohook-napi` est conservé en **fallback** : si node-hid ne peut pas ouvrir le device (permissions exclusivité, AV qui filtre aussi HIDAPI, mode COM), on retombe sur l'ancien chemin.
+### Garde-fous
+- **Déduplication** : si le pharmacien a déjà cliqué Accepter manuellement → on ignore le scan auto (pas de double comptage)
+- **Fenêtre 5 min** glissante depuis l'analyse, reset sur `Esc` ou nouvelle ordonnance
+- **Anti-faux-positif** : on ne compte que les PC qui ont un `cip_code` connu dans `medicament_cip`. Sinon, fallback sur match nom (fuzzy) avec score > 0.85.
 
-## Changements
+### UI
+Le bouton **Accepter** passe en vert avec un petit badge `⚡ auto-détecté` à côté (discret, conforme au style minimal Asclion).
 
-### 1. `electron/package.json`
-- Ajouter dépendance `node-hid` (avec prebuilds Windows x64).
-- Ajouter `node-hid` à `asarUnpack` (binding natif `.node`).
-- Bump version desktop (force MAJ auto chez les pharmacies).
+---
 
-### 2. `electron/main.js` — nouveau module HID direct
-- `loadNodeHid()` : require lazy, log erreur si indispo.
-- `listScanners()` : `HID.devices()` filtrée sur :
-  - VIDs connus : Honeywell `0x0C2E`, Zebra/Symbol `0x05E0`/`0x0536`, Datalogic `0x05F9`, Newland `0x1EAB`, NetumScan, Inateck, etc. (table maintenue).
-  - + tout device avec `usagePage=1` & `usage=6` (clavier générique) dont le `product` matche `/scan|barcode|imager|reader/i`.
-- `openScanner(device)` : ouvre en non-blocking, écoute `data` (HID keyboard report = 8 octets : modifiers + 6 keycodes).
-- Décodage HID Usage ID → chiffre / Enter, avec table interne (pas de dépendance layout).
-- Buffer + Enter terminator + parseur partagé `parseBarcodeToCip` (déjà présent) → `emitGlobalScan()`.
-- Reconnexion auto si la douchette est débranchée/rebranchée (poll `HID.devices()` toutes les 5 s).
-- Mémorisation du VID/PID choisi dans `app.getPath("userData")/scanner.json`.
-- Démarrage : tente HID direct → si échec **ET** uiohook dispo → fallback uiohook (comportement actuel).
+## 2. Inférence statistique mensuelle
 
-### 3. IPC + `electron/preload.js`
-Nouveaux canaux exposés sous `window.electronAPI.scanner` :
-- `listDevices()` → renvoie tous les devices HID (VID, PID, manufacturer, product, path, déjà-utilisé ?).
-- `bind(path)` / `unbind()` → force ouverture d'un device précis.
-- `getStatus()` → `{ mode: 'hid-direct' | 'uiohook' | 'none', boundDevice, hidLoaded, uiohookLoaded, lastError }`.
-- `testCapture(ms)` → renvoie tous les rapports bruts reçus pendant N ms (debug).
+### Principe
+Job mensuel qui croise `analytics_events` (analyses Asclion) avec les ventes réelles agrégées par catégorie (issues du LGO ou des données saisies manuellement), pour estimer le **taux de conversion implicite** par pharmacie et par catégorie de PC.
 
-### 4. `src/components/admin/HardwareDiagnosticTab.tsx`
-Nouvelle section **« Détection matérielle »** au-dessus du log clavier existant :
-- Badge mode actif (HID direct / uiohook / aucun) + couleur.
-- Liste des HID détectés avec bouton « Lier cette douchette ».
-- Bouton « Tester 10 s » qui scanne en mode raw et affiche les rapports.
-- Bouton « Recharger les pilotes » (relance `startGlobalBarcodeListener`).
-- Bannière rouge si `mode === 'none'` avec message clair : *« Aucune douchette détectée. Causes probables : (1) câble USB, (2) douchette en mode COM série → reconfigurez en USB-HID Keyboard avec le code-barres du manuel, (3) antivirus bloque HIDAPI → ajoutez Asclion en exception. »*
-- Tout cela ne s'affiche qu'en mode Desktop (`isAsclionDesktopRuntime()`).
+### Métriques calculées
+- `lift_rate` : (ventes catégorie X les jours avec proposition Asclion) / (ventes catégorie X jours sans)
+- `implicit_conversion_rate` : ventes attribuables ÷ propositions
+- `revenue_lift_estimated` : CA additionnel imputable à Asclion (€/mois)
 
-### 5. `src/hooks/useGlobalBarcodeBridge.ts`
-Pas de changement fonctionnel — déjà branché sur `electronAPI.onGlobalBarcode`. Le nouveau code HID emet sur le même canal, donc transparent côté UI.
+### Affichage
+Nouvel encart dans l'**Admin > InvestorKPIs** et **PharmacyKPIs** :
+> *« Sur 100 propositions de probiotiques, 18 ont été cliquées + 12 auto-détectées + 9 ventes inférées = 39% de conversion totale »*
 
-### 6. Build CI (`.github/workflows`)
-- `node-hid` nécessite `node-gyp` + headers Windows. Les prebuilds officielles couvrent Electron 33 / Win x64 → aucune compilation native côté CI Linux, juste `npm install`.
-- Vérifier dans le workflow desktop que les binaries `.node` sont bien recopiés dans `dist`.
+Permet de pitcher le ROI réel même quand HID ne capte pas tout.
 
-## Limites assumées
-- Si l'antivirus bloque **aussi** HIDAPI (rare, seulement quelques configs EDR très strictes), on tombe en fallback uiohook → si lui aussi est bloqué, l'UI affiche un message explicite avec procédure d'exception. Pas de contournement silencieux possible : aucune API Windows ne permet d'ignorer un AV qui bloque l'accès USB.
-- Douchettes en mode **virtual COM** (port série) : non couvert par cette itération (faudrait `serialport`). On le détectera et on guidera l'utilisateur à reconfigurer la douchette en HID Keyboard (procédure standard chez tous les fabricants : scanner un code-barres dans le manuel).
-- Aucune modification côté Web (sans Electron) : la lecture HID directe nécessite WebHID + geste utilisateur, hors scope ici.
+---
+
+## Détails techniques
+
+### Schéma DB
+- Ajouter `pc_feedback.detection_source TEXT DEFAULT 'manual_click'` (valeurs : `manual_click`, `hid_auto`, `lgo_sale`, `inferred`)
+- Nouvelle table `sales_attribution_monthly` (pharmacy_id, month, category, proposed_count, clicked_count, hid_auto_count, inferred_count, total_attributed, revenue_estimate)
+
+### Code frontend
+- Nouveau hook `useBasketAttributionTracker` dans `src/hooks/` : écoute `asclion:global-barcode`, maintient `proposedPCs` en ref, déclenche `handleOrder(..., 'hid_auto')` sur match
+- Modifier `AnalysisResults.tsx` : exposer les proposed_pcs au tracker via context ou ref, afficher badge `auto-détecté`
+- Modifier `usePcFeedback.recordFeedback` : accepter un 5e param `detectionSource`
+- Étendre `eanLookup.ts` : lookup CIP local prioritaire (table `medicament_cip`)
+
+### Edge function
+- Nouvelle `compute-sales-attribution` (cron mensuel via pg_cron + pg_net) : calcule l'inférence et remplit `sales_attribution_monthly`
+- Lecture par les composants Admin KPI
+
+### Migrations
+1. `ALTER TABLE pc_feedback ADD COLUMN detection_source TEXT DEFAULT 'manual_click'`
+2. `CREATE TABLE sales_attribution_monthly` + GRANT + RLS scopée pharmacy_id
+3. (data) backfill `detection_source = 'manual_click'` pour l'existant
+
+### Hors scope
+- Réconciliation LGO temps réel (option 2) — nécessite intégration LGO complète, à faire en V2
+- Prompt sortie ordonnance (option 3) — rejeté pour rester minimaliste
+- Calcul du `revenue_estimate` précis : version 1 utilise un prix moyen par catégorie hardcodé ; V2 lira les prix LGO réels
