@@ -41,12 +41,23 @@ async function lookupMedicamentsByCip(
   }
 
   const nomSet = [...new Set(cipRows.map((r: any) => r.medicament_nom as string))];
+  // ILIKE prefix match : "Doliprane" matche "Doliprane 1000mg", "Doliprane 500mg", etc.
   const { data: resolvedMeds } = await supabase
     .from("medicaments")
     .select("id, nom_commercial, atc_code, molecule_id, cip_code")
     .or(nomSet.map((n: string) => `nom_commercial.ilike.${n}%`).join(","));
 
-  const nomToMed = new Map((resolvedMeds || []).map((m: any) => [m.nom_commercial, m]));
+  // Pour chaque nom court (ex: "Doliprane"), trouver le meilleur médicament correspondant
+  // Préférence : match exact, sinon le nom le plus court (forme générique)
+  const nomToMed = new Map<string, any>();
+  for (const nom of nomSet) {
+    const matches = (resolvedMeds || []).filter((m: any) =>
+      m.nom_commercial.toLowerCase().startsWith(nom.toLowerCase()),
+    );
+    if (!matches.length) continue;
+    const exact = matches.find((m: any) => m.nom_commercial.toLowerCase() === nom.toLowerCase());
+    nomToMed.set(nom, exact ?? matches.sort((a: any, b: any) => a.nom_commercial.length - b.nom_commercial.length)[0]);
+  }
 
   const extraMeds: any[]   = [];
   const stillMissing: string[] = [];
