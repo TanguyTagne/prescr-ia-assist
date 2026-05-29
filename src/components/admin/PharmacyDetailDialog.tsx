@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, Activity, Users, AlertTriangle, ScanLine, Keyboard, Camera, Globe, ShoppingCart } from "lucide-react";
+import { Loader2, Activity, Users, AlertTriangle, ScanLine, Keyboard, Camera, Globe, ShoppingCart, FileText } from "lucide-react";
 
 interface Props {
   pharmacyId: string | null;
@@ -40,6 +40,15 @@ interface AcceptedRow {
   medicament_source: string | null;
   medicaments_analyses: string[];
   pcs_proposes: string[];
+}
+
+interface AnalysisRow {
+  id: string;
+  created_at: string;
+  medicaments: any;
+  suggestions_count: number;
+  interactions_count: number;
+  has_major_interaction: boolean;
 }
 
 const SOURCE_META: Record<string, { label: string; icon: any; cls: string }> = {
@@ -86,6 +95,7 @@ const PharmacyDetailDialog = ({ pharmacyId, pharmacyName, open, onOpenChange }: 
   const [kpi, setKpi] = useState<KPI | null>(null);
   const [scans, setScans] = useState<ScanRow[]>([]);
   const [accepted, setAccepted] = useState<AcceptedRow[]>([]);
+  const [analyses, setAnalyses] = useState<AnalysisRow[]>([]);
 
   useEffect(() => {
     if (!open || !pharmacyId) return;
@@ -93,8 +103,9 @@ const PharmacyDetailDialog = ({ pharmacyId, pharmacyName, open, onOpenChange }: 
     (async () => {
       setLoading(true);
       try {
-        const [histRes, scanRes, accRes] = await Promise.all([
+        const [histRes, recentHistRes, scanRes, accRes] = await Promise.all([
           supabase.from("analysis_history" as any).select("patient_hash, has_major_interaction, suggestions_count").eq("pharmacy_id", pharmacyId),
+          supabase.from("analysis_history" as any).select("id, created_at, medicaments, suggestions_count, interactions_count, has_major_interaction").eq("pharmacy_id", pharmacyId).order("created_at", { ascending: false }).limit(20),
           supabase.from("scan_queue" as any).select("id, created_at, scan_type, source, status, device_id, input_data, result").eq("pharmacy_id", pharmacyId).order("created_at", { ascending: false }).limit(100),
           supabase.from("accepted_combinations" as any).select("id, created_at, pc_accepte, pc_categorie, medicament_source, medicaments_analyses, pcs_proposes").eq("pharmacy_id", pharmacyId).order("created_at", { ascending: false }).limit(100),
         ]);
