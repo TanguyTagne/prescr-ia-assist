@@ -61,10 +61,13 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
   // quand le pharmacien oublie de cliquer sur "Accepter".
   const proposedCipMapRef = useRef<Map<string, { medNom: string; produit: string; categorie?: string }>>(new Map());
   const mountedAtRef = useRef<number>(Date.now());
+  // EAN auto-détectés depuis le dernier reset, pour permettre l'annulation par re-scan
+  const autoDetectedEansRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     mountedAtRef.current = Date.now();
     proposedCipMapRef.current = new Map();
+    autoDetectedEansRef.current = new Set();
 
     if (demoMode || allProductNames.length === 0) return;
 
@@ -102,10 +105,17 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
     const handler = (e: Event) => {
       const detail = (e as CustomEvent<{ ean: string; at: number }>).detail;
       if (!detail?.ean) return;
-      // Fenêtre d'attribution 5 min
+      // Fenêtre d'attribution 10 min
       if (Date.now() - mountedAtRef.current > HID_ATTRIBUTION_WINDOW_MS) return;
       const match = proposedCipMapRef.current.get(detail.ean);
       if (!match) return;
+      // Toggle anti faux-positif : si l'EAN a déjà été auto-détecté dans la
+      // fenêtre, le re-scan annule l'auto-acceptation (retour rayon, refus client…)
+      if (autoDetectedEansRef.current.has(detail.ean)) {
+        handleCancelAuto(match.medNom, match.produit, match.categorie, detail.ean);
+        return;
+      }
+      autoDetectedEansRef.current.add(detail.ean);
       handleOrder(match.medNom, match.produit, match.categorie, "hid_auto");
     };
     window.addEventListener(SCANNER.DOM_EVENT, handler);
