@@ -6,7 +6,42 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { isAsclionDesktopRuntime } from "@/lib/runtime";
 
-const MODE_BADGE: Record<ScannerStatus["mode"], { label: string; cls: string; icon: typeof CheckCircle2 }> = {
+type HidDevice = {
+  path: string;
+  vendorId: number;
+  productId: number;
+  vendorIdHex: string;
+  productIdHex: string;
+  manufacturer: string | null;
+  product: string | null;
+  usagePage?: number;
+  usage?: number;
+  interface?: number;
+  likelyScanner: boolean;
+  bound: boolean;
+};
+
+type ScanStatus = {
+  mode: "hid-direct" | "uiohook" | "none";
+  hidLoaded: boolean;
+  hidLoadError: string | null;
+  uiohookLoaded: boolean;
+  uiohookLoadError: string | null;
+  uiohookStarted: boolean;
+  bound: {
+    vendorId: number;
+    productId: number;
+    path: string;
+    product: string | null;
+    manufacturer: string | null;
+  } | null;
+  lastReportAt: number | null;
+  lastEnterAt: number | null;
+  lastError: string | null;
+  bufferLen: number;
+};
+
+const MODE_BADGE: Record<ScanStatus["mode"], { label: string; cls: string; icon: typeof CheckCircle2 }> = {
   "hid-direct": { label: "HID direct (optimal)", cls: "bg-green-500/10 text-green-700 border-green-500/30", icon: CheckCircle2 },
   "uiohook":    { label: "Capture clavier (fallback)", cls: "bg-amber-500/10 text-amber-700 border-amber-500/30", icon: Activity },
   "none":       { label: "Aucune source active", cls: "bg-destructive/10 text-destructive border-destructive/30", icon: AlertCircle },
@@ -17,10 +52,19 @@ const formatBytes = (bytes: number[]) =>
 
 const ScannerDetectionPanel = () => {
   const isDesktop = isAsclionDesktopRuntime();
-  const api = (typeof window !== "undefined" ? window.electronAPI?.scanner : null) ?? null;
+  const api = (typeof window !== "undefined" ? (window.electronAPI as any)?.scanner : null) as
+    | {
+        list: () => Promise<HidDevice[]>;
+        status: () => Promise<ScanStatus>;
+        bind: (path: string) => Promise<{ ok: boolean; error?: string }>;
+        unbind: () => Promise<{ ok: boolean }>;
+        testCapture: (ms: number) => Promise<{ count: number; reports: { at: number; bytes: number[] }[] }>;
+        reload: () => Promise<ScanStatus>;
+      }
+    | null;
 
-  const [status, setStatus] = useState<ScannerStatus | null>(null);
-  const [devices, setDevices] = useState<HidDeviceInfo[]>([]);
+  const [status, setStatus] = useState<ScanStatus | null>(null);
+  const [devices, setDevices] = useState<HidDevice[]>([]);
   const [loading, setLoading] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ count: number; reports: { at: number; bytes: number[] }[] } | null>(null);
