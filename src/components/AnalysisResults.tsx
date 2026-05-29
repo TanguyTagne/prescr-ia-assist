@@ -22,9 +22,10 @@ interface AnalysisResultsProps {
   demoMode?: boolean;
 }
 
-// Fenêtre d'attribution HID : un scan dans les 5 min suivant l'analyse
-// est considéré comme une vente du PC correspondant.
-const HID_ATTRIBUTION_WINDOW_MS = 5 * 60 * 1000;
+// Fenêtre d'attribution HID : un scan dans les 10 min suivant l'analyse
+// est considéré comme une vente du PC correspondant. La fenêtre est aussi
+// réinitialisée automatiquement à chaque nouvelle ordonnance (changement de `result`).
+const HID_ATTRIBUTION_WINDOW_MS = 10 * 60 * 1000;
 
 const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsProps) => {
   const { t } = useI18n();
@@ -60,10 +61,13 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
   // quand le pharmacien oublie de cliquer sur "Accepter".
   const proposedCipMapRef = useRef<Map<string, { medNom: string; produit: string; categorie?: string }>>(new Map());
   const mountedAtRef = useRef<number>(Date.now());
+  // EAN auto-détectés depuis le dernier reset, pour permettre l'annulation par re-scan
+  const autoDetectedEansRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     mountedAtRef.current = Date.now();
     proposedCipMapRef.current = new Map();
+    autoDetectedEansRef.current = new Set();
 
     if (demoMode || allProductNames.length === 0) return;
 
@@ -101,10 +105,17 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
     const handler = (e: Event) => {
       const detail = (e as CustomEvent<{ ean: string; at: number }>).detail;
       if (!detail?.ean) return;
-      // Fenêtre d'attribution 5 min
+      // Fenêtre d'attribution 10 min
       if (Date.now() - mountedAtRef.current > HID_ATTRIBUTION_WINDOW_MS) return;
       const match = proposedCipMapRef.current.get(detail.ean);
       if (!match) return;
+      // Toggle anti faux-positif : si l'EAN a déjà été auto-détecté dans la
+      // fenêtre, le re-scan annule l'auto-acceptation (retour rayon, refus client…)
+      if (autoDetectedEansRef.current.has(detail.ean)) {
+        handleCancelAuto(match.medNom, match.produit, match.categorie, detail.ean);
+        return;
+      }
+      autoDetectedEansRef.current.add(detail.ean);
       handleOrder(match.medNom, match.produit, match.categorie, "hid_auto");
     };
     window.addEventListener(SCANNER.DOM_EVENT, handler);
@@ -213,6 +224,22 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
       // Auto-détecté via scan douchette : toast discret 1.5s
       toast.success(`⚡ ${produit} détecté via scan`, { duration: 1500 });
     }
+  };
+
+  const handleCancelAuto = (medNom: string, produit: string, categorie: string | undefined, ean: string) => {
+    const key = `${medNom}::${produit}`;
+    // On n'annule que les auto-détections (le clic manuel reste prioritaire)
+    if (orderedItems.get(key) !== "hid_auto") return;
+    setOrderedItems((prev) => {
+      const next = new Map(prev);
+      next.delete(key);
+      return next;
+    });
+    autoDetectedEansRef.current.delete(ean);
+    trackEvent("product_auto_cancelled", { medicament: medNom, produit, ean });
+    // Log feedback "refused" pour invalider la conversion dans les KPI
+    recordFeedback(medNom, produit, "refused", categorie, "cancelled_by_rescan", undefined, "hid_auto");
+    toast.info(`Annulé : ${produit}`, { duration: 1500 });
   };
 
   const isOrdered = (medNom: string, produit: string) => orderedItems.has(`${medNom}::${produit}`);
