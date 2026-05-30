@@ -41,16 +41,7 @@
       "node_modules/serialport/**/*",
       "node_modules/@serialport/**/*",
       "native/rawinput/build/Release/*.node",
-      "native/rawinput/index.js",
-      "native/uiawatcher/build/Release/*.node",
-      "native/uiawatcher/index.js",
-      "lgo-mappings.json"
-    ],
-    "extraResources": [
-      {
-        "from": "lgo-mappings.json",
-        "to": "lgo-mappings.json"
-      }
+      "native/rawinput/index.js"
     ],
     "win": {
       "target": [
