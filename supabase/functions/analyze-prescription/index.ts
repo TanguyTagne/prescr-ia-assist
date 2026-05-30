@@ -1209,17 +1209,24 @@ serve(async (req) => {
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !SUPABASE_SERVICE_ROLE_KEY) throw new Error("Missing Supabase config");
 
-    const authClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      global: { headers: { Authorization: authHeader } },
-    });
     const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+    // Allow service-role calls (used by internal functions like scanner-webhook).
+    // For all other callers, require a valid user session validated server-side via getUser().
+    let userIdFromAuth: string | null = null;
+    if (token !== SUPABASE_SERVICE_ROLE_KEY) {
+      const authClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        global: { headers: { Authorization: authHeader } },
       });
+      const { data: userData, error: userError } = await authClient.auth.getUser();
+      if (userError || !userData?.user) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      userIdFromAuth = userData.user.id;
     }
+    const claimsData = userIdFromAuth ? { claims: { sub: userIdFromAuth } } : null;
 
     const body = await req.json();
     const { prescriptionText, imageBase64, basketSessionId, blockedProducts } = body;
@@ -1247,7 +1254,8 @@ serve(async (req) => {
 
     // ====== QUOTA CHECK (server-side, atomic, multi-PC safe) ======
     try {
-      const userId = claimsData.claims.sub;
+      const userId = claimsData?.claims?.sub;
+      if (!userId) throw new Error("__skip_quota__");
       const { data: profile } = await supabase
         .from("profiles")
         .select("pharmacy_id")
