@@ -11,6 +11,8 @@ import {
   FlaskConical,
   ToggleLeft,
   ToggleRight,
+  Wifi,
+  Clipboard,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -56,6 +58,10 @@ type ScanStatus = {
   lastGlobalKeyAt: number | null;
   globalBufferLen: number;
   lastRejection: { raw: string; reason: string; at: number } | null;
+  // Clipboard scanner
+  clipboardEnabled: boolean;
+  // WebHID flag (always true in Electron, activation depends on scanner mode)
+  webHidEnabled?: boolean;
 };
 
 type DeviceTestResult = {
@@ -97,6 +103,9 @@ const ScannerDetectionPanel = () => {
     testDevice: (path: string, ms: number) => Promise<DeviceTestResult>;
     setAllowGeneric: (allow: boolean) => Promise<ScanStatus>;
     reload: () => Promise<ScanStatus>;
+    requestWebHID: () => Promise<{ ok: boolean; error?: string }>;
+    clipboardStart: () => Promise<ScanStatus>;
+    clipboardStop: () => Promise<ScanStatus>;
   } | null;
 
   const [status, setStatus] = useState<ScanStatus | null>(null);
@@ -109,6 +118,8 @@ const ScannerDetectionPanel = () => {
   const [deviceTesting, setDeviceTesting] = useState<string | null>(null); // path being tested
   const [deviceTestResults, setDeviceTestResults] = useState<Record<string, DeviceTestResult>>({});
   const [togglingGeneric, setTogglingGeneric] = useState(false);
+  const [requestingWebHID, setRequestingWebHID] = useState(false);
+  const [togglingClipboard, setTogglingClipboard] = useState(false);
 
   const refresh = useCallback(async () => {
     if (!api) return;
@@ -217,6 +228,44 @@ const ScannerDetectionPanel = () => {
       toast.error("Erreur", { description: String(e) });
     } finally {
       setTogglingGeneric(false);
+    }
+  };
+
+  const handleRequestWebHID = async () => {
+    if (!api) return;
+    setRequestingWebHID(true);
+    try {
+      const res = await api.requestWebHID();
+      if (res.ok) {
+        toast.success("Demande WebHID envoyée — accordez l'accès dans la fenêtre de sélection si elle apparaît.");
+      } else {
+        toast.error("Échec WebHID", { description: res.error });
+      }
+    } catch (e) {
+      toast.error("Erreur", { description: String(e) });
+    } finally {
+      setRequestingWebHID(false);
+    }
+  };
+
+  const handleToggleClipboard = async () => {
+    if (!api) return;
+    setTogglingClipboard(true);
+    try {
+      const isEnabled = status?.clipboardEnabled ?? false;
+      const s = isEnabled ? await api.clipboardStop() : await api.clipboardStart();
+      setStatus(s);
+      if (!isEnabled) {
+        toast.message(
+          "Surveillance presse-papiers activée — configurez la douchette en mode « keyboard wedge + clipboard »",
+        );
+      } else {
+        toast.message("Surveillance presse-papiers désactivée");
+      }
+    } catch (e) {
+      toast.error("Erreur", { description: String(e) });
+    } finally {
+      setTogglingClipboard(false);
     }
   };
 
@@ -361,6 +410,109 @@ const ScannerDetectionPanel = () => {
             </ol>
           </div>
         )}
+
+        {/* ── WebHID (HID POS mode) ─────────────────────────────────── */}
+        <div className="rounded-lg border border-blue-500/30 bg-blue-500/5 p-3 text-[11px] space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5">
+              <Wifi className="h-3.5 w-3.5 text-blue-600" />
+              <span className="font-semibold text-blue-700 dark:text-blue-400">WebHID — mode HID POS</span>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 gap-1.5 shrink-0 border-blue-500/40 text-blue-700 hover:bg-blue-500/10"
+              onClick={handleRequestWebHID}
+              disabled={requestingWebHID}
+            >
+              {requestingWebHID ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wifi className="h-3.5 w-3.5" />}
+              Autoriser WebHID
+            </Button>
+          </div>
+          <div className="text-muted-foreground leading-relaxed">
+            <strong className="text-foreground">Sans antivirus, sans focus, sans hook clavier.</strong> Fonctionne
+            uniquement si la douchette est en mode <em>HID POS (usage page 0x8C)</em>. La plupart des douchettes bon
+            marché sortent d'usine en mode <em>USB Keyboard</em> — scannez le code-barres « HID POS » ou « USB-COM » du
+            manuel constructeur pour basculer.
+          </div>
+          <details className="text-muted-foreground">
+            <summary className="cursor-pointer font-medium text-foreground/80">
+              Comment passer ma douchette en mode HID POS ?
+            </summary>
+            <div className="mt-2 space-y-1.5 pl-2 border-l-2 border-blue-300/40">
+              <div>
+                <strong>Honeywell / Metrologic</strong> : scanner le code « USB HID POS » dans le guide d'installation
+                rapide (généralement page 3-2).
+              </div>
+              <div>
+                <strong>Zebra / Symbol</strong> : scanner « USB HID POS Bar Code Scanner » dans le manuel de référence
+                (section Interface).
+              </div>
+              <div>
+                <strong>Datalogic</strong> : scanner le code « USB COM Port Emulation » ou « USB HID POS » selon le
+                modèle (manuel Aladdin/Heron).
+              </div>
+              <div>
+                <strong>Newland / OEM chinois</strong> : scanner « USB-HID » puis « HID-POS » dans le livret de
+                configuration inclus dans la boîte.
+              </div>
+              <div className="text-[10px] opacity-70 mt-1">
+                Après le passage en mode HID POS, cliquez « Autoriser WebHID » puis scannez un code pour vérifier. Pour
+                revenir au mode clavier : scanner le code « USB Keyboard » du même manuel.
+              </div>
+            </div>
+          </details>
+        </div>
+
+        {/* ── Clipboard scanner ─────────────────────────────────────── */}
+        <div
+          className={`rounded-lg border p-3 text-[11px] ${status?.clipboardEnabled ? "border-purple-500/40 bg-purple-500/5" : "border-border bg-muted/30"}`}
+        >
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5">
+              <Clipboard
+                className={`h-3.5 w-3.5 ${status?.clipboardEnabled ? "text-purple-600" : "text-muted-foreground"}`}
+              />
+              <span
+                className={`font-semibold ${status?.clipboardEnabled ? "text-purple-700 dark:text-purple-400" : ""}`}
+              >
+                Surveillance presse-papiers
+              </span>
+            </div>
+            <Button
+              variant={status?.clipboardEnabled ? "default" : "outline"}
+              size="sm"
+              className="h-7 gap-1.5 shrink-0"
+              onClick={handleToggleClipboard}
+              disabled={togglingClipboard}
+            >
+              {togglingClipboard ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : status?.clipboardEnabled ? (
+                <ToggleRight className="h-3.5 w-3.5" />
+              ) : (
+                <ToggleLeft className="h-3.5 w-3.5" />
+              )}
+              {status?.clipboardEnabled ? "Activé" : "Désactivé"}
+            </Button>
+          </div>
+          <div className="mt-1.5 text-muted-foreground">
+            Asclion surveille le presse-papiers toutes les 120 ms. Utile si la douchette est configurée en{" "}
+            <em>keyboard wedge + clipboard</em> — le code scanné est copié dans le presse-papiers <strong>avant</strong>{" "}
+            d'être tapé dans le LGO. Méthode 100 % AV-safe, sans driver, sans focus.
+          </div>
+          {status?.clipboardEnabled && (
+            <div className="mt-1.5 text-purple-700 dark:text-purple-400 font-medium">
+              ✓ Surveillance active — tout code-barres copié dans le presse-papiers déclenchera une recherche Asclion.
+            </div>
+          )}
+          {!status?.clipboardEnabled && (
+            <div className="mt-1 text-muted-foreground text-[10px]">
+              Configuration douchette requise : cherchez « clipboard mode » ou « prefix/suffix » dans le manuel
+              constructeur.
+            </div>
+          )}
+        </div>
 
         {/* Mode douchette générique */}
         <div
