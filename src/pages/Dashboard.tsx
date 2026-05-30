@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BarChart3, Activity, MousePointerClick, ShoppingBag, Clock, ArrowLeft, LogOut, Download, Monitor, Shield, Package, Brain, Keyboard, Building2, Wrench, Sparkles } from "lucide-react";
+import { BarChart3, Activity, MousePointerClick, ShoppingBag, Clock, ArrowLeft, LogOut, Download, Monitor, Shield, Package, Brain, Keyboard, Building2, Wrench, Sparkles, ScanLine } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import ProductMappingSettings from "@/components/ProductMappingSettings";
 import ShortcutsSettings from "@/components/ShortcutsSettings";
+import ScannerConfigGuide from "@/components/ScannerConfigGuide";
 
 interface KpiData {
   ordonnancesDetected: number;
@@ -195,6 +196,19 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <ShortcutsSettings />
+          </CardContent>
+        </Card>
+
+        {/* Scanner Configuration Section */}
+        <Card className="glass-card border-primary/20">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <ScanLine className="h-5 w-5 text-primary" />
+              Configurer la douchette code-barres
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ScannerConfigGuide />
           </CardContent>
         </Card>
 
