@@ -12,11 +12,10 @@ const STORAGE_KEY = "asclion.lgo-detect-dismissed";
 const VALID_LGO: LgoType[] = ["winpharma", "lgpi", "smart_rx", "leo", "pharmagest", "autre"];
 
 export const LgoAutoDetectPrompt = () => {
-  const { user } = useAuth();
+  const { user, pharmacyId } = useAuth();
   const [detected, setDetected] = useState<LgoType | null>(null);
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [pharmacyId, setPharmacyId] = useState<string | null>(null);
 
   // Listen for the LGO detection IPC event from Electron
   useEffect(() => {
@@ -26,22 +25,12 @@ export const LgoAutoDetectPrompt = () => {
       const lgo = (payload?.lgo || "").toLowerCase();
       if (!VALID_LGO.includes(lgo as LgoType)) return;
       if (sessionStorage.getItem(STORAGE_KEY) === lgo) return;
-      if (!user) return;
-
-      // Check current LGO config — only prompt if not configured or "autre"
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("pharmacy_id")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      if (!profile?.pharmacy_id) return;
-      setPharmacyId(profile.pharmacy_id);
+      if (!user || !pharmacyId) return;
 
       const { data: config } = await supabase
         .from("pharmacy_lgo_config")
         .select("lgo_type")
-        .eq("pharmacy_id", profile.pharmacy_id)
+        .eq("pharmacy_id", pharmacyId)
         .maybeSingle();
 
       const current = (config?.lgo_type || "autre").toLowerCase();
@@ -53,7 +42,7 @@ export const LgoAutoDetectPrompt = () => {
     });
 
     return () => off?.();
-  }, [user]);
+  }, [user, pharmacyId]);
 
   const handleAccept = async () => {
     if (!detected || !pharmacyId) return;

@@ -10,7 +10,7 @@ interface UseLgoPresetResult {
 }
 
 export const useLgoPreset = (): UseLgoPresetResult => {
-  const { user } = useAuth();
+  const { user, pharmacyId } = useAuth();
   const [lgoType, setLgoType] = useState<LgoType>("autre");
   const [loading, setLoading] = useState(true);
 
@@ -24,25 +24,18 @@ export const useLgoPreset = (): UseLgoPresetResult => {
         return;
       }
 
+      if (!pharmacyId) {
+        // Either auth still resolving, or user has no pharmacy
+        setLgoType("autre");
+        setLoading(false);
+        return;
+      }
+
       try {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("pharmacy_id")
-          .eq("id", user.id)
-          .maybeSingle();
-
-        if (!profile?.pharmacy_id) {
-          if (!cancelled) {
-            setLgoType("autre");
-            setLoading(false);
-          }
-          return;
-        }
-
         const { data: config } = await supabase
           .from("pharmacy_lgo_config")
           .select("lgo_type")
-          .eq("pharmacy_id", profile.pharmacy_id)
+          .eq("pharmacy_id", pharmacyId)
           .maybeSingle();
 
         if (cancelled) return;
@@ -61,7 +54,7 @@ export const useLgoPreset = (): UseLgoPresetResult => {
     return () => {
       cancelled = true;
     };
-  }, [user]);
+  }, [user, pharmacyId]);
 
   return {
     preset: LGO_PRESETS[lgoType],

@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
+import { setCachedPharmacyId, clearAuthCache } from "@/lib/authCache";
 
 interface AuthContextType {
   user: User | null;
@@ -9,6 +10,7 @@ interface AuthContextType {
   isAdmin: boolean;
   isGroupManager: boolean;
   managedGroupementId: string | null;
+  pharmacyId: string | null;
   pharmacyStatus: string | null;
   onboardingCompleted: boolean;
   refreshOnboarding: () => Promise<void>;
@@ -22,6 +24,7 @@ const AuthContext = createContext<AuthContextType>({
   isAdmin: false,
   isGroupManager: false,
   managedGroupementId: null,
+  pharmacyId: null,
   pharmacyStatus: null,
   onboardingCompleted: true,
   refreshOnboarding: async () => {},
@@ -37,6 +40,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isGroupManager, setIsGroupManager] = useState(false);
   const [managedGroupementId, setManagedGroupementId] = useState<string | null>(null);
+  const [pharmacyId, setPharmacyId] = useState<string | null>(null);
   const [pharmacyStatus, setPharmacyStatus] = useState<string | null>(null);
   const [onboardingCompleted, setOnboardingCompleted] = useState(true);
 
@@ -56,6 +60,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     setOnboardingCompleted(profile?.onboarding_completed ?? true);
     setManagedGroupementId(profile?.managed_groupement_id ?? null);
+    setPharmacyId(profile?.pharmacy_id ?? null);
+    setCachedPharmacyId(userId, profile?.pharmacy_id ?? null);
 
     if (profile?.pharmacy_id) {
       const { data: pharmacy } = await supabase
@@ -91,8 +97,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setIsAdmin(false);
         setIsGroupManager(false);
         setManagedGroupementId(null);
+        setPharmacyId(null);
         setPharmacyStatus(null);
         setOnboardingCompleted(true);
+        clearAuthCache();
         setLoading(false);
       }
     });
@@ -122,6 +130,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         isAdmin,
         isGroupManager,
         managedGroupementId,
+        pharmacyId,
         pharmacyStatus,
         onboardingCompleted,
         refreshOnboarding,

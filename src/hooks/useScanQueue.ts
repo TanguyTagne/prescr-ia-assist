@@ -15,25 +15,10 @@ export interface ScanEvent {
 }
 
 export function useScanQueue() {
-  const { user } = useAuth();
+  const { user, pharmacyId } = useAuth();
   const [latestScan, setLatestScan] = useState<ScanEvent | null>(null);
   const [scanHistory, setScanHistory] = useState<ScanEvent[]>([]);
   const [isListening, setIsListening] = useState(false);
-
-  // Get user's pharmacy_id
-  const [pharmacyId, setPharmacyId] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!user) return;
-    supabase
-      .from("profiles")
-      .select("pharmacy_id")
-      .eq("id", user.id)
-      .single()
-      .then(({ data }) => {
-        if (data?.pharmacy_id) setPharmacyId(data.pharmacy_id);
-      });
-  }, [user]);
 
   // Subscribe to realtime changes
   useEffect(() => {
