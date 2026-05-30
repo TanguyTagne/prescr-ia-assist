@@ -39,6 +39,10 @@ type ScanStatus = {
   lastEnterAt: number | null;
   lastError: string | null;
   bufferLen: number;
+  // Global keyboard diagnostic (uiohook path)
+  lastGlobalKeyAt: number | null;
+  globalBufferLen: number;
+  lastRejection: { raw: string; reason: string; at: number } | null;
 };
 
 const MODE_BADGE: Record<ScanStatus["mode"], { label: string; cls: string; icon: typeof CheckCircle2 }> = {
@@ -216,6 +220,34 @@ const ScannerDetectionPanel = () => {
                 <div>Dernier rapport HID : {new Date(status.lastReportAt).toLocaleTimeString()}</div>
               )}
               {status.lastError && <div className="text-destructive">Erreur : {status.lastError}</div>}
+            </div>
+          )}
+          {/* ── Diagnostic clavier global (uiohook) ─────────────────── */}
+          {status && (
+            <div className="mt-3 border-t border-current/20 pt-2 text-[11px] space-y-0.5">
+              <div className="font-semibold mb-1 opacity-80">Diagnostic clavier global</div>
+              <div>
+                Dernier event clavier :{" "}
+                {status.lastGlobalKeyAt
+                  ? new Date(status.lastGlobalKeyAt).toLocaleTimeString()
+                  : <span className="opacity-60">aucun — douchette non vue</span>}
+              </div>
+              <div>Buffer global en cours : {status.globalBufferLen ?? 0} car.</div>
+              {status.lastRejection ? (
+                <div className="text-amber-700 dark:text-amber-400">
+                  Dernier rejet :{" "}
+                  <span className="font-semibold">{status.lastRejection.reason}</span>
+                  {" "}@ {new Date(status.lastRejection.at).toLocaleTimeString()}
+                  {" "}— <code className="font-mono opacity-80">
+                    {status.lastRejection.raw.slice(0, 24)}{status.lastRejection.raw.length > 24 ? "…" : ""}
+                  </code>
+                </div>
+              ) : (
+                <div className="opacity-60">Aucun rejet enregistré</div>
+              )}
+              <div className="opacity-60 mt-1">
+                Raisons : <em>too_short</em> buffer trop court · <em>cannot_parse</em> code non reconnu · <em>timeout</em> inter-touches trop lent · <em>key_break</em> touche parasite
+              </div>
             </div>
           )}
         </div>
