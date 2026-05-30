@@ -25,7 +25,7 @@ interface MedicamentMapping {
 }
 
 const ProductMappingSettings = () => {
-  const { user } = useAuth();
+  const { user, pharmacyId: authPharmacyId } = useAuth();
   const [mappings, setMappings] = useState<ProductMapping[]>([]);
   const [medMappings, setMedMappings] = useState<MedicamentMapping[]>([]);
   const [pharmacyId, setPharmacyId] = useState<string | null>(null);
@@ -36,27 +36,21 @@ const ProductMappingSettings = () => {
 
   useEffect(() => {
     if (!user) return;
-    loadData();
-  }, [user]);
-
-  const loadData = async () => {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("pharmacy_id")
-      .eq("id", user!.id)
-      .single();
-
-    if (!profile?.pharmacy_id) {
+    if (!authPharmacyId) {
       setLoading(false);
       return;
     }
-    setPharmacyId(profile.pharmacy_id);
+    loadData(authPharmacyId);
+  }, [user, authPharmacyId]);
+
+  const loadData = async (pid: string) => {
+    setPharmacyId(pid);
 
     const [mappingsRes, categoriesRes, medMapRes] = await Promise.all([
       supabase
         .from("product_mapping")
         .select("*")
-        .eq("pharmacy_id", profile.pharmacy_id)
+        .eq("pharmacy_id", pid)
         .order("categorie"),
       supabase
         .from("produits_complementaires")
@@ -65,7 +59,7 @@ const ProductMappingSettings = () => {
       supabase
         .from("medicament_pc_mapping")
         .select("*")
-        .eq("pharmacy_id", profile.pharmacy_id)
+        .eq("pharmacy_id", pid)
         .order("medicament_nom"),
     ]);
 

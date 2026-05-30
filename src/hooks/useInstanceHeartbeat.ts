@@ -24,12 +24,11 @@ function getInstanceId(): string {
  * Cleans up on unmount / tab close.
  */
 export function useInstanceHeartbeat() {
-  const { user } = useAuth();
+  const { user, pharmacyId } = useAuth();
   const instanceId = useRef<string>(getInstanceId());
-  const pharmacyIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !pharmacyId) return;
     let cancelled = false;
     let timer: ReturnType<typeof setInterval> | null = null;
 
@@ -38,23 +37,13 @@ export function useInstanceHeartbeat() {
     const appVersion = (import.meta as any).env?.VITE_APP_VERSION || null;
 
     const sendBeat = async () => {
+      if (cancelled) return;
       try {
-        // Resolve pharmacy_id lazily (cached after first hit)
-        if (!pharmacyIdRef.current) {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("pharmacy_id")
-            .eq("id", user.id)
-            .maybeSingle();
-          if (!profile?.pharmacy_id) return;
-          pharmacyIdRef.current = profile.pharmacy_id;
-        }
-        if (cancelled) return;
         await supabase
           .from("pharmacy_instance_heartbeats")
           .upsert(
             {
-              pharmacy_id: pharmacyIdRef.current,
+              pharmacy_id: pharmacyId,
               user_id: user.id,
               instance_id: instanceId.current,
               platform,
@@ -74,7 +63,6 @@ export function useInstanceHeartbeat() {
     timer = setInterval(sendBeat, HEARTBEAT_INTERVAL_MS);
 
     const cleanup = async () => {
-      if (!pharmacyIdRef.current) return;
       try {
         await supabase
           .from("pharmacy_instance_heartbeats")
@@ -93,5 +81,5 @@ export function useInstanceHeartbeat() {
       window.removeEventListener("beforeunload", onBeforeUnload);
       void cleanup();
     };
-  }, [user]);
+  }, [user, pharmacyId]);
 }
