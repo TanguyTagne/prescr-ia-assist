@@ -505,15 +505,18 @@ autoUpdater.on("error", (err) => {
 // On valid scan, forwards the code to the renderer and brings the window
 // to front WITHOUT stealing focus (showInactive + flashFrame).
 // ────────────────────────────────────────────────────────────
-const SCAN_MAX_KEY_INTERVAL_MS = 80;
+const SCAN_MAX_KEY_INTERVAL_MS = 180; // was 80 — raised for slow 2D/DataMatrix scanners
 const SCAN_MIN_LENGTH = 7;
 const SCAN_MAX_LENGTH = 60; // GS1 DataMatrix payloads can be long
 const SCAN_DEDUP_WINDOW_MS = 800;
-const SCAN_RESET_INACTIVITY_MS = 400;
+const SCAN_RESET_INACTIVITY_MS = 800; // was 400 — more tolerant for Bluetooth scanners
 let scanBuffer = "";
 let scanLastKeyAt = 0;
 let scanResetTimer = null;
 let scanLastEmitted = { code: "", at: 0 };
+// Diagnostic: expose last global key time, buffer length and last rejection reason
+let scanLastGlobalKeyAt = 0;
+let scanLastRejection = null; // { raw, reason, at }
 function charFromKeycode(keycode, rawKeychar) {
   if (!UiohookKey) return null;
   // 1) Numbers — top row + numpad (works whether NumLock is on or off,
@@ -552,16 +555,21 @@ function charFromKeycode(keycode, rawKeychar) {
   }
   return null;
 }
-// FIX: Tab retiré des terminateurs de scan.
-// La quasi-totalité des douchettes HID envoient Enter (ou NumpadEnter) comme
-// suffixe de fin de code-barres. Inclure Tab causait des faux positifs quand
-// l'utilisateur naviguait dans un formulaire du LGO avec quelques touches en
-// buffer (ex. saisie rapide dans Winpharma juste avant un scan).
 function isEnterKey(keycode) {
   if (!UiohookKey) return false;
   return keycode === UiohookKey.Enter || keycode === UiohookKey.NumpadEnter;
 }
-function resetScanBuffer() {
+// Tab accepted as terminator only when buffer already has ≥ SCAN_MIN_LENGTH chars.
+// Avoids false-positives when the user navigates a LGO form with Tab.
+function isTabKey(keycode) {
+  if (!UiohookKey || UiohookKey.Tab === undefined) return false;
+  return keycode === UiohookKey.Tab;
+}
+function resetScanBuffer(reason = null) {
+  if (reason && scanBuffer.length >= SCAN_MIN_LENGTH) {
+    scanLastRejection = { raw: scanBuffer.slice(0, 60), reason, at: Date.now() };
+    devLog(`[SCAN] buffer reset reason=${reason} raw="${scanBuffer.slice(0, 30)}"`);
+  }
   scanBuffer = "";
   if (scanResetTimer) {
     clearTimeout(scanResetTimer);
@@ -657,6 +665,7 @@ function startGlobalBarcodeListener() {
   try {
     uIOhook.on("keydown", (event) => {
       const now = Date.now();
+      scanLastGlobalKeyAt = now; // always update — diagnostic
       const elapsed = now - scanLastKeyAt;
       scanLastKeyAt = now;
       if (scanResetTimer) {
@@ -670,10 +679,30 @@ function startGlobalBarcodeListener() {
           if (parsed) {
             emitGlobalScan(parsed);
           } else {
+            scanLastRejection = { raw: raw.slice(0, 60), reason: "cannot_parse", at: now };
             devLog(`[SCAN] rejected raw="${raw}" reason=cannot-parse`);
           }
+        } else if (raw.length > 0) {
+          scanLastRejection = { raw: raw.slice(0, 60), reason: "too_short", at: now };
+          devLog(`[SCAN] rejected raw="${raw}" reason=too-short len=${raw.length}`);
         }
         resetScanBuffer();
+        return;
+      }
+      // Tab as terminator — only when a barcode sequence is already accumulating
+      if (isTabKey(event.keycode)) {
+        if (scanBuffer.length >= SCAN_MIN_LENGTH) {
+          const raw = scanBuffer;
+          const parsed = parseBarcodeToCip(raw);
+          if (parsed) {
+            emitGlobalScan(parsed);
+          } else {
+            scanLastRejection = { raw: raw.slice(0, 60), reason: "cannot_parse", at: now };
+            devLog(`[SCAN] tab-terminated rejected raw="${raw}" reason=cannot-parse`);
+          }
+          resetScanBuffer();
+        }
+        // If buffer < SCAN_MIN_LENGTH, ignore Tab entirely (normal keyboard navigation)
         return;
       }
       const ch = charFromKeycode(event.keycode, event.keychar);
@@ -683,9 +712,13 @@ function startGlobalBarcodeListener() {
             scanBuffer += ch;
           }
         } else {
+          // Gap between keys too large — abandon previous buffer
+          if (scanBuffer.length >= SCAN_MIN_LENGTH) {
+            scanLastRejection = { raw: scanBuffer.slice(0, 60), reason: "timeout", at: now };
+          }
           scanBuffer = ch;
         }
-        scanResetTimer = setTimeout(resetScanBuffer, SCAN_RESET_INACTIVITY_MS);
+        scanResetTimer = setTimeout(() => resetScanBuffer("timeout"), SCAN_RESET_INACTIVITY_MS);
       } else if (scanBuffer.length > 0) {
         // Unknown key breaks the sequence (modifiers, arrows, function keys)
         // but only if not a simple modifier — avoid resetting on Shift/Ctrl/Alt
@@ -699,7 +732,7 @@ function startGlobalBarcodeListener() {
           event.keycode === UiohookKey.Meta ||
           event.keycode === UiohookKey.MetaRight;
         if (!isModifier) {
-          resetScanBuffer();
+          resetScanBuffer("key_break");
         }
       }
     });
@@ -829,16 +862,17 @@ function decodeKeyboardReport(report) {
   // Some scanners send shorter/longer variants → scan bytes 1..end.
   const chars = [];
   let enter = false;
+  let tab = false;
   const start = report.length >= 8 ? 2 : 1;
   for (let i = start; i < report.length; i++) {
     const u = report[i];
     if (!u) continue;
     if (u === HID_USAGE_ENTER || u === HID_USAGE_NUMPAD_ENTER) { enter = true; continue; }
-    if (u === HID_USAGE_TAB) continue; // ignore Tab as terminator (see uiohook comment)
+    if (u === HID_USAGE_TAB) { tab = true; continue; }
     const c = HID_USAGE_TO_CHAR[u];
     if (c) chars.push(c);
   }
-  return { chars, enter };
+  return { chars, enter, tab };
 }
 
 function handleHidReport(report) {
@@ -847,13 +881,15 @@ function handleHidReport(report) {
   if (hidState.rawTap && now < hidState.rawTap.until) {
     hidState.rawTap.reports.push({ at: now, bytes: Array.from(report) });
   }
-  const { chars, enter } = decodeKeyboardReport(report);
+  const { chars, enter, tab } = decodeKeyboardReport(report);
   if (chars.length) {
     for (const c of chars) {
       if (hidState.buffer.length < SCAN_MAX_LENGTH) hidState.buffer += c;
     }
   }
-  if (enter) {
+  // Tab terminates only when a barcode sequence is already long enough
+  const isTerminator = enter || (tab && hidState.buffer.length >= SCAN_MIN_LENGTH);
+  if (isTerminator) {
     const raw = hidState.buffer;
     hidState.buffer = "";
     hidState.lastEnterAt = now;
@@ -974,6 +1010,10 @@ function getScannerStatus() {
     lastEnterAt: hidState.lastEnterAt || null,
     lastError: hidState.lastError,
     bufferLen: hidState.buffer.length,
+    // Global keyboard diagnostic (uiohook path)
+    lastGlobalKeyAt: scanLastGlobalKeyAt || null,
+    globalBufferLen: scanBuffer.length,
+    lastRejection: scanLastRejection,
   };
 }
 
