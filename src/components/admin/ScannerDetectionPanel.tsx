@@ -65,6 +65,18 @@ type ScanStatus = {
   // Raw Input Win32 subprocess
   rawInputStarted: boolean;
   rawInputError: string | null;
+  // SerialPort (USB-CDC) scanner
+  serialLoaded: boolean;
+  serialLoadError: string | null;
+  serialStarted: boolean;
+  serialOpenPorts: Array<{
+    path: string;
+    manufacturer: string | null;
+    vendorId: string | null;
+    productId: string | null;
+    baudRate: number;
+  }>;
+  serialLastError: string | null;
 };
 
 type DeviceTestResult = {
@@ -311,7 +323,12 @@ const ScannerDetectionPanel = () => {
   }
 
   // Determine effective capture state across all methods
-  const hasAnyCapture = !!(status?.mode === "hid-direct" || status?.mode === "uiohook" || status?.rawInputStarted);
+  const hasAnyCapture = !!(
+    status?.mode === "hid-direct" ||
+    status?.mode === "uiohook" ||
+    status?.rawInputStarted ||
+    (status?.serialStarted && status.serialOpenPorts.length > 0)
+  );
   const badge = status ? MODE_BADGE[status.mode] : MODE_BADGE.none;
   const BadgeIcon = badge.icon;
   // Only show the AV banner if NO method is active (not even Raw Input)
@@ -364,6 +381,20 @@ const ScannerDetectionPanel = () => {
                     ? `✓ lié (${status.bound.product || "?"})`
                     : "chargé, aucun scanner lié"
                   : `✗ ${status.hidLoadError || "indisponible"}`}
+              </div>
+              <div
+                className={
+                  status.serialStarted && status.serialOpenPorts.length > 0 ? "text-green-700 dark:text-green-400" : ""
+                }
+              >
+                SerialPort (USB-CDC) :{" "}
+                {!status.serialLoaded
+                  ? `✗ ${status.serialLoadError || "indisponible"}`
+                  : status.serialOpenPorts.length > 0
+                    ? `✓ ${status.serialOpenPorts.length} port(s) actif(s) — ${status.serialOpenPorts.map((p) => `${p.path}@${p.baudRate}`).join(", ")}`
+                    : status.serialStarted
+                      ? "actif, aucun scanner COM détecté"
+                      : "non démarré"}
               </div>
               <div>
                 uiohook (hook clavier) :{" "}
