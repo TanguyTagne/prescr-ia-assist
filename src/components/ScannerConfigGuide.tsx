@@ -7,7 +7,7 @@ import { code128ToSvg } from "@/lib/code128";
 import {
   SCANNER_MODELS,
   STATUS_LABEL,
-  type ScannerModel,
+  type ScannerFamily as ScannerModel,
   type ScannerStep,
 } from "@/lib/scannerConfigCodes";
 
