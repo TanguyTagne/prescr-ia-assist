@@ -46,32 +46,43 @@ type ScanStatus = {
 };
 
 const MODE_BADGE: Record<ScanStatus["mode"], { label: string; cls: string; icon: typeof CheckCircle2 }> = {
-  "hid-direct": { label: "HID direct (optimal)", cls: "bg-green-500/10 text-green-700 border-green-500/30", icon: CheckCircle2 },
-  "uiohook":    { label: "Capture clavier (fallback)", cls: "bg-amber-500/10 text-amber-700 border-amber-500/30", icon: Activity },
-  "none":       { label: "Aucune source active", cls: "bg-destructive/10 text-destructive border-destructive/30", icon: AlertCircle },
+  "hid-direct": {
+    label: "HID direct (optimal)",
+    cls: "bg-green-500/10 text-green-700 border-green-500/30",
+    icon: CheckCircle2,
+  },
+  uiohook: {
+    label: "Capture clavier (fallback)",
+    cls: "bg-amber-500/10 text-amber-700 border-amber-500/30",
+    icon: Activity,
+  },
+  none: {
+    label: "Aucune source active",
+    cls: "bg-destructive/10 text-destructive border-destructive/30",
+    icon: AlertCircle,
+  },
 };
 
-const formatBytes = (bytes: number[]) =>
-  bytes.map((b) => b.toString(16).padStart(2, "0")).join(" ");
+const formatBytes = (bytes: number[]) => bytes.map((b) => b.toString(16).padStart(2, "0")).join(" ");
 
 const ScannerDetectionPanel = () => {
   const isDesktop = isAsclionDesktopRuntime();
-  const api = (typeof window !== "undefined" ? (window.electronAPI as any)?.scanner : null) as
-    | {
-        list: () => Promise<HidDevice[]>;
-        status: () => Promise<ScanStatus>;
-        bind: (path: string) => Promise<{ ok: boolean; error?: string }>;
-        unbind: () => Promise<{ ok: boolean }>;
-        testCapture: (ms: number) => Promise<{ count: number; reports: { at: number; bytes: number[] }[] }>;
-        reload: () => Promise<ScanStatus>;
-      }
-    | null;
+  const api = (typeof window !== "undefined" ? (window.electronAPI as any)?.scanner : null) as {
+    list: () => Promise<HidDevice[]>;
+    status: () => Promise<ScanStatus>;
+    bind: (path: string) => Promise<{ ok: boolean; error?: string }>;
+    unbind: () => Promise<{ ok: boolean }>;
+    testCapture: (ms: number) => Promise<{ count: number; reports: { at: number; bytes: number[] }[] }>;
+    reload: () => Promise<ScanStatus>;
+  } | null;
 
   const [status, setStatus] = useState<ScanStatus | null>(null);
   const [devices, setDevices] = useState<HidDevice[]>([]);
   const [loading, setLoading] = useState(false);
   const [testing, setTesting] = useState(false);
-  const [testResult, setTestResult] = useState<{ count: number; reports: { at: number; bytes: number[] }[] } | null>(null);
+  const [testResult, setTestResult] = useState<{ count: number; reports: { at: number; bytes: number[] }[] } | null>(
+    null,
+  );
 
   const refresh = useCallback(async () => {
     if (!api) return;
@@ -147,9 +158,8 @@ const ScannerDetectionPanel = () => {
         </CardHeader>
         <CardContent>
           <p className="text-xs text-muted-foreground">
-            La détection HID directe n'est disponible que sur Asclion Desktop (Electron).
-            En mode navigateur web, la lecture passe uniquement par les frappes clavier
-            quand l'onglet a le focus.
+            La détection HID directe n'est disponible que sur Asclion Desktop (Electron). En mode navigateur web, la
+            lecture passe uniquement par les frappes clavier quand l'onglet a le focus.
           </p>
         </CardContent>
       </Card>
@@ -167,8 +177,8 @@ const ScannerDetectionPanel = () => {
         </CardHeader>
         <CardContent>
           <p className="text-xs text-destructive">
-            API scanner indisponible — l'application Desktop installée est probablement antérieure
-            à la v1.1. Mettez à jour Asclion Desktop pour activer la lecture HID directe.
+            API scanner indisponible — l'application Desktop installée est probablement antérieure à la v1.1. Mettez à
+            jour Asclion Desktop pour activer la lecture HID directe.
           </p>
         </CardContent>
       </Card>
@@ -209,11 +219,18 @@ const ScannerDetectionPanel = () => {
           {status && (
             <div className="mt-2 text-[11px] space-y-0.5 opacity-90">
               <div>HID direct : {status.hidLoaded ? "✓ chargé" : `✗ ${status.hidLoadError || "indisponible"}`}</div>
-              <div>uiohook (fallback) : {status.uiohookLoaded ? (status.uiohookStarted ? "✓ démarré" : "chargé, non démarré") : `✗ ${status.uiohookLoadError || "indisponible"}`}</div>
+              <div>
+                uiohook (fallback) :{" "}
+                {status.uiohookLoaded
+                  ? status.uiohookStarted
+                    ? "✓ démarré"
+                    : "chargé, non démarré"
+                  : `✗ ${status.uiohookLoadError || "indisponible"}`}
+              </div>
               {status.bound && (
                 <div>
-                  Douchette liée : <strong>{status.bound.product || "Sans nom"}</strong>{" "}
-                  ({status.bound.vendorId.toString(16)}:{status.bound.productId.toString(16)})
+                  Douchette liée : <strong>{status.bound.product || "Sans nom"}</strong> (
+                  {status.bound.vendorId.toString(16)}:{status.bound.productId.toString(16)})
                 </div>
               )}
               {status.lastReportAt && (
@@ -228,25 +245,28 @@ const ScannerDetectionPanel = () => {
               <div className="font-semibold mb-1 opacity-80">Diagnostic clavier global</div>
               <div>
                 Dernier event clavier :{" "}
-                {status.lastGlobalKeyAt
-                  ? new Date(status.lastGlobalKeyAt).toLocaleTimeString()
-                  : <span className="opacity-60">aucun — douchette non vue</span>}
+                {status.lastGlobalKeyAt ? (
+                  new Date(status.lastGlobalKeyAt).toLocaleTimeString()
+                ) : (
+                  <span className="opacity-60">aucun — douchette non vue</span>
+                )}
               </div>
               <div>Buffer global en cours : {status.globalBufferLen ?? 0} car.</div>
               {status.lastRejection ? (
                 <div className="text-amber-700 dark:text-amber-400">
-                  Dernier rejet :{" "}
-                  <span className="font-semibold">{status.lastRejection.reason}</span>
-                  {" "}@ {new Date(status.lastRejection.at).toLocaleTimeString()}
-                  {" "}— <code className="font-mono opacity-80">
-                    {status.lastRejection.raw.slice(0, 24)}{status.lastRejection.raw.length > 24 ? "…" : ""}
+                  Dernier rejet : <span className="font-semibold">{status.lastRejection.reason}</span> @{" "}
+                  {new Date(status.lastRejection.at).toLocaleTimeString()} —{" "}
+                  <code className="font-mono opacity-80">
+                    {status.lastRejection.raw.slice(0, 24)}
+                    {status.lastRejection.raw.length > 24 ? "…" : ""}
                   </code>
                 </div>
               ) : (
                 <div className="opacity-60">Aucun rejet enregistré</div>
               )}
               <div className="opacity-60 mt-1">
-                Raisons : <em>too_short</em> buffer trop court · <em>cannot_parse</em> code non reconnu · <em>timeout</em> inter-touches trop lent · <em>key_break</em> touche parasite
+                Raisons : <em>too_short</em> buffer trop court · <em>cannot_parse</em> code non reconnu ·{" "}
+                <em>timeout</em> inter-touches trop lent · <em>key_break</em> touche parasite
               </div>
             </div>
           )}
@@ -257,8 +277,14 @@ const ScannerDetectionPanel = () => {
             <div className="font-semibold mb-1">Aucune source de scan active</div>
             <ol className="list-decimal list-inside space-y-0.5 text-destructive/90">
               <li>Vérifiez que la douchette est branchée (port USB).</li>
-              <li>Si la douchette est en mode <em>USB COM série</em>, reconfigurez-la en <em>USB-HID Keyboard</em> avec le code-barres du manuel constructeur.</li>
-              <li>Si rien n'apparaît dans la liste ci-dessous, l'antivirus bloque probablement HIDAPI : ajoutez <code>Asclion.exe</code> et <code>%LOCALAPPDATA%\Programs\asclion-desktop\</code> en exception.</li>
+              <li>
+                Si la douchette est en mode <em>USB COM série</em>, reconfigurez-la en <em>USB-HID Keyboard</em> avec le
+                code-barres du manuel constructeur.
+              </li>
+              <li>
+                Si rien n'apparaît dans la liste ci-dessous, l'antivirus bloque probablement HIDAPI : ajoutez{" "}
+                <code>Asclion.exe</code> et <code>%LOCALAPPDATA%\Programs\asclion-desktop\</code> en exception.
+              </li>
             </ol>
           </div>
         )}
@@ -291,9 +317,15 @@ const ScannerDetectionPanel = () => {
                       <tr key={d.path} className={`border-t border-border ${d.bound ? "bg-primary/5" : ""}`}>
                         <td className="px-2 py-1.5">
                           <div className="flex items-center gap-1.5">
-                            {d.likelyScanner && <Badge variant="secondary" className="h-4 px-1 text-[9px]">scanner</Badge>}
+                            {d.likelyScanner && (
+                              <Badge variant="secondary" className="h-4 px-1 text-[9px]">
+                                scanner
+                              </Badge>
+                            )}
                             {d.bound && <Badge className="h-4 px-1 text-[9px]">lié</Badge>}
-                            <span className="truncate">{d.product || <em className="text-muted-foreground">Sans nom</em>}</span>
+                            <span className="truncate">
+                              {d.product || <em className="text-muted-foreground">Sans nom</em>}
+                            </span>
                           </div>
                           {d.manufacturer && <div className="text-[10px] text-muted-foreground">{d.manufacturer}</div>}
                         </td>
@@ -309,7 +341,12 @@ const ScannerDetectionPanel = () => {
                               Délier
                             </Button>
                           ) : (
-                            <Button size="sm" variant="outline" className="h-6 text-[10px] gap-1" onClick={() => handleBind(d.path)}>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-6 text-[10px] gap-1"
+                              onClick={() => handleBind(d.path)}
+                            >
                               <Plug className="h-3 w-3" />
                               Lier
                             </Button>
@@ -331,8 +368,8 @@ const ScannerDetectionPanel = () => {
             </div>
             {testResult.reports.length === 0 ? (
               <p className="text-xs text-destructive">
-                Aucun rapport reçu pendant 10 s. Si vous avez scanné : la douchette n'est pas lue par HID direct
-                (mode COM série, ou périphérique pas dans la liste ci-dessus).
+                Aucun rapport reçu pendant 10 s. Si vous avez scanné : la douchette n'est pas lue par HID direct (mode
+                COM série, ou périphérique pas dans la liste ci-dessus).
               </p>
             ) : (
               <div className="rounded-lg border border-border bg-muted/30 p-2 max-h-[180px] overflow-y-auto font-mono text-[10px] space-y-0.5">
