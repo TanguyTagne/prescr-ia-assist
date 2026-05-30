@@ -22,14 +22,11 @@ let HID = null;
 let hidLoadError = null;
 try {
   HID = require("node-hid");
-  try {
-    if (process.platform === "win32" && typeof HID.setDriverType === "function") {
-      // hidraw allows opening the keyboard collection of a scanner non-exclusively
-      HID.setDriverType("hidraw");
-    }
-  } catch (_) {
-    /* noop */
-  }
+  // NOTE: do NOT call setDriverType("hidraw") on Windows.
+  // "hidraw" requires WinUSB/libusb; barcode scanners enumerated as HID keyboards
+  // use the native kbdhid.sys driver which is NOT WinUSB-compatible.
+  // The default Windows HID API ("winhid") opens keyboard-class HID devices
+  // in shared mode and is the correct backend for barcode scanners.
 } catch (e) {
   hidLoadError = e && e.message;
   console.error("[ASCLION-SCAN] node-hid unavailable:", hidLoadError);
@@ -760,7 +757,7 @@ const SCANNER_VIDS = new Set([
   0x05e0, // Symbol Technologies / Zebra
   0x05f9, // Datalogic / PSC
   0x1eab, // Newland Auto-ID
-  0x1a86, // QinHeng (OEM cheap scanners)
+  0x1a86, // QinHeng (OEM cheap scanners — very common)
   0x1ab1, // Inateck OEMs
   0x2dd6, // NetumScan
   0x2cd5, // Yanzeo
@@ -769,8 +766,19 @@ const SCANNER_VIDS = new Set([
   0x0483, // STMicroelectronics (some 2D imagers)
   0x04b4, // Cypress (some scanner controllers)
   0x04f2, // Chicony (some imagers)
+  0x065a, // Opticon (popular in European pharmacies)
+  0x0699, // Denso Wave (QR / DataMatrix, Japan)
+  0x04d9, // Holtek Semiconductor (very common on cheap OEM scanners)
+  0x1504, // Bixolon
+  0x2c32, // TERA scanners
+  0x1d57, // Xenta/OEM (widely used IC in budget scanners)
+  0x04b8, // Epson / POS scanners
+  0x05f0, // Optec
+  0x16d0, // MCS Electronics (some OEM readers)
+  0x2c32, // TERA
+  0x0425, // Motorola Solutions additional VID
 ]);
-const SCANNER_PRODUCT_HINT = /scan|barcode|imager|reader|2d ?bar|hid ?pos/i;
+const SCANNER_PRODUCT_HINT = /scan|barcode|imager|reader|2d ?bar|hid ?pos|ean|qr|code/i;
 
 function hex(n) {
   return (
@@ -789,6 +797,12 @@ function loadScannerPref() {
     return JSON.parse(fs.readFileSync(scannerPrefPath(), "utf-8"));
   } catch {
     return null;
+  }
+}
+function applyScannerPref() {
+  const pref = loadScannerPref();
+  if (pref && typeof pref.allowGeneric === "boolean") {
+    hidState.allowGeneric = pref.allowGeneric;
   }
 }
 function saveScannerPref(pref) {
@@ -868,12 +882,17 @@ const hidState = {
   rebindTimer: null,
   pollTimer: null,
   rawTap: null, // { until, reports }
+  // When true: auto-bind to any keyboard-class HID device when no scanner-labeled
+  // device is detected. Requires explicit user activation from the admin panel.
+  allowGeneric: false,
 };
 let uiohookStarted = false;
 
 function isLikelyScanner(d) {
   if (!d) return false;
   if (SCANNER_VIDS.has(d.vendorId)) return true;
+  // HID Point-of-Sale usage page (0x8C) is always a barcode scanner interface
+  if (d.usagePage === 0x8c) return true;
   const p = (d.product || "") + " " + (d.manufacturer || "");
   return SCANNER_PRODUCT_HINT.test(p);
 }
@@ -1013,14 +1032,36 @@ function findBestScanner() {
     m = all.find((d) => d.vendorId === pref.vendorId && d.productId === pref.productId);
     if (m) return m;
   }
+
+  // Priority 1: devices recognized as scanners (known VID, POS HID page, or name match)
   const candidates = all.filter((d) => d.likelyScanner);
-  // Prefer the keyboard collection of the device (where scan data flows)
   candidates.sort((a, b) => {
+    // POS usage page (0x8C) first — not claimed by keyboard driver, always openable
+    const aPOS = a.usagePage === 0x8c ? 0 : 1;
+    const bPOS = b.usagePage === 0x8c ? 0 : 1;
+    if (aPOS !== bPOS) return aPOS - bPOS;
+    // Then keyboard interface (where scan data normally flows)
     const ka = a.usagePage === 1 && a.usage === 6 ? 0 : 1;
     const kb = b.usagePage === 1 && b.usage === 6 ? 0 : 1;
     return ka - kb;
   });
-  return candidates[0] || null;
+  if (candidates.length > 0) return candidates[0];
+
+  // Priority 2 (opt-in): generic keyboard-class HID devices.
+  // Many cheap/OEM scanners enumerate as plain "USB Keyboard" with no recognizable
+  // VID or name. When allowGeneric is enabled by the pharmacist from the admin panel,
+  // we try to bind the first keyboard-class HID device. The barcode buffer logic
+  // (inter-key < 180 ms + 7+ chars + Enter) filters out normal keyboard typing.
+  if (hidState.allowGeneric) {
+    const keyboards = all.filter((d) => d.usagePage === 1 && d.usage === 6);
+    if (keyboards.length > 0) {
+      keyboards.sort((a, b) => (a.interface ?? 99) - (b.interface ?? 99));
+      devLog("[SCAN] allowGeneric: trying generic keyboard HID", keyboards[0].product, hex(keyboards[0].vendorId));
+      return keyboards[0];
+    }
+  }
+
+  return null;
 }
 
 function scheduleRebind() {
@@ -1051,6 +1092,8 @@ function startUiohookFallback() {
 }
 
 function bootScannerStack() {
+  // Load persisted preferences (allowGeneric, etc.) before scanning
+  applyScannerPref();
   // 1) Direct HID read (works without focus, AV-friendly)
   if (HID) {
     const best = findBestScanner();
@@ -1074,6 +1117,7 @@ function getScannerStatus() {
     lastEnterAt: hidState.lastEnterAt || null,
     lastError: hidState.lastError,
     bufferLen: hidState.buffer.length,
+    allowGeneric: hidState.allowGeneric,
     // Global keyboard diagnostic (uiohook path)
     lastGlobalKeyAt: scanLastGlobalKeyAt || null,
     globalBufferLen: scanBuffer.length,
@@ -1106,6 +1150,75 @@ ipcMain.handle("scanner:test-capture", async (_e, ms) => {
 ipcMain.handle("scanner:reload", () => {
   closeHidDevice();
   bootScannerStack();
+  return getScannerStatus();
+});
+
+// Test a SPECIFIC device path for N ms without binding it.
+// Returns raw HID reports + decoded characters so the pharmacist can verify
+// which device is their scanner before committing to a binding.
+ipcMain.handle("scanner:test-device", async (_e, { devicePath, ms }) => {
+  const duration = Math.min(Math.max(Number(ms) || 5000, 1000), 30000);
+  if (!HID) return { ok: false, error: hidLoadError || "node-hid not loaded", reports: [], decoded: "" };
+  let dev = null;
+  const reports = [];
+  let decodedBuffer = "";
+  let barcodeDetected = null;
+  const until = Date.now() + duration;
+  try {
+    dev = new HID.HID(devicePath);
+    dev.on("data", (report) => {
+      const now = Date.now();
+      if (now >= until) return;
+      reports.push({ at: now, bytes: Array.from(report) });
+      const { chars, enter, tab } = decodeKeyboardReport(report);
+      for (const c of chars) {
+        if (decodedBuffer.length < SCAN_MAX_LENGTH) decodedBuffer += c;
+      }
+      if (enter || (tab && decodedBuffer.length >= SCAN_MIN_LENGTH)) {
+        if (decodedBuffer.length >= SCAN_MIN_LENGTH) {
+          const parsed = parseBarcodeToCip(decodedBuffer);
+          if (parsed) barcodeDetected = parsed;
+        }
+        decodedBuffer = "";
+      }
+    });
+    dev.on("error", () => {});
+    await new Promise((r) => setTimeout(r, duration));
+  } catch (e) {
+    return { ok: false, error: e && e.message, reports: [], decoded: "" };
+  } finally {
+    try {
+      if (dev) {
+        dev.removeAllListeners();
+        dev.close();
+      }
+    } catch (_) {}
+  }
+  return {
+    ok: true,
+    reports: reports.slice(-30),
+    count: reports.length,
+    decoded: decodedBuffer,
+    barcodeDetected,
+  };
+});
+
+// Enable / disable auto-binding to generic keyboard-class HID devices.
+// Must be activated explicitly by the pharmacist from the admin panel.
+ipcMain.handle("scanner:set-allow-generic", (_e, allow) => {
+  hidState.allowGeneric = !!allow;
+  // Persist in scanner pref
+  try {
+    const pref = loadScannerPref() || {};
+    fs.writeFileSync(scannerPrefPath(), JSON.stringify({ ...pref, allowGeneric: hidState.allowGeneric }));
+  } catch (e) {
+    devWarn("allowGeneric pref save failed:", e);
+  }
+  // If enabling and no device bound yet, trigger a rebind scan
+  if (hidState.allowGeneric && !hidState.device) {
+    const best = findBestScanner();
+    if (best) openHidDevice(best);
+  }
   return getScannerStatus();
 });
 
