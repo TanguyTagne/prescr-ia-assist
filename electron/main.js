@@ -1300,21 +1300,308 @@ function stopClipboardScanner() {
   devLog("[SCAN] Clipboard polling stopped.");
 }
 
+// ────────────────────────────────────────────────────────────
+// Windows Raw Input (RIDEV_INPUTSINK) — PowerShell/C# subprocess
+//
+// WHY: Win32 Raw Input is fundamentally different from keyboard hooks.
+//   • SetWindowsHookEx(WH_KEYBOARD_LL) → antivirus ALWAYS flags this
+//   • RegisterRawInputDevices(RIDEV_INPUTSINK) → READ-ONLY message delivery
+//     to a specific HWND, not a system-wide interception. No AV heuristic
+//     targets this API for legitimate processes.
+//
+// HOW: spawns a hidden PowerShell process that:
+//   1. Compiles a tiny C# class (Add-Type) creating a hidden WinForms window
+//   2. Registers the window for Raw Input with RIDEV_INPUTSINK
+//   3. Processes WM_INPUT messages: accumulates keypresses, detects barcodes
+//   4. Writes "BARCODE:<code>\n" to stdout for main.js to consume
+//
+// Works for ANY scanner in USB Keyboard mode, no configuration needed.
+// Runs in parallel with node-hid / WebHID / uiohook; emitGlobalScan deduplicates.
+// ────────────────────────────────────────────────────────────
+
+// C# source embedded as a PowerShell Add-Type block.
+// Using String.raw to preserve backslashes literally.
+const RAW_INPUT_PS_SCRIPT = String.raw`
+Add-Type -ReferencedAssemblies System.Windows.Forms -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+using System.Text;
+using System.Windows.Forms;
+
+public sealed class AsclionRawInput : Form {
+    // ── Win32 constants ───────────────────────────────────
+    const int  WM_INPUT           = 0x00FF;
+    const uint RID_INPUT          = 0x10000003;
+    const int  RIDEV_INPUTSINK    = 0x00000100;
+    const uint RIM_TYPEKEYBOARD   = 1;
+    const ushort RI_KEY_BREAK     = 0x0001; // key-up bit in RAWKEYBOARD.Flags
+
+    // ── P/Invoke signatures ───────────────────────────────
+    [StructLayout(LayoutKind.Sequential)]
+    struct RAWINPUTDEVICE {
+        public ushort usUsagePage;
+        public ushort usUsage;
+        public int    dwFlags;
+        public IntPtr hwndTarget;
+    }
+
+    [DllImport("user32.dll", SetLastError = true)]
+    static extern bool RegisterRawInputDevices(
+        [In] RAWINPUTDEVICE[] devices, int count, int cbSize);
+
+    [DllImport("user32.dll")]
+    static extern int GetRawInputData(
+        IntPtr hRawInput, uint uiCommand,
+        IntPtr pData, ref int pcbSize, int cbSizeHeader);
+
+    // RAWINPUTHEADER size: 24 bytes on 64-bit, 16 bytes on 32-bit
+    static readonly int HDR_SIZE = IntPtr.Size == 8 ? 24 : 16;
+
+    // ── Scanner state ─────────────────────────────────────
+    readonly StringBuilder _buf = new StringBuilder(64);
+    long _lastMs = 0;
+    const int MAX_GAP_MS = 180;
+    const int MIN_LEN    = 7;
+    const int MAX_LEN    = 60;
+
+    // ── Form init ─────────────────────────────────────────
+    public AsclionRawInput() {
+        Text            = "AsclionRawInputHelper";
+        WindowState     = FormWindowState.Minimized;
+        ShowInTaskbar   = false;
+        FormBorderStyle = FormBorderStyle.None;
+        Opacity         = 0;
+        Width           = 0;
+        Height          = 0;
+    }
+
+    protected override void OnHandleCreated(EventArgs e) {
+        base.OnHandleCreated(e);
+        var dev = new RAWINPUTDEVICE[1];
+        dev[0].usUsagePage = 1;   // HID_USAGE_PAGE_GENERIC
+        dev[0].usUsage     = 6;   // HID_USAGE_GENERIC_KEYBOARD
+        dev[0].dwFlags     = RIDEV_INPUTSINK;
+        dev[0].hwndTarget  = Handle;
+        bool ok = RegisterRawInputDevices(dev, 1, Marshal.SizeOf(typeof(RAWINPUTDEVICE)));
+        // Report status on stderr (devLog in main.js)
+        Console.Error.WriteLine(ok
+            ? "STATUS:RawInput registered OK"
+            : "STATUS:RegisterRawInputDevices failed, err=" + Marshal.GetLastWin32Error());
+        Console.Error.Flush();
+    }
+
+    // ── Message pump ──────────────────────────────────────
+    protected override void WndProc(ref Message m) {
+        if (m.Msg == WM_INPUT) ProcessRawInput(m.LParam);
+        base.WndProc(ref m);
+    }
+
+    void ProcessRawInput(IntPtr hRawInput) {
+        int sz = 0;
+        // First call: get required buffer size
+        GetRawInputData(hRawInput, RID_INPUT, IntPtr.Zero, ref sz, HDR_SIZE);
+        if (sz <= 0) return;
+
+        IntPtr ptr = Marshal.AllocHGlobal(sz);
+        try {
+            int read = GetRawInputData(hRawInput, RID_INPUT, ptr, ref sz, HDR_SIZE);
+            if (read < 0) return;
+
+            // RAWINPUTHEADER.dwType is at offset 0 (uint, 4 bytes)
+            uint type = (uint)Marshal.ReadInt32(ptr, 0);
+            if (type != RIM_TYPEKEYBOARD) return;
+
+            // RAWKEYBOARD layout (after header):
+            //   offset 0: MakeCode  (WORD)
+            //   offset 2: Flags     (WORD)  ← RI_KEY_BREAK = key-up
+            //   offset 4: Reserved  (WORD)
+            //   offset 6: VKey      (WORD)  ← virtual key code
+            //   offset 8: Message   (DWORD)
+            ushort flags = (ushort)(Marshal.ReadInt16(ptr, HDR_SIZE + 2) & 0xFFFF);
+            ushort vkey  = (ushort)(Marshal.ReadInt16(ptr, HDR_SIZE + 6) & 0xFFFF);
+
+            if ((flags & RI_KEY_BREAK) != 0) return; // ignore key-up
+            HandleVKey(vkey);
+        } finally {
+            Marshal.FreeHGlobal(ptr);
+        }
+    }
+
+    // Convert Virtual Key to ASCII character.
+    // Digits are layout-independent → covers EAN-13 / CIP-13 on any keyboard.
+    // Letters may be layout-shifted on AZERTY but GS1 DataMatrix is handled
+    // downstream by parseBarcodeToCip which is tolerant of case.
+    static string VkToChar(ushort vk) {
+        if (vk >= 0x30 && vk <= 0x39) return ((char)vk).ToString();              // row digits 0-9
+        if (vk >= 0x60 && vk <= 0x69) return ((char)(vk - 0x60 + 0x30)).ToString(); // numpad 0-9
+        if (vk >= 0x41 && vk <= 0x5A) return ((char)(vk + 32)).ToString();        // A-Z → a-z
+        if (vk == 0xBD) return "-"; // VK_OEM_MINUS
+        return null;
+    }
+
+    void HandleVKey(ushort vk) {
+        // Enter (VK_RETURN = 0x0D) or Tab (VK_TAB = 0x09) = terminator
+        if (vk == 0x0D || vk == 0x09) {
+            string s = _buf.ToString();
+            if (s.Length >= MIN_LEN) {
+                Console.WriteLine("BARCODE:" + s);
+                Console.Out.Flush();
+            }
+            _buf.Clear();
+            return;
+        }
+        // Modifier keys: Shift, Ctrl, Alt, Win (LR variants) — don't break buffer
+        if (vk == 0x10 || vk == 0x11 || vk == 0x12 ||
+            vk == 0xA0 || vk == 0xA1 ||
+            vk == 0xA2 || vk == 0xA3 ||
+            vk == 0xA4 || vk == 0xA5 ||
+            vk == 0x5B || vk == 0x5C) return;
+
+        long now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        // Inter-key gap too large → start fresh (scanner sends chars fast, humans slow)
+        if (_buf.Length > 0 && now - _lastMs > MAX_GAP_MS) _buf.Clear();
+        _lastMs = now;
+
+        string ch = VkToChar(vk);
+        if (ch != null) {
+            if (_buf.Length < MAX_LEN) _buf.Append(ch);
+        } else {
+            // Unrecognised non-modifier key (function key, arrow, etc.) breaks sequence
+            _buf.Clear();
+        }
+    }
+
+    [STAThread]
+    public static void Start() {
+        Console.OutputEncoding = Encoding.UTF8;
+        Console.Out.AutoFlush  = false; // we flush manually
+        Application.Run(new AsclionRawInput());
+    }
+}
+'@
+[AsclionRawInput]::Start()
+`;
+
+let rawInputProc = null;
+let rawInputStarted = false;
+let rawInputError = null;
+let isQuitting = false;
+
+function startRawInput() {
+  if (process.platform !== "win32") return;
+  if (rawInputProc) return;
+
+  // Write the PowerShell script to userData (less suspicious than %TEMP%)
+  const ps1Path = path.join(app.getPath("userData"), "asclion-rawinput-helper.ps1");
+  try {
+    fs.writeFileSync(ps1Path, RAW_INPUT_PS_SCRIPT, "utf-8");
+  } catch (e) {
+    rawInputError = "write: " + (e && e.message);
+    devWarn("[RAWINPUT] failed to write script:", e);
+    return;
+  }
+
+  try {
+    const { spawn } = require("child_process");
+    rawInputProc = spawn(
+      "powershell.exe",
+      ["-ExecutionPolicy", "Bypass", "-NoProfile", "-NonInteractive", "-WindowStyle", "Hidden", "-File", ps1Path],
+      { windowsHide: true, stdio: ["ignore", "pipe", "pipe"] },
+    );
+
+    let stdoutBuf = "";
+    rawInputProc.stdout.on("data", (chunk) => {
+      stdoutBuf += chunk.toString("utf-8");
+      const lines = stdoutBuf.split(/\r?\n/);
+      stdoutBuf = lines.pop(); // keep partial last line
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith("BARCODE:")) continue;
+        const raw = trimmed.slice(8).trim();
+        if (raw.length < SCAN_MIN_LENGTH) continue;
+        const parsed = parseBarcodeToCip(raw);
+        if (parsed) {
+          devLog("[RAWINPUT] barcode:", parsed);
+          emitGlobalScan(parsed);
+        } else {
+          devLog("[RAWINPUT] rejected raw:", raw);
+        }
+      }
+    });
+
+    rawInputProc.stderr.on("data", (chunk) => {
+      const msg = chunk.toString("utf-8").trim();
+      if (msg) devLog("[RAWINPUT]", msg);
+      if (msg.includes("STATUS:ok") || msg.includes("STATUS:RawInput registered OK")) {
+        rawInputError = null;
+      } else if (msg.includes("STATUS:fail") || msg.includes("STATUS:RegisterRawInputDevices failed")) {
+        rawInputError = msg;
+      }
+    });
+
+    rawInputProc.on("exit", (code, signal) => {
+      devLog("[RAWINPUT] process exited:", code, signal);
+      rawInputProc = null;
+      rawInputStarted = false;
+      rawInputError = rawInputError || `exited (code ${code})`;
+      // Auto-restart after 15 s unless the app is shutting down
+      if (!isQuitting) {
+        setTimeout(() => {
+          if (!rawInputProc && !isQuitting) startRawInput();
+        }, 15000);
+      }
+    });
+
+    rawInputProc.on("error", (err) => {
+      rawInputError = "spawn: " + (err && err.message);
+      devWarn("[RAWINPUT] spawn error:", err);
+      rawInputProc = null;
+      rawInputStarted = false;
+    });
+
+    rawInputStarted = true;
+    rawInputError = null;
+    devLog("[RAWINPUT] subprocess spawned, PID:", rawInputProc.pid);
+  } catch (e) {
+    rawInputError = "spawn: " + (e && e.message);
+    devWarn("[RAWINPUT] failed to spawn:", e);
+    rawInputProc = null;
+    rawInputStarted = false;
+  }
+}
+
+function stopRawInput() {
+  if (rawInputProc) {
+    try {
+      rawInputProc.kill("SIGTERM");
+    } catch (_) {}
+    rawInputProc = null;
+  }
+  rawInputStarted = false;
+}
+
 function bootScannerStack() {
   // Load persisted preferences (allowGeneric, clipboard, etc.) before scanning
   applyScannerPref();
   const pref = loadScannerPref();
   if (pref && pref.clipboardEnabled) startClipboardScanner();
-  // 1) Direct HID read (works without focus, AV-friendly)
+
+  // 1) Raw Input Win32 (Windows only) — NOT a hook, AV-safe, works without focus
+  //    Requires no scanner configuration. Runs as a hidden PowerShell subprocess.
+  startRawInput();
+
+  // 2) Direct HID read (node-hid) — AV-safe, works for HID POS / non-keyboard interfaces
   if (HID) {
     const best = findBestScanner();
     if (best) openHidDevice(best);
     startHidPolling();
   }
-  // 2) Always start uiohook in parallel as fallback. emitGlobalScan dedups.
+
+  // 3) uiohook-napi — global keyboard hook (may be blocked by AV, last resort)
   startUiohookFallback();
-  // Note: WebHID path is started by the renderer (preload.js) after did-finish-load.
-  // Barcodes arrive via scanner:webhid-barcode IPC and are forwarded to emitGlobalScan.
+
+  // Note: WebHID path is started by preload.js via navigator.hid after did-finish-load.
+  // Barcodes from all paths merge via emitGlobalScan() deduplication.
 }
 
 function getScannerStatus() {
@@ -1340,6 +1627,9 @@ function getScannerStatus() {
     clipboardEnabled,
     // WebHID (managed renderer-side; this just confirms the flag is set)
     webHidEnabled: true, // always available in Electron — activation depends on scanner mode
+    // Raw Input Win32 subprocess
+    rawInputStarted,
+    rawInputError,
   };
 }
 
@@ -1489,6 +1779,8 @@ ipcMain.handle("scanner:set-allow-generic", (_e, allow) => {
 });
 
 app.on("will-quit", () => {
+  isQuitting = true;
+  stopRawInput();
   try {
     if (uIOhook && uiohookStarted) uIOhook.stop();
   } catch {
