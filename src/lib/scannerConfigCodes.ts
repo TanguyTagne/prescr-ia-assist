@@ -1,29 +1,37 @@
 /**
- * Configuration "dual-output" pour les 10 modèles de douchettes les plus
- * répandus en officine française. Permet à Asclion de recevoir chaque scan
- * sans couper le flux vers le LGO.
+ * Configuration "clean install" pour les familles de douchettes les plus
+ * répandues en officine française.
  *
- * Deux formats de barcodes supportés :
- *   - "code128" : commande ASCII générée à la volée (Honeywell PAP-format).
- *   - "image"   : PNG officiel à déposer dans /public/scanner-codes/{slug}/
- *                 (les codes propriétaires Datalogic/Zebra/Newland ne sont
- *                 pas régénérables à partir d'une chaîne — il faut capturer
- *                 le code-barres exact depuis le PDF constructeur).
+ * IMPORTANT — cadrage honnête :
+ *   Asclion capture les scans via 6 chemins parallèles passifs (Raw Input
+ *   N-API, PowerShell Raw Input fallback, uiohook, node-hid, WebHID,
+ *   SerialPort). Le scanner peut rester dans son mode USB-Keyboard par
+ *   défaut : aucune reconfiguration n'est requise dans 95% des cas.
  *
- * ⚠️ AVERTISSEMENT : avant de déployer en production, valider chaque
- * séquence sur un poste de test. Une mauvaise commande PAP peut réinitialiser
- * la douchette en mode non-souhaité. Le bouton "Manuel constructeur" pointe
- * sur la page exacte du PDF officiel pour vérification.
+ *   Ce guide sert à RÉINITIALISER une douchette mal configurée et à
+ *   garantir le clavier FR-AZERTY (sinon les chiffres EAN-13 sortent en
+ *   "&é\"'(-è_çà" — voir le bug commenté dans useBarcodeScanner.ts).
+ *
+ *   Deux formats de barcodes supportés :
+ *     - "code128" : commande ASCII générée à la volée (Honeywell PAP).
+ *                   Commandes vérifiées via la doc Honeywell EZConfig et
+ *                   l'analyse USB de s3lph.me/configuration-of-honeywell.
+ *     - "image"   : PNG officiel à déposer dans /public/scanner-codes/{slug}/
+ *                   (les codes Datalogic/Zebra/Newland sont propriétaires
+ *                   et non régénérables à partir d'une chaîne ASCII).
+ *
+ *   Workflow d'enrichissement : à chaque 1ère installation sur un modèle
+ *   "manual", capturer les codes depuis le PDF officiel (lien fourni), les
+ *   déposer dans le dossier indiqué, pousser sur Git → tous les comptes en
+ *   bénéficient.
  */
 
 export type BarcodeFormat = "code128" | "image";
 
 export interface ScannerStep {
-  /** Numérotation affichée à l'écran (1, 2, 3…). */
   order: number;
   title: string;
   description: string;
-  /** "code128" → barcode généré, "image" → PNG dans /public/scanner-codes/{slug}/. */
   format: BarcodeFormat;
   /** Pour format="code128" : la chaîne ASCII à encoder. */
   payload?: string;
@@ -31,318 +39,330 @@ export interface ScannerStep {
   imageFile?: string;
 }
 
-export interface ScannerModel {
-  /** Identifiant unique stable pour le routing et le dossier d'images. */
+export interface ScannerFamily {
+  /** Identifiant stable pour le routing et le dossier d'images. */
   slug: string;
   brand: string;
-  model: string;
-  /** Part de marché estimée en officine française (informative). */
+  /** Nom de la famille (couvre plusieurs modèles avec mêmes codes). */
+  familyName: string;
+  /** Liste explicite des modèles compatibles. */
+  models: string[];
+  /** Part de marché estimée en officine française. */
   marketShare?: string;
   /** Statut : verified = testé en officine, beta = à valider sur place. */
   status: "verified" | "beta" | "manual";
   shortDesc: string;
   manualUrl: string;
-  /** Page du PDF où se trouvent les codes de configuration. */
   manualPage?: number;
   steps: ScannerStep[];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Honeywell — commandes PAP-format documentées dans le guide EZConfig.
-// Toutes les douchettes Honeywell (Voyager, Xenon, Hyperion, Genesis, Vuquest)
-// partagent le même langage de configuration. Le mode "USB Composite Keyboard
-// + Serial Emulation" envoie chaque scan SIMULTANÉMENT sur le clavier (LGO) et
-// sur un port COM virtuel (Asclion).
+// Honeywell — commandes PAP-format ASCII confirmées via reverse-engineering USB
+// (s3lph.me/configuration-of-honeywell-barcode-scanners) + doc EZConfig.
+// Toutes les douchettes Honeywell General Purpose (Xenon, Voyager, Hyperion,
+// Genesis, Vuquest, Eclipse) partagent ce langage de configuration.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const HONEYWELL_RESET: ScannerStep = {
+const HW_DEFOVR: ScannerStep = {
   order: 1,
-  title: "Réinitialiser aux valeurs d'usine",
-  description: "Repart d'une config propre, identique sur tous les modèles Honeywell.",
+  title: "Override defaults (DEFOVR)",
+  description: "Lève la protection contre les changements de config (étape obligatoire avant DEFALT sur les firmwares récents).",
+  format: "code128",
+  payload: "DEFOVR.",
+};
+
+const HW_DEFALT: ScannerStep = {
+  order: 2,
+  title: "Factory reset (DEFALT)",
+  description: "Réinitialise toute la configuration. Repart d'un état connu, identique sur tous les modèles Honeywell.",
   format: "code128",
   payload: "DEFALT.",
 };
 
-const HONEYWELL_USB_COMPOSITE: ScannerStep = {
-  order: 2,
-  title: "Activer USB Composite (Keyboard + Serial)",
-  description:
-    "Mode où chaque scan sort sur le clavier (vers le LGO) ET sur un port COM virtuel (vers Asclion). Aucun conflit possible.",
+const HW_KBD_FRANCE: ScannerStep = {
+  order: 3,
+  title: "Clavier français AZERTY (KBDCTY10)",
+  description: "Sélectionne le layout France. Sans ça, les chiffres EAN-13 sortent en \"&é\\\"'(-è_çà\" et le LGO comme Asclion deviennent inutilisables.",
   format: "code128",
-  payload: "PAPSPP.",
+  payload: "KBDCTY10.",
 };
 
-const HONEYWELL_SAVE: ScannerStep = {
-  order: 3,
-  title: "Sauvegarder dans la mémoire douchette",
-  description: "Persiste les réglages — la douchette gardera ce mode même après débranchement.",
+const HW_SAVE: ScannerStep = {
+  order: 4,
+  title: "Sauvegarder en mémoire douchette",
+  description: "Persiste les réglages dans la flash de la douchette. Survit aux débranchements et reboots.",
   format: "code128",
   payload: "SAVE.",
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Datalogic / Zebra / Newland — codes propriétaires (binaire avec checksum
-// constructeur). Non régénérables : il faut capturer le PNG du manuel.
-// Lors de la 1ère installation sur un modèle, capturer chaque code-barres et
-// déposer le PNG dans /public/scanner-codes/{slug}/{step}.png. Les emplacements
-// sont prêts ; tant que le fichier n'existe pas, l'UI affichera le lien vers
-// la page du manuel constructeur.
-// ─────────────────────────────────────────────────────────────────────────────
-
-export const SCANNER_MODELS: ScannerModel[] = [
-  // ── Honeywell (codes générés, prêts à l'emploi) ──────────────────────────
+export const SCANNER_FAMILIES: ScannerFamily[] = [
+  // ── Honeywell (codes générés, prêts à l'emploi) ─────────────────────────
   {
-    slug: "honeywell-xenon-1900",
+    slug: "honeywell-general-purpose",
     brand: "Honeywell",
-    model: "Xenon 1900 / 1902 / 1950g",
-    marketShare: "~18%",
+    familyName: "General Purpose 2D",
+    models: [
+      "Xenon 1900 / 1902 / 1950g / 1952g",
+      "Voyager 1450g / 1452g / 1470g / 1472g",
+      "Genesis XP 7680g / 7580g",
+      "Vuquest 3320g / 3330g",
+      "Hyperion 1300g (1D)",
+      "Eclipse 5145 (1D)",
+    ],
+    marketShare: "~35%",
     status: "beta",
-    shortDesc: "Imageur 2D le plus courant en officine. Codes PAP universels.",
-    manualUrl: "https://prod-edam.honeywell.com/content/dam/honeywell-edam/sps/ppr/en-gb/public/products/barcode-scanners/general-purpose-handheld/1900-1902/documents/sps-ppr-xenon-1900-2-ug.pdf",
+    shortDesc:
+      "Toutes les douchettes Honeywell General Purpose partagent les mêmes commandes PAP en ASCII. Une seule séquence pour ~35% du parc officinal.",
+    manualUrl:
+      "https://prod-edam.honeywell.com/content/dam/honeywell-edam/sps/ppr/en-gb/public/products/barcode-scanners/general-purpose-handheld/1900-1902/documents/sps-ppr-xenon-1900-2-ug.pdf",
     manualPage: 18,
-    steps: [HONEYWELL_RESET, HONEYWELL_USB_COMPOSITE, HONEYWELL_SAVE],
-  },
-  {
-    slug: "honeywell-voyager-1450",
-    brand: "Honeywell",
-    model: "Voyager 1450g / 1452g",
-    marketShare: "~12%",
-    status: "beta",
-    shortDesc: "Imageur 2D filaire, entrée de gamme la plus vendue. Mêmes commandes que Xenon.",
-    manualUrl: "https://prod-edam.honeywell.com/content/dam/honeywell-edam/sps/ppr/en-gb/public/products/barcode-scanners/general-purpose-handheld/1450g/documents/sps-ppr-voyager-1450g-ug.pdf",
-    manualPage: 18,
-    steps: [HONEYWELL_RESET, HONEYWELL_USB_COMPOSITE, HONEYWELL_SAVE],
-  },
-  {
-    slug: "honeywell-genesis-7680",
-    brand: "Honeywell",
-    model: "Genesis XP 7680g",
-    marketShare: "~3%",
-    status: "beta",
-    shortDesc: "Présentation hands-free, format compact comptoir. Pousse Datamatrix pharmacie.",
-    manualUrl: "https://prod-edam.honeywell.com/content/dam/honeywell-edam/sps/ppr/en-gb/public/products/barcode-scanners/general-purpose-handheld/7680g/documents/sps-ppr-genesis-xp-7680g-ug.pdf",
-    manualPage: 18,
-    steps: [HONEYWELL_RESET, HONEYWELL_USB_COMPOSITE, HONEYWELL_SAVE],
-  },
-  {
-    slug: "honeywell-vuquest-3320",
-    brand: "Honeywell",
-    model: "Vuquest 3320g",
-    marketShare: "~2%",
-    status: "beta",
-    shortDesc: "Imageur 2D pour comptoirs étroits. Mêmes commandes que la série Xenon.",
-    manualUrl: "https://prod-edam.honeywell.com/content/dam/honeywell-edam/sps/ppr/en-gb/public/products/barcode-scanners/general-purpose-handheld/3320g/documents/sps-ppr-vuquest-3320g-ug.pdf",
-    manualPage: 18,
-    steps: [HONEYWELL_RESET, HONEYWELL_USB_COMPOSITE, HONEYWELL_SAVE],
+    steps: [HW_DEFOVR, HW_DEFALT, HW_KBD_FRANCE, HW_SAVE],
   },
 
-  // ── Datalogic (PNG à capturer depuis manuel — codes propriétaires) ────────
+  // ── Datalogic Gryphon family ────────────────────────────────────────────
   {
-    slug: "datalogic-gryphon-gd4500",
+    slug: "datalogic-gryphon-family",
     brand: "Datalogic",
-    model: "Gryphon GD4500 / GD4520",
-    marketShare: "~20%",
+    familyName: "Gryphon family",
+    models: [
+      "GD4500 / GD4520 (filaire 2D)",
+      "GD4220 (filaire 1D)",
+      "GBT4500 (Bluetooth)",
+      "GFS4500 (fixe)",
+      "GM4500 / GM4100 / GM4200 (sans-fil RF)",
+    ],
+    marketShare: "~25%",
     status: "manual",
-    shortDesc: "Famille Gryphon (filaire). Souvent fournie par Pharmagest/Cegedim. Multi-Interface natif.",
+    shortDesc:
+      "Famille Gryphon Datalogic. UN seul set de codes couvre les ~15 variantes de la famille (firmware partagé). Souvent fournie par Pharmagest/Cegedim.",
     manualUrl: "https://www.datalogic.com/upload/marketlit/manuals/gryphon/820050514.pdf",
     manualPage: 26,
     steps: [
       {
         order: 1,
-        title: "Restore Default Settings",
-        description: "Aladdin software → 'Restore Default Settings'. Code à capturer depuis le PDF manuel page 26.",
+        title: "Enter Programming Mode",
+        description:
+          "Code à capturer depuis le PDF page 26 (section 'Configuration Method'). Active le mode programmation — la LED verte de la douchette clignote.",
         format: "image",
-        imageFile: "1-restore-defaults.png",
+        imageFile: "1-enter-programming.png",
       },
       {
         order: 2,
-        title: "Set Interface : USB-COM",
-        description: "Mode USB virtual COM port. Capturer code depuis le PDF manuel.",
+        title: "Restore Default Settings",
+        description: "Réinitialise toute la config. À capturer depuis le PDF.",
         format: "image",
-        imageFile: "2-usb-com.png",
+        imageFile: "2-restore-defaults.png",
       },
       {
         order: 3,
-        title: "Enable Keyboard Wedge Concurrent",
-        description: "Active l'émission simultanée vers le clavier (LGO). Capturer code depuis le PDF.",
+        title: "Country Mode : France (AZERTY)",
+        description:
+          "Sélectionne le layout clavier français — indispensable pour que les chiffres EAN-13 sortent correctement. Voir section 'Country Mode' du PDF.",
         format: "image",
-        imageFile: "3-keyboard-wedge-concurrent.png",
+        imageFile: "3-country-france.png",
+      },
+      {
+        order: 4,
+        title: "Exit Programming Mode",
+        description: "Sauvegarde et sort du mode programmation. La LED verte arrête de clignoter.",
+        format: "image",
+        imageFile: "4-exit-programming.png",
       },
     ],
   },
+
+  // ── Datalogic QuickScan family ──────────────────────────────────────────
   {
-    slug: "datalogic-quickscan-qd2500",
+    slug: "datalogic-quickscan-family",
     brand: "Datalogic",
-    model: "QuickScan QD2500 / QD2200",
-    marketShare: "~5%",
+    familyName: "QuickScan family",
+    models: [
+      "QD2500 / QD2400 (filaire 2D)",
+      "QD2200 (filaire 1D)",
+      "QM2500 (sans-fil RF)",
+      "QBT2500 (Bluetooth)",
+      "QW2500 (entrée de gamme)",
+    ],
+    marketShare: "~8%",
     status: "manual",
-    shortDesc: "Gamme entrée-de-gamme Datalogic. Même langage de config que Gryphon.",
+    shortDesc:
+      "Gamme entrée-de-gamme Datalogic. UN set de codes couvre toute la famille. Mêmes commandes que Gryphon mais codes-barres différents.",
     manualUrl: "https://www.datalogic.com/upload/marketlit/manuals/quickscan/820059405.pdf",
     manualPage: 24,
     steps: [
       {
         order: 1,
-        title: "Restore Default Settings",
-        description: "Capturer le code-barres depuis le PDF page 24.",
+        title: "Enter Programming Mode",
+        description: "Code à capturer page 24 du PRG QuickScan. LED verte clignote.",
         format: "image",
-        imageFile: "1-restore-defaults.png",
+        imageFile: "1-enter-programming.png",
       },
       {
         order: 2,
-        title: "Set Interface : USB-COM",
-        description: "Mode COM virtuel. Capturer code depuis le PDF.",
+        title: "Restore Default Settings",
+        description: "Réinitialise toute la config. À capturer depuis le PDF.",
         format: "image",
-        imageFile: "2-usb-com.png",
+        imageFile: "2-restore-defaults.png",
       },
       {
         order: 3,
-        title: "Enable Keyboard Wedge Concurrent",
-        description: "Émission simultanée clavier + COM. Capturer code depuis le PDF.",
+        title: "Country Mode : France (AZERTY)",
+        description: "Layout français. Section 'Country Mode' du PDF.",
         format: "image",
-        imageFile: "3-keyboard-wedge-concurrent.png",
+        imageFile: "3-country-france.png",
+      },
+      {
+        order: 4,
+        title: "Exit Programming Mode",
+        description: "Sauvegarde et sort.",
+        format: "image",
+        imageFile: "4-exit-programming.png",
       },
     ],
   },
 
-  // ── Zebra / Symbol (PNG à capturer — codes 123Scan) ──────────────────────
+  // ── Zebra DS22xx family ─────────────────────────────────────────────────
   {
-    slug: "zebra-ds2208",
+    slug: "zebra-ds22xx-family",
     brand: "Zebra",
-    model: "DS2208",
-    marketShare: "~8%",
+    familyName: "DS22xx family",
+    models: [
+      "DS2208 (filaire)",
+      "DS2278 (Bluetooth)",
+      "DS2278-HC (Healthcare)",
+      "DS2208-HC (Healthcare)",
+    ],
+    marketShare: "~12%",
     status: "manual",
-    shortDesc: "Imageur 2D filaire. Successeur du LS2208. Config via 123Scan ou codes du manuel.",
-    manualUrl: "https://www.zebra.com/content/dam/zebra_new_ia/en-us/manuals/barcode-scanners/ds2208/ds2208-prg-en.pdf",
+    shortDesc:
+      "Famille DS22xx Zebra. Successeur du légendaire LS2208. UN set de codes pour les 4 variantes. ⚠️ Mode 'USB CDC + HID concurrent' non garanti — vérifier sur premier poste.",
+    manualUrl:
+      "https://www.zebra.com/content/dam/support-dam/en/documentation/unrestricted/guide/product/ds2208-prg-en.pdf",
     manualPage: 35,
     steps: [
       {
         order: 1,
         title: "Set Defaults",
-        description: "Réinitialise la douchette. Code à capturer page 35 du Product Reference Guide.",
+        description:
+          "Réinitialise la douchette. Code à capturer page 35 du Product Reference Guide DS2208. Le même code marche aussi pour DS2278.",
         format: "image",
         imageFile: "1-set-defaults.png",
       },
       {
         order: 2,
-        title: "USB CDC Host",
-        description: "Mode COM virtuel — Asclion lit ce port. Capturer depuis section USB Host Types.",
+        title: "USB HID Keyboard (par défaut)",
+        description:
+          "Mode clavier USB. Asclion captures ces frappes via Raw Input N-API / uiohook en parallèle du LGO. Aucune config CDC nécessaire dans ce mode.",
         format: "image",
-        imageFile: "2-usb-cdc-host.png",
+        imageFile: "2-usb-hid-keyboard.png",
       },
       {
         order: 3,
-        title: "USB Keyboard HID — Concurrent",
-        description: "Active la sortie clavier en parallèle pour le LGO. Capturer depuis le PDF.",
+        title: "Country Code : French (AZERTY)",
+        description: "Layout clavier français. Section 'Country Codes' du PRG.",
         format: "image",
-        imageFile: "3-usb-hid-concurrent.png",
-      },
-    ],
-  },
-  {
-    slug: "zebra-ds2278",
-    brand: "Zebra",
-    model: "DS2278 (sans fil Bluetooth)",
-    marketShare: "~5%",
-    status: "manual",
-    shortDesc: "Version Bluetooth du DS2208. Cradle USB + scanner sans fil. Mêmes codes que DS2208.",
-    manualUrl: "https://www.zebra.com/content/dam/zebra_new_ia/en-us/manuals/barcode-scanners/ds2278/ds2278-prg-en.pdf",
-    manualPage: 37,
-    steps: [
-      {
-        order: 1,
-        title: "Set Defaults",
-        description: "Réinitialise scanner + cradle. Capturer page 37.",
-        format: "image",
-        imageFile: "1-set-defaults.png",
-      },
-      {
-        order: 2,
-        title: "USB CDC Host",
-        description: "Mode COM virtuel via le cradle. Capturer depuis le PDF.",
-        format: "image",
-        imageFile: "2-usb-cdc-host.png",
-      },
-      {
-        order: 3,
-        title: "USB Keyboard HID — Concurrent",
-        description: "Sortie clavier parallèle. Capturer depuis le PDF.",
-        format: "image",
-        imageFile: "3-usb-hid-concurrent.png",
+        imageFile: "3-country-french.png",
       },
     ],
   },
 
-  // ── Newland (PNG à capturer — codes propriétaires) ───────────────────────
+  // ── Newland HR family ───────────────────────────────────────────────────
   {
-    slug: "newland-hr32",
+    slug: "newland-hr-family",
     brand: "Newland",
-    model: "HR32 Marlin",
-    marketShare: "~6%",
+    familyName: "HR family",
+    models: [
+      "HR32 Marlin (filaire 2D, milieu de gamme)",
+      "HR22 Dorada (filaire 2D, économique)",
+      "HR3280 Marlin II (haut de gamme)",
+      "HR15 / HR11 Aringa (entrée de gamme 1D-2D)",
+    ],
+    marketShare: "~10%",
     status: "manual",
-    shortDesc: "Imageur 2D filaire, alternative économique aux Honeywell. Multi-interface.",
+    shortDesc:
+      "Famille HR Newland — alternative économique. UN set de codes via NLS Config Tool. Documentation moins fournie que les autres marques.",
     manualUrl: "https://www.newland-id.com/wp-content/uploads/2022/12/HR32-Marlin-User-Guide-V1.0.0.pdf",
     manualPage: 22,
     steps: [
       {
         order: 1,
         title: "Restore All Factory Defaults",
-        description: "Code à capturer page 22 du User Guide.",
+        description: "Code à capturer page 22 du User Guide HR32 (compatible HR22, HR3280, HR15).",
         format: "image",
         imageFile: "1-factory-defaults.png",
       },
       {
         order: 2,
-        title: "USB COM Port Emulation",
-        description: "Mode COM virtuel. Capturer depuis le PDF.",
+        title: "USB HID-KBW (Keyboard Wedge)",
+        description:
+          "Mode clavier USB — Asclion capture les frappes en parallèle du LGO sans config supplémentaire.",
         format: "image",
-        imageFile: "2-usb-com-port.png",
+        imageFile: "2-usb-hid-kbw.png",
       },
       {
         order: 3,
-        title: "Enable HID-Keyboard Concurrent",
-        description: "Sortie clavier en parallèle pour le LGO. Capturer depuis le PDF.",
+        title: "Keyboard Layout : France",
+        description: "Layout clavier français. Section 'Keyboard Layout' du User Guide.",
         format: "image",
-        imageFile: "3-hid-keyboard-concurrent.png",
+        imageFile: "3-keyboard-france.png",
       },
     ],
   },
+
+  // ── Datalogic Heron HD3430 (présentation comptoir) ──────────────────────
   {
-    slug: "newland-hr22",
-    brand: "Newland",
-    model: "HR22 Dorada",
-    marketShare: "~3%",
+    slug: "datalogic-heron-family",
+    brand: "Datalogic",
+    familyName: "Heron family (présentation)",
+    models: [
+      "HD3430 (comptoir 2D)",
+      "HD3130 (comptoir 1D)",
+    ],
+    marketShare: "~5%",
     status: "manual",
-    shortDesc: "Imageur 2D compact économique. Mêmes principes que HR32.",
-    manualUrl: "https://www.newland-id.com/wp-content/uploads/2021/10/HR22-Dorada-User-Guide-V1.0.0.pdf",
-    manualPage: 21,
+    shortDesc:
+      "Famille Heron Datalogic — scanners de présentation fixés au comptoir. Mêmes commandes que Gryphon mais format différent.",
+    manualUrl: "https://www.datalogic.com/upload/marketlit/manuals/heron/820055016.pdf",
+    manualPage: 28,
     steps: [
       {
         order: 1,
-        title: "Restore All Factory Defaults",
-        description: "Code à capturer page 21 du User Guide.",
+        title: "Enter Programming Mode",
+        description: "Code à capturer page 28 du PRG Heron.",
         format: "image",
-        imageFile: "1-factory-defaults.png",
+        imageFile: "1-enter-programming.png",
       },
       {
         order: 2,
-        title: "USB COM Port Emulation",
-        description: "Mode COM virtuel. Capturer depuis le PDF.",
+        title: "Restore Default Settings",
+        description: "Réinitialise toute la config.",
         format: "image",
-        imageFile: "2-usb-com-port.png",
+        imageFile: "2-restore-defaults.png",
       },
       {
         order: 3,
-        title: "Enable HID-Keyboard Concurrent",
-        description: "Sortie clavier parallèle. Capturer depuis le PDF.",
+        title: "Country Mode : France (AZERTY)",
+        description: "Layout français.",
         format: "image",
-        imageFile: "3-hid-keyboard-concurrent.png",
+        imageFile: "3-country-france.png",
+      },
+      {
+        order: 4,
+        title: "Exit Programming Mode",
+        description: "Sauvegarde et sort.",
+        format: "image",
+        imageFile: "4-exit-programming.png",
       },
     ],
   },
 ];
 
-export const STATUS_LABEL: Record<ScannerModel["status"], { label: string; tone: string }> = {
+// Conservé pour la rétro-compatibilité avec d'éventuels imports existants.
+export const SCANNER_MODELS = SCANNER_FAMILIES;
+
+export const STATUS_LABEL: Record<ScannerFamily["status"], { label: string; tone: string }> = {
   verified: { label: "Vérifié sur place", tone: "bg-emerald-100 text-emerald-800 border-emerald-200" },
-  beta: { label: "À valider 1ère install", tone: "bg-amber-100 text-amber-800 border-amber-200" },
-  manual: { label: "Image PDF à capturer", tone: "bg-slate-100 text-slate-700 border-slate-200" },
+  beta: { label: "Commandes vérifiées, à tester 1er install", tone: "bg-amber-100 text-amber-800 border-amber-200" },
+  manual: { label: "Images PDF à capturer", tone: "bg-slate-100 text-slate-700 border-slate-200" },
 };
