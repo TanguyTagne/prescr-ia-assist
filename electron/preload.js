@@ -62,6 +62,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
     bind: (devicePath) => ipcRenderer.invoke("scanner:bind", devicePath),
     unbind: () => ipcRenderer.invoke("scanner:unbind"),
     testCapture: (ms) => ipcRenderer.invoke("scanner:test-capture", ms),
+    // Test any device for N ms without binding — returns raw reports + decoded chars
+    testDevice: (devicePath, ms) => ipcRenderer.invoke("scanner:test-device", { devicePath, ms }),
+    // Enable/disable auto-bind to generic keyboard-class HID devices (opt-in)
+    setAllowGeneric: (allow) => ipcRenderer.invoke("scanner:set-allow-generic", allow),
     reload: () => ipcRenderer.invoke("scanner:reload"),
   },
 });
