@@ -41,6 +41,25 @@ try {
   serialLoadError = e && e.message;
   console.error("[ASCLION-SCAN] serialport unavailable:", serialLoadError);
 }
+
+// ────────────────────────────────────────────────────────────
+// Native N-API Raw Input addon — preferred over the PowerShell subprocess
+// (faster boot, no subprocess killable by GPO/EDR, inherits Electron
+// signature). Windows-only; degrades gracefully on macOS/Linux to the
+// existing PowerShell + uiohook + node-hid + WebHID + serialport fallbacks.
+// ────────────────────────────────────────────────────────────
+let nativeRawInput = null;
+let nativeRawInputError = null;
+try {
+  nativeRawInput = require("./native/rawinput");
+  if (!nativeRawInput.available) {
+    nativeRawInputError = nativeRawInput.loadError || "not built for this platform";
+    console.warn("[ASCLION-SCAN] native rawinput unavailable:", nativeRawInputError);
+  }
+} catch (e) {
+  nativeRawInputError = e && e.message;
+  console.error("[ASCLION-SCAN] native rawinput load failed:", nativeRawInputError);
+}
 // ────────────────────────────────────────────────────────────
 // Picture-in-Picture state (always-on-top + compact mode)
 // ────────────────────────────────────────────────────────────
@@ -213,11 +232,11 @@ if (!gotTheLock) {
       if (details.deviceType !== "hid") return false;
       const d = details.device || {};
       // HID POS (Point-of-Sale) usage page — always a scanner interface
-      if (d.usagePage === 0x8c) return true;
+      if (d.usagePage === 0x8C) return true;
       // Known scanner vendor IDs
       if (SCANNER_VIDS.has(d.vendorId)) return true;
       // Name-based hint
-      const name = (d.product || "") + " " + (d.manufacturer || "");
+      const name = ((d.product || "") + " " + (d.manufacturer || ""));
       if (SCANNER_PRODUCT_HINT.test(name)) return true;
       return false;
     });
@@ -228,16 +247,10 @@ if (!gotTheLock) {
       event.preventDefault();
       const list = details.deviceList || [];
       // Prefer HID POS (usage page 0x8C), then known VIDs
-      const pos = list.find((d) => d.usagePage === 0x8c);
-      if (pos) {
-        callback(pos.deviceId);
-        return;
-      }
+      const pos = list.find((d) => d.usagePage === 0x8C);
+      if (pos) { callback(pos.deviceId); return; }
       const known = list.find((d) => SCANNER_VIDS.has(d.vendorId));
-      if (known) {
-        callback(known.deviceId);
-        return;
-      }
+      if (known) { callback(known.deviceId); return; }
       callback(""); // decline
     });
 
@@ -535,11 +548,7 @@ async function registerAutoLaunch() {
     } catch (e) {
       lastError = String(e && e.message ? e.message : e);
     } finally {
-      try {
-        fs.unlinkSync(xmlPath);
-      } catch {
-        /* ignore */
-      }
+      try { fs.unlinkSync(xmlPath); } catch { /* ignore */ }
     }
     results.push({
       name: task.name,
@@ -916,24 +925,14 @@ const SCANNER_VIDS = new Set([
 ]);
 const SCANNER_PRODUCT_HINT = /scan|barcode|imager|reader|2d ?bar|hid ?pos|ean|qr|code/i;
 
-function hex(n) {
-  return (
-    "0x" +
-    Number(n || 0)
-      .toString(16)
-      .padStart(4, "0")
-  );
-}
+function hex(n) { return "0x" + Number(n || 0).toString(16).padStart(4, "0"); }
 
 function scannerPrefPath() {
   return path.join(app.getPath("userData"), "scanner.json");
 }
 function loadScannerPref() {
-  try {
-    return JSON.parse(fs.readFileSync(scannerPrefPath(), "utf-8"));
-  } catch {
-    return null;
-  }
+  try { return JSON.parse(fs.readFileSync(scannerPrefPath(), "utf-8")); }
+  catch { return null; }
 }
 function applyScannerPref() {
   const pref = loadScannerPref();
@@ -942,67 +941,25 @@ function applyScannerPref() {
   }
 }
 function saveScannerPref(pref) {
-  try {
-    fs.writeFileSync(scannerPrefPath(), JSON.stringify(pref ?? {}));
-  } catch (e) {
-    devWarn("scanner pref save failed:", e);
-  }
+  try { fs.writeFileSync(scannerPrefPath(), JSON.stringify(pref ?? {})); }
+  catch (e) { devWarn("scanner pref save failed:", e); }
 }
 
 // HID Usage IDs → ASCII (page 0x07, "Keyboard/Keypad")
 const HID_USAGE_TO_CHAR = {
-  0x1e: "1",
-  0x1f: "2",
-  0x20: "3",
-  0x21: "4",
-  0x22: "5",
-  0x23: "6",
-  0x24: "7",
-  0x25: "8",
-  0x26: "9",
-  0x27: "0",
+  0x1e: "1", 0x1f: "2", 0x20: "3", 0x21: "4", 0x22: "5",
+  0x23: "6", 0x24: "7", 0x25: "8", 0x26: "9", 0x27: "0",
   // Numpad
-  0x59: "1",
-  0x5a: "2",
-  0x5b: "3",
-  0x5c: "4",
-  0x5d: "5",
-  0x5e: "6",
-  0x5f: "7",
-  0x60: "8",
-  0x61: "9",
-  0x62: "0",
+  0x59: "1", 0x5a: "2", 0x5b: "3", 0x5c: "4", 0x5d: "5",
+  0x5e: "6", 0x5f: "7", 0x60: "8", 0x61: "9", 0x62: "0",
   // Letters — kept for GS1 DataMatrix alphanumeric payloads
-  0x04: "a",
-  0x05: "b",
-  0x06: "c",
-  0x07: "d",
-  0x08: "e",
-  0x09: "f",
-  0x0a: "g",
-  0x0b: "h",
-  0x0c: "i",
-  0x0d: "j",
-  0x0e: "k",
-  0x0f: "l",
-  0x10: "m",
-  0x11: "n",
-  0x12: "o",
-  0x13: "p",
-  0x14: "q",
-  0x15: "r",
-  0x16: "s",
-  0x17: "t",
-  0x18: "u",
-  0x19: "v",
-  0x1a: "w",
-  0x1b: "x",
-  0x1c: "y",
-  0x1d: "z",
+  0x04: "a", 0x05: "b", 0x06: "c", 0x07: "d", 0x08: "e",
+  0x09: "f", 0x0a: "g", 0x0b: "h", 0x0c: "i", 0x0d: "j",
+  0x0e: "k", 0x0f: "l", 0x10: "m", 0x11: "n", 0x12: "o",
+  0x13: "p", 0x14: "q", 0x15: "r", 0x16: "s", 0x17: "t",
+  0x18: "u", 0x19: "v", 0x1a: "w", 0x1b: "x", 0x1c: "y", 0x1d: "z",
   // Common punctuation found in GS1 payloads
-  0x2d: "-",
-  0x36: ",",
-  0x37: ".",
+  0x2d: "-", 0x36: ",", 0x37: ".",
 };
 const HID_USAGE_ENTER = 0x28;
 const HID_USAGE_NUMPAD_ENTER = 0x58;
@@ -1028,8 +985,8 @@ function isLikelyScanner(d) {
   if (!d) return false;
   if (SCANNER_VIDS.has(d.vendorId)) return true;
   // HID Point-of-Sale usage page (0x8C) is always a barcode scanner interface
-  if (d.usagePage === 0x8c) return true;
-  const p = (d.product || "") + " " + (d.manufacturer || "");
+  if (d.usagePage === 0x8C) return true;
+  const p = ((d.product || "") + " " + (d.manufacturer || ""));
   return SCANNER_PRODUCT_HINT.test(p);
 }
 
@@ -1058,12 +1015,8 @@ function listHidDevices() {
 
 function closeHidDevice() {
   if (hidState.device) {
-    try {
-      hidState.device.removeAllListeners("data");
-    } catch (_) {}
-    try {
-      hidState.device.close();
-    } catch (_) {}
+    try { hidState.device.removeAllListeners("data"); } catch (_) {}
+    try { hidState.device.close(); } catch (_) {}
   }
   hidState.device = null;
   hidState.bound = null;
@@ -1080,14 +1033,8 @@ function decodeKeyboardReport(report) {
   for (let i = start; i < report.length; i++) {
     const u = report[i];
     if (!u) continue;
-    if (u === HID_USAGE_ENTER || u === HID_USAGE_NUMPAD_ENTER) {
-      enter = true;
-      continue;
-    }
-    if (u === HID_USAGE_TAB) {
-      tab = true;
-      continue;
-    }
+    if (u === HID_USAGE_ENTER || u === HID_USAGE_NUMPAD_ENTER) { enter = true; continue; }
+    if (u === HID_USAGE_TAB) { tab = true; continue; }
     const c = HID_USAGE_TO_CHAR[u];
     if (c) chars.push(c);
   }
@@ -1149,7 +1096,7 @@ function openHidDevice(deviceInfo) {
     });
     devLog(
       `[SCAN] HID-direct bound: "${deviceInfo.product || "?"}" ` +
-        `VID=${hex(deviceInfo.vendorId)} PID=${hex(deviceInfo.productId)}`,
+      `VID=${hex(deviceInfo.vendorId)} PID=${hex(deviceInfo.productId)}`
     );
     return { ok: true, bound: hidState.bound };
   } catch (e) {
@@ -1173,12 +1120,12 @@ function findBestScanner() {
   const candidates = all.filter((d) => d.likelyScanner);
   candidates.sort((a, b) => {
     // POS usage page (0x8C) first — not claimed by keyboard driver, always openable
-    const aPOS = a.usagePage === 0x8c ? 0 : 1;
-    const bPOS = b.usagePage === 0x8c ? 0 : 1;
+    const aPOS = a.usagePage === 0x8C ? 0 : 1;
+    const bPOS = b.usagePage === 0x8C ? 0 : 1;
     if (aPOS !== bPOS) return aPOS - bPOS;
     // Then keyboard interface (where scan data normally flows)
-    const ka = a.usagePage === 1 && a.usage === 6 ? 0 : 1;
-    const kb = b.usagePage === 1 && b.usage === 6 ? 0 : 1;
+    const ka = (a.usagePage === 1 && a.usage === 6) ? 0 : 1;
+    const kb = (b.usagePage === 1 && b.usage === 6) ? 0 : 1;
     return ka - kb;
   });
   if (candidates.length > 0) return candidates[0];
@@ -1350,9 +1297,7 @@ function startClipboardScanner() {
   clipboardEnabled = true;
   const { clipboard } = require("electron");
   // Snapshot current clipboard so we don't emit whatever is there on start
-  try {
-    clipboardLastText = clipboard.readText().trim();
-  } catch (_) {}
+  try { clipboardLastText = clipboard.readText().trim(); } catch (_) {}
   clipboardPollTimer = setInterval(() => {
     try {
       const text = clipboard.readText().trim();
@@ -1555,7 +1500,7 @@ async function tryOpenScannerPort(portInfo) {
 
   devLog(
     `[SERIAL] opened ${portInfo.path} @ ${opened.baudRate} baud ` +
-      `(${portInfo.manufacturer || "?"} VID=${portInfo.vendorId || "?"})`,
+    `(${portInfo.manufacturer || "?"} VID=${portInfo.vendorId || "?"})`,
   );
 }
 
@@ -1574,9 +1519,7 @@ async function rescanSerial() {
   // 2. Close ports for devices that disappeared (unplugged)
   for (const [pathName, state] of serialState.ports.entries()) {
     if (!currentPaths.has(pathName)) {
-      try {
-        state.sp.close(() => {});
-      } catch (_) {}
+      try { state.sp.close(() => {}); } catch (_) {}
       serialState.ports.delete(pathName);
       devLog(`[SERIAL] device removed: ${pathName}`);
     }
@@ -1601,9 +1544,7 @@ function stopSerialScan() {
     serialState.rescanTimer = null;
   }
   for (const [_path, state] of serialState.ports.entries()) {
-    try {
-      state.sp.close(() => {});
-    } catch (_) {}
+    try { state.sp.close(() => {}); } catch (_) {}
   }
   serialState.ports.clear();
   serialState.started = false;
@@ -1814,7 +1755,13 @@ function startRawInput() {
     const { spawn } = require("child_process");
     rawInputProc = spawn(
       "powershell.exe",
-      ["-ExecutionPolicy", "Bypass", "-NoProfile", "-NonInteractive", "-WindowStyle", "Hidden", "-File", ps1Path],
+      [
+        "-ExecutionPolicy", "Bypass",
+        "-NoProfile",
+        "-NonInteractive",
+        "-WindowStyle", "Hidden",
+        "-File", ps1Path,
+      ],
       { windowsHide: true, stdio: ["ignore", "pipe", "pipe"] },
     );
 
@@ -1881,12 +1828,44 @@ function startRawInput() {
 
 function stopRawInput() {
   if (rawInputProc) {
-    try {
-      rawInputProc.kill("SIGTERM");
-    } catch (_) {}
+    try { rawInputProc.kill("SIGTERM"); } catch (_) {}
     rawInputProc = null;
   }
   rawInputStarted = false;
+}
+
+// ────────────────────────────────────────────────────────────
+// Native N-API Raw Input — preferred over the PowerShell subprocess.
+// Same Win32 API (RegisterRawInputDevices + RIDEV_INPUTSINK) but in-process,
+// no subprocess to be killed by GPO, no C# JIT cost at startup.
+// ────────────────────────────────────────────────────────────
+let nativeRawInputStarted = false;
+function startNativeRawInput() {
+  if (!nativeRawInput || !nativeRawInput.available) return false;
+  if (nativeRawInputStarted) return true;
+  const ok = nativeRawInput.start((rawBuffer) => {
+    if (!rawBuffer || rawBuffer.length < SCAN_MIN_LENGTH) return;
+    const parsed = parseBarcodeToCip(rawBuffer);
+    if (parsed) {
+      devLog("[RAWINPUT-NATIVE] barcode:", parsed);
+      emitGlobalScan(parsed);
+    } else {
+      devLog("[RAWINPUT-NATIVE] rejected raw:", rawBuffer);
+    }
+  });
+  nativeRawInputStarted = !!ok;
+  if (!nativeRawInputStarted) {
+    devWarn("[RAWINPUT-NATIVE] start() returned false:", nativeRawInput.loadError);
+  } else {
+    devLog("[RAWINPUT-NATIVE] started OK");
+  }
+  return nativeRawInputStarted;
+}
+function stopNativeRawInput() {
+  if (nativeRawInput && nativeRawInputStarted) {
+    nativeRawInput.stop();
+    nativeRawInputStarted = false;
+  }
 }
 
 function bootScannerStack() {
@@ -1898,9 +1877,9 @@ function bootScannerStack() {
   // ALL methods run in parallel.  emitGlobalScan() deduplicates within 800 ms
   // so duplicate captures from multiple paths are silently dropped.
 
-  // 1) Raw Input Win32 (Windows only) — NOT a hook, AV-safe, works without focus
-  //    Requires no scanner configuration. Runs as a hidden PowerShell subprocess.
-  startRawInput();
+  // 1) NATIVE Raw Input N-API (Windows, in-process) — preferred over the
+  //    PowerShell subprocess. Inherits Electron signature, no GPO/EDR friction.
+  const nativeRiOk = startNativeRawInput();
 
   // 2) SerialPort (USB-CDC) — AV-safe (file I/O), auto-detect scanner VIDs
   //    Skips ports in use by other apps (LGO).  No conflict with anyone.
@@ -1913,15 +1892,27 @@ function bootScannerStack() {
     startHidPolling();
   }
 
-  // 4) uiohook-napi — global keyboard hook (may be blocked by AV, last resort)
+  // 4) PowerShell Raw Input subprocess — fallback if native N-API addon failed
+  //    to load (binary not built, blocked by AppLocker, etc.). Kept for parity
+  //    with previous behaviour.
+  if (!nativeRiOk) {
+    devLog("[BOOT] native RawInput unavailable, falling back to PowerShell subprocess");
+    startRawInput();
+  }
+
+  // 5) uiohook-napi — global keyboard hook (may be blocked by AV, last resort)
   startUiohookFallback();
 
-  // 5) WebHID path is started by preload.js via navigator.hid after did-finish-load.
+  // 6) WebHID path is started by preload.js via navigator.hid after did-finish-load.
   //    Activates only if scanner is in HID POS mode (usage page 0x8C).
 }
 
 function getScannerStatus() {
-  const mode = hidState.device ? "hid-direct" : uiohookStarted ? "uiohook" : "none";
+  const mode = hidState.device
+    ? "hid-direct"
+    : uiohookStarted
+      ? "uiohook"
+      : "none";
   return {
     mode,
     hidLoaded: !!HID,
@@ -1943,9 +1934,13 @@ function getScannerStatus() {
     clipboardEnabled,
     // WebHID (managed renderer-side; this just confirms the flag is set)
     webHidEnabled: true, // always available in Electron — activation depends on scanner mode
-    // Raw Input Win32 subprocess
+    // Raw Input Win32 subprocess (PowerShell fallback)
     rawInputStarted,
     rawInputError,
+    // Native N-API Raw Input (preferred)
+    nativeRawInputLoaded: !!(nativeRawInput && nativeRawInput.available),
+    nativeRawInputLoadError: nativeRawInputError,
+    nativeRawInputStarted,
     // SerialPort (USB-CDC) scanner
     serialLoaded: !!SerialPortLib,
     serialLoadError,
@@ -2023,12 +2018,7 @@ ipcMain.handle("scanner:test-device", async (_e, { devicePath, ms }) => {
   } catch (e) {
     return { ok: false, error: e && e.message, reports: [], decoded: "" };
   } finally {
-    try {
-      if (dev) {
-        dev.removeAllListeners();
-        dev.close();
-      }
-    } catch (_) {}
+    try { if (dev) { dev.removeAllListeners(); dev.close(); } } catch (_) {}
   }
   return {
     ok: true,
@@ -2095,9 +2085,7 @@ ipcMain.handle("scanner:set-allow-generic", (_e, allow) => {
   try {
     const pref = loadScannerPref() || {};
     fs.writeFileSync(scannerPrefPath(), JSON.stringify({ ...pref, allowGeneric: hidState.allowGeneric }));
-  } catch (e) {
-    devWarn("allowGeneric pref save failed:", e);
-  }
+  } catch (e) { devWarn("allowGeneric pref save failed:", e); }
   // If enabling and no device bound yet, trigger a rebind scan
   if (hidState.allowGeneric && !hidState.device) {
     const best = findBestScanner();
@@ -2108,21 +2096,11 @@ ipcMain.handle("scanner:set-allow-generic", (_e, allow) => {
 
 app.on("will-quit", () => {
   isQuitting = true;
+  stopNativeRawInput();
   stopRawInput();
   stopSerialScan();
-  try {
-    if (uIOhook && uiohookStarted) uIOhook.stop();
-  } catch {
-    /* noop */
-  }
-  try {
-    closeHidDevice();
-  } catch {
-    /* noop */
-  }
-  if (hidState.pollTimer) {
-    clearInterval(hidState.pollTimer);
-    hidState.pollTimer = null;
-  }
+  try { if (uIOhook && uiohookStarted) uIOhook.stop(); } catch { /* noop */ }
+  try { closeHidDevice(); } catch { /* noop */ }
+  if (hidState.pollTimer) { clearInterval(hidState.pollTimer); hidState.pollTimer = null; }
   stopClipboardScanner();
 });
