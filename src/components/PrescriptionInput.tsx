@@ -6,7 +6,6 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { pdfToImageBase64 } from "@/lib/pdfToImage";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
 interface MedSuggestion {
@@ -22,7 +21,6 @@ interface PrescriptionInputProps {
 }
 
 const PrescriptionInput = ({ onAnalyze, onAnalyzeImage, autoAnalyze = true }: PrescriptionInputProps) => {
-  const { pharmacyId } = useAuth();
   const [mode, setMode] = useState<"quick" | "text" | "image">("quick");
   const [quickInput, setQuickInput] = useState("");
   const [textInput, setTextInput] = useState("");
@@ -65,6 +63,19 @@ const PrescriptionInput = ({ onAnalyze, onAnalyzeImage, autoAnalyze = true }: Pr
 
     const timeout = window.setTimeout(async () => {
       const startsWith = `${token}%`;
+
+      let pharmacyId: string | null = null;
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("pharmacy_id")
+            .eq("id", user.id)
+            .maybeSingle();
+          pharmacyId = profile?.pharmacy_id || null;
+        }
+      } catch { /* ignore */ }
 
       const queries: any[] = [
         supabase
@@ -115,7 +126,7 @@ const PrescriptionInput = ({ onAnalyze, onAnalyzeImage, autoAnalyze = true }: Pr
     }, 120);
 
     return () => window.clearTimeout(timeout);
-  }, [quickInput, textInput, mode, showSuggestions, pharmacyId]);
+  }, [quickInput, textInput, mode, showSuggestions]);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 

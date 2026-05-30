@@ -5,7 +5,7 @@ import { trackEvent } from "@/hooks/useAnalytics";
 const STORAGE_KEY = "asclion_register_id";
 
 export const usePcFeedback = () => {
-  const { user, pharmacyId } = useAuth();
+  const { user } = useAuth();
 
   const recordFeedback = async (
     medicamentNom: string,
@@ -18,10 +18,15 @@ export const usePcFeedback = () => {
   ) => {
 
     if (!user) return;
-    if (!pharmacyId) return;
 
     try {
-      const profile = { pharmacy_id: pharmacyId };
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("pharmacy_id")
+        .eq("id", user.id)
+        .single();
+
+      if (!profile?.pharmacy_id) return;
 
       const registerId = localStorage.getItem(STORAGE_KEY) || null;
 

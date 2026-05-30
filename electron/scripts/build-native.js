@@ -35,6 +35,7 @@ const electronVersion = (() => {
 
 const modules = [
   path.join(here, "native", "rawinput"),
+  path.join(here, "native", "uiawatcher"),
 ];
 
 for (const mod of modules) {

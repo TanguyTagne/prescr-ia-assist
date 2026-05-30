@@ -22,13 +22,26 @@ const STEPS = [
 ] as const;
 
 export const OnboardingTour = ({ open, onClose, onConnectScanner }: OnboardingTourProps) => {
-  const { user, pharmacyId } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
+  const [pharmacyId, setPharmacyId] = useState<string | null>(null);
   const [selectedLgo, setSelectedLgo] = useState<LgoType>("winpharma");
   const [savingLgo, setSavingLgo] = useState(false);
   const [scannerConnected, setScannerConnected] = useState(false);
   const [lgoSaved, setLgoSaved] = useState(false);
+
+  useEffect(() => {
+    if (!user || !open) return;
+    supabase
+      .from("profiles")
+      .select("pharmacy_id")
+      .eq("id", user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.pharmacy_id) setPharmacyId(data.pharmacy_id);
+      });
+  }, [user, open]);
 
   const finish = async () => {
     if (user) {

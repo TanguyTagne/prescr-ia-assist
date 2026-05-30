@@ -18,7 +18,7 @@ interface ReportButtonProps {
 }
 
 const ReportButton = ({ type, medicamentNom, pcNom, pcCategorie, context }: ReportButtonProps) => {
-  const { user, pharmacyId } = useAuth();
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -28,13 +28,18 @@ const ReportButton = ({ type, medicamentNom, pcNom, pcCategorie, context }: Repo
       toast.error("Connexion requise pour signaler");
       return;
     }
-    if (!pharmacyId) {
-      toast.error("Aucune pharmacie associée");
-      return;
-    }
     setSubmitting(true);
     try {
-      const profile = { pharmacy_id: pharmacyId };
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("pharmacy_id")
+        .eq("id", user.id)
+        .single();
+
+      if (!profile?.pharmacy_id) {
+        toast.error("Aucune pharmacie associée");
+        return;
+      }
 
       const { error } = await supabase.from("signalements" as any).insert({
         pharmacy_id: profile.pharmacy_id,

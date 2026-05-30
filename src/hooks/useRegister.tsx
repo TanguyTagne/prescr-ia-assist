@@ -27,7 +27,7 @@ export const useRegister = () => useContext(RegisterContext);
 const STORAGE_KEY = "asclion_register_id";
 
 export const RegisterProvider = ({ children }: { children: ReactNode }) => {
-  const { user, pharmacyId } = useAuth();
+  const { user } = useAuth();
   const [registers, setRegisters] = useState<Register[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(() => localStorage.getItem(STORAGE_KEY));
   const [loading, setLoading] = useState(true);
@@ -41,17 +41,21 @@ export const RegisterProvider = ({ children }: { children: ReactNode }) => {
       setLoading(false);
       return;
     }
-    if (!pharmacyId) {
-      // Auth still resolving the pharmacy_id — wait
-      return;
-    }
 
     let cancelled = false;
     const load = async () => {
+      const { data: profile } = await supabase.from("profiles").select("pharmacy_id").eq("id", user.id).single();
+
+      if (cancelled) return;
+      if (!profile?.pharmacy_id) {
+        setLoading(false);
+        return;
+      }
+
       const { data } = await supabase
         .from("pharmacy_registers")
         .select("id, label, active")
-        .eq("pharmacy_id", pharmacyId)
+        .eq("pharmacy_id", profile.pharmacy_id)
         .eq("active", true)
         .order("created_at", { ascending: true });
 
@@ -73,7 +77,7 @@ export const RegisterProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       cancelled = true;
     };
-  }, [user, pharmacyId]);
+  }, [user]);
 
   const setSelectedRegisterId = useCallback((id: string) => {
     setSelectedId(id);

@@ -98,7 +98,6 @@ const WidgetAuth = () => {
 };
 
 const WidgetApp = () => {
-  const { user, pharmacyId } = useAuth();
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -109,16 +108,20 @@ const WidgetApp = () => {
   const blockedCipsRef = useRef<Set<string>>(new Set());
   // Dedup guard: keyboard path + IPC global path fire simultaneously on focused window
   const lastBarcodeScanRef = useRef<{ code: string; at: number }>({ code: "", at: 0 });
-  // Cached user/pharmacy context — kept in a ref so the fire-and-forget log
-  // helpers (called from inside non-React callbacks) can read it synchronously.
+  // Cached user/pharmacy context — populated once on mount to avoid a DB query on every scan
   const scanContextRef = useRef<{ userId: string; pharmacyId: string | null } | null>(null);
   useEffect(() => {
-    if (!user) {
-      scanContextRef.current = null;
-      return;
-    }
-    scanContextRef.current = { userId: user.id, pharmacyId: pharmacyId ?? null };
-  }, [user, pharmacyId]);
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return;
+      supabase.from("profiles").select("pharmacy_id").eq("id", user.id).maybeSingle()
+        .then(({ data }) => {
+          scanContextRef.current = {
+            userId: user.id,
+            pharmacyId: (data as any)?.pharmacy_id ?? null,
+          };
+        });
+    });
+  }, []);
 
   const handleReset = () => {
     setResult(null);

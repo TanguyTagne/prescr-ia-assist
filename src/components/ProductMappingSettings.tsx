@@ -25,7 +25,7 @@ interface MedicamentMapping {
 }
 
 const ProductMappingSettings = () => {
-  const { user, pharmacyId: authPharmacyId } = useAuth();
+  const { user } = useAuth();
   const [mappings, setMappings] = useState<ProductMapping[]>([]);
   const [medMappings, setMedMappings] = useState<MedicamentMapping[]>([]);
   const [pharmacyId, setPharmacyId] = useState<string | null>(null);
@@ -36,21 +36,27 @@ const ProductMappingSettings = () => {
 
   useEffect(() => {
     if (!user) return;
-    if (!authPharmacyId) {
+    loadData();
+  }, [user]);
+
+  const loadData = async () => {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("pharmacy_id")
+      .eq("id", user!.id)
+      .single();
+
+    if (!profile?.pharmacy_id) {
       setLoading(false);
       return;
     }
-    loadData(authPharmacyId);
-  }, [user, authPharmacyId]);
-
-  const loadData = async (pid: string) => {
-    setPharmacyId(pid);
+    setPharmacyId(profile.pharmacy_id);
 
     const [mappingsRes, categoriesRes, medMapRes] = await Promise.all([
       supabase
         .from("product_mapping")
         .select("*")
-        .eq("pharmacy_id", pid)
+        .eq("pharmacy_id", profile.pharmacy_id)
         .order("categorie"),
       supabase
         .from("produits_complementaires")
@@ -59,7 +65,7 @@ const ProductMappingSettings = () => {
       supabase
         .from("medicament_pc_mapping")
         .select("*")
-        .eq("pharmacy_id", pid)
+        .eq("pharmacy_id", profile.pharmacy_id)
         .order("medicament_nom"),
     ]);
 
@@ -127,7 +133,7 @@ const ProductMappingSettings = () => {
       }
 
       toast.success("Mappings catégorie sauvegardés");
-      if (pharmacyId) await loadData(pharmacyId);
+      await loadData();
     } catch (e: any) {
       toast.error(e.message || "Erreur lors de la sauvegarde");
     } finally {
@@ -157,7 +163,7 @@ const ProductMappingSettings = () => {
       }
 
       toast.success("Mappings médicament → PC sauvegardés");
-      if (pharmacyId) await loadData(pharmacyId);
+      await loadData();
     } catch (e: any) {
       toast.error(e.message || "Erreur lors de la sauvegarde");
     } finally {
