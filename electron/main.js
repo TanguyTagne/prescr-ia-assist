@@ -356,36 +356,63 @@ ipcMain.handle("attention:is-focused", () => {
   return !!(mainWindow && mainWindow.isFocused());
 });
 // ────────────────────────────────────────────────────────────
-// Robust auto-launch (Windows Task Scheduler via XML)
-// 3 tasks: at boot, daily 08:30, daily 09:00 (catch-up)
-// Runs as SYSTEM so it fires even when no user is logged in.
-// Falls back to current user if SYSTEM registration is refused.
+// Robust auto-launch (3 mechanisms, defence-in-depth)
+//
+// CRITICAL BUG FIX (was the cause of "ghost session" issue where
+// some pharmacy PCs showed "hors ligne" despite being powered on):
+//
+//   The previous version used <BootTrigger> + UserId=S-1-5-18 (SYSTEM),
+//   which made Asclion launch in Windows session 0 (services session).
+//   Session 0 is isolated from the interactive user session since Vista
+//   for security reasons → the Asclion window existed on a desktop NO
+//   human ever sees, so the pharmacist could never log in, so no
+//   session was ever registered in the backend.
+//
+// NEW STRATEGY (all 3 layered, run as the INTERACTIVE user):
+//
+//   1. HKCU\Software\Microsoft\Windows\CurrentVersion\Run
+//      → primary mechanism, standard Windows GUI auto-launch.
+//      Fires on user logon, runs in user session (visible).
+//   2. Scheduled task with <LogonTrigger>
+//      → backup if Run key is wiped by group policy or by user.
+//      Fires 15 s after logon, principal = Users group.
+//   3. Scheduled tasks at 08:30 and 09:00 daily
+//      → catch-up if Asclion crashed during the day.
 // ────────────────────────────────────────────────────────────
 const AUTOLAUNCH_TASKS = [
-  { name: "AsclionAtBoot", kind: "boot" },
+  { name: "AsclionAtLogon", kind: "logon" },
   { name: "AsclionDaily0830", kind: "daily", time: "08:30:00" },
   { name: "AsclionDaily0900", kind: "daily", time: "09:00:00" },
 ];
+// Old task names from pre-fix versions (registered as SYSTEM, broken).
+// Deleted on every registerAutoLaunch() call so existing installs heal.
+const OLD_TASK_NAMES = ["AsclionAtBoot"];
+
 function buildTaskXml({ kind, time, exePath }) {
   const exeEscaped = exePath.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   const trigger =
-    kind === "boot"
-      ? `<BootTrigger><Enabled>true</Enabled><Delay>PT30S</Delay></BootTrigger>`
+    kind === "logon"
+      ? `<LogonTrigger><Enabled>true</Enabled><Delay>PT15S</Delay></LogonTrigger>`
       : `<CalendarTrigger>
            <StartBoundary>2026-01-01T${time}</StartBoundary>
            <Enabled>true</Enabled>
            <ScheduleByDay><DaysInterval>1</DaysInterval></ScheduleByDay>
          </CalendarTrigger>`;
+  // WakeToRun only meaningful for calendar triggers (logon = user already woke up).
+  const wakeToRun = kind === "daily" ? "<WakeToRun>true</WakeToRun>" : "";
+  // GroupId S-1-5-32-545 = BUILTIN\Users → task runs in the context of
+  // WHICHEVER user is currently logged in (interactive session, visible UI).
+  // RunLevel LeastPrivilege → no UAC prompt, no admin needed.
   return `<?xml version="1.0" encoding="UTF-16"?>
 <Task version="1.4" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
   <RegistrationInfo>
     <Author>Asclion</Author>
-    <Description>Lancement automatique d'Asclion</Description>
+    <Description>Lancement automatique d'Asclion (session interactive)</Description>
   </RegistrationInfo>
   <Triggers>${trigger}</Triggers>
   <Principals>
     <Principal id="Author">
-      <UserId>S-1-5-18</UserId>
+      <GroupId>S-1-5-32-545</GroupId>
       <RunLevel>LeastPrivilege</RunLevel>
     </Principal>
   </Principals>
@@ -402,7 +429,7 @@ function buildTaskXml({ kind, time, exePath }) {
     <RunOnlyIfIdle>false</RunOnlyIfIdle>
     <DisallowStartOnRemoteAppSession>false</DisallowStartOnRemoteAppSession>
     <UseUnifiedSchedulingEngine>true</UseUnifiedSchedulingEngine>
-    <WakeToRun>true</WakeToRun>
+    ${wakeToRun}
     <ExecutionTimeLimit>PT0S</ExecutionTimeLimit>
     <Priority>7</Priority>
     <RestartOnFailure>
@@ -417,12 +444,43 @@ function buildTaskXml({ kind, time, exePath }) {
   </Actions>
 </Task>`;
 }
-function buildTaskXmlUser({ kind, time, exePath }) {
-  // Fallback: same XML but principal = current interactive user (no SYSTEM)
-  const xml = buildTaskXml({ kind, time, exePath });
-  return xml
-    .replace(/<UserId>S-1-5-18<\/UserId>/, `<GroupId>S-1-5-32-545</GroupId>`)
-    .replace(/<RunLevel>HighestAvailable<\/RunLevel>/, `<RunLevel>LeastPrivilege</RunLevel>`);
+
+// HKCU Run key — most reliable Windows auto-launch mechanism.
+// No admin required, no UAC prompt, runs in user session, visible.
+async function setRunRegistryKey(enable) {
+  if (process.platform !== "win32") return { ok: false, error: "not Windows" };
+  const KEY = `HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run`;
+  if (enable) {
+    const exePath = process.execPath;
+    // Wrap value in literal quotes to handle spaces in path.
+    // reg.exe needs each inner quote escaped as \"
+    const r = await execAsync(`reg add "${KEY}" /v "Asclion" /t REG_SZ /d "\\"${exePath}\\"" /f`);
+    return { ok: r.code === 0, output: (r.stdout || r.stderr).trim() };
+  } else {
+    const r = await execAsync(`reg delete "${KEY}" /v "Asclion" /f`);
+    return { ok: r.code === 0, output: (r.stdout || r.stderr).trim() };
+  }
+}
+
+async function queryRunRegistryKey() {
+  if (process.platform !== "win32") return { exists: false, value: null };
+  const KEY = `HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run`;
+  const r = await execAsync(`reg query "${KEY}" /v "Asclion"`);
+  if (r.code !== 0) return { exists: false, value: null };
+  // Output line looks like: "    Asclion    REG_SZ    \"C:\\path\\Asclion.exe\""
+  const match = r.stdout.match(/Asclion\s+REG_SZ\s+(.+)/);
+  const value = match ? match[1].trim().replace(/^"|"$/g, "") : null;
+  return { exists: true, value };
+}
+
+async function cleanupOldTasks() {
+  if (process.platform !== "win32") return;
+  // Silently delete pre-v1.2 task names (broken because registered as SYSTEM
+  // → ran in session 0, invisible). Existing installs heal on next launch.
+  for (const name of OLD_TASK_NAMES) {
+    const r = await execAsync(`schtasks /Delete /TN "${name}" /F`);
+    if (r.code === 0) devLog(`[AUTOLAUNCH] cleaned up old task: ${name}`);
+  }
 }
 function execAsync(cmd) {
   return new Promise((resolve) => {
@@ -442,34 +500,37 @@ function writeAutolaunchState(state) {
   }
 }
 async function registerAutoLaunch() {
-  if (process.platform !== "win32") return;
+  if (process.platform !== "win32") return { runKey: null, tasks: [] };
   const exePath = process.execPath;
   const tmpDir = app.getPath("temp");
+
+  // 0) Heal old broken installs: remove pre-fix SYSTEM tasks (session 0 ghosts)
+  await cleanupOldTasks();
+
+  // 1) Primary mechanism: HKCU Run key (most reliable Windows auto-launch)
+  const runKeyResult = await setRunRegistryKey(true);
+  if (runKeyResult.ok) {
+    devLog("[AUTOLAUNCH] HKCU Run key set:", exePath);
+  } else {
+    devWarn("[AUTOLAUNCH] HKCU Run key failed:", runKeyResult.output);
+  }
+
+  // 2+3) Scheduled tasks (logon + daily catch-up), all running in user context
   const results = [];
   for (const task of AUTOLAUNCH_TASKS) {
     const xmlPath = path.join(tmpDir, `${task.name}.xml`);
     let registered = false;
-    let mode = "system";
     let lastError = "";
     try {
-      // 1st attempt: SYSTEM principal (runs without logged-in user)
       const xml = buildTaskXml({ kind: task.kind, time: task.time, exePath });
       fs.writeFileSync(xmlPath, "﻿" + xml, { encoding: "utf16le" });
-      let r = await execAsync(`schtasks /Create /TN "${task.name}" /XML "${xmlPath}" /F /RU SYSTEM`);
+      // No /RU SYSTEM — Principal in XML defines GroupId=Users (interactive session).
+      // /F = force overwrite if task already exists.
+      const r = await execAsync(`schtasks /Create /TN "${task.name}" /XML "${xmlPath}" /F`);
       if (r.code === 0) {
         registered = true;
       } else {
-        lastError = r.stderr || r.stdout;
-        // 2nd attempt: current user fallback (no UAC needed, but requires session)
-        const xmlUser = buildTaskXmlUser({ kind: task.kind, time: task.time, exePath });
-        fs.writeFileSync(xmlPath, "﻿" + xmlUser, { encoding: "utf16le" });
-        r = await execAsync(`schtasks /Create /TN "${task.name}" /XML "${xmlPath}" /F`);
-        if (r.code === 0) {
-          registered = true;
-          mode = "user";
-        } else {
-          lastError = r.stderr || r.stdout || lastError;
-        }
+        lastError = (r.stderr || r.stdout).trim();
       }
     } catch (e) {
       lastError = String(e && e.message ? e.message : e);
@@ -485,20 +546,26 @@ async function registerAutoLaunch() {
       kind: task.kind,
       time: task.time || null,
       registered,
-      mode,
-      error: registered ? null : lastError.trim().slice(0, 500),
+      mode: "user", // never SYSTEM anymore
+      error: registered ? null : lastError.slice(0, 500),
     });
     if (registered) {
-      devLog(`Auto-launch task "${task.name}" registered (${mode}).`);
+      devLog(`[AUTOLAUNCH] task "${task.name}" registered (user context).`);
     } else {
-      console.error(`Auto-launch task "${task.name}" failed:`, lastError);
+      console.error(`[AUTOLAUNCH] task "${task.name}" failed:`, lastError);
     }
   }
-  writeAutolaunchState({ tasks: results });
-  return results;
+
+  const state = {
+    runKey: { enabled: runKeyResult.ok, value: exePath, error: runKeyResult.ok ? null : runKeyResult.output },
+    tasks: results,
+  };
+  writeAutolaunchState(state);
+  return state;
 }
+
 async function queryAutoLaunchStatus() {
-  if (process.platform !== "win32") return { platform: process.platform, tasks: [] };
+  if (process.platform !== "win32") return { platform: process.platform, tasks: [], runKey: null };
   const tasks = [];
   for (const t of AUTOLAUNCH_TASKS) {
     const r = await execAsync(`schtasks /Query /TN "${t.name}" /FO LIST /V`);
@@ -518,12 +585,14 @@ async function queryAutoLaunchStatus() {
     }
     tasks.push({ name: t.name, kind: t.kind, exists, nextRun, lastRun, lastResult });
   }
-  return { platform: "win32", tasks };
+  const runKey = await queryRunRegistryKey();
+  return { platform: "win32", tasks, runKey };
 }
+
 ipcMain.handle("autolaunch:status", async () => queryAutoLaunchStatus());
 ipcMain.handle("autolaunch:reinstall", async () => {
-  const results = await registerAutoLaunch();
-  return { results, status: await queryAutoLaunchStatus() };
+  const state = await registerAutoLaunch();
+  return { state, status: await queryAutoLaunchStatus() };
 });
 function detectLgoAndNotify() {
   if (process.platform !== "win32") return;
