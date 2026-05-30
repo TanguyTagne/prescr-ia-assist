@@ -52,9 +52,17 @@ const Auth = () => {
 
     try {
       if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        navigate("/admin");
+        // Route by role: admins → /admin, group managers → /groupement, others → /dashboard
+        let destination = "/dashboard";
+        if (data?.user) {
+          const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", data.user.id);
+          const roleList = (roles ?? []).map((r) => r.role);
+          if (roleList.includes("admin")) destination = "/admin";
+          else if (roleList.includes("group_manager")) destination = "/groupement";
+        }
+        navigate(destination);
       } else {
         const { error } = await supabase.auth.signUp({
           email,
@@ -76,11 +84,7 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <Seo
-        title={t("seo.auth.title")}
-        description={t("seo.auth.desc")}
-        path="/auth"
-      />
+      <Seo title={t("seo.auth.title")} description={t("seo.auth.desc")} path="/auth" />
       <header className="pharmacy-gradient px-4 py-4">
         <div className="container max-w-md mx-auto flex items-center gap-3">
           <div className="h-10 w-10 rounded-xl bg-primary-foreground/20 flex items-center justify-center">
@@ -104,7 +108,9 @@ const Auth = () => {
             <p className="text-muted-foreground text-sm">
               {isForgotPassword
                 ? "Entrez votre email pour recevoir un lien de réinitialisation"
-                : isLogin ? "Accédez à votre espace Asclion" : "Rejoignez Asclion en quelques secondes"}
+                : isLogin
+                  ? "Accédez à votre espace Asclion"
+                  : "Rejoignez Asclion en quelques secondes"}
             </p>
           </div>
 
@@ -124,7 +130,11 @@ const Auth = () => {
                   />
                 </div>
               </div>
-              <Button type="submit" className="w-full h-12 text-base font-semibold pharmacy-gradient border-0" disabled={loading}>
+              <Button
+                type="submit"
+                className="w-full h-12 text-base font-semibold pharmacy-gradient border-0"
+                disabled={loading}
+              >
                 {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Envoyer le lien"}
               </Button>
             </form>
@@ -196,19 +206,28 @@ const Auth = () => {
                 </div>
               </div>
 
-
               {!isLogin && (
                 <label className="flex items-start gap-2 text-xs text-muted-foreground leading-relaxed">
                   <Checkbox checked={accepted} onCheckedChange={(v) => setAccepted(v === true)} className="mt-0.5" />
                   <span>
                     J'accepte les{" "}
-                    <Link to="/cgu" className="text-primary underline">CGU</Link> et la{" "}
-                    <Link to="/confidentialite" className="text-primary underline">politique de confidentialité</Link>.
+                    <Link to="/cgu" className="text-primary underline">
+                      CGU
+                    </Link>{" "}
+                    et la{" "}
+                    <Link to="/confidentialite" className="text-primary underline">
+                      politique de confidentialité
+                    </Link>
+                    .
                   </span>
                 </label>
               )}
 
-              <Button type="submit" className="w-full h-12 text-base font-semibold pharmacy-gradient border-0" disabled={loading || (!isLogin && !accepted)}>
+              <Button
+                type="submit"
+                className="w-full h-12 text-base font-semibold pharmacy-gradient border-0"
+                disabled={loading || (!isLogin && !accepted)}
+              >
                 {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : isLogin ? "Se connecter" : "Créer mon compte"}
               </Button>
             </form>
