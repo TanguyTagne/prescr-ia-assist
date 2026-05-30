@@ -62,6 +62,9 @@ type ScanStatus = {
   clipboardEnabled: boolean;
   // WebHID flag (always true in Electron, activation depends on scanner mode)
   webHidEnabled?: boolean;
+  // Raw Input Win32 subprocess
+  rawInputStarted: boolean;
+  rawInputError: string | null;
 };
 
 type DeviceTestResult = {
@@ -307,9 +310,12 @@ const ScannerDetectionPanel = () => {
     );
   }
 
+  // Determine effective capture state across all methods
+  const hasAnyCapture = !!(status?.mode === "hid-direct" || status?.mode === "uiohook" || status?.rawInputStarted);
   const badge = status ? MODE_BADGE[status.mode] : MODE_BADGE.none;
   const BadgeIcon = badge.icon;
-  const showAvBanner = status?.mode === "none";
+  // Only show the AV banner if NO method is active (not even Raw Input)
+  const showAvBanner = !!status && !hasAnyCapture;
 
   return (
     <Card>
@@ -340,25 +346,38 @@ const ScannerDetectionPanel = () => {
           </div>
           {status && (
             <div className="mt-2 text-[11px] space-y-0.5 opacity-90">
-              <div>HID direct : {status.hidLoaded ? "✓ chargé" : `✗ ${status.hidLoadError || "indisponible"}`}</div>
+              {/* Raw Input Win32 — most robust, shown first */}
+              <div className={status.rawInputStarted ? "text-green-700 dark:text-green-400" : ""}>
+                Raw Input Win32 :{" "}
+                {status.rawInputStarted
+                  ? "✓ actif (meilleure méthode — pas un hook)"
+                  : status.rawInputError
+                    ? `✗ ${status.rawInputError}`
+                    : process.platform === "win32" || (window as any).electronAPI?.platform === "win32"
+                      ? "démarrage…"
+                      : "non-Windows"}
+              </div>
               <div>
-                uiohook (fallback) :{" "}
+                HID direct :{" "}
+                {status.hidLoaded
+                  ? status.bound
+                    ? `✓ lié (${status.bound.product || "?"})`
+                    : "chargé, aucun scanner lié"
+                  : `✗ ${status.hidLoadError || "indisponible"}`}
+              </div>
+              <div>
+                uiohook (hook clavier) :{" "}
                 {status.uiohookLoaded
                   ? status.uiohookStarted
-                    ? "✓ démarré"
+                    ? "✓ démarré (peut être bloqué AV)"
                     : "chargé, non démarré"
                   : `✗ ${status.uiohookLoadError || "indisponible"}`}
               </div>
-              {status.bound && (
-                <div>
-                  Douchette liée : <strong>{status.bound.product || "Sans nom"}</strong> (
-                  {status.bound.vendorId.toString(16)}:{status.bound.productId.toString(16)})
-                </div>
-              )}
+              <div>WebHID : ✓ disponible (nécessite mode HID POS sur la douchette)</div>
               {status.lastReportAt && (
-                <div>Dernier rapport HID : {new Date(status.lastReportAt).toLocaleTimeString()}</div>
+                <div>Dernier rapport HID direct : {new Date(status.lastReportAt).toLocaleTimeString()}</div>
               )}
-              {status.lastError && <div className="text-destructive">Erreur : {status.lastError}</div>}
+              {status.lastError && <div className="text-destructive">Erreur HID : {status.lastError}</div>}
             </div>
           )}
           {/* ── Diagnostic clavier global (uiohook) ─────────────────── */}
