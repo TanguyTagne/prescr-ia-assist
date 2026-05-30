@@ -27,7 +27,9 @@ try {
       // hidraw allows opening the keyboard collection of a scanner non-exclusively
       HID.setDriverType("hidraw");
     }
-  } catch (_) { /* noop */ }
+  } catch (_) {
+    /* noop */
+  }
 } catch (e) {
   hidLoadError = e && e.message;
   console.error("[ASCLION-SCAN] node-hid unavailable:", hidLoadError);
@@ -770,35 +772,87 @@ const SCANNER_VIDS = new Set([
 ]);
 const SCANNER_PRODUCT_HINT = /scan|barcode|imager|reader|2d ?bar|hid ?pos/i;
 
-function hex(n) { return "0x" + Number(n || 0).toString(16).padStart(4, "0"); }
+function hex(n) {
+  return (
+    "0x" +
+    Number(n || 0)
+      .toString(16)
+      .padStart(4, "0")
+  );
+}
 
 function scannerPrefPath() {
   return path.join(app.getPath("userData"), "scanner.json");
 }
 function loadScannerPref() {
-  try { return JSON.parse(fs.readFileSync(scannerPrefPath(), "utf-8")); }
-  catch { return null; }
+  try {
+    return JSON.parse(fs.readFileSync(scannerPrefPath(), "utf-8"));
+  } catch {
+    return null;
+  }
 }
 function saveScannerPref(pref) {
-  try { fs.writeFileSync(scannerPrefPath(), JSON.stringify(pref ?? {})); }
-  catch (e) { devWarn("scanner pref save failed:", e); }
+  try {
+    fs.writeFileSync(scannerPrefPath(), JSON.stringify(pref ?? {}));
+  } catch (e) {
+    devWarn("scanner pref save failed:", e);
+  }
 }
 
 // HID Usage IDs → ASCII (page 0x07, "Keyboard/Keypad")
 const HID_USAGE_TO_CHAR = {
-  0x1e: "1", 0x1f: "2", 0x20: "3", 0x21: "4", 0x22: "5",
-  0x23: "6", 0x24: "7", 0x25: "8", 0x26: "9", 0x27: "0",
+  0x1e: "1",
+  0x1f: "2",
+  0x20: "3",
+  0x21: "4",
+  0x22: "5",
+  0x23: "6",
+  0x24: "7",
+  0x25: "8",
+  0x26: "9",
+  0x27: "0",
   // Numpad
-  0x59: "1", 0x5a: "2", 0x5b: "3", 0x5c: "4", 0x5d: "5",
-  0x5e: "6", 0x5f: "7", 0x60: "8", 0x61: "9", 0x62: "0",
+  0x59: "1",
+  0x5a: "2",
+  0x5b: "3",
+  0x5c: "4",
+  0x5d: "5",
+  0x5e: "6",
+  0x5f: "7",
+  0x60: "8",
+  0x61: "9",
+  0x62: "0",
   // Letters — kept for GS1 DataMatrix alphanumeric payloads
-  0x04: "a", 0x05: "b", 0x06: "c", 0x07: "d", 0x08: "e",
-  0x09: "f", 0x0a: "g", 0x0b: "h", 0x0c: "i", 0x0d: "j",
-  0x0e: "k", 0x0f: "l", 0x10: "m", 0x11: "n", 0x12: "o",
-  0x13: "p", 0x14: "q", 0x15: "r", 0x16: "s", 0x17: "t",
-  0x18: "u", 0x19: "v", 0x1a: "w", 0x1b: "x", 0x1c: "y", 0x1d: "z",
+  0x04: "a",
+  0x05: "b",
+  0x06: "c",
+  0x07: "d",
+  0x08: "e",
+  0x09: "f",
+  0x0a: "g",
+  0x0b: "h",
+  0x0c: "i",
+  0x0d: "j",
+  0x0e: "k",
+  0x0f: "l",
+  0x10: "m",
+  0x11: "n",
+  0x12: "o",
+  0x13: "p",
+  0x14: "q",
+  0x15: "r",
+  0x16: "s",
+  0x17: "t",
+  0x18: "u",
+  0x19: "v",
+  0x1a: "w",
+  0x1b: "x",
+  0x1c: "y",
+  0x1d: "z",
   // Common punctuation found in GS1 payloads
-  0x2d: "-", 0x36: ",", 0x37: ".",
+  0x2d: "-",
+  0x36: ",",
+  0x37: ".",
 };
 const HID_USAGE_ENTER = 0x28;
 const HID_USAGE_NUMPAD_ENTER = 0x58;
@@ -820,7 +874,7 @@ let uiohookStarted = false;
 function isLikelyScanner(d) {
   if (!d) return false;
   if (SCANNER_VIDS.has(d.vendorId)) return true;
-  const p = ((d.product || "") + " " + (d.manufacturer || ""));
+  const p = (d.product || "") + " " + (d.manufacturer || "");
   return SCANNER_PRODUCT_HINT.test(p);
 }
 
@@ -849,8 +903,12 @@ function listHidDevices() {
 
 function closeHidDevice() {
   if (hidState.device) {
-    try { hidState.device.removeAllListeners("data"); } catch (_) {}
-    try { hidState.device.close(); } catch (_) {}
+    try {
+      hidState.device.removeAllListeners("data");
+    } catch (_) {}
+    try {
+      hidState.device.close();
+    } catch (_) {}
   }
   hidState.device = null;
   hidState.bound = null;
@@ -867,8 +925,14 @@ function decodeKeyboardReport(report) {
   for (let i = start; i < report.length; i++) {
     const u = report[i];
     if (!u) continue;
-    if (u === HID_USAGE_ENTER || u === HID_USAGE_NUMPAD_ENTER) { enter = true; continue; }
-    if (u === HID_USAGE_TAB) { tab = true; continue; }
+    if (u === HID_USAGE_ENTER || u === HID_USAGE_NUMPAD_ENTER) {
+      enter = true;
+      continue;
+    }
+    if (u === HID_USAGE_TAB) {
+      tab = true;
+      continue;
+    }
     const c = HID_USAGE_TO_CHAR[u];
     if (c) chars.push(c);
   }
@@ -930,7 +994,7 @@ function openHidDevice(deviceInfo) {
     });
     devLog(
       `[SCAN] HID-direct bound: "${deviceInfo.product || "?"}" ` +
-      `VID=${hex(deviceInfo.vendorId)} PID=${hex(deviceInfo.productId)}`
+        `VID=${hex(deviceInfo.vendorId)} PID=${hex(deviceInfo.productId)}`,
     );
     return { ok: true, bound: hidState.bound };
   } catch (e) {
@@ -952,8 +1016,8 @@ function findBestScanner() {
   const candidates = all.filter((d) => d.likelyScanner);
   // Prefer the keyboard collection of the device (where scan data flows)
   candidates.sort((a, b) => {
-    const ka = (a.usagePage === 1 && a.usage === 6) ? 0 : 1;
-    const kb = (b.usagePage === 1 && b.usage === 6) ? 0 : 1;
+    const ka = a.usagePage === 1 && a.usage === 6 ? 0 : 1;
+    const kb = b.usagePage === 1 && b.usage === 6 ? 0 : 1;
     return ka - kb;
   });
   return candidates[0] || null;
@@ -999,7 +1063,7 @@ function bootScannerStack() {
 
 function getScannerStatus() {
   return {
-    mode: hidState.device ? "hid-direct" : (uiohookStarted ? "uiohook" : "none"),
+    mode: hidState.device ? "hid-direct" : uiohookStarted ? "uiohook" : "none",
     hidLoaded: !!HID,
     hidLoadError,
     uiohookLoaded: !!uIOhook,
@@ -1046,7 +1110,18 @@ ipcMain.handle("scanner:reload", () => {
 });
 
 app.on("will-quit", () => {
-  try { if (uIOhook && uiohookStarted) uIOhook.stop(); } catch { /* noop */ }
-  try { closeHidDevice(); } catch { /* noop */ }
-  if (hidState.pollTimer) { clearInterval(hidState.pollTimer); hidState.pollTimer = null; }
+  try {
+    if (uIOhook && uiohookStarted) uIOhook.stop();
+  } catch {
+    /* noop */
+  }
+  try {
+    closeHidDevice();
+  } catch {
+    /* noop */
+  }
+  if (hidState.pollTimer) {
+    clearInterval(hidState.pollTimer);
+    hidState.pollTimer = null;
+  }
 });
