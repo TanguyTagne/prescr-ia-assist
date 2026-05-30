@@ -127,7 +127,7 @@ const ProductMappingSettings = () => {
       }
 
       toast.success("Mappings catégorie sauvegardés");
-      await loadData();
+      if (pharmacyId) await loadData(pharmacyId);
     } catch (e: any) {
       toast.error(e.message || "Erreur lors de la sauvegarde");
     } finally {
@@ -157,7 +157,7 @@ const ProductMappingSettings = () => {
       }
 
       toast.success("Mappings médicament → PC sauvegardés");
-      await loadData();
+      if (pharmacyId) await loadData(pharmacyId);
     } catch (e: any) {
       toast.error(e.message || "Erreur lors de la sauvegarde");
     } finally {
