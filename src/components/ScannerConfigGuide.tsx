@@ -128,7 +128,7 @@ const ScannerStepsDialog = ({
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div>
               <p className="text-xs uppercase tracking-wide text-muted-foreground">{model.brand}</p>
-              <DialogTitle className="text-lg">{model.model}</DialogTitle>
+              <DialogTitle className="text-lg">{model.familyName}</DialogTitle>
             </div>
             <Badge variant="outline" className={status.tone}>
               {status.label}
