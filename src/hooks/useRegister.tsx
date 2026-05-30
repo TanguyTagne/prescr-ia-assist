@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -31,6 +31,9 @@ export const RegisterProvider = ({ children }: { children: ReactNode }) => {
   const [registers, setRegisters] = useState<Register[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(() => localStorage.getItem(STORAGE_KEY));
   const [loading, setLoading] = useState(true);
+  // Avoid stale-closure on selectedId inside the load() effect
+  const selectedIdRef = useRef(selectedId);
+  selectedIdRef.current = selectedId;
 
   useEffect(() => {
     if (!user) {
@@ -39,13 +42,11 @@ export const RegisterProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
+    let cancelled = false;
     const load = async () => {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("pharmacy_id")
-        .eq("id", user.id)
-        .single();
+      const { data: profile } = await supabase.from("profiles").select("pharmacy_id").eq("id", user.id).single();
 
+      if (cancelled) return;
       if (!profile?.pharmacy_id) {
         setLoading(false);
         return;
@@ -58,11 +59,13 @@ export const RegisterProvider = ({ children }: { children: ReactNode }) => {
         .eq("active", true)
         .order("created_at", { ascending: true });
 
+      if (cancelled) return;
       const regs = (data || []) as Register[];
       setRegisters(regs);
 
-      // Auto-select first if none selected or selection invalid
-      if (regs.length > 0 && (!selectedId || !regs.find(r => r.id === selectedId))) {
+      // Auto-select first if none selected or selection invalid (uses ref → never stale)
+      const current = selectedIdRef.current;
+      if (regs.length > 0 && (!current || !regs.some((r) => r.id === current))) {
         const first = regs[0].id;
         setSelectedId(first);
         localStorage.setItem(STORAGE_KEY, first);
@@ -71,14 +74,17 @@ export const RegisterProvider = ({ children }: { children: ReactNode }) => {
     };
 
     load();
+    return () => {
+      cancelled = true;
+    };
   }, [user]);
 
-  const setSelectedRegisterId = (id: string) => {
+  const setSelectedRegisterId = useCallback((id: string) => {
     setSelectedId(id);
     localStorage.setItem(STORAGE_KEY, id);
-  };
+  }, []);
 
-  const selectedRegister = registers.find(r => r.id === selectedId) || null;
+  const selectedRegister = registers.find((r) => r.id === selectedId) || null;
 
   return (
     <RegisterContext.Provider value={{ registers, selectedRegister, setSelectedRegisterId, loading }}>
