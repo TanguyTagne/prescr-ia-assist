@@ -43,7 +43,9 @@ export default defineConfig(({ mode }) => ({
           if (id.includes("react-dom") || id.includes("/react/") || id.includes("scheduler")) return "react-vendor";
           if (id.includes("@supabase")) return "supabase-vendor";
           if (id.includes("@radix-ui")) return "radix-vendor";
-          if (id.includes("recharts") || id.includes("d3-") || id.includes("victory-vendor")) return "charts-vendor";
+          // NOTE: do NOT split recharts/d3 into a separate chunk — it triggers
+          // a circular-dependency TDZ error ("Cannot access 'P' before initialization")
+          // at runtime that white-screens the entire production site.
           if (id.includes("pdfjs-dist")) return "pdf-vendor";
           if (id.includes("lucide-react")) return "icons-vendor";
         },
