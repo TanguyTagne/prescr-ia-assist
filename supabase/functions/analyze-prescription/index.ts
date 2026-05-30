@@ -1254,7 +1254,8 @@ serve(async (req) => {
 
     // ====== QUOTA CHECK (server-side, atomic, multi-PC safe) ======
     try {
-      const userId = claimsData.claims.sub;
+      const userId = claimsData?.claims?.sub;
+      if (!userId) throw new Error("__skip_quota__");
       const { data: profile } = await supabase
         .from("profiles")
         .select("pharmacy_id")
