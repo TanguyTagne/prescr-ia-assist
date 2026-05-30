@@ -1,11 +1,11 @@
 /**
- * Builds the two native N-API addons (rawinput + uiawatcher) against the
- * Electron Node ABI, on Windows only.
+ * Builds the native N-API rawinput addon against the Electron Node ABI,
+ * on Windows only.
  *
  * Invoked automatically as `postinstall` of electron/package.json so that
  * `cd electron && npm install` produces a ready-to-run project.
  *
- * On macOS/Linux this is a silent no-op: the addons are Windows-only.
+ * On macOS/Linux this is a silent no-op: the addon is Windows-only.
  */
 "use strict";
 
@@ -35,7 +35,6 @@ const electronVersion = (() => {
 
 const modules = [
   path.join(here, "native", "rawinput"),
-  path.join(here, "native", "uiawatcher"),
 ];
 
 for (const mod of modules) {
