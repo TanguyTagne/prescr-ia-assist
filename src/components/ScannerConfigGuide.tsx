@@ -7,7 +7,7 @@ import { code128ToSvg } from "@/lib/code128";
 import {
   SCANNER_MODELS,
   STATUS_LABEL,
-  type ScannerModel,
+  type ScannerFamily as ScannerModel,
   type ScannerStep,
 } from "@/lib/scannerConfigCodes";
 
@@ -84,7 +84,10 @@ const ScannerModelCard = ({ model, onOpen }: { model: ScannerModel; onOpen: () =
           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
             {model.brand}
           </p>
-          <h3 className="font-semibold text-sm leading-tight">{model.model}</h3>
+          <h3 className="font-semibold text-sm leading-tight">{model.familyName}</h3>
+          {model.models?.length > 0 && (
+            <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-1">{model.models.join(" • ")}</p>
+          )}
         </div>
         {model.marketShare && (
           <span className="text-[10px] text-muted-foreground bg-secondary px-1.5 py-0.5 rounded shrink-0">
@@ -125,7 +128,7 @@ const ScannerStepsDialog = ({
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div>
               <p className="text-xs uppercase tracking-wide text-muted-foreground">{model.brand}</p>
-              <DialogTitle className="text-lg">{model.model}</DialogTitle>
+              <DialogTitle className="text-lg">{model.familyName}</DialogTitle>
             </div>
             <Badge variant="outline" className={status.tone}>
               {status.label}
