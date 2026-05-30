@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { logger } from "@/lib/logger";
 
 /**
  * Bridge between Electron's main-process global HID listener and the React
@@ -10,23 +11,27 @@ import { useEffect } from "react";
  */
 export function useGlobalBarcodeBridge() {
   useEffect(() => {
-    const api = (typeof window !== "undefined" ? window.electronAPI : undefined);
+    const api = typeof window !== "undefined" ? window.electronAPI : undefined;
     if (!api?.onGlobalBarcode) return;
 
     const unsubscribe = api.onGlobalBarcode(({ ean, at }) => {
-      console.log("[ASCLION-SCAN] renderer received", { ean, at });
+      logger.log("[ASCLION-SCAN] renderer received", { ean, at });
       try {
         localStorage.setItem("asclion_scanner_detected", "1");
         localStorage.setItem("asclion_last_scan_at", String(at));
         localStorage.setItem("asclion_last_scan_ean", ean);
-      } catch { /* noop */ }
-      window.dispatchEvent(
-        new CustomEvent("asclion:global-barcode", { detail: { ean, at } })
-      );
+      } catch {
+        /* noop */
+      }
+      window.dispatchEvent(new CustomEvent("asclion:global-barcode", { detail: { ean, at } }));
     });
 
     return () => {
-      try { unsubscribe?.(); } catch { /* noop */ }
+      try {
+        unsubscribe?.();
+      } catch {
+        /* noop */
+      }
     };
   }, []);
 }
