@@ -67,7 +67,8 @@ export interface ScannerFamily {
 const HW_DEFOVR: ScannerStep = {
   order: 1,
   title: "Override defaults (DEFOVR)",
-  description: "Lève la protection contre les changements de config (étape obligatoire avant DEFALT sur les firmwares récents).",
+  description:
+    "Lève la protection contre les changements de config (étape obligatoire avant DEFALT sur les firmwares récents).",
   format: "code128",
   payload: "DEFOVR.",
 };
@@ -83,7 +84,8 @@ const HW_DEFALT: ScannerStep = {
 const HW_KBD_FRANCE: ScannerStep = {
   order: 3,
   title: "Clavier français AZERTY (KBDCTY10)",
-  description: "Sélectionne le layout France. Sans ça, les chiffres EAN-13 sortent en \"&é\\\"'(-è_çà\" et le LGO comme Asclion deviennent inutilisables.",
+  description:
+    'Sélectionne le layout France. Sans ça, les chiffres EAN-13 sortent en "&é\\"\'(-è_çà" et le LGO comme Asclion deviennent inutilisables.',
   format: "code128",
   payload: "KBDCTY10.",
 };
@@ -227,12 +229,7 @@ export const SCANNER_FAMILIES: ScannerFamily[] = [
     slug: "zebra-ds22xx-family",
     brand: "Zebra",
     familyName: "DS22xx family",
-    models: [
-      "DS2208 (filaire)",
-      "DS2278 (Bluetooth)",
-      "DS2278-HC (Healthcare)",
-      "DS2208-HC (Healthcare)",
-    ],
+    models: ["DS2208 (filaire)", "DS2278 (Bluetooth)", "DS2278-HC (Healthcare)", "DS2208-HC (Healthcare)"],
     marketShare: "~12%",
     status: "manual",
     shortDesc:
@@ -295,8 +292,7 @@ export const SCANNER_FAMILIES: ScannerFamily[] = [
       {
         order: 2,
         title: "USB HID-KBW (Keyboard Wedge)",
-        description:
-          "Mode clavier USB — Asclion capture les frappes en parallèle du LGO sans config supplémentaire.",
+        description: "Mode clavier USB — Asclion capture les frappes en parallèle du LGO sans config supplémentaire.",
         format: "image",
         imageFile: "2-usb-hid-kbw.png",
       },
@@ -315,10 +311,7 @@ export const SCANNER_FAMILIES: ScannerFamily[] = [
     slug: "datalogic-heron-family",
     brand: "Datalogic",
     familyName: "Heron family (présentation)",
-    models: [
-      "HD3430 (comptoir 2D)",
-      "HD3130 (comptoir 1D)",
-    ],
+    models: ["HD3430 (comptoir 2D)", "HD3130 (comptoir 1D)"],
     marketShare: "~5%",
     status: "manual",
     shortDesc:
@@ -358,8 +351,11 @@ export const SCANNER_FAMILIES: ScannerFamily[] = [
   },
 ];
 
-// Conservé pour la rétro-compatibilité avec d'éventuels imports existants.
+// Alias de rétro-compatibilité — laisser en place pour qu'un push partiel
+// (composant mis à jour sans le fichier de données, ou inverse) ne casse pas
+// le build.
 export const SCANNER_MODELS = SCANNER_FAMILIES;
+export type ScannerModel = ScannerFamily;
 
 export const STATUS_LABEL: Record<ScannerFamily["status"], { label: string; tone: string }> = {
   verified: { label: "Vérifié sur place", tone: "bg-emerald-100 text-emerald-800 border-emerald-200" },
