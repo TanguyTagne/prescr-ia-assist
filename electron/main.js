@@ -68,6 +68,11 @@ function applyPipState() {
   const size = pipState.compact ? SIZE_COMPACT : SIZE_NORMAL;
   mainWindow.setSize(size.width, size.height);
 }
+// Enable WebHID — removes Chromium's built-in HID blocklist so the renderer can
+// open scanner devices (HID POS / usage page 0x8C) via navigator.hid without
+// restriction. Must be set BEFORE the app is ready.
+app.commandLine.appendSwitch("disable-hid-blocklist");
+
 // Disable hardware acceleration for compatibility
 app.disableHardwareAcceleration();
 
@@ -152,6 +157,15 @@ function createWindow() {
   mainWindow.on("closed", () => {
     mainWindow = null;
   });
+
+  // Inject WebHID init script after every page load.
+  // executeJavaScript with userGesture:true bypasses the user-activation
+  // requirement for navigator.hid.requestDevice() — Electron-specific.
+  mainWindow.webContents.on("did-finish-load", () => {
+    mainWindow.webContents
+      .executeJavaScript(WEBHID_INIT_SCRIPT, /* userGesture */ true)
+      .catch((e) => devWarn("[WEBHID] init script failed:", e));
+  });
 }
 // Single instance lock — prevent multiple windows
 const gotTheLock = app.requestSingleInstanceLock();
@@ -180,6 +194,49 @@ if (!gotTheLock) {
     } catch (e) {
       devWarn("Cache clear failed:", e);
     }
+
+    // ── WebHID auto-permission ─────────────────────────────────────────────
+    // Grant permission for HID devices silently when the renderer calls
+    // navigator.hid.requestDevice().  Only grant known scanner types so we
+    // don't accidentally expose keyboards or mice.
+    session.defaultSession.setDevicePermissionHandler((details) => {
+      if (details.deviceType !== "hid") return false;
+      const d = details.device || {};
+      // HID POS (Point-of-Sale) usage page — always a scanner interface
+      if (d.usagePage === 0x8c) return true;
+      // Known scanner vendor IDs
+      if (SCANNER_VIDS.has(d.vendorId)) return true;
+      // Name-based hint
+      const name = (d.product || "") + " " + (d.manufacturer || "");
+      if (SCANNER_PRODUCT_HINT.test(name)) return true;
+      return false;
+    });
+
+    // Auto-select the best scanner when the renderer enumerates HID devices.
+    // This fires when navigator.hid.requestDevice() is called from the renderer.
+    session.defaultSession.on("select-hid-device", (event, details, callback) => {
+      event.preventDefault();
+      const list = details.deviceList || [];
+      // Prefer HID POS (usage page 0x8C), then known VIDs
+      const pos = list.find((d) => d.usagePage === 0x8c);
+      if (pos) {
+        callback(pos.deviceId);
+        return;
+      }
+      const known = list.find((d) => SCANNER_VIDS.has(d.vendorId));
+      if (known) {
+        callback(known.deviceId);
+        return;
+      }
+      callback(""); // decline
+    });
+
+    // Re-open WebHID device when it reconnects (e.g. after USB replug)
+    session.defaultSession.on("hid-device-added", (_e, _details) => {
+      // Preload's navigator.hid 'connect' listener handles reopening
+    });
+    // ──────────────────────────────────────────────────────────────────────
+
     createWindow();
     // Register Windows auto-launch tasks (at boot + 08:30 + 09:00 catch-up)
     registerAutoLaunch();
@@ -1091,9 +1148,163 @@ function startUiohookFallback() {
   startGlobalBarcodeListener();
 }
 
+// ────────────────────────────────────────────────────────────
+// WebHID init script — injected into the renderer after every
+// page load (executeJavaScript with userGesture:true).
+//
+// Connects to HID POS (usage page 0x8C) barcode scanner devices
+// via the WebHID API.  Works without focus and is NOT a keyboard hook
+// so it cannot be flagged by antivirus software.
+// Only activates if the scanner is in "HID POS" mode (as opposed to
+// the default "USB Keyboard" mode used by most cheap scanners).
+// ────────────────────────────────────────────────────────────
+const WEBHID_INIT_SCRIPT = `
+(async () => {
+  if (typeof navigator === 'undefined' || !navigator.hid) return;
+
+  const HID_POS_PAGE = 0x8C;
+  const MIN_LEN = 7;
+  let _wbuf = '';
+  let _wlast = 0;
+  const RESET_MS = 800;
+
+  function _handleReport(ev) {
+    const now = Date.now();
+    // Reset buffer on long gap (shouldn't happen for HID POS but be safe)
+    if (now - _wlast > RESET_MS && _wbuf.length > 0) _wbuf = '';
+    _wlast = now;
+    const view = new DataView(ev.data.buffer);
+    for (let i = 0; i < view.byteLength; i++) {
+      const b = view.getUint8(i);
+      if (b === 0) continue; // padding
+      if (b === 0x0d || b === 0x0a) { // CR or LF = end of barcode
+        const code = _wbuf.trim();
+        if (code.length >= MIN_LEN) {
+          try {
+            window.electronAPI && window.electronAPI.scanner &&
+              window.electronAPI.scanner._reportWebHIDBarcode &&
+              window.electronAPI.scanner._reportWebHIDBarcode(code);
+          } catch(_) {}
+        }
+        _wbuf = '';
+        return;
+      }
+      if (b > 0x1f && b < 0x7f) _wbuf += String.fromCharCode(b);
+    }
+    // Some HID POS devices deliver the entire barcode in one report with no
+    // terminator — detect by examining the report length field (reportId may
+    // encode the string length).  If the buffer grew and nothing terminated it
+    // within RESET_MS, flush it.
+    if (_wbuf.length >= MIN_LEN) {
+      clearTimeout(window.__asclion_webhid_timer);
+      window.__asclion_webhid_timer = setTimeout(() => {
+        const code = _wbuf.trim();
+        if (code.length >= MIN_LEN) {
+          try {
+            window.electronAPI && window.electronAPI.scanner &&
+              window.electronAPI.scanner._reportWebHIDBarcode &&
+              window.electronAPI.scanner._reportWebHIDBarcode(code);
+          } catch(_) {}
+        }
+        _wbuf = '';
+      }, RESET_MS);
+    }
+  }
+
+  async function _open(dev) {
+    if (!dev.opened) {
+      try { await dev.open(); } catch(e) { return false; }
+    }
+    dev.removeEventListener('inputreport', _handleReport);
+    dev.addEventListener('inputreport', _handleReport);
+    return true;
+  }
+
+  function _isPosScanner(dev) {
+    return dev.collections && dev.collections.some(c => c.usagePage === HID_POS_PAGE);
+  }
+
+  // 1. Reopen already-permitted devices (persisted across sessions)
+  try {
+    const granted = await navigator.hid.getDevices();
+    for (const d of granted) {
+      if (_isPosScanner(d)) await _open(d);
+    }
+  } catch(_) {}
+
+  // 2. Request device (userGesture:true in executeJavaScript bypasses activation gate)
+  try {
+    const devs = await navigator.hid.requestDevice({ filters: [{ usagePage: HID_POS_PAGE }] });
+    for (const d of devs) await _open(d);
+  } catch(_) {}
+
+  // 3. Listen for hot-plug
+  navigator.hid.addEventListener('connect', async ({ device }) => {
+    if (_isPosScanner(device)) await _open(device);
+  });
+  navigator.hid.addEventListener('disconnect', ({ device }) => {
+    try { if (device.opened) device.close(); } catch(_) {}
+  });
+
+  console.log('[ASCLION-WEBHID] init done');
+})();
+`;
+
+// ────────────────────────────────────────────────────────────
+// Clipboard scanner (opt-in, Electron main process)
+//
+// Polls the system clipboard every 120 ms.  If new content looks
+// like a barcode (EAN-13 / CIP-13 / GS1), emits it as a scan.
+//
+// When to use: configure the scanner to "keyboard wedge + clipboard"
+// mode (most scanners support this via a config barcode from the
+// manufacturer manual).  The scanner then writes the code to the
+// clipboard before/after the keyboard injection, making capture
+// completely focus-independent and antivirus-safe.
+// ────────────────────────────────────────────────────────────
+let clipboardPollTimer = null;
+let clipboardLastText = "";
+let clipboardEnabled = false;
+
+function startClipboardScanner() {
+  if (clipboardPollTimer) return;
+  clipboardEnabled = true;
+  const { clipboard } = require("electron");
+  // Snapshot current clipboard so we don't emit whatever is there on start
+  try {
+    clipboardLastText = clipboard.readText().trim();
+  } catch (_) {}
+  clipboardPollTimer = setInterval(() => {
+    try {
+      const text = clipboard.readText().trim();
+      if (!text || text === clipboardLastText) return;
+      clipboardLastText = text;
+      if (text.length >= SCAN_MIN_LENGTH && text.length <= SCAN_MAX_LENGTH) {
+        const parsed = parseBarcodeToCip(text);
+        if (parsed) {
+          devLog("[SCAN] clipboard detected:", parsed);
+          emitGlobalScan(parsed);
+        }
+      }
+    } catch (_) {}
+  }, 120);
+  devLog("[SCAN] Clipboard polling started.");
+}
+
+function stopClipboardScanner() {
+  if (clipboardPollTimer) {
+    clearInterval(clipboardPollTimer);
+    clipboardPollTimer = null;
+  }
+  clipboardEnabled = false;
+  devLog("[SCAN] Clipboard polling stopped.");
+}
+
 function bootScannerStack() {
-  // Load persisted preferences (allowGeneric, etc.) before scanning
+  // Load persisted preferences (allowGeneric, clipboard, etc.) before scanning
   applyScannerPref();
+  const pref = loadScannerPref();
+  if (pref && pref.clipboardEnabled) startClipboardScanner();
   // 1) Direct HID read (works without focus, AV-friendly)
   if (HID) {
     const best = findBestScanner();
@@ -1102,11 +1313,14 @@ function bootScannerStack() {
   }
   // 2) Always start uiohook in parallel as fallback. emitGlobalScan dedups.
   startUiohookFallback();
+  // Note: WebHID path is started by the renderer (preload.js) after did-finish-load.
+  // Barcodes arrive via scanner:webhid-barcode IPC and are forwarded to emitGlobalScan.
 }
 
 function getScannerStatus() {
+  const mode = hidState.device ? "hid-direct" : uiohookStarted ? "uiohook" : "none";
   return {
-    mode: hidState.device ? "hid-direct" : uiohookStarted ? "uiohook" : "none",
+    mode,
     hidLoaded: !!HID,
     hidLoadError,
     uiohookLoaded: !!uIOhook,
@@ -1122,6 +1336,10 @@ function getScannerStatus() {
     lastGlobalKeyAt: scanLastGlobalKeyAt || null,
     globalBufferLen: scanBuffer.length,
     lastRejection: scanLastRejection,
+    // Clipboard scanner
+    clipboardEnabled,
+    // WebHID (managed renderer-side; this just confirms the flag is set)
+    webHidEnabled: true, // always available in Electron — activation depends on scanner mode
   };
 }
 
@@ -1203,6 +1421,54 @@ ipcMain.handle("scanner:test-device", async (_e, { devicePath, ms }) => {
   };
 });
 
+// ── WebHID IPC ────────────────────────────────────────────────────────────
+
+// Called by preload.js when navigator.hid detects a full barcode scan.
+// Joins the same emitGlobalScan() path as HID-direct and uiohook.
+ipcMain.handle("scanner:webhid-barcode", (_e, raw) => {
+  if (!raw || typeof raw !== "string") return;
+  const parsed = parseBarcodeToCip(raw);
+  if (parsed) {
+    devLog("[WEBHID] barcode:", parsed);
+    emitGlobalScan(parsed);
+  } else {
+    devLog("[WEBHID] rejected raw:", raw);
+  }
+});
+
+// Ask the renderer to call navigator.hid.requestDevice() with userGesture:true.
+// This opens the device picker (or auto-selects via select-hid-device if already
+// configured).  Called from the admin panel "Connecter WebHID" button.
+ipcMain.handle("scanner:webhid-request", () => {
+  if (!mainWindow) return { ok: false, error: "no window" };
+  mainWindow.webContents
+    .executeJavaScript(WEBHID_INIT_SCRIPT, true)
+    .catch((e) => devWarn("[WEBHID] manual request failed:", e));
+  return { ok: true };
+});
+
+// ── Clipboard scanner IPC ─────────────────────────────────────────────────
+
+ipcMain.handle("scanner:clipboard-start", () => {
+  startClipboardScanner();
+  try {
+    const pref = loadScannerPref() || {};
+    fs.writeFileSync(scannerPrefPath(), JSON.stringify({ ...pref, clipboardEnabled: true }));
+  } catch (_) {}
+  return getScannerStatus();
+});
+
+ipcMain.handle("scanner:clipboard-stop", () => {
+  stopClipboardScanner();
+  try {
+    const pref = loadScannerPref() || {};
+    fs.writeFileSync(scannerPrefPath(), JSON.stringify({ ...pref, clipboardEnabled: false }));
+  } catch (_) {}
+  return getScannerStatus();
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+
 // Enable / disable auto-binding to generic keyboard-class HID devices.
 // Must be activated explicitly by the pharmacist from the admin panel.
 ipcMain.handle("scanner:set-allow-generic", (_e, allow) => {
@@ -1237,4 +1503,5 @@ app.on("will-quit", () => {
     clearInterval(hidState.pollTimer);
     hidState.pollTimer = null;
   }
+  stopClipboardScanner();
 });
