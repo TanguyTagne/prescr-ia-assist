@@ -1,5 +1,17 @@
 import { useCallback, useEffect, useState } from "react";
-import { Usb, RefreshCw, Loader2, CheckCircle2, AlertCircle, Activity, Plug, PlugZap } from "lucide-react";
+import {
+  Usb,
+  RefreshCw,
+  Loader2,
+  CheckCircle2,
+  AlertCircle,
+  Activity,
+  Plug,
+  PlugZap,
+  FlaskConical,
+  ToggleLeft,
+  ToggleRight,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,10 +51,19 @@ type ScanStatus = {
   lastEnterAt: number | null;
   lastError: string | null;
   bufferLen: number;
+  allowGeneric: boolean;
   // Global keyboard diagnostic (uiohook path)
   lastGlobalKeyAt: number | null;
   globalBufferLen: number;
   lastRejection: { raw: string; reason: string; at: number } | null;
+};
+
+type DeviceTestResult = {
+  ok: boolean;
+  count: number;
+  decoded: string;
+  barcodeDetected: string | null;
+  error?: string;
 };
 
 const MODE_BADGE: Record<ScanStatus["mode"], { label: string; cls: string; icon: typeof CheckCircle2 }> = {
@@ -73,6 +94,8 @@ const ScannerDetectionPanel = () => {
     bind: (path: string) => Promise<{ ok: boolean; error?: string }>;
     unbind: () => Promise<{ ok: boolean }>;
     testCapture: (ms: number) => Promise<{ count: number; reports: { at: number; bytes: number[] }[] }>;
+    testDevice: (path: string, ms: number) => Promise<DeviceTestResult>;
+    setAllowGeneric: (allow: boolean) => Promise<ScanStatus>;
     reload: () => Promise<ScanStatus>;
   } | null;
 
@@ -83,6 +106,9 @@ const ScannerDetectionPanel = () => {
   const [testResult, setTestResult] = useState<{ count: number; reports: { at: number; bytes: number[] }[] } | null>(
     null,
   );
+  const [deviceTesting, setDeviceTesting] = useState<string | null>(null); // path being tested
+  const [deviceTestResults, setDeviceTestResults] = useState<Record<string, DeviceTestResult>>({});
+  const [togglingGeneric, setTogglingGeneric] = useState(false);
 
   const refresh = useCallback(async () => {
     if (!api) return;
@@ -144,6 +170,53 @@ const ScannerDetectionPanel = () => {
       toast.error("Test échoué", { description: String(e) });
     } finally {
       setTesting(false);
+    }
+  };
+
+  const handleTestDevice = async (devicePath: string) => {
+    if (!api) return;
+    setDeviceTesting(devicePath);
+    setDeviceTestResults((prev) => {
+      const next = { ...prev };
+      delete next[devicePath];
+      return next;
+    });
+    try {
+      const res = await api.testDevice(devicePath, 5000);
+      setDeviceTestResults((prev) => ({ ...prev, [devicePath]: res }));
+      if (!res.ok) {
+        toast.error("Impossible d'ouvrir ce périphérique", { description: res.error });
+      } else if (res.barcodeDetected) {
+        toast.success(`Code-barres détecté : ${res.barcodeDetected}`);
+      } else if (res.count === 0) {
+        toast.message("Aucun rapport reçu — scannez pendant le test");
+      } else {
+        toast.message(`${res.count} rapport(s) — "${res.decoded || "—"}" — code non reconnu`);
+      }
+    } catch (e) {
+      toast.error("Test échoué", { description: String(e) });
+    } finally {
+      setDeviceTesting(null);
+    }
+  };
+
+  const handleToggleGeneric = async () => {
+    if (!api) return;
+    setTogglingGeneric(true);
+    try {
+      const newVal = !(status?.allowGeneric ?? false);
+      const s = await api.setAllowGeneric(newVal);
+      setStatus(s);
+      if (newVal) {
+        toast.message("Mode douchette générique activé — tous les claviers HID sont essayés");
+      } else {
+        toast.message("Mode douchette générique désactivé");
+      }
+      refresh();
+    } catch (e) {
+      toast.error("Erreur", { description: String(e) });
+    } finally {
+      setTogglingGeneric(false);
     }
   };
 
@@ -289,71 +362,169 @@ const ScannerDetectionPanel = () => {
           </div>
         )}
 
+        {/* Mode douchette générique */}
+        <div
+          className={`rounded-lg border p-3 text-[11px] ${status?.allowGeneric ? "border-amber-500/40 bg-amber-500/5" : "border-border bg-muted/30"}`}
+        >
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <span className="font-semibold">Mode douchette générique</span>
+              <span className="text-muted-foreground ml-1.5">
+                — essaie tous les claviers USB HID si aucun scanner reconnu
+              </span>
+            </div>
+            <Button
+              variant={status?.allowGeneric ? "default" : "outline"}
+              size="sm"
+              className="h-7 gap-1.5 shrink-0"
+              onClick={handleToggleGeneric}
+              disabled={togglingGeneric}
+            >
+              {togglingGeneric ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : status?.allowGeneric ? (
+                <ToggleRight className="h-3.5 w-3.5" />
+              ) : (
+                <ToggleLeft className="h-3.5 w-3.5" />
+              )}
+              {status?.allowGeneric ? "Activé" : "Désactivé"}
+            </Button>
+          </div>
+          {status?.allowGeneric && (
+            <div className="mt-1.5 text-amber-700 dark:text-amber-400">
+              ⚠ Tous les claviers USB sont lus. Désactivez si vous constatez des faux positifs lors de la saisie au
+              clavier.
+            </div>
+          )}
+          {!status?.allowGeneric && (
+            <div className="mt-1 text-muted-foreground">
+              Activez si votre douchette apparaît comme "USB Keyboard" et n'est pas détectée automatiquement.
+            </div>
+          )}
+        </div>
+
         {/* Liste des périphériques HID */}
         <div>
           <div className="text-xs font-semibold text-muted-foreground mb-2 flex items-center justify-between">
             <span>Périphériques HID détectés ({devices.length})</span>
             <Button variant="outline" size="sm" onClick={handleTest} disabled={testing} className="h-7 gap-1.5">
               {testing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Activity className="h-3.5 w-3.5" />}
-              Tester 10 s (scanner brut)
+              Tester 10 s (scanner lié)
             </Button>
           </div>
+          <p className="text-[10px] text-muted-foreground mb-2">
+            Cliquez sur <strong>Tester 5 s</strong> à côté de chaque périphérique, puis scannez un code : le résultat
+            identifie votre douchette.
+          </p>
           {devices.length === 0 ? (
             <p className="text-xs text-muted-foreground italic">Aucun périphérique HID détecté.</p>
           ) : (
             <div className="rounded-lg border border-border overflow-hidden">
-              <div className="max-h-[280px] overflow-y-auto">
+              <div className="max-h-[340px] overflow-y-auto">
                 <table className="w-full text-xs">
                   <thead className="bg-secondary sticky top-0">
                     <tr>
                       <th className="text-left px-2 py-1.5 font-semibold">Produit</th>
                       <th className="text-left px-2 py-1.5 font-semibold font-mono whitespace-nowrap">VID:PID</th>
                       <th className="text-left px-2 py-1.5 font-semibold">Usage</th>
-                      <th className="text-right px-2 py-1.5 font-semibold">Action</th>
+                      <th className="text-right px-2 py-1.5 font-semibold">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {devices.map((d) => (
-                      <tr key={d.path} className={`border-t border-border ${d.bound ? "bg-primary/5" : ""}`}>
-                        <td className="px-2 py-1.5">
-                          <div className="flex items-center gap-1.5">
-                            {d.likelyScanner && (
-                              <Badge variant="secondary" className="h-4 px-1 text-[9px]">
-                                scanner
-                              </Badge>
-                            )}
-                            {d.bound && <Badge className="h-4 px-1 text-[9px]">lié</Badge>}
-                            <span className="truncate">
-                              {d.product || <em className="text-muted-foreground">Sans nom</em>}
-                            </span>
-                          </div>
-                          {d.manufacturer && <div className="text-[10px] text-muted-foreground">{d.manufacturer}</div>}
-                        </td>
-                        <td className="px-2 py-1.5 font-mono whitespace-nowrap">
-                          {d.vendorIdHex.slice(2)}:{d.productIdHex.slice(2)}
-                        </td>
-                        <td className="px-2 py-1.5 text-muted-foreground">
-                          {d.usagePage}/{d.usage}
-                        </td>
-                        <td className="px-2 py-1.5 text-right">
-                          {d.bound ? (
-                            <Button size="sm" variant="ghost" className="h-6 text-[10px]" onClick={handleUnbind}>
-                              Délier
-                            </Button>
-                          ) : (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-6 text-[10px] gap-1"
-                              onClick={() => handleBind(d.path)}
+                    {devices.map((d) => {
+                      const testRes = deviceTestResults[d.path];
+                      const isTesting = deviceTesting === d.path;
+                      return (
+                        <>
+                          <tr key={d.path} className={`border-t border-border ${d.bound ? "bg-primary/5" : ""}`}>
+                            <td className="px-2 py-1.5">
+                              <div className="flex items-center gap-1.5">
+                                {d.likelyScanner && (
+                                  <Badge variant="secondary" className="h-4 px-1 text-[9px]">
+                                    scanner
+                                  </Badge>
+                                )}
+                                {d.bound && <Badge className="h-4 px-1 text-[9px]">lié</Badge>}
+                                <span className="truncate">
+                                  {d.product || <em className="text-muted-foreground">Sans nom</em>}
+                                </span>
+                              </div>
+                              {d.manufacturer && (
+                                <div className="text-[10px] text-muted-foreground">{d.manufacturer}</div>
+                              )}
+                            </td>
+                            <td className="px-2 py-1.5 font-mono whitespace-nowrap">
+                              {d.vendorIdHex.slice(2)}:{d.productIdHex.slice(2)}
+                            </td>
+                            <td className="px-2 py-1.5 text-muted-foreground">
+                              {d.usagePage}/{d.usage}
+                            </td>
+                            <td className="px-2 py-1.5 text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-6 text-[10px] gap-1"
+                                  onClick={() => handleTestDevice(d.path)}
+                                  disabled={isTesting || !!deviceTesting}
+                                  title="Tester ce périphérique 5 s sans le lier"
+                                >
+                                  {isTesting ? (
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                  ) : (
+                                    <FlaskConical className="h-3 w-3" />
+                                  )}
+                                  {isTesting ? "Test…" : "Test 5s"}
+                                </Button>
+                                {d.bound ? (
+                                  <Button size="sm" variant="ghost" className="h-6 text-[10px]" onClick={handleUnbind}>
+                                    Délier
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-6 text-[10px] gap-1"
+                                    onClick={() => handleBind(d.path)}
+                                  >
+                                    <Plug className="h-3 w-3" />
+                                    Lier
+                                  </Button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                          {testRes && (
+                            <tr
+                              key={`${d.path}-result`}
+                              className="border-t border-dashed border-primary/20 bg-primary/3"
                             >
-                              <Plug className="h-3 w-3" />
-                              Lier
-                            </Button>
+                              <td colSpan={4} className="px-3 py-2">
+                                {!testRes.ok ? (
+                                  <span className="text-destructive font-semibold text-[10px]">
+                                    ✗ Impossible d'ouvrir — {testRes.error}
+                                  </span>
+                                ) : testRes.barcodeDetected ? (
+                                  <span className="text-green-700 font-semibold text-[10px]">
+                                    ✓ Code-barres détecté : <code>{testRes.barcodeDetected}</code> — c'est votre
+                                    douchette → cliquez Lier
+                                  </span>
+                                ) : testRes.count > 0 ? (
+                                  <span className="text-amber-700 text-[10px]">
+                                    ⚠ {testRes.count} rapport(s) reçu(s) — chars décodés : "
+                                    <code>{testRes.decoded || "—"}</code>" — code non reconnu
+                                  </span>
+                                ) : (
+                                  <span className="text-muted-foreground text-[10px]">
+                                    Périphérique ouvert, aucun rapport reçu en 5 s — scannez pendant le test
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
                           )}
-                        </td>
-                      </tr>
-                    ))}
+                        </>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
