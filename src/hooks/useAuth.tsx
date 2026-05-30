@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
+import { setCachedPharmacyId, clearAuthCache } from "@/lib/authCache";
 
 interface AuthContextType {
   user: User | null;
@@ -9,6 +10,7 @@ interface AuthContextType {
   isAdmin: boolean;
   isGroupManager: boolean;
   managedGroupementId: string | null;
+  pharmacyId: string | null;
   pharmacyStatus: string | null;
   onboardingCompleted: boolean;
   refreshOnboarding: () => Promise<void>;
@@ -22,6 +24,7 @@ const AuthContext = createContext<AuthContextType>({
   isAdmin: false,
   isGroupManager: false,
   managedGroupementId: null,
+  pharmacyId: null,
   pharmacyStatus: null,
   onboardingCompleted: true,
   refreshOnboarding: async () => {},
