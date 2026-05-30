@@ -31,6 +31,16 @@ try {
   hidLoadError = e && e.message;
   console.error("[ASCLION-SCAN] node-hid unavailable:", hidLoadError);
 }
+// Load serialport lazily — reads barcode scanners configured in USB-CDC
+// (Virtual COM Port) mode. 100% AV-safe (plain file I/O on COM port).
+let SerialPortLib = null;
+let serialLoadError = null;
+try {
+  SerialPortLib = require("serialport");
+} catch (e) {
+  serialLoadError = e && e.message;
+  console.error("[ASCLION-SCAN] serialport unavailable:", serialLoadError);
+}
 // ────────────────────────────────────────────────────────────
 // Picture-in-Picture state (always-on-top + compact mode)
 // ────────────────────────────────────────────────────────────
@@ -1301,6 +1311,236 @@ function stopClipboardScanner() {
 }
 
 // ────────────────────────────────────────────────────────────
+// SerialPort scanner reader (USB-CDC / Virtual COM Port)
+//
+// Reads barcode scanners configured in "USB Serial" / "USB-CDC" /
+// "Virtual COM Port" mode.  This is the THIRD common scanner mode
+// (after USB Keyboard and HID POS).
+//
+// SAFETY GUARANTEES:
+//   • 100% AV-safe (plain file I/O on COM port — same as a modem)
+//   • Auto-detects scanners by USB Vendor ID (no port hijacking)
+//   • If a COM port is locked by another process (e.g. LGO reading
+//     from it directly), open() returns Access Denied and we skip it.
+//     We NEVER fight the LGO for the port — we let it win silently.
+//   • Auto-rescan every 15 s for hot-plug / replug events.
+//
+// Runs in parallel to all other scanner paths.  emitGlobalScan
+// deduplicates within SCAN_DEDUP_WINDOW_MS so no double-emission.
+// ────────────────────────────────────────────────────────────
+
+const SERIAL_BAUD_RATES = [9600, 115200, 38400, 19200, 57600];
+
+const serialState = {
+  ports: new Map(), // path → { sp, buf, lastAt, flushTimer, baudRate, info }
+  rescanTimer: null,
+  lastError: null,
+  started: false,
+};
+
+async function listSerialPorts() {
+  if (!SerialPortLib) return [];
+  try {
+    const list = await SerialPortLib.SerialPort.list();
+    return list || [];
+  } catch (e) {
+    serialState.lastError = "list: " + (e && e.message);
+    return [];
+  }
+}
+
+function isLikelyScannerPort(p) {
+  // 1. Match by USB vendorId (most reliable)
+  if (p.vendorId) {
+    const vid = parseInt(p.vendorId, 16);
+    if (!isNaN(vid) && SCANNER_VIDS.has(vid)) return true;
+  }
+  // 2. Some Windows enumerations only fill pnpId — extract VID from it
+  if (p.pnpId) {
+    const m = p.pnpId.match(/VID_([0-9A-Fa-f]{4})/);
+    if (m) {
+      const vid = parseInt(m[1], 16);
+      if (!isNaN(vid) && SCANNER_VIDS.has(vid)) return true;
+    }
+  }
+  // 3. Manufacturer / friendly name match
+  if (p.manufacturer && SCANNER_PRODUCT_HINT.test(p.manufacturer)) return true;
+  if (p.friendlyName && SCANNER_PRODUCT_HINT.test(p.friendlyName)) return true;
+  return false;
+}
+
+function flushSerialBuffer(portPath, reason) {
+  const state = serialState.ports.get(portPath);
+  if (!state) return;
+  const raw = state.buf.trim();
+  state.buf = "";
+  if (raw.length >= SCAN_MIN_LENGTH) {
+    const parsed = parseBarcodeToCip(raw);
+    if (parsed) {
+      devLog(`[SERIAL] barcode (${reason}) from ${portPath}: ${parsed}`);
+      emitGlobalScan(parsed);
+    } else {
+      devLog(`[SERIAL] rejected (${reason}) raw="${raw}"`);
+    }
+  }
+}
+
+function handleSerialData(portPath, data) {
+  const state = serialState.ports.get(portPath);
+  if (!state) return;
+  const now = Date.now();
+  // Reset buffer on long gap (>800 ms = next scan, not a continuation)
+  if (now - state.lastAt > 800 && state.buf.length > 0) state.buf = "";
+  state.lastAt = now;
+
+  // Walk bytes: accumulate printable ASCII, terminate on CR/LF
+  for (let i = 0; i < data.length; i++) {
+    const b = data[i];
+    if (b === 0x0d || b === 0x0a) {
+      flushSerialBuffer(portPath, "crlf");
+      continue;
+    }
+    if (b > 0x1f && b < 0x7f && state.buf.length < SCAN_MAX_LENGTH) {
+      state.buf += String.fromCharCode(b);
+    }
+  }
+
+  // Auto-flush after 300 ms idle (scanners that send without terminator)
+  clearTimeout(state.flushTimer);
+  if (state.buf.length >= SCAN_MIN_LENGTH) {
+    state.flushTimer = setTimeout(() => flushSerialBuffer(portPath, "idle"), 300);
+  }
+}
+
+function openSerialPortAt(portInfo, baudRate) {
+  return new Promise((resolve) => {
+    if (!SerialPortLib) return resolve({ ok: false, err: "lib not loaded" });
+    try {
+      const sp = new SerialPortLib.SerialPort({
+        path: portInfo.path,
+        baudRate,
+        autoOpen: false,
+      });
+      sp.open((err) => {
+        if (err) return resolve({ ok: false, err: err.message || String(err) });
+        resolve({ ok: true, sp });
+      });
+    } catch (e) {
+      resolve({ ok: false, err: e && e.message });
+    }
+  });
+}
+
+async function tryOpenScannerPort(portInfo) {
+  if (!SerialPortLib) return;
+  if (serialState.ports.has(portInfo.path)) return; // already open
+
+  let opened = null;
+  let lastErr = null;
+
+  // Try the most common scanner baud rates in order
+  for (const baudRate of SERIAL_BAUD_RATES) {
+    const res = await openSerialPortAt(portInfo, baudRate);
+    if (res.ok) {
+      opened = { sp: res.sp, baudRate };
+      break;
+    }
+    lastErr = res.err;
+    // If "Access denied" / "in use" → another process owns it (LGO probably).
+    // Don't keep trying other baud rates, just skip this port silently.
+    if (lastErr && /access|denied|busy|in use|locked|EBUSY|EACCES/i.test(lastErr)) {
+      devLog(`[SERIAL] ${portInfo.path} in use by another process — skipping`);
+      return;
+    }
+  }
+
+  if (!opened) {
+    devWarn(`[SERIAL] cannot open ${portInfo.path}: ${lastErr}`);
+    return;
+  }
+
+  const state = {
+    sp: opened.sp,
+    buf: "",
+    lastAt: 0,
+    flushTimer: null,
+    baudRate: opened.baudRate,
+    info: {
+      path: portInfo.path,
+      manufacturer: portInfo.manufacturer || null,
+      vendorId: portInfo.vendorId || null,
+      productId: portInfo.productId || null,
+      friendlyName: portInfo.friendlyName || null,
+    },
+  };
+  serialState.ports.set(portInfo.path, state);
+
+  opened.sp.on("data", (chunk) => handleSerialData(portInfo.path, chunk));
+  opened.sp.on("error", (err) => {
+    devWarn(`[SERIAL] ${portInfo.path} runtime error:`, err && err.message);
+  });
+  opened.sp.on("close", () => {
+    serialState.ports.delete(portInfo.path);
+    devLog(`[SERIAL] ${portInfo.path} closed`);
+  });
+
+  devLog(
+    `[SERIAL] opened ${portInfo.path} @ ${opened.baudRate} baud ` +
+      `(${portInfo.manufacturer || "?"} VID=${portInfo.vendorId || "?"})`,
+  );
+}
+
+async function rescanSerial() {
+  if (!SerialPortLib) return;
+  const list = await listSerialPorts();
+  const currentPaths = new Set(list.map((p) => p.path));
+
+  // 1. Open newly-detected scanner ports
+  for (const p of list) {
+    if (isLikelyScannerPort(p) && !serialState.ports.has(p.path)) {
+      await tryOpenScannerPort(p);
+    }
+  }
+
+  // 2. Close ports for devices that disappeared (unplugged)
+  for (const [pathName, state] of serialState.ports.entries()) {
+    if (!currentPaths.has(pathName)) {
+      try {
+        state.sp.close(() => {});
+      } catch (_) {}
+      serialState.ports.delete(pathName);
+      devLog(`[SERIAL] device removed: ${pathName}`);
+    }
+  }
+}
+
+function startSerialScan() {
+  if (!SerialPortLib) return;
+  if (serialState.rescanTimer) return;
+  serialState.started = true;
+  // Initial scan + hot-plug detection
+  rescanSerial().catch((e) => devWarn("[SERIAL] initial scan failed:", e));
+  serialState.rescanTimer = setInterval(() => {
+    rescanSerial().catch((e) => devWarn("[SERIAL] rescan failed:", e));
+  }, 15000);
+  devLog("[SERIAL] scanner started (auto-detect every 15 s)");
+}
+
+function stopSerialScan() {
+  if (serialState.rescanTimer) {
+    clearInterval(serialState.rescanTimer);
+    serialState.rescanTimer = null;
+  }
+  for (const [_path, state] of serialState.ports.entries()) {
+    try {
+      state.sp.close(() => {});
+    } catch (_) {}
+  }
+  serialState.ports.clear();
+  serialState.started = false;
+}
+
+// ────────────────────────────────────────────────────────────
 // Windows Raw Input (RIDEV_INPUTSINK) — PowerShell/C# subprocess
 //
 // WHY: Win32 Raw Input is fundamentally different from keyboard hooks.
@@ -1586,22 +1826,29 @@ function bootScannerStack() {
   const pref = loadScannerPref();
   if (pref && pref.clipboardEnabled) startClipboardScanner();
 
+  // ALL methods run in parallel.  emitGlobalScan() deduplicates within 800 ms
+  // so duplicate captures from multiple paths are silently dropped.
+
   // 1) Raw Input Win32 (Windows only) — NOT a hook, AV-safe, works without focus
   //    Requires no scanner configuration. Runs as a hidden PowerShell subprocess.
   startRawInput();
 
-  // 2) Direct HID read (node-hid) — AV-safe, works for HID POS / non-keyboard interfaces
+  // 2) SerialPort (USB-CDC) — AV-safe (file I/O), auto-detect scanner VIDs
+  //    Skips ports in use by other apps (LGO).  No conflict with anyone.
+  startSerialScan();
+
+  // 3) Direct HID read (node-hid) — AV-safe, works for HID POS / non-keyboard interfaces
   if (HID) {
     const best = findBestScanner();
     if (best) openHidDevice(best);
     startHidPolling();
   }
 
-  // 3) uiohook-napi — global keyboard hook (may be blocked by AV, last resort)
+  // 4) uiohook-napi — global keyboard hook (may be blocked by AV, last resort)
   startUiohookFallback();
 
-  // Note: WebHID path is started by preload.js via navigator.hid after did-finish-load.
-  // Barcodes from all paths merge via emitGlobalScan() deduplication.
+  // 5) WebHID path is started by preload.js via navigator.hid after did-finish-load.
+  //    Activates only if scanner is in HID POS mode (usage page 0x8C).
 }
 
 function getScannerStatus() {
@@ -1630,6 +1877,18 @@ function getScannerStatus() {
     // Raw Input Win32 subprocess
     rawInputStarted,
     rawInputError,
+    // SerialPort (USB-CDC) scanner
+    serialLoaded: !!SerialPortLib,
+    serialLoadError,
+    serialStarted: serialState.started,
+    serialOpenPorts: Array.from(serialState.ports.values()).map((s) => ({
+      path: s.info.path,
+      manufacturer: s.info.manufacturer,
+      vendorId: s.info.vendorId,
+      productId: s.info.productId,
+      baudRate: s.baudRate,
+    })),
+    serialLastError: serialState.lastError,
   };
 }
 
@@ -1781,6 +2040,7 @@ ipcMain.handle("scanner:set-allow-generic", (_e, allow) => {
 app.on("will-quit", () => {
   isQuitting = true;
   stopRawInput();
+  stopSerialScan();
   try {
     if (uIOhook && uiohookStarted) uIOhook.stop();
   } catch {
