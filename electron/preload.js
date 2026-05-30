@@ -67,5 +67,111 @@ contextBridge.exposeInMainWorld("electronAPI", {
     // Enable/disable auto-bind to generic keyboard-class HID devices (opt-in)
     setAllowGeneric: (allow) => ipcRenderer.invoke("scanner:set-allow-generic", allow),
     reload: () => ipcRenderer.invoke("scanner:reload"),
+    // WebHID: trigger navigator.hid.requestDevice() from the admin panel.
+    // Main process executes it with userGesture:true so no click is required.
+    requestWebHID: () => ipcRenderer.invoke("scanner:webhid-request"),
+    // Clipboard scanner (opt-in fallback for scanners in "keyboard wedge" mode)
+    clipboardStart: () => ipcRenderer.invoke("scanner:clipboard-start"),
+    clipboardStop: () => ipcRenderer.invoke("scanner:clipboard-stop"),
+    // Internal: called by the WEBHID_INIT_SCRIPT (injected by main via executeJavaScript)
+    // to forward detected barcodes back to the main process scanner stack.
+    _reportWebHIDBarcode: (raw) => ipcRenderer.invoke("scanner:webhid-barcode", raw),
   },
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WebHID passive listener — runs in the preload context (renderer-side) and
+// connects to HID POS barcode scanners (usage page 0x8C) without requiring any
+// user interaction.
+//
+// HOW IT WORKS:
+//   1. On load, call navigator.hid.getDevices() — returns devices the user has
+//      already granted in a previous session.  No user gesture required.
+//   2. Listen for navigator.hid 'connect' events so hot-plugged scanners are
+//      picked up automatically.
+//   3. When a report arrives, decode it and send to main via IPC.
+//
+// This path is completely antivirus-safe: it uses the browser's HID API, not a
+// low-level keyboard hook.  Focus is irrelevant — HID reports arrive regardless
+// of which window is active.
+//
+// LIMITATION: Only works when the scanner is in "HID POS" (usage page 0x8C) mode.
+// Most cheap scanners ship in "USB Keyboard" mode by default.  The pharmacist
+// must scan a configuration barcode from the manufacturer manual to switch modes.
+// The admin panel shows per-brand instructions for common scanner models.
+// ─────────────────────────────────────────────────────────────────────────────
+(async function initWebHIDScanner() {
+  if (typeof navigator === "undefined" || !navigator.hid) return;
+
+  const HID_POS_PAGE = 0x8c;
+  const MIN_LEN = 7;
+  const RESET_MS = 800;
+  let buf = "";
+  let lastAt = 0;
+
+  function flush(source) {
+    const code = buf.trim();
+    buf = "";
+    if (code.length >= MIN_LEN) {
+      ipcRenderer.invoke("scanner:webhid-barcode", code).catch(() => {});
+    }
+  }
+
+  function onInputReport(ev) {
+    const now = Date.now();
+    if (now - lastAt > RESET_MS && buf.length > 0) buf = "";
+    lastAt = now;
+
+    const view = new DataView(ev.data.buffer);
+    for (let i = 0; i < view.byteLength; i++) {
+      const b = view.getUint8(i);
+      if (b === 0) continue;
+      if (b === 0x0d || b === 0x0a) {
+        flush("crlf");
+        return;
+      }
+      if (b > 0x1f && b < 0x7f) buf += String.fromCharCode(b);
+    }
+    // Auto-flush after inactivity (some HID POS devices send the full code in
+    // one report with no explicit terminator)
+    clearTimeout(onInputReport._timer);
+    if (buf.length >= MIN_LEN) {
+      onInputReport._timer = setTimeout(() => flush("timeout"), RESET_MS);
+    }
+  }
+
+  async function openDevice(dev) {
+    if (!dev.opened) {
+      try {
+        await dev.open();
+      } catch (_) {
+        return;
+      }
+    }
+    dev.removeEventListener("inputreport", onInputReport);
+    dev.addEventListener("inputreport", onInputReport);
+  }
+
+  function isPosScanner(dev) {
+    return dev.collections && dev.collections.some((c) => c.usagePage === HID_POS_PAGE);
+  }
+
+  // 1. Open already-granted devices (persisted from previous sessions)
+  try {
+    const granted = await navigator.hid.getDevices();
+    for (const d of granted) {
+      if (isPosScanner(d)) await openDevice(d);
+    }
+  } catch (_) {}
+
+  // 2. Hot-plug: automatically open new POS scanners when connected
+  navigator.hid.addEventListener("connect", async ({ device }) => {
+    if (isPosScanner(device)) await openDevice(device);
+  });
+  navigator.hid.addEventListener("disconnect", ({ device }) => {
+    try {
+      if (device.opened) device.close();
+    } catch (_) {}
+    buf = "";
+  });
+})();
