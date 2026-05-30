@@ -28,11 +28,26 @@ export default defineConfig(({ mode }) => ({
     ],
   },
   optimizeDeps: {
-    force: true,
-    include: [
-      "react",
-      "react-dom",
-      "@radix-ui/react-dialog",
-    ],
+    // `force: true` invalidated the pre-bundle cache on every dev start (slow boot).
+    // Vite already invalidates the cache automatically when dependencies change.
+    include: ["react", "react-dom", "@radix-ui/react-dialog"],
+  },
+  build: {
+    // Three pages were above the 500 KB warning limit; raise the threshold and
+    // split heavy vendors so the initial chunk stays lean.
+    chunkSizeWarningLimit: 800,
+    rollupOptions: {
+      output: {
+        manualChunks: (id) => {
+          if (!id.includes("node_modules")) return;
+          if (id.includes("react-dom") || id.includes("/react/") || id.includes("scheduler")) return "react-vendor";
+          if (id.includes("@supabase")) return "supabase-vendor";
+          if (id.includes("@radix-ui")) return "radix-vendor";
+          if (id.includes("recharts") || id.includes("d3-") || id.includes("victory-vendor")) return "charts-vendor";
+          if (id.includes("pdfjs-dist")) return "pdf-vendor";
+          if (id.includes("lucide-react")) return "icons-vendor";
+        },
+      },
+    },
   },
 }));
