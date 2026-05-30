@@ -41,6 +41,39 @@ try {
   serialLoadError = e && e.message;
   console.error("[ASCLION-SCAN] serialport unavailable:", serialLoadError);
 }
+
+// ────────────────────────────────────────────────────────────
+// Native N-API addons — preferred over the PowerShell Raw Input subprocess
+// (faster boot, no subprocess to be killed by GPO/EDR, inherits Electron
+// signature). Both addons are Windows-only and degrade gracefully on macOS/
+// Linux: the existing PowerShell + uiohook + node-hid + WebHID + serialport
+// fallbacks remain wired in and active.
+// ────────────────────────────────────────────────────────────
+let nativeRawInput = null;
+let nativeRawInputError = null;
+try {
+  nativeRawInput = require("./native/rawinput");
+  if (!nativeRawInput.available) {
+    nativeRawInputError = nativeRawInput.loadError || "not built for this platform";
+    console.warn("[ASCLION-SCAN] native rawinput unavailable:", nativeRawInputError);
+  }
+} catch (e) {
+  nativeRawInputError = e && e.message;
+  console.error("[ASCLION-SCAN] native rawinput load failed:", nativeRawInputError);
+}
+
+let nativeUia = null;
+let nativeUiaError = null;
+try {
+  nativeUia = require("./native/uiawatcher");
+  if (!nativeUia.available) {
+    nativeUiaError = nativeUia.loadError || "not built for this platform";
+    console.warn("[ASCLION-SCAN] native uiawatcher unavailable:", nativeUiaError);
+  }
+} catch (e) {
+  nativeUiaError = e && e.message;
+  console.error("[ASCLION-SCAN] native uiawatcher load failed:", nativeUiaError);
+}
 // ────────────────────────────────────────────────────────────
 // Picture-in-Picture state (always-on-top + compact mode)
 // ────────────────────────────────────────────────────────────
@@ -1889,6 +1922,75 @@ function stopRawInput() {
   rawInputStarted = false;
 }
 
+// ────────────────────────────────────────────────────────────
+// Native N-API Raw Input — preferred over the PowerShell subprocess.
+// Same Win32 API (RegisterRawInputDevices + RIDEV_INPUTSINK) but in-process,
+// no subprocess to be killed by GPO, no C# JIT cost at startup.
+// ────────────────────────────────────────────────────────────
+let nativeRawInputStarted = false;
+function startNativeRawInput() {
+  if (!nativeRawInput || !nativeRawInput.available) return false;
+  if (nativeRawInputStarted) return true;
+  const ok = nativeRawInput.start((rawBuffer) => {
+    if (!rawBuffer || rawBuffer.length < SCAN_MIN_LENGTH) return;
+    const parsed = parseBarcodeToCip(rawBuffer);
+    if (parsed) {
+      devLog("[RAWINPUT-NATIVE] barcode:", parsed);
+      emitGlobalScan(parsed);
+    } else {
+      devLog("[RAWINPUT-NATIVE] rejected raw:", rawBuffer);
+    }
+  });
+  nativeRawInputStarted = !!ok;
+  if (!nativeRawInputStarted) {
+    devWarn("[RAWINPUT-NATIVE] start() returned false:", nativeRawInput.loadError);
+  } else {
+    devLog("[RAWINPUT-NATIVE] started OK");
+  }
+  return nativeRawInputStarted;
+}
+function stopNativeRawInput() {
+  if (nativeRawInput && nativeRawInputStarted) {
+    nativeRawInput.stop();
+    nativeRawInputStarted = false;
+  }
+}
+
+// ────────────────────────────────────────────────────────────
+// Native UI Automation watcher — universal LGO field capture.
+// Polls each LGO's "barcode input" field every 200 ms; emits whenever a value
+// change looks like a barcode. Independent of every keyboard/HID path.
+// Reads LGO selectors from electron/lgo-mappings.json.
+// ────────────────────────────────────────────────────────────
+let nativeUiaStarted = false;
+function startNativeUia() {
+  if (!nativeUia || !nativeUia.available) return false;
+  if (nativeUiaStarted) return true;
+  const ok = nativeUia.start((payload) => {
+    if (!payload || !payload.barcode) return;
+    const parsed = parseBarcodeToCip(payload.barcode);
+    if (parsed) {
+      devLog(`[UIA] barcode from ${payload.lgoId}:`, parsed);
+      emitGlobalScan(parsed);
+    } else {
+      devLog(`[UIA] rejected from ${payload.lgoId}: "${payload.barcode}"`);
+    }
+  });
+  nativeUiaStarted = !!ok;
+  if (!nativeUiaStarted) {
+    devWarn("[UIA] start() returned false:", nativeUia.loadError);
+  } else {
+    devLog(`[UIA] started, watching ${nativeUia.fieldCount()} LGO field(s)`);
+  }
+  return nativeUiaStarted;
+}
+function stopNativeUia() {
+  if (nativeUia && nativeUiaStarted) {
+    nativeUia.stop();
+    nativeUiaStarted = false;
+  }
+}
+
 function bootScannerStack() {
   // Load persisted preferences (allowGeneric, clipboard, etc.) before scanning
   applyScannerPref();
@@ -1898,25 +2000,37 @@ function bootScannerStack() {
   // ALL methods run in parallel.  emitGlobalScan() deduplicates within 800 ms
   // so duplicate captures from multiple paths are silently dropped.
 
-  // 1) Raw Input Win32 (Windows only) — NOT a hook, AV-safe, works without focus
-  //    Requires no scanner configuration. Runs as a hidden PowerShell subprocess.
-  startRawInput();
+  // 1) NATIVE Raw Input N-API (Windows, in-process) — preferred over the
+  //    PowerShell subprocess. Inherits Electron signature, no GPO/EDR friction.
+  const nativeRiOk = startNativeRawInput();
 
-  // 2) SerialPort (USB-CDC) — AV-safe (file I/O), auto-detect scanner VIDs
+  // 2) NATIVE UI Automation watcher — universal LGO field capture, independent
+  //    of every keyboard/HID path. The "100% on supported LGOs" guarantee.
+  startNativeUia();
+
+  // 3) SerialPort (USB-CDC) — AV-safe (file I/O), auto-detect scanner VIDs
   //    Skips ports in use by other apps (LGO).  No conflict with anyone.
   startSerialScan();
 
-  // 3) Direct HID read (node-hid) — AV-safe, works for HID POS / non-keyboard interfaces
+  // 4) Direct HID read (node-hid) — AV-safe, works for HID POS / non-keyboard interfaces
   if (HID) {
     const best = findBestScanner();
     if (best) openHidDevice(best);
     startHidPolling();
   }
 
-  // 4) uiohook-napi — global keyboard hook (may be blocked by AV, last resort)
+  // 5) PowerShell Raw Input subprocess — fallback if native N-API addon failed
+  //    to load (binary not built, blocked by AppLocker, etc.). Kept for parity
+  //    with previous behaviour.
+  if (!nativeRiOk) {
+    devLog("[BOOT] native RawInput unavailable, falling back to PowerShell subprocess");
+    startRawInput();
+  }
+
+  // 6) uiohook-napi — global keyboard hook (may be blocked by AV, last resort)
   startUiohookFallback();
 
-  // 5) WebHID path is started by preload.js via navigator.hid after did-finish-load.
+  // 7) WebHID path is started by preload.js via navigator.hid after did-finish-load.
   //    Activates only if scanner is in HID POS mode (usage page 0x8C).
 }
 
@@ -1943,9 +2057,18 @@ function getScannerStatus() {
     clipboardEnabled,
     // WebHID (managed renderer-side; this just confirms the flag is set)
     webHidEnabled: true, // always available in Electron — activation depends on scanner mode
-    // Raw Input Win32 subprocess
+    // Raw Input Win32 subprocess (PowerShell fallback)
     rawInputStarted,
     rawInputError,
+    // Native N-API Raw Input (preferred)
+    nativeRawInputLoaded: !!(nativeRawInput && nativeRawInput.available),
+    nativeRawInputLoadError: nativeRawInputError,
+    nativeRawInputStarted,
+    // Native UI Automation watcher
+    nativeUiaLoaded: !!(nativeUia && nativeUia.available),
+    nativeUiaLoadError: nativeUiaError,
+    nativeUiaStarted,
+    nativeUiaFields: nativeUia && nativeUia.available ? nativeUia.fieldCount() : 0,
     // SerialPort (USB-CDC) scanner
     serialLoaded: !!SerialPortLib,
     serialLoadError,
@@ -2108,6 +2231,8 @@ ipcMain.handle("scanner:set-allow-generic", (_e, allow) => {
 
 app.on("will-quit", () => {
   isQuitting = true;
+  stopNativeRawInput();
+  stopNativeUia();
   stopRawInput();
   stopSerialScan();
   try {
