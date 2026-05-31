@@ -228,11 +228,28 @@ const RemoteScannerDiagnosticTab = () => {
   const load = useCallback(async () => {
     setLoading(true);
     try {
+      // Purge stale heartbeats (>10 min sans signe de vie) AVANT de lire,
+      // pour éviter d'accumuler des centaines de lignes fantômes par pharmacie.
+      // Best-effort : on ignore une éventuelle erreur de delete.
+      const tenMinAgo = new Date(Date.now() - 10 * 60_000).toISOString();
+      try {
+        await (supabase as any)
+          .from("pharmacy_instance_heartbeats")
+          .delete()
+          .lt("last_seen_at", tenMinAgo);
+      } catch (e) {
+        console.warn("purge heartbeats failed", e);
+      }
+
+      // On ne montre que les instances "vivantes" (vues dans les 3 dernières
+      // minutes) — cohérent avec get_pharmacy_connection_counts côté DB.
+      const threeMinAgo = new Date(Date.now() - 3 * 60_000).toISOString();
       const { data, error } = await (supabase as any)
         .from("pharmacy_instance_heartbeats")
         .select(
           "id, pharmacy_id, user_id, instance_id, platform, user_agent, app_version, first_seen_at, last_seen_at, last_scan_at, scanner_status",
         )
+        .gte("last_seen_at", threeMinAgo)
         .order("last_seen_at", { ascending: false })
         .limit(500);
       if (error) throw error;
