@@ -468,10 +468,16 @@ const RemoteScannerDiagnosticTab = () => {
   );
 };
 
-const PharmacyDiagRow = ({ row }: { row: HeartbeatRow }) => {
+const PharmacyDiagRow = ({ row, latestVersion }: { row: HeartbeatRow; latestVersion: string | null }) => {
   const paths = useMemo(() => computePaths(row.scanner_status), [row.scanner_status]);
   const health = useMemo(() => healthScore(paths), [paths]);
   const isDesktop = row.platform === "desktop";
+
+  const versionState: "up-to-date" | "outdated" | "unknown" = !latestVersion
+    ? "unknown"
+    : row.app_version === latestVersion
+      ? "up-to-date"
+      : "outdated";
 
   return (
     <div className="rounded-lg border bg-card px-3 py-3 space-y-2">
@@ -488,7 +494,7 @@ const PharmacyDiagRow = ({ row }: { row: HeartbeatRow }) => {
                 {isDesktop ? <Activity className="h-2.5 w-2.5" /> : null}
                 {row.platform}
               </span>
-              {row.app_version ? ` · v${row.app_version}` : ""}
+              {row.app_version ? ` · v${row.app_version}` : " · v?"}
               {" · "}
               <Clock className="h-2.5 w-2.5 inline" /> heartbeat {relativeTime(row.last_seen_at)}
               {" · "}
@@ -496,10 +502,27 @@ const PharmacyDiagRow = ({ row }: { row: HeartbeatRow }) => {
             </p>
           </div>
         </div>
-        <Badge variant="outline" className={`${health.tone} border-current/30`}>
-          {health.label}
-        </Badge>
+        <div className="flex items-center gap-1.5 flex-wrap justify-end">
+          {versionState === "up-to-date" && (
+            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300 text-[10px]">
+              à jour
+            </Badge>
+          )}
+          {versionState === "outdated" && (
+            <Badge
+              variant="outline"
+              className="bg-amber-50 text-amber-800 border-amber-300 text-[10px]"
+              title={`Cette instance tourne sur ${row.app_version ?? "?"} alors que la dernière version déployée est ${latestVersion}`}
+            >
+              ancienne version
+            </Badge>
+          )}
+          <Badge variant="outline" className={`${health.tone} border-current/30`}>
+            {health.label}
+          </Badge>
+        </div>
       </div>
+
 
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-1.5">
         {paths.map((p) => {
