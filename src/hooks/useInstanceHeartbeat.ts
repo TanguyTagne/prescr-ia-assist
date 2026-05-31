@@ -51,45 +51,72 @@ export function useInstanceHeartbeat() {
         }
         if (cancelled) return;
 
-        // Collect scanner diagnostic snapshot (Electron desktop only).
-        // The admin uses this to triage offline pharmacies remotely without
-        // needing TeamViewer access to the pharmacist's PC.
-        let scannerStatus: Record<string, unknown> | null = null;
+        // Collect scanner diagnostic snapshot.
+        // Toujours écrire un scanner_status, même si la capture n'est pas
+        // disponible — on tag l'objet avec un champ `_meta` qui dit
+        // POURQUOI il n'y a pas de données. Permet de débuguer un parc
+        // entier depuis le dashboard admin.
+        let scannerStatus: Record<string, unknown> = {
+          _meta: "init",
+          _heartbeat_version: 2,
+        };
         let lastScanAt: string | null = null;
-        try {
-          const api = (window as any).electronAPI?.scanner;
-          if (api?.status) {
-            const s = await api.status();
+        const electronApi = (window as any).electronAPI;
+        if (!electronApi) {
+          scannerStatus = { _meta: "no_electron", _heartbeat_version: 2 };
+        } else if (!electronApi.scanner) {
+          scannerStatus = {
+            _meta: "no_scanner_api",
+            _heartbeat_version: 2,
+            _electron_keys: Object.keys(electronApi).slice(0, 20),
+          };
+        } else if (typeof electronApi.scanner.status !== "function") {
+          scannerStatus = {
+            _meta: "no_status_function",
+            _heartbeat_version: 2,
+            _scanner_keys: Object.keys(electronApi.scanner).slice(0, 20),
+          };
+        } else {
+          try {
+            const s = await electronApi.scanner.status();
             if (s && typeof s === "object") {
-              scannerStatus = s as Record<string, unknown>;
+              scannerStatus = { ...(s as Record<string, unknown>), _meta: "ok", _heartbeat_version: 2 };
               const lastEnter = (s as any).lastEnterAt;
               if (typeof lastEnter === "number" && lastEnter > 0) {
                 lastScanAt = new Date(lastEnter).toISOString();
               }
+            } else {
+              scannerStatus = {
+                _meta: "status_returned_falsy",
+                _heartbeat_version: 2,
+                _typeof: typeof s,
+              };
             }
+          } catch (err: any) {
+            scannerStatus = {
+              _meta: "status_call_threw",
+              _heartbeat_version: 2,
+              _error: String(err?.message || err).slice(0, 200),
+            };
           }
-        } catch {
-          // Non-Electron or API missing — skip silently.
         }
 
         // Cast as `any` because Supabase TypeGen hasn't picked up the new
         // scanner_status / last_scan_at columns yet (migration is fresh).
-        await supabase
-          .from("pharmacy_instance_heartbeats")
-          .upsert(
-            ({
-              pharmacy_id: pharmacyIdRef.current,
-              user_id: user.id,
-              instance_id: instanceId.current,
-              platform,
-              user_agent: userAgent,
-              app_version: appVersion,
-              last_seen_at: new Date().toISOString(),
-              ...(scannerStatus ? { scanner_status: scannerStatus } : {}),
-              ...(lastScanAt ? { last_scan_at: lastScanAt } : {}),
-            }) as any,
-            { onConflict: "pharmacy_id,user_id,instance_id" }
-          );
+        await supabase.from("pharmacy_instance_heartbeats").upsert(
+          {
+            pharmacy_id: pharmacyIdRef.current,
+            user_id: user.id,
+            instance_id: instanceId.current,
+            platform,
+            user_agent: userAgent,
+            app_version: appVersion,
+            last_seen_at: new Date().toISOString(),
+            scanner_status: scannerStatus,
+            ...(lastScanAt ? { last_scan_at: lastScanAt } : {}),
+          } as any,
+          { onConflict: "pharmacy_id,user_id,instance_id" },
+        );
       } catch (e) {
         // Silent: heartbeat is best-effort
         console.warn("heartbeat failed", e);
@@ -107,10 +134,14 @@ export function useInstanceHeartbeat() {
           .delete()
           .eq("user_id", user.id)
           .eq("instance_id", instanceId.current);
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
     };
 
-    const onBeforeUnload = () => { void cleanup(); };
+    const onBeforeUnload = () => {
+      void cleanup();
+    };
     window.addEventListener("beforeunload", onBeforeUnload);
 
     return () => {
