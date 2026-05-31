@@ -50,10 +50,34 @@ export function useInstanceHeartbeat() {
           pharmacyIdRef.current = profile.pharmacy_id;
         }
         if (cancelled) return;
+
+        // Collect scanner diagnostic snapshot (Electron desktop only).
+        // The admin uses this to triage offline pharmacies remotely without
+        // needing TeamViewer access to the pharmacist's PC.
+        let scannerStatus: Record<string, unknown> | null = null;
+        let lastScanAt: string | null = null;
+        try {
+          const api = (window as any).electronAPI?.scanner;
+          if (api?.status) {
+            const s = await api.status();
+            if (s && typeof s === "object") {
+              scannerStatus = s as Record<string, unknown>;
+              const lastEnter = (s as any).lastEnterAt;
+              if (typeof lastEnter === "number" && lastEnter > 0) {
+                lastScanAt = new Date(lastEnter).toISOString();
+              }
+            }
+          }
+        } catch {
+          // Non-Electron or API missing — skip silently.
+        }
+
+        // Cast as `any` because Supabase TypeGen hasn't picked up the new
+        // scanner_status / last_scan_at columns yet (migration is fresh).
         await supabase
           .from("pharmacy_instance_heartbeats")
           .upsert(
-            {
+            ({
               pharmacy_id: pharmacyIdRef.current,
               user_id: user.id,
               instance_id: instanceId.current,
@@ -61,7 +85,9 @@ export function useInstanceHeartbeat() {
               user_agent: userAgent,
               app_version: appVersion,
               last_seen_at: new Date().toISOString(),
-            },
+              ...(scannerStatus ? { scanner_status: scannerStatus } : {}),
+              ...(lastScanAt ? { last_scan_at: lastScanAt } : {}),
+            }) as any,
             { onConflict: "pharmacy_id,user_id,instance_id" }
           );
       } catch (e) {
