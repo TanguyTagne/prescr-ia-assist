@@ -188,15 +188,6 @@ function healthScore(paths: PathInfo[]): { score: number; tone: string; label: s
   return { score: 0, tone: "text-slate-500", label: "Aucune voie active" };
 }
 
-function formatLoadError(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  if (error && typeof error === "object") {
-    const e = error as { message?: string; details?: string; hint?: string; code?: string };
-    return [e.message, e.details, e.hint, e.code].filter(Boolean).join(" · ") || "Erreur inconnue";
-  }
-  return String(error || "Erreur inconnue");
-}
-
 const RemoteScannerDiagnosticTab = () => {
   const [rows, setRows] = useState<HeartbeatRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -208,40 +199,15 @@ const RemoteScannerDiagnosticTab = () => {
     try {
       const { data, error } = await (supabase as any)
         .from("pharmacy_instance_heartbeats")
-        .select("id, pharmacy_id, user_id, instance_id, platform, user_agent, app_version, first_seen_at, last_seen_at, last_scan_at, scanner_status")
+        .select(
+          "id, pharmacy_id, user_id, instance_id, platform, user_agent, app_version, first_seen_at, last_seen_at, last_scan_at, scanner_status, pharmacy:pharmacies(name, city)",
+        )
         .order("last_seen_at", { ascending: false })
         .limit(500);
       if (error) throw error;
-
-      const heartbeatRows = (data || []) as HeartbeatRow[];
-      const pharmacyIds = Array.from(new Set(heartbeatRows.map((row) => row.pharmacy_id).filter(Boolean)));
-
-      if (pharmacyIds.length === 0) {
-        setRows(heartbeatRows);
-        return;
-      }
-
-      const { data: pharmacies, error: pharmaciesError } = await (supabase as any)
-        .from("pharmacies")
-        .select("id, name, city")
-        .in("id", pharmacyIds);
-
-      if (pharmaciesError) {
-        console.warn("pharmacy labels failed", pharmaciesError);
-        setRows(heartbeatRows);
-        return;
-      }
-
-      const pharmaciesById = new Map(
-        ((pharmacies || []) as Array<{ id: string; name: string | null; city: string | null }>).map((pharmacy) => [
-          pharmacy.id,
-          { name: pharmacy.name, city: pharmacy.city },
-        ]),
-      );
-
-      setRows(heartbeatRows.map((row) => ({ ...row, pharmacy: pharmaciesById.get(row.pharmacy_id) ?? null })));
+      setRows((data || []) as HeartbeatRow[]);
     } catch (e) {
-      toast.error("Erreur de chargement", { description: formatLoadError(e) });
+      toast.error("Erreur de chargement", { description: String(e) });
     } finally {
       setLoading(false);
     }
@@ -443,12 +409,25 @@ const PharmacyDiagRow = ({ row }: { row: HeartbeatRow }) => {
         })}
       </div>
 
-      {/* Bannière diagnostic basée sur _meta */}
+      {/* Bannière diagnostic — cas SANS scanner_status (ancien code heartbeat) */}
+      {!row.scanner_status && (
+        <div className="text-[10px] bg-rose-50 border border-rose-200 text-rose-900 rounded px-2 py-1.5">
+          <span className="font-semibold">Heartbeat ancien :</span> scanner_status est NULL en base. L'instance pousse
+          encore l'ancienne version du code heartbeat (sans le champ scanner_status). Soit le client n'a pas rechargé
+          l'app depuis le push, soit Lovable n'a pas synchronisé{" "}
+          <code className="font-mono">useInstanceHeartbeat.ts</code>. Vérifie le contenu du fichier en prod côté
+          Lovable.
+        </div>
+      )}
+
+      {/* Bannière diagnostic — cas avec scanner_status mais _meta sans données utiles */}
       {row.scanner_status?._meta && row.scanner_status._meta !== "ok" && (
         <div className="text-[10px] bg-amber-50 border border-amber-200 text-amber-900 rounded px-2 py-1.5">
           <span className="font-semibold">Diagnostic :</span>{" "}
           {row.scanner_status._meta === "no_electron" &&
-            "Pas d'electronAPI exposé — c'est probablement une session navigateur classique (web) déguisée en desktop par les heuristiques. Aucune capture native possible."}
+            (isDesktop
+              ? "Plateforme marquée desktop mais aucun electronAPI exposé. Faux positif de isAsclionDesktopRuntime() — vérifier les heuristiques."
+              : "Pas d'electronAPI (session navigateur normale). Aucune capture native possible — c'est attendu en mode web.")}
           {row.scanner_status._meta === "no_scanner_api" && (
             <>
               electronAPI présent mais sans <code className="font-mono">.scanner</code> — l'EXE installé est trop ancien
@@ -471,6 +450,18 @@ const PharmacyDiagRow = ({ row }: { row: HeartbeatRow }) => {
           )}
           {row.scanner_status._meta === "init" &&
             "scanner_status non rempli — bug dans le code heartbeat (à signaler)."}
+        </div>
+      )}
+
+      {/* Bannière diagnostic — scanner_status présent SANS _meta (ancien code v1) */}
+      {row.scanner_status && !row.scanner_status._meta && (
+        <div className="text-[10px] bg-amber-50 border border-amber-200 text-amber-900 rounded px-2 py-1.5">
+          <span className="font-semibold">Heartbeat v1 :</span> Données scanner présentes mais sans marqueur{" "}
+          <code className="font-mono">_meta</code>. Le client tourne sur la version intermédiaire du heartbeat (avant
+          ajout des marqueurs diagnostic).
+          {Object.keys(row.scanner_status).length === 0
+            ? " Objet vide — vraisemblablement échec silencieux de scanner.status()."
+            : ` Champs détectés : ${Object.keys(row.scanner_status).slice(0, 10).join(", ")}.`}
         </div>
       )}
 
