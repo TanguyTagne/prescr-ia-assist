@@ -213,14 +213,29 @@ const RemoteScannerDiagnosticTab = () => {
       const { data, error } = await (supabase as any)
         .from("pharmacy_instance_heartbeats")
         .select(
-          "id, pharmacy_id, user_id, instance_id, platform, user_agent, app_version, first_seen_at, last_seen_at, last_scan_at, scanner_status, pharmacy:pharmacies(name, city)"
+          "id, pharmacy_id, user_id, instance_id, platform, user_agent, app_version, first_seen_at, last_seen_at, last_scan_at, scanner_status"
         )
         .order("last_seen_at", { ascending: false })
         .limit(500);
       if (error) throw error;
-      setRows((data || []) as HeartbeatRow[]);
-    } catch (e) {
-      toast.error("Erreur de chargement", { description: String(e) });
+      const heartbeats = (data || []) as HeartbeatRow[];
+
+      // No FK between heartbeats and pharmacies — fetch names in a 2nd query.
+      const pharmacyIds = Array.from(new Set(heartbeats.map((r) => r.pharmacy_id).filter(Boolean)));
+      let pharmaciesById: Record<string, { name: string | null; city: string | null }> = {};
+      if (pharmacyIds.length > 0) {
+        const { data: phs } = await (supabase as any)
+          .from("pharmacies")
+          .select("id, name, city")
+          .in("id", pharmacyIds);
+        for (const p of (phs || []) as Array<{ id: string; name: string | null; city: string | null }>) {
+          pharmaciesById[p.id] = { name: p.name, city: p.city };
+        }
+      }
+      setRows(heartbeats.map((r) => ({ ...r, pharmacy: pharmaciesById[r.pharmacy_id] ?? null })));
+    } catch (e: any) {
+      const msg = e?.message || e?.error_description || (typeof e === "string" ? e : JSON.stringify(e));
+      toast.error("Erreur de chargement", { description: msg });
     } finally {
       setLoading(false);
     }
