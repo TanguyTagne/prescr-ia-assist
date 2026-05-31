@@ -65,6 +65,22 @@ jobs:
         working-directory: electron
         run: npm install
 
+      # Garde-fou : le postinstall (build-native.js) DOIT avoir produit l'addon
+      # N-API Raw Input. C'est le chemin de capture PRINCIPAL, indépendant du
+      # focus — sans lui l'EXE ne peut pas lire les scans douchette pendant que
+      # le LGO a le focus. On refuse de packager un EXE sans ce binaire.
+      - name: Verify native Raw Input addon was built
+        shell: pwsh
+        run: |
+          $addon = "electron/native/rawinput/build/Release/asclion_rawinput.node"
+          if (-not (Test-Path $addon)) {
+            Write-Host "::error::Addon natif manquant : $addon"
+            Write-Host "Le postinstall node-gyp a échoué — l'EXE ne pourrait pas lire les douchettes HID pendant que le LGO a le focus."
+            exit 1
+          }
+          $size = (Get-Item $addon).Length
+          Write-Host "OK: $addon ($size octets)"
+
       - name: Build Windows installer
         working-directory: electron
         run: npm run build:win -- --publish never
