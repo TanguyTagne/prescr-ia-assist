@@ -359,12 +359,35 @@ const WidgetApp = () => {
         logger.log(`[SCAN] ${ts} ean=${code} match=db name=${med.nom_commercial}`);
         const { data: pathLinks } = await supabase
           .from("medicament_pathologie")
-          .select("pathologie_id")
-          .eq("medicament_id", med.id);
+          .select("pathologie_id, score_pertinence, pathologies(nom_pathologie)")
+          .eq("medicament_id", med.id)
+          .order("score_pertinence", { ascending: false });
+
+        // ── Filtre pathologies pertinentes pour le médicament scanné ─────
+        // Évite qu'un antalgique générique remonte les PCs de pathologies
+        // qu'il ne traite que symptomatiquement (varicelle, otite, etc.)
+        const atc = (med.atc_code || "").toUpperCase();
+        const isSymptomaticAnalgesic =
+          atc.startsWith("N02BE") ||  // paracétamol
+          atc.startsWith("N02BA") ||  // aspirine
+          atc.startsWith("M01AE") ||  // ibuprofène
+          atc.startsWith("M01AB") ||  // diclofénac, indométacine
+          atc.startsWith("M01AC") ||  // piroxicam, méloxicam
+          atc.startsWith("M01AH") ||  // célécoxib, étoricoxib
+          atc.startsWith("N02BB") ||  // métamizole
+          atc.startsWith("R05D");     // antitussifs
+
+        // Pour les antalgiques/antipyrétiques génériques, ne garder QUE les
+        // pathologies de type douleur/fièvre — pas les maladies sous-jacentes.
+        const SYMPTOM_PATHO_RE = /^(douleur|fi[èe]vre|maux|c[ée]phal[ée]e|migraine|lombalgie|arthralgie|n[ée]vralgie|courbatures|dysm[ée]norrh[ée]e|r[èe]gles)/i;
+
+        const filteredLinks = isSymptomaticAnalgesic
+          ? (pathLinks || []).filter(p => SYMPTOM_PATHO_RE.test((p.pathologies as any)?.nom_pathologie || ""))
+          : (pathLinks || []).slice(0, 3); // TOP 3 par score sinon
 
         let recommendations: AnalysisResult["medicaments"][number]["recommendations"] = [];
-        if (pathLinks && pathLinks.length > 0) {
-          const pathIds = pathLinks.map((p) => p.pathologie_id);
+        if (filteredLinks.length > 0) {
+          const pathIds = filteredLinks.map((p) => p.pathologie_id);
           // Include medicaments join to get CIP codes for anti-loop blocking
           const { data: produits } = await supabase
             .from("produits_complementaires")
