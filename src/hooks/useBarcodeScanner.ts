@@ -127,13 +127,18 @@ export function useBarcodeScanner({
         });
       }
 
-      // Accept digits AND GS1 punctuation (parens, GS char) AND letters (for LOT/AI codes in DataMatrix)
-      const isAccepted = e.key.length === 1 && /[0-9A-Za-z()\x1d]/.test(e.key);
-      // Numpad fallback when NumLock off
-      const numpadDigit =
-        !isAccepted && /^Numpad[0-9]$/.test(e.code) ? e.code.slice(-1) : null;
+      // Digits via e.code (physical key position — layout-independent).
+      // Fixes AZERTY PCs where e.key gives "&éè..."  instead of "123..." when
+      // the scanner is in US-QWERTY mode (the factory default for most scanners).
+      const digitByCode =
+        /^Digit([0-9])$/.exec(e.code)?.[1] ??
+        (/^Numpad[0-9]$/.test(e.code) ? e.code.slice(-1) : null);
 
-      const charToAdd = isAccepted ? e.key : numpadDigit;
+      // Letters and GS1 punctuation still use e.key (layout-aware, correct when
+      // the scanner is configured to match the PC layout — or for GS1 DataMatrix).
+      const isAccepted = !digitByCode && e.key.length === 1 && /[A-Za-z()\x1d]/.test(e.key);
+
+      const charToAdd = digitByCode ?? (isAccepted ? e.key : null);
 
       if (charToAdd) {
         if (bufferRef.current.length === 0 || elapsed < maxKeyInterval) {
