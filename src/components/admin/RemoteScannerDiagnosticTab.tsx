@@ -16,6 +16,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { CURRENT_BUILD_ID, fetchExpectedVersion } from "@/lib/versionCheck";
+
 
 /**
  * Diagnostic distant — vue admin de quel chemin de capture est actif sur
