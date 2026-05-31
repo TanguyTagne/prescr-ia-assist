@@ -282,6 +282,12 @@ const RemoteScannerDiagnosticTab = () => {
     return () => clearInterval(t);
   }, [load]);
 
+  const isOutdated = (r: HeartbeatRow): boolean => {
+    if (!latestVersion) return false;
+    if (!r.app_version) return true;
+    return r.app_version !== latestVersion;
+  };
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return rows.filter((r) => {
@@ -301,9 +307,11 @@ const RemoteScannerDiagnosticTab = () => {
         const ageHours = (Date.now() - new Date(r.last_scan_at).getTime()) / 3600_000;
         if (ageHours < 24) return false;
       }
+      if (filter === "outdated" && !isOutdated(r)) return false;
       return true;
     });
-  }, [rows, search, filter]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, search, filter, latestVersion]);
 
   const summary = useMemo(() => {
     const total = rows.length;
@@ -316,8 +324,15 @@ const RemoteScannerDiagnosticTab = () => {
       if (!r.last_scan_at) return true;
       return Date.now() - new Date(r.last_scan_at).getTime() > 24 * 3600_000;
     }).length;
-    return { total, desktop, noActiveCapture, staleScan };
-  }, [rows]);
+    const upToDate = latestVersion
+      ? rows.filter((r) => r.app_version === latestVersion).length
+      : 0;
+    const outdated = latestVersion
+      ? rows.filter((r) => !r.app_version || r.app_version !== latestVersion).length
+      : 0;
+    return { total, desktop, noActiveCapture, staleScan, upToDate, outdated };
+  }, [rows, latestVersion]);
+
 
   return (
     <div className="space-y-4">
