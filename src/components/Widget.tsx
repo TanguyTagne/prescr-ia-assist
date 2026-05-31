@@ -363,56 +363,70 @@ const WidgetApp = () => {
           .eq("medicament_id", med.id)
           .order("score_pertinence", { ascending: false });
 
-        // ── Filtre pathologies pertinentes pour le médicament scanné ─────
-        // Évite qu'un antalgique générique remonte les PCs de pathologies
-        // qu'il ne traite que symptomatiquement (varicelle, otite, etc.)
-        const atc = (med.atc_code || "").toUpperCase();
-        const isSymptomaticAnalgesic =
-          atc.startsWith("N02BE") ||  // paracétamol
-          atc.startsWith("N02BA") ||  // aspirine
-          atc.startsWith("M01AE") ||  // ibuprofène
-          atc.startsWith("M01AB") ||  // diclofénac, indométacine
-          atc.startsWith("M01AC") ||  // piroxicam, méloxicam
-          atc.startsWith("M01AH") ||  // célécoxib, étoricoxib
-          atc.startsWith("N02BB") ||  // métamizole
-          atc.startsWith("R05D");     // antitussifs
-
-        // Pour les antalgiques/antipyrétiques génériques, ne garder QUE les
-        // pathologies de type douleur/fièvre — pas les maladies sous-jacentes.
-        const SYMPTOM_PATHO_RE = /^(douleur|fi[èe]vre|maux|c[ée]phal[ée]e|migraine|lombalgie|arthralgie|n[ée]vralgie|courbatures|dysm[ée]norrh[ée]e|r[èe]gles)/i;
-
-        const filteredLinks = isSymptomaticAnalgesic
-          ? (pathLinks || []).filter(p => SYMPTOM_PATHO_RE.test((p.pathologies as any)?.nom_pathologie || ""))
-          : (pathLinks || []).slice(0, 3); // TOP 3 par score sinon
+        // ── Spécificité du médicament ────────────────────────────────────
+        // Principe : plus un médicament traite de pathologies (= générique),
+        // moins les suggestions par pathologie sont fiables. À l'inverse,
+        // un médicament très spécifique (insuline, chimio…) permet des
+        // recommandations très précises.
+        const nbPathos = (pathLinks || []).length;
+        const specificity: "generic" | "moderate" | "specific" | "very_specific" =
+          nbPathos >= 10 ? "generic"        // ex: Doliprane (20+ pathos)
+          : nbPathos >= 5  ? "moderate"       // ex: Ibuprofène, IPP
+          : nbPathos >= 2  ? "specific"       // ex: bêta-bloquant
+          : "very_specific";                  // ex: insuline, anti-TNF
 
         let recommendations: AnalysisResult["medicaments"][number]["recommendations"] = [];
-        if (filteredLinks.length > 0) {
-          const pathIds = filteredLinks.map((p) => p.pathologie_id);
-          // Include medicaments join to get CIP codes for anti-loop blocking
-          const { data: produits } = await supabase
+        let produits: any[] | null = null;
+
+        if (specificity === "generic") {
+          // Médicament générique → on cherche d'abord des PCs LIÉS DIRECTEMENT
+          // au médicament (table produits_complementaires.medicament_id).
+          // Ces PCs sont par construction pertinents pour le médicament,
+          // peu importe la pathologie sous-jacente.
+          const { data: directPcs } = await supabase
+            .from("produits_complementaires")
+            .select("produit, categorie, description, phrase_conseil, medicaments(cip_code)")
+            .eq("medicament_id", med.id)
+            .order("priorite", { ascending: false })
+            .limit(2);
+          produits = directPcs || [];
+          if (produits.length === 0) {
+            logger.log(`[SCAN] ${ts} med=${med.nom_commercial} générique sans PC direct — aucune suggestion`);
+          }
+        } else {
+          // Médicament plus spécifique → top N pathologies par score, et
+          // on remonte les PCs liés à ces pathologies. Plus c'est spécifique,
+          // plus on peut en proposer.
+          const topN =
+            specificity === "moderate"     ? 1  // moins on en sait, moins on extrapole
+            : specificity === "specific"     ? 2
+            : 3;                                // very_specific : on prend tout (max 3)
+          const pathIds = (pathLinks || []).slice(0, topN).map(p => p.pathologie_id);
+          const { data } = await supabase
             .from("produits_complementaires")
             .select("produit, categorie, description, phrase_conseil, medicaments(cip_code)")
             .in("pathologie_id", pathIds)
             .order("priorite", { ascending: false })
             .limit(2);
-          if (produits) {
-            recommendations = (produits as any[]).map((p) => ({
-              produit: p.produit,
-              categorie: p.categorie || "",
-              description: p.description || undefined,
-              phrase_conseil: p.phrase_conseil || undefined,
-              priorite: 90,
-            }));
-            // Register CIP codes of suggested products so they are skipped if scanned
-            const newNames: string[] = [];
-            for (const p of produits as any[]) {
-              const cip = p.medicaments?.cip_code;
-              if (cip) blockedCipsRef.current.add(cip);
-              newNames.push(p.produit);
-            }
-            if (newNames.length > 0) {
-              setBlockedProducts((prev) => [...new Set([...prev, ...newNames])]);
-            }
+          produits = data;
+        }
+        if (produits && produits.length > 0) {
+          recommendations = (produits as any[]).map((p) => ({
+            produit: p.produit,
+            categorie: p.categorie || "",
+            description: p.description || undefined,
+            phrase_conseil: p.phrase_conseil || undefined,
+            priorite: 90,
+          }));
+          // Register CIP codes of suggested products so they are skipped if scanned
+          const newNames: string[] = [];
+          for (const p of produits as any[]) {
+            const cip = p.medicaments?.cip_code;
+            if (cip) blockedCipsRef.current.add(cip);
+            newNames.push(p.produit);
+          }
+          if (newNames.length > 0) {
+            setBlockedProducts((prev) => [...new Set([...prev, ...newNames])]);
           }
         }
         prependMedicament({ nom: med.nom_commercial, classe: "", recommendations });
