@@ -37,7 +37,7 @@ function markReload() {
   }
 }
 
-async function fetchExpectedVersion(): Promise<string | null> {
+export async function fetchExpectedVersion(): Promise<string | null> {
   try {
     const res = await fetch(`/version.json?t=${Date.now()}`, { cache: "no-store" });
     if (!res.ok) return null;
@@ -50,6 +50,29 @@ async function fetchExpectedVersion(): Promise<string | null> {
   }
 }
 
+/**
+ * Nuke service worker + cache storage so the next page load can't serve a
+ * stale bundle from disk. Must run BEFORE `location.reload()`.
+ */
+async function purgeClientCaches(): Promise<void> {
+  try {
+    if ("serviceWorker" in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map((r) => r.unregister()));
+    }
+  } catch {
+    /* ignore */
+  }
+  try {
+    if ("caches" in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map((k) => caches.delete(k)));
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
 function scheduleReload(currentVersion: string, expectedVersion: string) {
   if (reloadScheduled) return;
   reloadScheduled = true;
@@ -59,7 +82,7 @@ function scheduleReload(currentVersion: string, expectedVersion: string) {
     `${TAG} new version detected (current=${currentVersion} → expected=${expectedVersion}), reloading in ${Math.round(jitterMs / 1000)}s`,
   );
 
-  setTimeout(() => {
+  setTimeout(async () => {
     // Re-check guards just before reloading — state may have changed during jitter.
     if (isCriticalTaskInProgress()) {
       console.info(`${TAG} reload cancelled because critical task started during jitter`);
@@ -72,9 +95,12 @@ function scheduleReload(currentVersion: string, expectedVersion: string) {
       return;
     }
     markReload();
+    // Purge SW + caches first so the reload actually pulls the new bundle.
+    await purgeClientCaches();
     window.location.reload();
   }, jitterMs);
 }
+
 
 export async function checkAppVersionAndMaybeReload(): Promise<void> {
   if (typeof window === "undefined") return;
