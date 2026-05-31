@@ -93,9 +93,10 @@ export function useInstanceHeartbeat() {
             const s = await electronApi.scanner.status();
             if (s && typeof s === "object") {
               scannerStatus = { ...(s as Record<string, unknown>), _meta: "ok", _heartbeat_version: 2 };
-              const lastEnter = (s as any).lastEnterAt;
-              if (typeof lastEnter === "number" && lastEnter > 0) {
-                lastScanAt = new Date(lastEnter).toISOString();
+              // Prefer lastGlobalScanAt (any path) — falls back to lastEnterAt (HID direct only)
+              const lastScanTs = (s as any).lastGlobalScanAt || (s as any).lastEnterAt;
+              if (typeof lastScanTs === "number" && lastScanTs > 0) {
+                lastScanAt = new Date(lastScanTs).toISOString();
               }
             } else {
               scannerStatus = {
