@@ -625,6 +625,37 @@ function withDeterminant(produit: string): string {
   return `le ${p}`;
 }
 
+// Returns true when phrase_conseil names a specific drug that is NOT the current med.
+// Prevents "Le tramadol constipe..." from appearing for Doliprane, etc.
+function phraseIsForWrongMed(phrase: string, med: any): boolean {
+  if (!phrase) return false;
+  const lp = phrase.toLowerCase();
+
+  // All identifiers for the current medication (name, molecule, class, aliases)
+  const medIds = [
+    med.nom_commercial, med.nom, med.molecule, med.dci,
+    med.classe, med.classe_therapeutique,
+    ...(med.aliases || []),
+  ]
+    .filter(Boolean)
+    .map((s: string) => s.toLowerCase());
+
+  // Pharmaceutical proper nouns that may appear in DB phrases.
+  // Add any new molecule names here when seeding drug-specific phrases.
+  const DRUG_NAMES_RE = /\b(tramadol|morphine|codéine|codeine|méthotrexate|methotrexate|tamoxifène|tamoxifene|furosémide|furosemide|spironolactone|lithium|valproate|doxycycline|roaccutane|isotrétinoïne|isotretinoine|duloxétine|duloxetine|mirtazapine|venlafaxine|sertraline|escitalopram|prednisone|cortisone|rivaroxaban|sitagliptine|empagliflozine|périndopril|perindopril|losartan|propranolol|clonazépam|clonazepam|liraglutide|lercanidipine|amoxicilline|ibuprofène|ibuprofen|diclofénac|diclofenac|kétoprofène|ketoprofen|atorvastatine|rosuvastatine|simvastatine|amlodipine|oméprazole|pantoprazole)\b/gi;
+
+  const mentions = (lp.match(DRUG_NAMES_RE) || []).map((d: string) => d.toLowerCase());
+  if (mentions.length === 0) return false; // phrase doesn't name any specific drug → keep it
+
+  // Phrase is valid if at least one mentioned drug matches the current med
+  for (const drug of mentions) {
+    if (medIds.some((id: string) => id.includes(drug) || drug.includes(id.split(" ")[0]))) {
+      return false;
+    }
+  }
+  return true; // named drug(s) don't match current med → regenerate
+}
+
 // Medical phrase generator: [pathologie/conséquence] + [mécanisme produit] + [bénéfice précis]
 // Rules: 15-25 words, no "confort"/"bien-être"/"au quotidien", must contain medical mechanism
 function generatePhraseConseil(rec: any, med: any): string {
@@ -747,8 +778,8 @@ function buildMedicalPhrase(produit: string, pathologie: string, categorie: stri
 
   // === LAXATIF ===
   if (cat.includes("laxatif") || produit.toLowerCase().includes("laxatif")) {
-    if (classe.includes("opioïde") || classe.includes("opiacé") || medName.toLowerCase().includes("codéine") || medName.toLowerCase().includes("tramadol")) {
-      return `La codéine ralentit le transit intestinal, ${p} aide à prévenir la constipation.`;
+    if (classe.includes("opioïde") || classe.includes("opiacé") || medName.toLowerCase().includes("codéine") || medName.toLowerCase().includes("tramadol") || medName.toLowerCase().includes("morphine")) {
+      return `Les opioïdes ralentissent le transit intestinal, ${p} prévient la constipation dès le début du traitement.`;
     }
     return `Ce traitement peut ralentir le transit intestinal, ${p} aide à prévenir la constipation.`;
   }
@@ -1912,8 +1943,9 @@ serve(async (req) => {
 
 
       // Generate phrase_conseil for each PC: [context/problem] + [simple explanation] + [patient benefit]
+      // Also regenerate when the stored phrase names a different drug (cross-contamination guard).
       for (const r of finalRecs) {
-        if (!r.phrase_conseil) {
+        if (!r.phrase_conseil || phraseIsForWrongMed(r.phrase_conseil, med)) {
           r.phrase_conseil = generatePhraseConseil(r, med);
         }
         allProposedPCs.push(normalizeText(r.produit));
