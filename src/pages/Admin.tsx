@@ -27,6 +27,7 @@ import SignalementsTab from "@/components/admin/SignalementsTab";
 import AuditPcTab from "@/components/admin/AuditPcTab";
 import AcceptedPcsTab from "@/components/admin/AcceptedPcsTab";
 import HardwareDiagnosticTab from "@/components/admin/HardwareDiagnosticTab";
+import RemoteScannerDiagnosticTab from "@/components/admin/RemoteScannerDiagnosticTab";
 import MedicamentsManquantsTab from "@/components/admin/MedicamentsManquantsTab";
 
 interface AccessRequest {
@@ -62,7 +63,7 @@ const Admin = () => {
   const [requests, setRequests] = useState<AccessRequest[]>([]);
   const [pharmacies, setPharmacies] = useState<PharmacyWithLGO[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<"requests" | "pharmacies" | "kpis" | "investor" | "coverage" | "sales" | "perf" | "benchmark" | "registers" | "demo-sessions" | "demo-leads" | "tracking-links" | "groupements" | "tracabilite" | "conformite" | "rgpd" | "quotas" | "mes-donnees" | "signalements" | "audit-pc" | "accepted-pcs" | "hardware" | "medicaments-manquants">("kpis");
+  const [tab, setTab] = useState<"requests" | "pharmacies" | "kpis" | "investor" | "coverage" | "sales" | "perf" | "benchmark" | "registers" | "demo-sessions" | "demo-leads" | "tracking-links" | "groupements" | "tracabilite" | "conformite" | "rgpd" | "quotas" | "mes-donnees" | "signalements" | "audit-pc" | "accepted-pcs" | "hardware" | "remote-diag" | "medicaments-manquants">("kpis");
 
   useEffect(() => {
     loadData();
@@ -205,6 +206,10 @@ const Admin = () => {
             <ScanLine className="h-3.5 w-3.5" />
             Diagnostic Hardware
           </Button>
+          <Button variant={tab === "remote-diag" ? "default" : "outline"} size="sm" onClick={() => setTab("remote-diag")} className="gap-1.5">
+            <ScanLine className="h-3.5 w-3.5" />
+            Diag distants (par pharmacie)
+          </Button>
           <Button variant={tab === "medicaments-manquants" ? "default" : "outline"} size="sm" onClick={() => setTab("medicaments-manquants")} className="gap-1.5">
             <PackageSearch className="h-3.5 w-3.5" />
             Médicaments manquants
@@ -237,6 +242,7 @@ const Admin = () => {
         {tab === "audit-pc" && <AuditPcTab />}
         {tab === "accepted-pcs" && <AcceptedPcsTab />}
         {tab === "hardware" && <HardwareDiagnosticTab />}
+        {tab === "remote-diag" && <RemoteScannerDiagnosticTab />}
         {tab === "medicaments-manquants" && <MedicamentsManquantsTab />}
       </div>
     </div>
