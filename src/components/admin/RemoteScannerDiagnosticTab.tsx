@@ -194,7 +194,25 @@ const RemoteScannerDiagnosticTab = () => {
   const [rows, setRows] = useState<HeartbeatRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<"all" | "broken" | "stale" | "desktop">("all");
+  const [filter, setFilter] = useState<"all" | "broken" | "stale" | "desktop" | "outdated">("all");
+  const [latestVersion, setLatestVersion] = useState<string | null>(null);
+
+  // The "latest deployed" version is whatever /version.json currently serves.
+  // We refresh it alongside the heartbeat table so admins always see truth.
+  useEffect(() => {
+    let cancelled = false;
+    const refresh = async () => {
+      const v = await fetchExpectedVersion();
+      if (!cancelled) setLatestVersion(v);
+    };
+    refresh();
+    const t = setInterval(refresh, 30_000);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
+  }, []);
+
 
   const formatLoadError = (error: unknown): string => {
     if (!error) return "Erreur inconnue";
