@@ -1746,9 +1746,11 @@ export type Database = {
           first_seen_at: string
           id: string
           instance_id: string
+          last_scan_at: string | null
           last_seen_at: string
           pharmacy_id: string
           platform: string
+          scanner_status: Json | null
           user_agent: string | null
           user_id: string
         }
@@ -1757,9 +1759,11 @@ export type Database = {
           first_seen_at?: string
           id?: string
           instance_id: string
+          last_scan_at?: string | null
           last_seen_at?: string
           pharmacy_id: string
           platform?: string
+          scanner_status?: Json | null
           user_agent?: string | null
           user_id: string
         }
@@ -1768,9 +1772,11 @@ export type Database = {
           first_seen_at?: string
           id?: string
           instance_id?: string
+          last_scan_at?: string | null
           last_seen_at?: string
           pharmacy_id?: string
           platform?: string
+          scanner_status?: Json | null
           user_agent?: string | null
           user_id?: string
         }
