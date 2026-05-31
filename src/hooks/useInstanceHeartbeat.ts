@@ -37,7 +37,8 @@ export function useInstanceHeartbeat() {
 
     const platform = isAsclionDesktopRuntime() ? "desktop" : "web";
     const userAgent = typeof navigator !== "undefined" ? navigator.userAgent.slice(0, 300) : null;
-    const appVersion = (import.meta as any).env?.VITE_APP_VERSION || null;
+    const appVersion = CURRENT_BUILD_ID;
+
 
     const sendBeat = async () => {
       try {
