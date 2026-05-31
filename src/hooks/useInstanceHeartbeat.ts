@@ -124,7 +124,12 @@ export function useInstanceHeartbeat() {
         // Silent: heartbeat is best-effort
         console.warn("heartbeat failed", e);
       }
+
+      // Piggy-back the deploy version check on the heartbeat tick.
+      // Fire-and-forget: never let it break the heartbeat loop.
+      void checkAppVersionAndMaybeReload();
     };
+
 
     sendBeat();
     timer = setInterval(sendBeat, HEARTBEAT_INTERVAL_MS);
