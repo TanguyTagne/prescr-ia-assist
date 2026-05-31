@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   PackageSearch, RefreshCw, Download, Loader2,
-  ExternalLink, AlertTriangle, Wand2,
+  ExternalLink, AlertTriangle, Wand2, DatabaseZap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -87,6 +87,56 @@ const MedicamentsManquantsTab = () => {
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   const [recovering, setRecovering] = useState(false);
   const [recoverResult, setRecoverResult] = useState<{ sans_cip_total?: number; mappes?: number; mis_a_jour?: number } | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<{ inserted?: number; valid?: number; purged?: number } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImportBdpm = useCallback(async (file: File) => {
+    setImporting(true);
+    setImportResult(null);
+    try {
+      // 1. Upload CSV dans Storage
+      const { error: uploadErr } = await supabase.storage
+        .from("imports")
+        .upload("cip-produit-mapping-COMPLETE.csv", file, { upsert: true });
+      if (uploadErr) throw new Error("Upload échoué : " + uploadErr.message);
+
+      // 2. Purger les CIPs faux (mappés à 5+ médicaments différents)
+      const { data: dupes } = await supabase
+        .from("medicament_cip")
+        .select("cip13")
+        .limit(50000) as any;
+
+      const cipCounts: Record<string, Set<string>> = {};
+      for (const row of dupes ?? []) {
+        if (!cipCounts[row.cip13]) cipCounts[row.cip13] = new Set();
+        cipCounts[row.cip13].add(row.medicament_nom);
+      }
+      const fakeCips = Object.entries(cipCounts)
+        .filter(([, noms]) => noms.size >= 5)
+        .map(([cip]) => cip);
+
+      let purged = 0;
+      if (fakeCips.length > 0) {
+        const CHUNK = 500;
+        for (let i = 0; i < fakeCips.length; i += CHUNK) {
+          await supabase.from("medicament_cip").delete().in("cip13", fakeCips.slice(i, i + CHUNK));
+        }
+        purged = fakeCips.length;
+      }
+
+      // 3. Lancer l'import depuis Storage
+      const { data, error: fnErr } = await supabase.functions.invoke("import-cip-mapping");
+      if (fnErr) throw new Error("Import échoué : " + fnErr.message);
+
+      setImportResult({ inserted: data?.inserted, valid: data?.valid, purged });
+      toast.success(`Import BDPM terminé — ${data?.inserted ?? 0} CIPs insérés, ${purged} faux CIPs supprimés`);
+    } catch (e: any) {
+      toast.error(e?.message ?? String(e));
+    } finally {
+      setImporting(false);
+    }
+  }, []);
 
   const recoverCips = useCallback(async () => {
     setRecovering(true);
@@ -165,7 +215,7 @@ const MedicamentsManquantsTab = () => {
             Codes EAN scannés sans correspondance dans le référentiel — à ajouter en priorité
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button
             variant="outline"
             size="sm"
@@ -186,6 +236,38 @@ const MedicamentsManquantsTab = () => {
             <Download className="h-3.5 w-3.5" />
             Export CSV
           </Button>
+          {/* Import CIPs BDPM */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) handleImportBdpm(file);
+              e.target.value = "";
+            }}
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={importing}
+            className="gap-2 border-blue-300 text-blue-700 hover:bg-blue-50"
+            title="Sélectionne cip-produit-mapping-COMPLETE-BDPM.csv pour remplacer les CIPs faux par les vrais CIPs BDPM"
+          >
+            {importing ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <DatabaseZap className="h-3.5 w-3.5" />
+            )}
+            {importing ? "Import en cours…" : "Importer CIPs BDPM"}
+          </Button>
+          {importResult && (
+            <span className="text-xs text-muted-foreground self-center">
+              ✓ {importResult.inserted ?? 0} insérés · {importResult.purged ?? 0} faux supprimés
+            </span>
+          )}
           <Button
             variant="default"
             size="sm"
