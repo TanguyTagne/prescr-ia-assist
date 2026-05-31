@@ -9,11 +9,20 @@ const HEARTBEAT_INTERVAL_MS = 60_000;
 const INSTANCE_KEY = "asclion_instance_id";
 
 function getInstanceId(): string {
+  // Use localStorage so a given poste (machine + browser profile) keeps the
+  // SAME instance_id across reloads, tab restarts and app restarts. Otherwise
+  // every reopen creates a new heartbeat row and we end up with hundreds of
+  // ghost rows per pharmacy in the admin diag view.
   try {
-    let id = sessionStorage.getItem(INSTANCE_KEY);
+    let id = localStorage.getItem(INSTANCE_KEY);
     if (!id) {
-      id = crypto.randomUUID();
-      sessionStorage.setItem(INSTANCE_KEY, id);
+      // Migrate any pre-existing sessionStorage id to keep continuity once.
+      try {
+        const legacy = sessionStorage.getItem(INSTANCE_KEY);
+        if (legacy) id = legacy;
+      } catch { /* ignore */ }
+      if (!id) id = crypto.randomUUID();
+      localStorage.setItem(INSTANCE_KEY, id);
     }
     return id;
   } catch {
