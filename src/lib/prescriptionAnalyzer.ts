@@ -98,12 +98,17 @@ export async function analyzePrescription(
     throw new Error(data.error);
   }
   return normalizeResult(data);
+  } finally {
+    endCriticalTask();
+  }
 }
 
 export async function analyzePrescriptionImage(
   imageBase64: string,
   options?: { basketSessionId?: string; blockedProducts?: string[] },
 ): Promise<AnalysisResult> {
+  beginCriticalTask();
+  try {
   const { data, error } = await supabase.functions.invoke("analyze-prescription", {
     body: {
       imageBase64,
@@ -132,7 +137,11 @@ export async function analyzePrescriptionImage(
     throw new Error(data.error);
   }
   return normalizeResult(data);
+  } finally {
+    endCriticalTask();
+  }
 }
+
 
 export async function trackRecommendationClick(
   pharmacyId: string,
