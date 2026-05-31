@@ -1,4 +1,3 @@
-// build: specificity-based PC selection (directPcs/nbPathos) — v2026.06.01
 import { useState, useCallback, useEffect, useRef } from "react";
 import { X, Loader2, Mail, Lock, Eye, EyeOff, Monitor, HelpCircle, Pin, PinOff, Minimize2, Maximize2, LogOut, ScanLine } from "lucide-react";
 import OnboardingTour from "@/components/OnboardingTour";
@@ -322,6 +321,33 @@ const WidgetApp = () => {
     trackEvent("ordonnance_analyzed", { input_type: "barcode_hid", medicaments: [med.nom], ean: code });
   }, [logScanEvent]);
 
+  // Détecte si une phrase conseil mentionne un médicament autre que celui scanné.
+  // Filet de sécurité au cas où la migration de cleanup aurait raté des cas.
+  const phraseIsForWrongMed = (phrase: string | null | undefined, med: { nom_commercial: string; atc_code?: string | null }): boolean => {
+    if (!phrase) return false;
+    const p = phrase.toLowerCase();
+    const nom = med.nom_commercial.toLowerCase();
+    const atc = (med.atc_code || "").toUpperCase();
+    const DRUGS = [
+      { name: "tramadol",     ok: () => /tramadol|topalgic|contramal|ixprim|izalgi/.test(nom) || atc.startsWith("N02AX02") || atc.startsWith("N02AJ06") },
+      { name: "codéine",      ok: () => /cod[ée]ine|codoliprane|klipal|nealgyl/.test(nom) },
+      { name: "morphine",     ok: () => /morphine|skenan|moscontin|actiskenan|sevredol/.test(nom) },
+      { name: "oxycodone",    ok: () => /oxycodone|oxycontin|oxynorm/.test(nom) },
+      { name: "ibuprofène",   ok: () => /ibuprof|nurofen|advil|spedifen/.test(nom) || atc.startsWith("M01AE") },
+      { name: "méthotrexate", ok: () => /methotrexate|metoject|imeth|novatrex/.test(nom) },
+      { name: "furosémide",   ok: () => /furosemide|lasilix/.test(nom) || atc.startsWith("C03CA") },
+      { name: "lithium",      ok: () => /lithium|teralithe/.test(nom) },
+      { name: "valproate",    ok: () => /valproate|depakine|depakote|depamide/.test(nom) },
+      { name: "metformine",   ok: () => /metformine|glucophage|stagid/.test(nom) },
+      { name: "aspirine",     ok: () => /aspirin|aspegic|kardegic|catalgine/.test(nom) || atc.startsWith("B01AC06") || atc.startsWith("N02BA01") },
+    ];
+    for (const d of DRUGS) {
+      const re = new RegExp(`\\b${d.name.replace("é", "[ée]").replace("è", "[èe]")}\\b`, "i");
+      if (re.test(p) && !d.ok()) return true;
+    }
+    return false;
+  };
+
   const lookupAndStream = useCallback(async (code: string) => {
     const ts = new Date().toISOString();
     try {
@@ -416,7 +442,9 @@ const WidgetApp = () => {
             produit: p.produit,
             categorie: p.categorie || "",
             description: p.description || undefined,
-            phrase_conseil: p.phrase_conseil || undefined,
+            // Filtre filet de sécurité : si la phrase parle d'un autre médicament,
+            // on la vide → l'UI affichera le PC sans phrase trompeuse.
+            phrase_conseil: phraseIsForWrongMed(p.phrase_conseil, med) ? undefined : (p.phrase_conseil || undefined),
             priorite: 90,
           }));
           // Register CIP codes of suggested products so they are skipped if scanned
