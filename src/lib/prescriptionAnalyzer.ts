@@ -66,6 +66,9 @@ export async function analyzePrescription(
   input: string,
   options?: { basketSessionId?: string; blockedProducts?: string[] },
 ): Promise<AnalysisResult> {
+  beginCriticalTask();
+  try {
+
   const { data, error } = await supabase.functions.invoke("analyze-prescription", {
     body: {
       prescriptionText: input,
