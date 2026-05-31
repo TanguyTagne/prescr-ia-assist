@@ -194,20 +194,59 @@ const RemoteScannerDiagnosticTab = () => {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | "broken" | "stale" | "desktop">("all");
 
+  const formatLoadError = (error: unknown): string => {
+    if (!error) return "Erreur inconnue";
+    if (error instanceof Error) return error.message;
+    if (typeof error === "string") return error;
+    if (typeof error === "object") {
+      const e = error as { message?: string; details?: string; hint?: string; code?: string };
+      return [e.message, e.details, e.hint, e.code].filter(Boolean).join(" · ") || JSON.stringify(error);
+    }
+    return String(error);
+  };
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const { data, error } = await (supabase as any)
         .from("pharmacy_instance_heartbeats")
         .select(
-          "id, pharmacy_id, user_id, instance_id, platform, user_agent, app_version, first_seen_at, last_seen_at, last_scan_at, scanner_status, pharmacy:pharmacies(name, city)",
+          "id, pharmacy_id, user_id, instance_id, platform, user_agent, app_version, first_seen_at, last_seen_at, last_scan_at, scanner_status",
         )
         .order("last_seen_at", { ascending: false })
         .limit(500);
       if (error) throw error;
-      setRows((data || []) as HeartbeatRow[]);
+
+      const heartbeatRows = (data || []) as HeartbeatRow[];
+      const pharmacyIds = Array.from(new Set(heartbeatRows.map((row) => row.pharmacy_id).filter(Boolean)));
+      let pharmaciesById = new Map<string, { name: string | null; city: string | null }>();
+
+      if (pharmacyIds.length > 0) {
+        const { data: pharmacies, error: pharmaciesError } = await (supabase as any)
+          .from("pharmacies")
+          .select("id, name, city")
+          .in("id", pharmacyIds);
+
+        if (pharmaciesError) {
+          console.warn("Impossible de charger les libellés pharmacies", pharmaciesError);
+        } else {
+          pharmaciesById = new Map(
+            (pharmacies || []).map((pharmacy: { id: string; name: string | null; city: string | null }) => [
+              pharmacy.id,
+              { name: pharmacy.name, city: pharmacy.city },
+            ]),
+          );
+        }
+      }
+
+      setRows(
+        heartbeatRows.map((row) => ({
+          ...row,
+          pharmacy: pharmaciesById.get(row.pharmacy_id) || null,
+        })),
+      );
     } catch (e) {
-      toast.error("Erreur de chargement", { description: String(e) });
+      toast.error("Erreur de chargement", { description: formatLoadError(e) });
     } finally {
       setLoading(false);
     }
