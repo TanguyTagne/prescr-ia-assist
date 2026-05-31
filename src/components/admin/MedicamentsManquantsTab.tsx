@@ -95,15 +95,25 @@ const MedicamentsManquantsTab = () => {
     setImporting(true);
     setImportResult(null);
     try {
-      // Envoyer le CSV directement en multipart — la fonction purge
-      // l'ancienne table puis insère les nouveaux CIPs (contourne le RLS Storage)
-      const form = new FormData();
-      form.append("file", file, "cip-produit-mapping-COMPLETE.csv");
+      // Lire le CSV comme texte et l'envoyer via fetch direct (text/plain)
+      // supabase.functions.invoke ne gère pas FormData correctement.
+      const csvText = await file.text();
+      const { data: { session } } = await supabase.auth.getSession();
+      const fnUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/import-cip-mapping`;
 
-      const { data, error: fnErr } = await supabase.functions.invoke("import-cip-mapping", {
-        body: form,
+      const res = await fetch(fnUrl, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${session?.access_token}`,
+          "Content-Type": "text/plain",
+        },
+        body: csvText,
       });
-      if (fnErr) throw new Error("Import échoué : " + fnErr.message);
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`Import échoué (${res.status}) : ${errText}`);
+      }
+      const data = await res.json();
 
       const purged = data?.purged ?? 0;
 
