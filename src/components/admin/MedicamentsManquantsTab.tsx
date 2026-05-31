@@ -95,39 +95,17 @@ const MedicamentsManquantsTab = () => {
     setImporting(true);
     setImportResult(null);
     try {
-      // 1. Upload CSV dans Storage
-      const { error: uploadErr } = await supabase.storage
-        .from("imports")
-        .upload("cip-produit-mapping-COMPLETE.csv", file, { upsert: true });
-      if (uploadErr) throw new Error("Upload échoué : " + uploadErr.message);
+      // Envoyer le CSV directement en multipart — la fonction purge
+      // l'ancienne table puis insère les nouveaux CIPs (contourne le RLS Storage)
+      const form = new FormData();
+      form.append("file", file, "cip-produit-mapping-COMPLETE.csv");
 
-      // 2. Purger les CIPs faux (mappés à 5+ médicaments différents)
-      const { data: dupes } = await supabase
-        .from("medicament_cip")
-        .select("cip13")
-        .limit(50000) as any;
-
-      const cipCounts: Record<string, Set<string>> = {};
-      for (const row of dupes ?? []) {
-        if (!cipCounts[row.cip13]) cipCounts[row.cip13] = new Set();
-        cipCounts[row.cip13].add(row.medicament_nom);
-      }
-      const fakeCips = Object.entries(cipCounts)
-        .filter(([, noms]) => noms.size >= 5)
-        .map(([cip]) => cip);
-
-      let purged = 0;
-      if (fakeCips.length > 0) {
-        const CHUNK = 500;
-        for (let i = 0; i < fakeCips.length; i += CHUNK) {
-          await supabase.from("medicament_cip").delete().in("cip13", fakeCips.slice(i, i + CHUNK));
-        }
-        purged = fakeCips.length;
-      }
-
-      // 3. Lancer l'import depuis Storage
-      const { data, error: fnErr } = await supabase.functions.invoke("import-cip-mapping");
+      const { data, error: fnErr } = await supabase.functions.invoke("import-cip-mapping", {
+        body: form,
+      });
       if (fnErr) throw new Error("Import échoué : " + fnErr.message);
+
+      const purged = data?.purged ?? 0;
 
       setImportResult({ inserted: data?.inserted, valid: data?.valid, purged });
       toast.success(`Import BDPM terminé — ${data?.inserted ?? 0} CIPs insérés, ${purged} faux CIPs supprimés`);
