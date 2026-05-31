@@ -76,6 +76,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
     // Internal: called by the WEBHID_INIT_SCRIPT (injected by main via executeJavaScript)
     // to forward detected barcodes back to the main process scanner stack.
     _reportWebHIDBarcode: (raw) => ipcRenderer.invoke("scanner:webhid-barcode", raw),
+    // Dev only (disabled in production builds): inject a barcode directly into
+    // the scan pipeline without any hardware. Use from DevTools console:
+    //   electronAPI.scanner.injectScan("3400936081349")
+    injectScan: (code) => ipcRenderer.invoke("scanner:inject", { code }),
   },
 });
 
