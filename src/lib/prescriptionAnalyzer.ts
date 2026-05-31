@@ -1,5 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
+import { beginCriticalTask, endCriticalTask } from "@/lib/criticalTask";
+
 
 export interface Interaction {
   medicaments: string[];
