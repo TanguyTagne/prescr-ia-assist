@@ -661,6 +661,8 @@ let scanLastEmitted = { code: "", at: 0 };
 // Diagnostic: expose last global key time, buffer length and last rejection reason
 let scanLastGlobalKeyAt = 0;
 let scanLastRejection = null; // { raw, reason, at }
+// Timestamp of the last successfully emitted barcode (any path: N-API, PS, uiohook, HID, serial…)
+let lastGlobalScanAt = 0;
 function charFromKeycode(keycode, rawKeychar) {
   if (!UiohookKey) return null;
   // 1) Numbers — top row + numpad (works whether NumLock is on or off,
@@ -766,6 +768,7 @@ function emitGlobalScan(code) {
     return;
   }
   scanLastEmitted = { code, at: now };
+  lastGlobalScanAt = now;
   devLog(`[SCAN] ts=${new Date(now).toISOString()} ean=${code}`);
   ensureWindowAlive();
   if (!mainWindow) return;
@@ -1926,6 +1929,8 @@ function getScannerStatus() {
     lastError: hidState.lastError,
     bufferLen: hidState.buffer.length,
     allowGeneric: hidState.allowGeneric,
+    // Last successful scan from ANY path (N-API, PS, uiohook, HID, serial…)
+    lastGlobalScanAt: lastGlobalScanAt || null,
     // Global keyboard diagnostic (uiohook path)
     lastGlobalKeyAt: scanLastGlobalKeyAt || null,
     globalBufferLen: scanBuffer.length,
