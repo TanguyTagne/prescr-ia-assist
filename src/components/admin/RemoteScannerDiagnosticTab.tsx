@@ -350,8 +350,33 @@ const RemoteScannerDiagnosticTab = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Version banner */}
+          <div className="rounded-lg border bg-muted/30 px-3 py-2 flex flex-wrap items-center justify-between gap-2 text-xs">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="font-semibold uppercase tracking-wide text-[10px] text-muted-foreground">
+                Version déployée
+              </span>
+              <code className="rounded bg-background border px-1.5 py-0.5 font-mono text-[11px]">
+                {latestVersion ?? "—"}
+              </code>
+              <span className="text-muted-foreground">·</span>
+              <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Cet onglet admin</span>
+              <code className="rounded bg-background border px-1.5 py-0.5 font-mono text-[11px]">
+                {CURRENT_BUILD_ID}
+              </code>
+            </div>
+            {latestVersion && (
+              <span className="text-[11px]">
+                <span className="text-emerald-700 font-semibold">{summary.upToDate}</span>
+                <span className="text-muted-foreground"> à jour · </span>
+                <span className="text-amber-700 font-semibold">{summary.outdated}</span>
+                <span className="text-muted-foreground"> ancienne version</span>
+              </span>
+            )}
+          </div>
+
           {/* Summary tiles */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
             <div className="rounded-lg border bg-card px-3 py-2">
               <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Instances connectées</p>
               <p className="text-2xl font-bold">{summary.total}</p>
@@ -361,15 +386,17 @@ const RemoteScannerDiagnosticTab = () => {
               <p className="text-2xl font-bold">{summary.desktop}</p>
             </div>
             <div className="rounded-lg border bg-card px-3 py-2">
-              <p className="text-[10px] uppercase tracking-wide text-muted-foreground text-rose-600">
-                Aucune voie active
+              <p className="text-[10px] uppercase tracking-wide text-emerald-700">À jour</p>
+              <p className="text-2xl font-bold text-emerald-700">
+                {latestVersion ? summary.upToDate : "—"}
               </p>
+            </div>
+            <div className="rounded-lg border bg-card px-3 py-2">
+              <p className="text-[10px] uppercase tracking-wide text-rose-600">Aucune voie active</p>
               <p className="text-2xl font-bold text-rose-700">{summary.noActiveCapture}</p>
             </div>
             <div className="rounded-lg border bg-card px-3 py-2">
-              <p className="text-[10px] uppercase tracking-wide text-muted-foreground text-amber-600">
-                Pas de scan &gt;24h
-              </p>
+              <p className="text-[10px] uppercase tracking-wide text-amber-600">Pas de scan &gt;24h</p>
               <p className="text-2xl font-bold text-amber-700">{summary.staleScan}</p>
             </div>
           </div>
@@ -394,6 +421,15 @@ const RemoteScannerDiagnosticTab = () => {
               onClick={() => setFilter("desktop")}
             >
               Desktop seulement
+            </Button>
+            <Button
+              variant={filter === "outdated" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setFilter("outdated")}
+              disabled={!latestVersion}
+              className={filter === "outdated" ? "" : "border-amber-300 text-amber-700 hover:bg-amber-50"}
+            >
+              Ancienne version
             </Button>
             <Button
               variant={filter === "broken" ? "default" : "outline"}
@@ -422,9 +458,10 @@ const RemoteScannerDiagnosticTab = () => {
                 Aucune instance ne correspond aux filtres.
               </p>
             ) : (
-              filtered.map((r) => <PharmacyDiagRow key={r.id} row={r} />)
+              filtered.map((r) => <PharmacyDiagRow key={r.id} row={r} latestVersion={latestVersion} />)
             )}
           </div>
+
         </CardContent>
       </Card>
     </div>
