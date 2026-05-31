@@ -2,6 +2,8 @@ import { useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { isAsclionDesktopRuntime } from "@/lib/runtime";
+import { CURRENT_BUILD_ID, checkAppVersionAndMaybeReload } from "@/lib/versionCheck";
+
 
 const HEARTBEAT_INTERVAL_MS = 60_000;
 const INSTANCE_KEY = "asclion_instance_id";
