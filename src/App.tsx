@@ -238,7 +238,7 @@ const App = () => {
                 </Routes>
                 <SiteDemoLayer />
                 <VisitorTour />
-                <CookieBanner />
+                {!isAsclionDesktopRuntime() && <CookieBanner />}
                 <LgoAutoDetectPrompt />
               </>
             )}
