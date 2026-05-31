@@ -2099,6 +2099,16 @@ ipcMain.handle("scanner:set-allow-generic", (_e, allow) => {
   return getScannerStatus();
 });
 
+// Dev/test only — injects a barcode directly into the scan pipeline,
+// bypassing all hardware paths. Only available in development builds.
+ipcMain.handle("scanner:inject", (_e, { code } = {}) => {
+  if (!app.isPackaged && code && typeof code === "string") {
+    emitGlobalScan(code.trim(), "inject");
+    return { ok: true, code: code.trim() };
+  }
+  return { ok: false, error: app.isPackaged ? "disabled in production" : "invalid code" };
+});
+
 app.on("will-quit", () => {
   isQuitting = true;
   stopNativeRawInput();
