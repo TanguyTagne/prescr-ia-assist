@@ -30,6 +30,12 @@ import { toast } from "sonner";
  */
 
 type ScannerStatus = {
+  _meta?: string;
+  _heartbeat_version?: number;
+  _error?: string;
+  _typeof?: string;
+  _electron_keys?: string[];
+  _scanner_keys?: string[];
   mode?: "hid-direct" | "uiohook" | "none";
   hidLoaded?: boolean;
   hidLoadError?: string | null;
@@ -114,44 +120,24 @@ function computePaths(s: ScannerStatus | null): PathInfo[] {
       key: "hid",
       label: "node-hid (HID direct)",
       shortLabel: "HID",
-      status:
-        s.mode === "hid-direct"
-          ? "active"
-          : s.hidLoaded
-            ? "loaded"
-            : s.hidLoadError
-              ? "error"
-              : "absent",
+      status: s.mode === "hid-direct" ? "active" : s.hidLoaded ? "loaded" : s.hidLoadError ? "error" : "absent",
       detail: s.hidLoadError || (s.bound ? `Bound : ${s.bound.product ?? "—"}` : null),
     },
     {
       key: "uiohook",
       label: "uiohook-napi (hook global)",
       shortLabel: "uiohook",
-      status: s.uiohookStarted
-        ? "active"
-        : s.uiohookLoaded
-          ? "loaded"
-          : s.uiohookLoadError
-            ? "error"
-            : "absent",
+      status: s.uiohookStarted ? "active" : s.uiohookLoaded ? "loaded" : s.uiohookLoadError ? "error" : "absent",
       detail: s.uiohookLoadError || null,
     },
     {
       key: "serial",
       label: "SerialPort (USB-CDC)",
       shortLabel: "Serial",
-      status:
-        s.serialStarted && (s.serialOpenPorts?.length ?? 0) > 0
-          ? "active"
-          : s.serialLoaded
-            ? "loaded"
-            : "absent",
+      status: s.serialStarted && (s.serialOpenPorts?.length ?? 0) > 0 ? "active" : s.serialLoaded ? "loaded" : "absent",
       detail:
         s.serialLastError ||
-        (s.serialOpenPorts && s.serialOpenPorts.length > 0
-          ? s.serialOpenPorts.map((p) => p.path).join(", ")
-          : null),
+        (s.serialOpenPorts && s.serialOpenPorts.length > 0 ? s.serialOpenPorts.map((p) => p.path).join(", ") : null),
     },
     {
       key: "webhid",
@@ -197,7 +183,8 @@ function healthScore(paths: PathInfo[]): { score: number; tone: string; label: s
   const errors = paths.filter((p) => p.status === "error").length;
   if (active >= 2) return { score: active, tone: "text-emerald-700", label: `${active} voies actives` };
   if (active === 1) return { score: 1, tone: "text-amber-700", label: "1 voie active" };
-  if (errors > 0) return { score: 0, tone: "text-rose-700", label: `0 voie active, ${errors} erreur${errors > 1 ? "s" : ""}` };
+  if (errors > 0)
+    return { score: 0, tone: "text-rose-700", label: `0 voie active, ${errors} erreur${errors > 1 ? "s" : ""}` };
   return { score: 0, tone: "text-slate-500", label: "Aucune voie active" };
 }
 
@@ -213,29 +200,14 @@ const RemoteScannerDiagnosticTab = () => {
       const { data, error } = await (supabase as any)
         .from("pharmacy_instance_heartbeats")
         .select(
-          "id, pharmacy_id, user_id, instance_id, platform, user_agent, app_version, first_seen_at, last_seen_at, last_scan_at, scanner_status"
+          "id, pharmacy_id, user_id, instance_id, platform, user_agent, app_version, first_seen_at, last_seen_at, last_scan_at, scanner_status, pharmacy:pharmacies(name, city)",
         )
         .order("last_seen_at", { ascending: false })
         .limit(500);
       if (error) throw error;
-      const heartbeats = (data || []) as HeartbeatRow[];
-
-      // No FK between heartbeats and pharmacies — fetch names in a 2nd query.
-      const pharmacyIds = Array.from(new Set(heartbeats.map((r) => r.pharmacy_id).filter(Boolean)));
-      let pharmaciesById: Record<string, { name: string | null; city: string | null }> = {};
-      if (pharmacyIds.length > 0) {
-        const { data: phs } = await (supabase as any)
-          .from("pharmacies")
-          .select("id, name, city")
-          .in("id", pharmacyIds);
-        for (const p of (phs || []) as Array<{ id: string; name: string | null; city: string | null }>) {
-          pharmaciesById[p.id] = { name: p.name, city: p.city };
-        }
-      }
-      setRows(heartbeats.map((r) => ({ ...r, pharmacy: pharmaciesById[r.pharmacy_id] ?? null })));
-    } catch (e: any) {
-      const msg = e?.message || e?.error_description || (typeof e === "string" ? e : JSON.stringify(e));
-      toast.error("Erreur de chargement", { description: msg });
+      setRows((data || []) as HeartbeatRow[]);
+    } catch (e) {
+      toast.error("Erreur de chargement", { description: String(e) });
     } finally {
       setLoading(false);
     }
@@ -315,11 +287,15 @@ const RemoteScannerDiagnosticTab = () => {
               <p className="text-2xl font-bold">{summary.desktop}</p>
             </div>
             <div className="rounded-lg border bg-card px-3 py-2">
-              <p className="text-[10px] uppercase tracking-wide text-muted-foreground text-rose-600">Aucune voie active</p>
+              <p className="text-[10px] uppercase tracking-wide text-muted-foreground text-rose-600">
+                Aucune voie active
+              </p>
               <p className="text-2xl font-bold text-rose-700">{summary.noActiveCapture}</p>
             </div>
             <div className="rounded-lg border bg-card px-3 py-2">
-              <p className="text-[10px] uppercase tracking-wide text-muted-foreground text-amber-600">Pas de scan &gt;24h</p>
+              <p className="text-[10px] uppercase tracking-wide text-muted-foreground text-amber-600">
+                Pas de scan &gt;24h
+              </p>
               <p className="text-2xl font-bold text-amber-700">{summary.staleScan}</p>
             </div>
           </div>
@@ -335,11 +311,7 @@ const RemoteScannerDiagnosticTab = () => {
                 className="pl-8 h-9 text-sm"
               />
             </div>
-            <Button
-              variant={filter === "all" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setFilter("all")}
-            >
+            <Button variant={filter === "all" ? "default" : "outline"} size="sm" onClick={() => setFilter("all")}>
               Tout
             </Button>
             <Button
@@ -376,9 +348,7 @@ const RemoteScannerDiagnosticTab = () => {
                 Aucune instance ne correspond aux filtres.
               </p>
             ) : (
-              filtered.map((r) => (
-                <PharmacyDiagRow key={r.id} row={r} />
-              ))
+              filtered.map((r) => <PharmacyDiagRow key={r.id} row={r} />)
             )}
           </div>
         </CardContent>
@@ -433,13 +403,42 @@ const PharmacyDiagRow = ({ row }: { row: HeartbeatRow }) => {
                 <span className="font-semibold truncate">{p.shortLabel}</span>
                 <Icon className="h-3 w-3 shrink-0" />
               </div>
-              <p className="text-[9px] mt-0.5 uppercase tracking-wide opacity-80">
-                {STATUS_LABEL[p.status]}
-              </p>
+              <p className="text-[9px] mt-0.5 uppercase tracking-wide opacity-80">{STATUS_LABEL[p.status]}</p>
             </div>
           );
         })}
       </div>
+
+      {/* Bannière diagnostic basée sur _meta */}
+      {row.scanner_status?._meta && row.scanner_status._meta !== "ok" && (
+        <div className="text-[10px] bg-amber-50 border border-amber-200 text-amber-900 rounded px-2 py-1.5">
+          <span className="font-semibold">Diagnostic :</span>{" "}
+          {row.scanner_status._meta === "no_electron" &&
+            "Pas d'electronAPI exposé — c'est probablement une session navigateur classique (web) déguisée en desktop par les heuristiques. Aucune capture native possible."}
+          {row.scanner_status._meta === "no_scanner_api" && (
+            <>
+              electronAPI présent mais sans <code className="font-mono">.scanner</code> — l'EXE installé est trop ancien
+              (préload.js antérieur à la version qui expose le scanner). Mettre à jour Asclion Desktop sur ce poste.
+              {row.scanner_status._electron_keys && (
+                <span className="block opacity-80 mt-1">
+                  Clés disponibles : <code className="font-mono">{row.scanner_status._electron_keys.join(", ")}</code>
+                </span>
+              )}
+            </>
+          )}
+          {row.scanner_status._meta === "no_status_function" &&
+            "scanner API présent mais sans .status() — version intermédiaire d'Asclion Desktop. Mettre à jour."}
+          {row.scanner_status._meta === "status_returned_falsy" &&
+            `scanner.status() a renvoyé une valeur falsy (${row.scanner_status._typeof}). Bug Electron ou IPC interrompu.`}
+          {row.scanner_status._meta === "status_call_threw" && (
+            <>
+              scanner.status() a levé une exception : <code className="font-mono">{row.scanner_status._error}</code>
+            </>
+          )}
+          {row.scanner_status._meta === "init" &&
+            "scanner_status non rempli — bug dans le code heartbeat (à signaler)."}
+        </div>
+      )}
 
       {!isDesktop && (
         <p className="text-[10px] text-muted-foreground italic">
