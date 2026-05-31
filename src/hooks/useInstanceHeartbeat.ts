@@ -2,6 +2,8 @@ import { useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { isAsclionDesktopRuntime } from "@/lib/runtime";
+import { CURRENT_BUILD_ID, checkAppVersionAndMaybeReload } from "@/lib/versionCheck";
+
 
 const HEARTBEAT_INTERVAL_MS = 60_000;
 const INSTANCE_KEY = "asclion_instance_id";
@@ -35,7 +37,8 @@ export function useInstanceHeartbeat() {
 
     const platform = isAsclionDesktopRuntime() ? "desktop" : "web";
     const userAgent = typeof navigator !== "undefined" ? navigator.userAgent.slice(0, 300) : null;
-    const appVersion = (import.meta as any).env?.VITE_APP_VERSION || null;
+    const appVersion = CURRENT_BUILD_ID;
+
 
     const sendBeat = async () => {
       try {
@@ -121,7 +124,12 @@ export function useInstanceHeartbeat() {
         // Silent: heartbeat is best-effort
         console.warn("heartbeat failed", e);
       }
+
+      // Piggy-back the deploy version check on the heartbeat tick.
+      // Fire-and-forget: never let it break the heartbeat loop.
+      void checkAppVersionAndMaybeReload();
     };
+
 
     sendBeat();
     timer = setInterval(sendBeat, HEARTBEAT_INTERVAL_MS);

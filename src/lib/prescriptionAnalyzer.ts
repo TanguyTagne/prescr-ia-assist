@@ -1,5 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
+import { beginCriticalTask, endCriticalTask } from "@/lib/criticalTask";
+
 
 export interface Interaction {
   medicaments: string[];
@@ -64,6 +66,9 @@ export async function analyzePrescription(
   input: string,
   options?: { basketSessionId?: string; blockedProducts?: string[] },
 ): Promise<AnalysisResult> {
+  beginCriticalTask();
+  try {
+
   const { data, error } = await supabase.functions.invoke("analyze-prescription", {
     body: {
       prescriptionText: input,
@@ -93,12 +98,17 @@ export async function analyzePrescription(
     throw new Error(data.error);
   }
   return normalizeResult(data);
+  } finally {
+    endCriticalTask();
+  }
 }
 
 export async function analyzePrescriptionImage(
   imageBase64: string,
   options?: { basketSessionId?: string; blockedProducts?: string[] },
 ): Promise<AnalysisResult> {
+  beginCriticalTask();
+  try {
   const { data, error } = await supabase.functions.invoke("analyze-prescription", {
     body: {
       imageBase64,
@@ -127,7 +137,11 @@ export async function analyzePrescriptionImage(
     throw new Error(data.error);
   }
   return normalizeResult(data);
+  } finally {
+    endCriticalTask();
+  }
 }
+
 
 export async function trackRecommendationClick(
   pharmacyId: string,

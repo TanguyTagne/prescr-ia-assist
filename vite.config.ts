@@ -1,7 +1,37 @@
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
+
+// Build identifier injected into the client bundle and into /version.json.
+// Generated once per build so all bundled chunks AND the publicly-served
+// version.json share the same value. Lovable/Vite re-runs the config on
+// each build, so a module-level constant is sufficient.
+const BUILD_ID = process.env.VITE_BUILD_ID || String(Date.now());
+
+// Emits /version.json containing the current BUILD_ID. Two responsibilities:
+//  - dev: serve it from a middleware so the version-check runs end-to-end in dev
+//  - build: emit it as a static asset alongside index.html
+function versionJsonPlugin(): Plugin {
+  const payload = () => JSON.stringify({ version: BUILD_ID });
+  return {
+    name: "asclion-version-json",
+    configureServer(server) {
+      server.middlewares.use("/version.json", (_req, res) => {
+        res.setHeader("Content-Type", "application/json");
+        res.setHeader("Cache-Control", "no-store");
+        res.end(payload());
+      });
+    },
+    generateBundle() {
+      this.emitFile({
+        type: "asset",
+        fileName: "version.json",
+        source: payload(),
+      });
+    },
+  };
+}
 
 export default defineConfig(({ mode }) => ({
   server: {
@@ -11,7 +41,15 @@ export default defineConfig(({ mode }) => ({
       overlay: false,
     },
   },
-  plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
+  define: {
+    // Exposed to the client as import.meta.env.VITE_BUILD_ID.
+    "import.meta.env.VITE_BUILD_ID": JSON.stringify(BUILD_ID),
+  },
+  plugins: [
+    react(),
+    versionJsonPlugin(),
+    mode === "development" && componentTagger(),
+  ].filter(Boolean),
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
@@ -28,13 +66,9 @@ export default defineConfig(({ mode }) => ({
     ],
   },
   optimizeDeps: {
-    // `force: true` invalidated the pre-bundle cache on every dev start (slow boot).
-    // Vite already invalidates the cache automatically when dependencies change.
     include: ["react", "react-dom", "@radix-ui/react-dialog"],
   },
   build: {
-    // Three pages were above the 500 KB warning limit; raise the threshold and
-    // split heavy vendors so the initial chunk stays lean.
     chunkSizeWarningLimit: 800,
     rollupOptions: {
       output: {
@@ -43,9 +77,6 @@ export default defineConfig(({ mode }) => ({
           if (id.includes("react-dom") || id.includes("/react/") || id.includes("scheduler")) return "react-vendor";
           if (id.includes("@supabase")) return "supabase-vendor";
           if (id.includes("@radix-ui")) return "radix-vendor";
-          // NOTE: do NOT split recharts/d3 into a separate chunk — it triggers
-          // a circular-dependency TDZ error ("Cannot access 'P' before initialization")
-          // at runtime that white-screens the entire production site.
           if (id.includes("pdfjs-dist")) return "pdf-vendor";
           if (id.includes("lucide-react")) return "icons-vendor";
         },
