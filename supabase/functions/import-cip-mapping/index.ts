@@ -86,23 +86,51 @@ serve(async (req) => {
   }
 
   try {
-    // ── Télécharger le CSV depuis Storage ─────────────────────────────────
-    const { data: blob, error: storageErr } = await supabase.storage
-      .from(BUCKET)
-      .download(FILE_NAME);
+    // ── Source du CSV : body multipart (upload direct) ou Storage ─────────
+    let text: string;
+    const contentType = req.headers.get("content-type") ?? "";
 
-    if (storageErr || !blob) {
-      return new Response(JSON.stringify({
-        error: `Fichier introuvable dans le bucket "${BUCKET}/${FILE_NAME}": ${storageErr?.message ?? "blob null"}`,
-      }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    if (contentType.includes("multipart/form-data")) {
+      // CSV envoyé directement depuis le client (contourne le RLS Storage)
+      const form = await req.formData();
+      const file = form.get("file");
+      if (!file || typeof file === "string") {
+        return new Response(JSON.stringify({ error: "Champ 'file' manquant dans le form-data" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      text = await (file as File).text();
+    } else {
+      // Fallback : lire depuis Storage
+      const { data: blob, error: storageErr } = await supabase.storage
+        .from(BUCKET)
+        .download(FILE_NAME);
+
+      if (storageErr || !blob) {
+        return new Response(JSON.stringify({
+          error: `Fichier introuvable dans le bucket "${BUCKET}/${FILE_NAME}": ${storageErr?.message ?? "blob null"}`,
+        }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      text = await blob.text();
     }
 
-    const text    = await blob.text();
     const records = parseCsv(text);
 
     // Colonnes attendues : produit, cip13, denomination, forme, statut, cis
     const valid = records.filter(r => /^\d{13}$/.test(r["cip13"] ?? ""));
     console.log(`Parsed ${records.length} rows → ${valid.length} CIP13 valides`);
+
+    // ── Si CSV envoyé directement (multipart), purger toute la table d'abord
+    // Le service role peut tout supprimer sans contrainte RLS.
+    let purged = 0;
+    if (contentType.includes("multipart/form-data")) {
+      const { count } = await supabase
+        .from("medicament_cip")
+        .delete()
+        .gt("created_at", "1970-01-01") // condition toujours vraie → vide la table
+        .select("*", { count: "exact", head: true }) as any;
+      purged = count ?? 0;
+      console.log(`Purged ${purged} old CIP entries`);
+    }
 
     let inserted = 0;
     let batchErrors = 0;
@@ -138,6 +166,7 @@ serve(async (req) => {
       parsed:   records.length,
       valid:    valid.length,
       inserted,
+      purged,
       errors:   batchErrors,
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
