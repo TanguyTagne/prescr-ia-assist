@@ -687,216 +687,312 @@ function containsForbiddenWords(phrase: string): boolean {
 }
 
 function buildMedicalPhrase(produit: string, pathologie: string, categorie: string, description: string, medName: string, classe: string, latentNeed: string): string {
-  const p = withDeterminant(produit);
+  const p  = withDeterminant(produit);
   const cat = categorie;
-  const desc = description;
+  const mn  = medName ? medName.split(" ")[0] : "";
+  const cl  = classe || "";
+
+  // Contexte naturel selon la classe — langage pharmacien parlant à un patient.
+  function medCtx(): string {
+    if (cl.includes("opioïde") || cl.includes("opiacé"))                        return mn ? `Le ${mn}` : "Ce médicament contre la douleur";
+    if (cl.includes("corticoïde"))                                               return mn ? `Le ${mn}` : "La cortisone";
+    if (cl.includes("antibiotique") || cl.includes("anti-infect"))               return mn ? `Le ${mn}` : "Cet antibiotique";
+    if (cl.includes("ains") || cl.includes("anti-inflamm"))                      return mn ? `Le ${mn}` : "Cet anti-inflammatoire";
+    if (cl.includes("antidépresseur") || cl.includes("isrs") || cl.includes("irsn")) return mn ? `Le ${mn}` : "Cet antidépresseur";
+    if (cl.includes("diurétique"))                                               return mn ? `Le ${mn}` : "Ce diurétique";
+    if (cl.includes("statine"))                                                  return mn ? `Le ${mn}` : "Cette statine";
+    if (cl.includes("antiépileptique") || cl.includes("anticonvulsivant"))       return mn ? `Le ${mn}` : "Ce traitement antiépileptique";
+    if (cl.includes("bêta-bloquant"))                                            return mn ? `Le ${mn}` : "Ce bêta-bloquant";
+    if (cl.includes("ipp") || cl.includes("inhibiteur de la pompe"))             return mn ? `Le ${mn}` : "Ce médicament pour l'estomac";
+    if (cl.includes("chimiothérapie") || cl.includes("anticancéreux"))           return mn ? `Le ${mn}` : "Ce traitement contre le cancer";
+    if (cl.includes("antihypertenseur") || cl.includes("cardiovasculaire"))      return mn ? `Le ${mn}` : "Ce traitement pour le cœur";
+    if (mn) return `Le ${mn}`;
+    return "Votre médicament";
+  }
 
   // === PROBIOTIQUES / FLORE ===
   if (cat.includes("probiotique") || cat.includes("flore") || produit.toLowerCase().includes("probiotique") || produit.toLowerCase().includes("ultra levure") || produit.toLowerCase().includes("saccharomyces")) {
-    if (classe.includes("antibiotique") || classe.includes("anti-infect") || medName.toLowerCase().includes("amoxicilline") || medName.toLowerCase().includes("augmentin")) {
-      return `Les antibiotiques perturbent la flore intestinale, ${p} aide à prévenir les troubles digestifs.`;
+    if (cl.includes("antibiotique") || cl.includes("anti-infect") || medName.toLowerCase().includes("amoxicilline") || medName.toLowerCase().includes("augmentin") || medName.toLowerCase().includes("clamoxyl")) {
+      return `${medCtx()} détruit aussi les bonnes bactéries de l'intestin. ${p} aide à protéger votre ventre et éviter la diarrhée.`;
     }
     if (pathologie.includes("gastro") || pathologie.includes("diarrhée")) {
-      return `La diarrhée déséquilibre la flore intestinale, ${p} aide à restaurer le microbiote.`;
+      return `La gastro perturbe votre flore intestinale. ${p} aide à la remettre d'aplomb et à accélérer la guérison.`;
     }
-    if (pathologie.includes("reflux") || classe.includes("ipp") || classe.includes("inhibiteur") || medName.toLowerCase().includes("oméprazole") || medName.toLowerCase().includes("pantoprazole")) {
-      return `Les troubles digestifs peuvent perturber l'équilibre intestinal, ${p} aide à stabiliser le microbiote.`;
+    if (cl.includes("ipp") || medName.toLowerCase().includes("oméprazole") || medName.toLowerCase().includes("pantoprazole")) {
+      return `${medCtx()} modifie l'acidité de l'estomac et fragilise votre flore intestinale. ${p} aide à maintenir l'équilibre.`;
     }
-    return `Ce traitement peut altérer l'équilibre de la flore intestinale, ${p} aide à restaurer le microbiote.`;
+    if (cl.includes("chimiothérapie") || cl.includes("anticancéreux") || cl.includes("immunosuppresseur")) {
+      return `${medCtx()} fragilise les défenses naturelles de l'intestin. ${p} aide à soutenir votre flore et limiter les troubles digestifs.`;
+    }
+    return `${medCtx()} peut fragiliser votre flore intestinale. ${p} aide à maintenir l'équilibre de votre ventre.`;
   }
 
   // === RÉHYDRATATION ===
   if (cat.includes("réhydratation") || cat.includes("hydratation") || produit.toLowerCase().includes("réhydratation") || produit.toLowerCase().includes("sro")) {
     if (pathologie.includes("gastro") || pathologie.includes("diarrhée")) {
-      return `La diarrhée entraîne une perte importante d'eau et de sels minéraux, ${p} aide à prévenir la déshydratation.`;
+      return `La diarrhée fait perdre beaucoup d'eau et de minéraux. ${p} aide à vous réhydrater rapidement et efficacement.`;
     }
-    if (classe.includes("antibiotique") || pathologie.includes("infection")) {
-      return `Les infections digestives peuvent entraîner une déshydratation, ${p} aide à compenser les pertes hydriques.`;
+    if (cl.includes("antibiotique")) {
+      return `${medCtx()} peut provoquer des diarrhées qui déshydratent. ${p} aide à compenser cette perte en eau.`;
     }
-    if (classe.includes("opioïde") || classe.includes("opiacé") || medName.toLowerCase().includes("codéine")) {
-      return `Les traitements opioïdes peuvent favoriser la constipation, une bonne hydratation aide à maintenir un transit normal.`;
+    if (cl.includes("diurétique")) {
+      return `${medCtx()} vous fait uriner davantage. ${p} aide à compenser la perte en eau et en sels minéraux.`;
     }
-    return `Ce traitement peut entraîner des pertes hydriques, ${p} aide à maintenir une hydratation correcte.`;
+    return `${medCtx()} peut entraîner une perte en eau. ${p} aide à rester bien hydraté pendant le traitement.`;
   }
 
   // === PANSEMENT GASTRIQUE / PROTECTEUR ===
   if (cat.includes("pansement") || produit.toLowerCase().includes("pansement") || produit.toLowerCase().includes("gaviscon") || produit.toLowerCase().includes("smecta")) {
-    if (cat.includes("intestin") || pathologie.includes("gastro") || pathologie.includes("diarrhée")) {
-      return `L'irritation intestinale peut persister après la diarrhée, ${p} protège la muqueuse digestive.`;
+    if (pathologie.includes("gastro") || pathologie.includes("diarrhée")) {
+      return `Après une gastro, le ventre reste souvent irrité. ${p} apaise et protège la paroi de l'intestin.`;
     }
-    if (classe.includes("ains") || classe.includes("anti-inflamm") || medName.toLowerCase().includes("diclofénac") || medName.toLowerCase().includes("ibuprofène") || medName.toLowerCase().includes("kétoprofène")) {
-      return `Les AINS augmentent l'acidité gastrique, ${p} aide à limiter les brûlures d'estomac.`;
+    if (cl.includes("ains") || cl.includes("anti-inflamm") || medName.toLowerCase().includes("ibuprofène") || medName.toLowerCase().includes("nurofen") || medName.toLowerCase().includes("advil") || medName.toLowerCase().includes("diclofénac")) {
+      return `${medCtx()} peut irriter l'estomac et provoquer des brûlures. ${p} protège la paroi de l'estomac.`;
     }
-    if (pathologie.includes("reflux") || classe.includes("ipp")) {
-      return `Le reflux acide irrite la muqueuse digestive, ${p} aide à protéger l'estomac et l'œsophage.`;
+    if (pathologie.includes("reflux")) {
+      return `Le reflux fait remonter l'acide dans la gorge. ${p} forme un bouclier qui empêche ces remontées.`;
     }
-    return `Ce traitement peut irriter la muqueuse gastrique, ${p} aide à protéger l'estomac.`;
+    if (cl.includes("corticoïde")) {
+      return `${medCtx()} peut irriter l'estomac avec le temps. ${p} le protège pendant toute la durée du traitement.`;
+    }
+    return `${medCtx()} peut irriter l'estomac. ${p} le protège et soulage les brûlures.`;
   }
 
   // === IPP / PROTECTEUR GASTRIQUE ===
-  if (cat.includes("ipp") || cat.includes("protecteur gastrique") || produit.toLowerCase().includes("oméprazole") || produit.toLowerCase().includes("pantoprazole")) {
-    if (classe.includes("ains") || classe.includes("anti-inflamm") || medName.toLowerCase().includes("diclofénac") || medName.toLowerCase().includes("ibuprofène")) {
-      return `Les anti-inflammatoires peuvent irriter la muqueuse gastrique, ${p} aide à protéger l'estomac.`;
+  if (cat.includes("ipp") || cat.includes("protecteur gastrique") || produit.toLowerCase().includes("oméprazole") || produit.toLowerCase().includes("pantoprazole") || produit.toLowerCase().includes("esoméprazole")) {
+    if (cl.includes("ains") || cl.includes("anti-inflamm") || medName.toLowerCase().includes("ibuprofène") || medName.toLowerCase().includes("diclofénac")) {
+      return `${medCtx()} pris régulièrement peut abîmer l'estomac. ${p} réduit l'acidité et protège contre les ulcères.`;
     }
-    return `Ce traitement peut augmenter l'acidité gastrique, ${p} aide à protéger la muqueuse digestive.`;
+    if (cl.includes("corticoïde")) {
+      return `${medCtx()} peut provoquer des ulcères à l'estomac. ${p} protège la paroi en réduisant l'acidité.`;
+    }
+    if (cl.includes("anticoagulant") || cl.includes("antiagrégant")) {
+      return `${medCtx()} augmente le risque de saignement dans l'estomac. ${p} réduit ce risque en protégeant la paroi.`;
+    }
+    return `${medCtx()} peut augmenter l'acidité de l'estomac. ${p} le protège et évite les brûlures.`;
   }
 
   // === CHARBON ACTIF ===
   if (produit.toLowerCase().includes("charbon")) {
     if (pathologie.includes("gastro") || pathologie.includes("diarrhée")) {
-      return `La diarrhée peut s'accompagner de gaz et de toxines intestinales, ${p} aide à les adsorber et réduire les ballonnements.`;
+      return `La diarrhée s'accompagne souvent de gaz et de ballonnements. ${p} absorbe les toxines dans l'intestin et soulage rapidement.`;
     }
-    return `Les troubles digestifs peuvent générer gaz et toxines, ${p} aide à les adsorber.`;
+    return `${medCtx()} peut provoquer des ballonnements ou des gaz. ${p} absorbe les substances irritantes dans l'intestin.`;
   }
 
-  // === SPRAY NASAL / DÉCONGESTIONNANT ===
-  if (cat.includes("nasal") || cat.includes("spray") || produit.toLowerCase().includes("spray nasal") || produit.toLowerCase().includes("décongestionnant")) {
-    if (pathologie.includes("allergie") || classe.includes("antihistaminique")) {
-      return `L'allergie provoque une inflammation des voies nasales, ${p} aide à décongestionner et calmer l'irritation.`;
+  // === SPRAY NASAL / LAVAGE NASAL ===
+  if (cat.includes("nasal") || produit.toLowerCase().includes("spray nasal") || produit.toLowerCase().includes("physiomer") || produit.toLowerCase().includes("sterimar") || produit.toLowerCase().includes("décongestionnant")) {
+    if (pathologie.includes("allergie") || cl.includes("antihistaminique")) {
+      return `L'allergie bouche le nez et irrite les muqueuses. ${p} nettoie les voies nasales et soulage la congestion.`;
     }
-    if (pathologie.includes("rhume") || pathologie.includes("rhinite")) {
-      return `L'inflammation nasale obstrue les voies respiratoires, ${p} aide à dégager le nez et faciliter la respiration.`;
+    if (pathologie.includes("rhume") || pathologie.includes("rhinite") || pathologie.includes("sinusite")) {
+      return `Le nez bouché peut vite mener à une sinusite. ${p} dégage les voies nasales et évite la surinfection.`;
     }
-    return `L'irritation des voies nasales gêne la respiration, ${p} aide à décongestionner et apaiser l'inflammation.`;
+    return `${medCtx()} peut assécher ou irriter les voies nasales. ${p} aide à garder les muqueuses bien hydratées.`;
   }
 
-  // === SOLUTION SALINE / LAVAGE NASAL ===
-  if (produit.toLowerCase().includes("saline") || produit.toLowerCase().includes("lavage nasal") || produit.toLowerCase().includes("sérum physiologique")) {
-    if (pathologie.includes("allergie")) {
-      return `Les allergènes irritent la muqueuse nasale, ${p} permet d'éliminer les particules et d'apaiser l'inflammation.`;
+  // === COLLYRE / LARMES ARTIFICIELLES ===
+  if (cat.includes("collyre") || cat.includes("ophtalmique") || produit.toLowerCase().includes("collyre") || produit.toLowerCase().includes("larmes") || produit.toLowerCase().includes("hyabak") || produit.toLowerCase().includes("théalose")) {
+    if (pathologie.includes("allergie") || cl.includes("antihistaminique")) {
+      return `L'allergie irrite les yeux et provoque des démangeaisons. ${p} calme les yeux et soulage les picotements.`;
     }
-    return `Les sécrétions nasales encombrent les voies respiratoires, ${p} aide à les éliminer et faciliter la respiration.`;
-  }
-
-  // === COLLYRE ===
-  if (cat.includes("collyre") || cat.includes("ophtalmique") || produit.toLowerCase().includes("collyre")) {
-    if (pathologie.includes("allergie") || classe.includes("antihistaminique")) {
-      return `L'allergie saisonnière irrite les yeux et provoque des démangeaisons, ${p} stabilise les mastocytes pour soulager le prurit.`;
+    if (cl.includes("antidépresseur") || cl.includes("anticholinergique") || cl.includes("bêta-bloquant")) {
+      return `${medCtx()} peut provoquer des yeux secs. ${p} lubrifie et hydrate les yeux pour éviter l'inconfort.`;
     }
-    return `L'irritation oculaire peut accompagner ce traitement, ${p} aide à apaiser et protéger les yeux.`;
+    return `${medCtx()} peut assécher les yeux. ${p} hydrate la surface de l'œil et soulage les picotements.`;
   }
 
   // === LAXATIF ===
-  if (cat.includes("laxatif") || produit.toLowerCase().includes("laxatif")) {
-    if (classe.includes("opioïde") || classe.includes("opiacé") || medName.toLowerCase().includes("codéine") || medName.toLowerCase().includes("tramadol") || medName.toLowerCase().includes("morphine")) {
-      return `Les opioïdes ralentissent le transit intestinal, ${p} prévient la constipation dès le début du traitement.`;
+  if (cat.includes("laxatif") || produit.toLowerCase().includes("laxatif") || produit.toLowerCase().includes("macrogol") || produit.toLowerCase().includes("movicol") || produit.toLowerCase().includes("forlax")) {
+    if (cl.includes("opioïde") || cl.includes("opiacé") || medName.toLowerCase().includes("codéine") || medName.toLowerCase().includes("tramadol") || medName.toLowerCase().includes("morphine") || medName.toLowerCase().includes("oxycodone")) {
+      return `${medCtx()} bloque presque toujours le transit. ${p} est indispensable dès le premier jour pour éviter la constipation.`;
     }
-    return `Ce traitement peut ralentir le transit intestinal, ${p} aide à prévenir la constipation.`;
+    if (cl.includes("antidépresseur") || cl.includes("antipsychotique")) {
+      return `${medCtx()} ralentit souvent le transit intestinal. ${p} aide à garder un ventre qui fonctionne normalement.`;
+    }
+    if (cl.includes("fer")) {
+      return `Le fer constipe très souvent. ${p} aide à réguler le transit et rend la cure beaucoup plus supportable.`;
+    }
+    return `${medCtx()} peut ralentir le transit. ${p} aide à rester régulier pendant le traitement.`;
   }
 
   // === FIBRES / PSYLLIUM ===
   if (produit.toLowerCase().includes("fibre") || produit.toLowerCase().includes("psyllium")) {
-    if (cat.includes("laxatif") || pathologie.includes("constipation")) {
-      return `Les laxatifs stimulants peuvent irriter le côlon, ${p} aide à réguler le transit plus naturellement.`;
+    if (cl.includes("opioïde") || cl.includes("opiacé")) {
+      return `${medCtx()} bloque le transit. ${p} ramollit les selles et facilite leur passage naturellement.`;
     }
-    return `Le transit peut être perturbé par ce traitement, ${p} aide à le réguler de manière physiologique.`;
+    return `${medCtx()} peut rendre le transit paresseux. ${p} régule naturellement le transit intestinal.`;
   }
 
   // === MAGNÉSIUM ===
   if (produit.toLowerCase().includes("magnésium") || cat.includes("magnésium")) {
-    if (classe.includes("ains") || classe.includes("anti-inflamm") || pathologie.includes("douleur")) {
-      return `Les douleurs musculaires peuvent s'accompagner de tensions, ${p} aide à favoriser la détente musculaire.`;
+    if (cl.includes("diurétique")) {
+      return `${medCtx()} fait éliminer le magnésium dans les urines. ${p} compense cette perte et évite les crampes.`;
     }
-    if (classe.includes("diurétique") || pathologie.includes("hypertension")) {
-      return `Certains traitements augmentent les pertes en magnésium, ${p} aide à compenser ce déficit.`;
+    if (cl.includes("ipp") || medName.toLowerCase().includes("oméprazole") || medName.toLowerCase().includes("pantoprazole")) {
+      return `${medCtx()} pris longtemps peut faire baisser le magnésium dans le sang. ${p} prévient les crampes et la fatigue.`;
     }
-    return `Ce traitement peut augmenter les besoins en magnésium, ${p} aide à prévenir les crampes et la fatigue.`;
+    if (cl.includes("corticoïde")) {
+      return `${medCtx()} diminue les réserves en magnésium de l'organisme. ${p} compense ce manque et réduit la fatigue musculaire.`;
+    }
+    if (pathologie.includes("douleur") || pathologie.includes("migraine")) {
+      return `La douleur et le stress épuisent les réserves en magnésium. ${p} aide à détendre les muscles et réduire les tensions.`;
+    }
+    if (cl.includes("antidépresseur") || cl.includes("anxiolytique")) {
+      return `${medCtx()} peut augmenter la consommation de magnésium. ${p} aide à soutenir le système nerveux et réduire la fatigue.`;
+    }
+    return `${medCtx()} augmente les besoins en magnésium. ${p} aide à éviter les crampes, la fatigue et l'irritabilité.`;
   }
 
   // === COENZYME Q10 ===
   if (produit.toLowerCase().includes("coenzyme") || produit.toLowerCase().includes("q10")) {
-    if (classe.includes("statine") || medName.toLowerCase().includes("atorvastatine") || medName.toLowerCase().includes("rosuvastatine") || medName.toLowerCase().includes("simvastatine")) {
-      return `Les statines peuvent diminuer la production de coenzyme Q10, ${p} aide à limiter les douleurs musculaires.`;
+    if (cl.includes("statine") || medName.toLowerCase().includes("atorvastatine") || medName.toLowerCase().includes("rosuvastatine") || medName.toLowerCase().includes("simvastatine") || medName.toLowerCase().includes("pravastatine")) {
+      return `${medCtx()} peut provoquer des douleurs ou une faiblesse musculaire. ${p} aide à réduire ces effets et redonner de l'énergie.`;
     }
-    if (classe.includes("antihypertenseur") || classe.includes("cardiovasculaire") || medName.toLowerCase().includes("amlodipine")) {
-      return `Certains traitements cardiovasculaires peuvent impacter l'énergie cellulaire, ${p} soutient la fonction cardiaque.`;
+    if (cl.includes("bêta-bloquant") || cl.includes("antihypertenseur")) {
+      return `${medCtx()} peut provoquer de la fatigue. ${p} aide à maintenir l'énergie et soutient le cœur.`;
     }
-    return `Ce traitement peut réduire les niveaux de coenzyme Q10, ${p} aide à maintenir l'énergie cellulaire.`;
+    return `${medCtx()} peut épuiser les réserves d'énergie de l'organisme. ${p} aide à réduire la fatigue musculaire.`;
   }
 
-  // === RINÇAGE BUCCAL / ANTISEPTIQUE BUCCAL ===
-  if (produit.toLowerCase().includes("rinçage") || produit.toLowerCase().includes("bain de bouche") || produit.toLowerCase().includes("antiseptique buccal")) {
-    if (classe.includes("corticoïde") || medName.toLowerCase().includes("budésonide") || medName.toLowerCase().includes("béclométasone") || medName.toLowerCase().includes("fluticasone")) {
-      return `Les corticoïdes inhalés peuvent favoriser les infections buccales, ${p} aide à prévenir les mycoses.`;
+  // === BAIN DE BOUCHE / SOIN BUCCAL ===
+  if (produit.toLowerCase().includes("bain de bouche") || produit.toLowerCase().includes("antiseptique buccal") || cat.includes("buccal")) {
+    if (cl.includes("corticoïde") || medName.toLowerCase().includes("budésonide") || medName.toLowerCase().includes("béclométasone") || medName.toLowerCase().includes("fluticasone")) {
+      return `${medCtx()} inhalé peut laisser des dépôts dans la bouche et provoquer des infections. ${p} prévient ce risque.`;
     }
-    return `Ce traitement peut fragiliser la muqueuse buccale, ${p} aide à prévenir les infections locales.`;
+    if (cl.includes("chimiothérapie") || cl.includes("anticancéreux") || cl.includes("immunosuppresseur")) {
+      return `${medCtx()} peut provoquer des plaies dans la bouche. ${p} soulage et aide la guérison.`;
+    }
+    if (cl.includes("antibiotique")) {
+      return `${medCtx()} peut provoquer des infections à champignons dans la bouche. ${p} aide à les prévenir.`;
+    }
+    return `${medCtx()} peut fragiliser la bouche. ${p} protège les gencives et la muqueuse buccale.`;
   }
 
   // === VITAMINE D / CALCIUM ===
-  if (produit.toLowerCase().includes("vitamine d") || produit.toLowerCase().includes("calcium")) {
-    if (classe.includes("corticoïde")) {
-      return `Les corticoïdes au long cours fragilisent les os, ${p} aide à prévenir la déminéralisation osseuse.`;
+  if (produit.toLowerCase().includes("vitamine d") || produit.toLowerCase().includes("calcium") || cat.includes("vitamine d") || cat.includes("calcium")) {
+    if (cl.includes("corticoïde")) {
+      return `${medCtx()} fragilise les os avec le temps. ${p} aide à les protéger et évite l'ostéoporose.`;
     }
-    if (classe.includes("ipp") || medName.toLowerCase().includes("oméprazole")) {
-      return `Les traitements prolongés par IPP réduisent l'absorption du calcium, ${p} aide à maintenir la santé osseuse.`;
+    if (cl.includes("ipp") || medName.toLowerCase().includes("oméprazole") || medName.toLowerCase().includes("pantoprazole")) {
+      return `${medCtx()} pris longtemps peut diminuer l'absorption du calcium. ${p} protège vos os pendant le traitement.`;
     }
-    return `Ce traitement peut affecter le métabolisme osseux, ${p} aide à maintenir un apport suffisant.`;
+    if (cl.includes("antiépileptique") || cl.includes("anticonvulsivant")) {
+      return `${medCtx()} peut fragiliser les os sur la durée. ${p} aide à garder des os solides.`;
+    }
+    return `${medCtx()} peut affecter les os sur le long terme. ${p} aide à maintenir un bon capital osseux.`;
   }
 
   // === FER ===
-  if (produit.toLowerCase().includes("fer") || cat.includes("fer")) {
-    return `Ce traitement peut impacter l'absorption du fer, ${p} aide à prévenir les carences et la fatigue.`;
+  if (produit.toLowerCase().includes("fer") || cat.includes("fer") || cat.includes("anémie")) {
+    if (cl.includes("ipp") || medName.toLowerCase().includes("oméprazole") || medName.toLowerCase().includes("pantoprazole")) {
+      return `${medCtx()} réduit l'acidité de l'estomac et peut gêner l'absorption du fer. ${p} aide à prévenir la fatigue et l'anémie.`;
+    }
+    if (cl.includes("antibiotique")) {
+      return `${medCtx()} peut réduire l'absorption du fer. ${p} aide à prévenir l'anémie pendant le traitement.`;
+    }
+    return `${medCtx()} peut réduire l'absorption du fer dans l'organisme. ${p} aide à prévenir la fatigue et l'anémie.`;
   }
 
-  // === VITAMINE B ===
-  if (produit.toLowerCase().includes("vitamine b") || produit.toLowerCase().includes("b12") || produit.toLowerCase().includes("acide folique")) {
-    if (classe.includes("metformine") || medName.toLowerCase().includes("metformine")) {
-      return `La metformine peut diminuer l'absorption de la vitamine B12, ${p} aide à prévenir les carences.`;
+  // === VITAMINE B / ACIDE FOLIQUE ===
+  if (produit.toLowerCase().includes("vitamine b") || produit.toLowerCase().includes("b12") || produit.toLowerCase().includes("acide folique") || produit.toLowerCase().includes("folique")) {
+    if (cl.includes("metformine") || medName.toLowerCase().includes("metformine") || medName.toLowerCase().includes("glucophage")) {
+      return `${medCtx()} peut faire baisser la vitamine B12 avec le temps. ${p} prévient la fatigue et les fourmillements dans les jambes.`;
     }
-    return `Ce traitement peut augmenter les besoins en vitamines du groupe B, ${p} aide à compenser les pertes.`;
+    if (cl.includes("méthotrexate") || medName.toLowerCase().includes("méthotrexate")) {
+      return `${medCtx()} consomme les réserves en acide folique. ${p} doit être pris le lendemain de la prise pour réduire les effets secondaires.`;
+    }
+    if (cl.includes("antiépileptique") || cl.includes("anticonvulsivant")) {
+      return `${medCtx()} peut diminuer les vitamines B dans le sang. ${p} aide à prévenir la fatigue et les fourmillements.`;
+    }
+    return `${medCtx()} peut réduire les vitamines B dans l'organisme. ${p} aide à prévenir la fatigue et les carences.`;
   }
 
   // === ANTISEPTIQUE / CICATRISANT ===
-  if (cat.includes("antiseptique") || cat.includes("cicatrisant") || produit.toLowerCase().includes("antiseptique")) {
-    return `Les lésions cutanées nécessitent une protection contre les infections, ${p} favorise la cicatrisation.`;
-  }
-
-  // === CRÈME / ÉMOLLIENT ===
-  if (cat.includes("émollient") || cat.includes("crème") || produit.toLowerCase().includes("émollient")) {
-    if (classe.includes("corticoïde") || pathologie.includes("eczéma") || pathologie.includes("dermatite")) {
-      return `L'inflammation cutanée fragilise la barrière de la peau, ${p} aide à restaurer l'hydratation et la protection.`;
+  if (cat.includes("antiseptique") || cat.includes("cicatrisant") || produit.toLowerCase().includes("antiseptique") || produit.toLowerCase().includes("cicatrisant")) {
+    if (cl.includes("anticoagulant") || cl.includes("antiagrégant")) {
+      return `${medCtx()} ralentit la coagulation et les petites plaies cicatrisent moins vite. ${p} aide à prévenir l'infection et à guérir.`;
     }
-    return `Ce traitement peut assécher la peau, ${p} aide à restaurer la barrière cutanée.`;
+    if (cl.includes("corticoïde") || cl.includes("immunosuppresseur")) {
+      return `${medCtx()} ralentit la cicatrisation. ${p} protège la plaie contre les infections et aide à guérir.`;
+    }
+    return `Les plaies cutanées doivent être bien protégées. ${p} désinfecte et favorise la cicatrisation.`;
   }
 
-  // === LARMES ARTIFICIELLES ===
-  if (produit.toLowerCase().includes("larmes artificielles") || produit.toLowerCase().includes("larme artificielle")) {
-    return `La sécheresse oculaire réduit le film lacrymal, ${p} à base d'hyaluronate hydratent intensément la surface oculaire.`;
+  // === CRÈME / ÉMOLLIENT / HYDRATANT ===
+  if (cat.includes("émollient") || cat.includes("crème") || cat.includes("dermocosmétique") || produit.toLowerCase().includes("émollient") || produit.toLowerCase().includes("dexeryl") || produit.toLowerCase().includes("cicaplast")) {
+    if (cl.includes("rétinoïde") || medName.toLowerCase().includes("isotrétinoïne") || medName.toLowerCase().includes("roaccutane") || medName.toLowerCase().includes("trétinoïne")) {
+      return `${medCtx()} assèche beaucoup la peau. ${p} est indispensable pour éviter les crevasses et l'inconfort.`;
+    }
+    if (cl.includes("corticoïde") || pathologie.includes("eczéma") || pathologie.includes("dermatite") || pathologie.includes("psoriasis")) {
+      return `L'eczéma fragilise la peau et casse sa protection naturelle. ${p} restaure cette barrière et réduit les poussées.`;
+    }
+    if (cl.includes("chimiothérapie") || cl.includes("anticancéreux")) {
+      return `${medCtx()} assèche et abîme souvent la peau. ${p} la protège et limite l'inconfort.`;
+    }
+    return `${medCtx()} peut assécher la peau. ${p} l'hydrate en profondeur et restaure sa protection.`;
   }
 
-  // === GENERIC FALLBACK using description ===
+  // === PROTECTION SOLAIRE ===
+  if (cat.includes("solaire") || produit.toLowerCase().includes("spf") || produit.toLowerCase().includes("solaire")) {
+    if (cl.includes("antibiotique") || medName.toLowerCase().includes("doxycycline") || medName.toLowerCase().includes("cycline")) {
+      return `${medCtx()} rend la peau très sensible au soleil. ${p} est indispensable pour éviter les brûlures, même par temps nuageux.`;
+    }
+    if (cl.includes("rétinoïde") || medName.toLowerCase().includes("isotrétinoïne") || medName.toLowerCase().includes("roaccutane")) {
+      return `${medCtx()} rend la peau extrêmement fragile face au soleil. Une protection SPF50+ est indispensable tous les jours.`;
+    }
+    return `${medCtx()} rend la peau plus sensible au soleil. ${p} protège et évite les brûlures ou taches.`;
+  }
+
+  // === ZINC ===
+  if (produit.toLowerCase().includes("zinc") || cat.includes("zinc")) {
+    if (pathologie.includes("acné") || cl.includes("rétinoïde")) {
+      return `L'acné est liée à un excès de sébum et une inflammation. ${p} aide à réduire les boutons et calmer la peau.`;
+    }
+    return `${medCtx()} peut fragiliser les défenses de la peau. ${p} aide la cicatrisation et renforce l'immunité cutanée.`;
+  }
+
+  // === SOINS INTIMES / FLORE VAGINALE ===
+  if (cat.includes("intime") || cat.includes("vaginal") || produit.toLowerCase().includes("intime") || produit.toLowerCase().includes("vaginal")) {
+    if (cl.includes("antibiotique") || cl.includes("anti-infect")) {
+      return `${medCtx()} peut provoquer des mycoses vaginales en éliminant les bonnes bactéries. ${p} rééquilibre la flore intime.`;
+    }
+    return `${medCtx()} peut fragiliser la flore intime. ${p} aide à la protéger et éviter les irritations.`;
+  }
+
+  // === FALLBACK avec description ===
   if (description && description.length > 10) {
-    const descClean = description.replace(/\.$/g, "").trim();
-    // Build a proper phrase using description as context + product with determinant
+    const descClean = description.replace(/\.$/g, "").trim().replace(/^[a-z]/, c => c.toUpperCase());
     if (pathologie) {
-      return `En cas de ${pathologie}, ${descClean}, ${p} aide à soulager les symptômes.`;
+      return `${descClean}. ${p} complète votre traitement contre ${pathologie}.`;
     }
-    return `${descClean.charAt(0).toUpperCase() + descClean.slice(1)}, ${p} aide à soulager les symptômes associés.`;
+    return `${descClean}. ${p} accompagne votre traitement.`;
   }
 
-  // === PATHOLOGIE-BASED FALLBACK ===
+  // === FALLBACK pathologie ===
   if (pathologie) {
-    return `En cas de ${pathologie}, ${p} agit en complément pour limiter les effets secondaires du traitement.`;
+    return `${medCtx()} peut avoir des effets secondaires liés à ${pathologie}. ${p} aide à les soulager.`;
   }
 
-  // === CLASSE-BASED FALLBACK ===
-  if (classe) {
-    return `Les traitements de type ${classe} peuvent avoir des effets secondaires, ${p} aide à les atténuer.`;
+  // === FALLBACK classe ===
+  if (cl) {
+    return `${medCtx()} peut provoquer certains effets secondaires. ${p} aide à les limiter pendant le traitement.`;
   }
 
-  // === ULTIMATE FALLBACK ===
-  return `Ce traitement peut nécessiter un accompagnement, ${p} aide à en limiter les effets indésirables.`;
+  // === FALLBACK ultime ===
+  if (mn) {
+    return `Le ${mn} peut provoquer des inconforts. ${p} aide à les soulager pendant le traitement.`;
+  }
+  return `${p} accompagne votre traitement pour en limiter les effets indésirables.`;
 }
 
 function buildFallbackMedical(produit: string, medName: string, classe: string, description: string): string {
-  const p = withDeterminant(produit);
-  if (classe) {
-    return `Les traitements de type ${classe} peuvent avoir des effets secondaires, ${p} aide à les atténuer.`;
-  }
-  if (medName) {
-    return `Ce traitement peut nécessiter un accompagnement, ${p} aide à en limiter les effets indésirables.`;
-  }
-  return `${p} est recommandé en accompagnement pour limiter les effets indésirables du traitement.`;
+  const p  = withDeterminant(produit);
+  const mn = medName ? medName.split(" ")[0] : "";
+  const cl = classe || "";
+  if (cl) return `Les ${cl} peuvent provoquer des effets secondaires. ${p} aide à les limiter.`;
+  if (mn) return `Le ${mn} peut provoquer des inconforts. ${p} aide à les soulager pendant le traitement.`;
+  return `${p} accompagne votre traitement pour en limiter les effets indésirables.`;
 }
 
 // Stopwords used to strip form/packaging/grammatical words when building a
