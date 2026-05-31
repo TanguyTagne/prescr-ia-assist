@@ -16,6 +16,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { CURRENT_BUILD_ID, fetchExpectedVersion } from "@/lib/versionCheck";
+
 
 /**
  * Diagnostic distant — vue admin de quel chemin de capture est actif sur
@@ -192,7 +194,25 @@ const RemoteScannerDiagnosticTab = () => {
   const [rows, setRows] = useState<HeartbeatRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<"all" | "broken" | "stale" | "desktop">("all");
+  const [filter, setFilter] = useState<"all" | "broken" | "stale" | "desktop" | "outdated">("all");
+  const [latestVersion, setLatestVersion] = useState<string | null>(null);
+
+  // The "latest deployed" version is whatever /version.json currently serves.
+  // We refresh it alongside the heartbeat table so admins always see truth.
+  useEffect(() => {
+    let cancelled = false;
+    const refresh = async () => {
+      const v = await fetchExpectedVersion();
+      if (!cancelled) setLatestVersion(v);
+    };
+    refresh();
+    const t = setInterval(refresh, 30_000);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
+  }, []);
+
 
   const formatLoadError = (error: unknown): string => {
     if (!error) return "Erreur inconnue";
@@ -262,6 +282,12 @@ const RemoteScannerDiagnosticTab = () => {
     return () => clearInterval(t);
   }, [load]);
 
+  const isOutdated = (r: HeartbeatRow): boolean => {
+    if (!latestVersion) return false;
+    if (!r.app_version) return true;
+    return r.app_version !== latestVersion;
+  };
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return rows.filter((r) => {
@@ -281,9 +307,11 @@ const RemoteScannerDiagnosticTab = () => {
         const ageHours = (Date.now() - new Date(r.last_scan_at).getTime()) / 3600_000;
         if (ageHours < 24) return false;
       }
+      if (filter === "outdated" && !isOutdated(r)) return false;
       return true;
     });
-  }, [rows, search, filter]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, search, filter, latestVersion]);
 
   const summary = useMemo(() => {
     const total = rows.length;
@@ -296,8 +324,15 @@ const RemoteScannerDiagnosticTab = () => {
       if (!r.last_scan_at) return true;
       return Date.now() - new Date(r.last_scan_at).getTime() > 24 * 3600_000;
     }).length;
-    return { total, desktop, noActiveCapture, staleScan };
-  }, [rows]);
+    const upToDate = latestVersion
+      ? rows.filter((r) => r.app_version === latestVersion).length
+      : 0;
+    const outdated = latestVersion
+      ? rows.filter((r) => !r.app_version || r.app_version !== latestVersion).length
+      : 0;
+    return { total, desktop, noActiveCapture, staleScan, upToDate, outdated };
+  }, [rows, latestVersion]);
+
 
   return (
     <div className="space-y-4">
@@ -315,8 +350,33 @@ const RemoteScannerDiagnosticTab = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Version banner */}
+          <div className="rounded-lg border bg-muted/30 px-3 py-2 flex flex-wrap items-center justify-between gap-2 text-xs">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="font-semibold uppercase tracking-wide text-[10px] text-muted-foreground">
+                Version déployée
+              </span>
+              <code className="rounded bg-background border px-1.5 py-0.5 font-mono text-[11px]">
+                {latestVersion ?? "—"}
+              </code>
+              <span className="text-muted-foreground">·</span>
+              <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Cet onglet admin</span>
+              <code className="rounded bg-background border px-1.5 py-0.5 font-mono text-[11px]">
+                {CURRENT_BUILD_ID}
+              </code>
+            </div>
+            {latestVersion && (
+              <span className="text-[11px]">
+                <span className="text-emerald-700 font-semibold">{summary.upToDate}</span>
+                <span className="text-muted-foreground"> à jour · </span>
+                <span className="text-amber-700 font-semibold">{summary.outdated}</span>
+                <span className="text-muted-foreground"> ancienne version</span>
+              </span>
+            )}
+          </div>
+
           {/* Summary tiles */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
             <div className="rounded-lg border bg-card px-3 py-2">
               <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Instances connectées</p>
               <p className="text-2xl font-bold">{summary.total}</p>
@@ -326,15 +386,17 @@ const RemoteScannerDiagnosticTab = () => {
               <p className="text-2xl font-bold">{summary.desktop}</p>
             </div>
             <div className="rounded-lg border bg-card px-3 py-2">
-              <p className="text-[10px] uppercase tracking-wide text-muted-foreground text-rose-600">
-                Aucune voie active
+              <p className="text-[10px] uppercase tracking-wide text-emerald-700">À jour</p>
+              <p className="text-2xl font-bold text-emerald-700">
+                {latestVersion ? summary.upToDate : "—"}
               </p>
+            </div>
+            <div className="rounded-lg border bg-card px-3 py-2">
+              <p className="text-[10px] uppercase tracking-wide text-rose-600">Aucune voie active</p>
               <p className="text-2xl font-bold text-rose-700">{summary.noActiveCapture}</p>
             </div>
             <div className="rounded-lg border bg-card px-3 py-2">
-              <p className="text-[10px] uppercase tracking-wide text-muted-foreground text-amber-600">
-                Pas de scan &gt;24h
-              </p>
+              <p className="text-[10px] uppercase tracking-wide text-amber-600">Pas de scan &gt;24h</p>
               <p className="text-2xl font-bold text-amber-700">{summary.staleScan}</p>
             </div>
           </div>
@@ -359,6 +421,15 @@ const RemoteScannerDiagnosticTab = () => {
               onClick={() => setFilter("desktop")}
             >
               Desktop seulement
+            </Button>
+            <Button
+              variant={filter === "outdated" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setFilter("outdated")}
+              disabled={!latestVersion}
+              className={filter === "outdated" ? "" : "border-amber-300 text-amber-700 hover:bg-amber-50"}
+            >
+              Ancienne version
             </Button>
             <Button
               variant={filter === "broken" ? "default" : "outline"}
@@ -387,19 +458,26 @@ const RemoteScannerDiagnosticTab = () => {
                 Aucune instance ne correspond aux filtres.
               </p>
             ) : (
-              filtered.map((r) => <PharmacyDiagRow key={r.id} row={r} />)
+              filtered.map((r) => <PharmacyDiagRow key={r.id} row={r} latestVersion={latestVersion} />)
             )}
           </div>
+
         </CardContent>
       </Card>
     </div>
   );
 };
 
-const PharmacyDiagRow = ({ row }: { row: HeartbeatRow }) => {
+const PharmacyDiagRow = ({ row, latestVersion }: { row: HeartbeatRow; latestVersion: string | null }) => {
   const paths = useMemo(() => computePaths(row.scanner_status), [row.scanner_status]);
   const health = useMemo(() => healthScore(paths), [paths]);
   const isDesktop = row.platform === "desktop";
+
+  const versionState: "up-to-date" | "outdated" | "unknown" = !latestVersion
+    ? "unknown"
+    : row.app_version === latestVersion
+      ? "up-to-date"
+      : "outdated";
 
   return (
     <div className="rounded-lg border bg-card px-3 py-3 space-y-2">
@@ -416,7 +494,7 @@ const PharmacyDiagRow = ({ row }: { row: HeartbeatRow }) => {
                 {isDesktop ? <Activity className="h-2.5 w-2.5" /> : null}
                 {row.platform}
               </span>
-              {row.app_version ? ` · v${row.app_version}` : ""}
+              {row.app_version ? ` · v${row.app_version}` : " · v?"}
               {" · "}
               <Clock className="h-2.5 w-2.5 inline" /> heartbeat {relativeTime(row.last_seen_at)}
               {" · "}
@@ -424,10 +502,27 @@ const PharmacyDiagRow = ({ row }: { row: HeartbeatRow }) => {
             </p>
           </div>
         </div>
-        <Badge variant="outline" className={`${health.tone} border-current/30`}>
-          {health.label}
-        </Badge>
+        <div className="flex items-center gap-1.5 flex-wrap justify-end">
+          {versionState === "up-to-date" && (
+            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300 text-[10px]">
+              à jour
+            </Badge>
+          )}
+          {versionState === "outdated" && (
+            <Badge
+              variant="outline"
+              className="bg-amber-50 text-amber-800 border-amber-300 text-[10px]"
+              title={`Cette instance tourne sur ${row.app_version ?? "?"} alors que la dernière version déployée est ${latestVersion}`}
+            >
+              ancienne version
+            </Badge>
+          )}
+          <Badge variant="outline" className={`${health.tone} border-current/30`}>
+            {health.label}
+          </Badge>
+        </div>
       </div>
+
 
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-1.5">
         {paths.map((p) => {
