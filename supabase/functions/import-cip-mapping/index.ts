@@ -91,7 +91,6 @@ serve(async (req) => {
     const contentType = req.headers.get("content-type") ?? "";
 
     if (contentType.includes("multipart/form-data")) {
-      // CSV envoyé directement depuis le client (contourne le RLS Storage)
       const form = await req.formData();
       const file = form.get("file");
       if (!file || typeof file === "string") {
@@ -99,6 +98,9 @@ serve(async (req) => {
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
       text = await (file as File).text();
+    } else if (contentType.includes("text/plain") || contentType.includes("text/csv")) {
+      // CSV envoyé directement comme body texte — méthode la plus simple depuis le client
+      text = await req.text();
     } else {
       // Fallback : lire depuis Storage
       const { data: blob, error: storageErr } = await supabase.storage
@@ -122,7 +124,7 @@ serve(async (req) => {
     // ── Si CSV envoyé directement (multipart), purger toute la table d'abord
     // Le service role peut tout supprimer sans contrainte RLS.
     let purged = 0;
-    if (contentType.includes("multipart/form-data")) {
+    if (contentType.includes("multipart/form-data") || contentType.includes("text/plain") || contentType.includes("text/csv")) {
       const { count } = await supabase
         .from("medicament_cip")
         .delete()
