@@ -692,21 +692,31 @@ function buildMedicalPhrase(produit: string, pathologie: string, categorie: stri
   const mn  = medName ? medName.split(" ")[0] : "";
   const cl  = classe || "";
 
+  // Article + élision française : "Le Doliprane" / "L'Amoxicilline" / "L'Augmentin"
+  // Pas de "Le Amoxicilline" qui blesse les yeux du patient.
+  function articulate(name: string): string {
+    if (!name) return "Ce médicament";
+    const first = name[0].toLowerCase();
+    // Voyelles + H muet → élision
+    if (/[aeiouhâàéèêëîïôöùûü]/.test(first)) return `L'${name}`;
+    return `Le ${name}`;
+  }
+
   // Contexte naturel selon la classe — langage pharmacien parlant à un patient.
   function medCtx(): string {
-    if (cl.includes("opioïde") || cl.includes("opiacé"))                        return mn ? `Le ${mn}` : "Ce médicament contre la douleur";
-    if (cl.includes("corticoïde"))                                               return mn ? `Le ${mn}` : "La cortisone";
-    if (cl.includes("antibiotique") || cl.includes("anti-infect"))               return mn ? `Le ${mn}` : "Cet antibiotique";
-    if (cl.includes("ains") || cl.includes("anti-inflamm"))                      return mn ? `Le ${mn}` : "Cet anti-inflammatoire";
-    if (cl.includes("antidépresseur") || cl.includes("isrs") || cl.includes("irsn")) return mn ? `Le ${mn}` : "Cet antidépresseur";
-    if (cl.includes("diurétique"))                                               return mn ? `Le ${mn}` : "Ce diurétique";
-    if (cl.includes("statine"))                                                  return mn ? `Le ${mn}` : "Cette statine";
-    if (cl.includes("antiépileptique") || cl.includes("anticonvulsivant"))       return mn ? `Le ${mn}` : "Ce traitement antiépileptique";
-    if (cl.includes("bêta-bloquant"))                                            return mn ? `Le ${mn}` : "Ce bêta-bloquant";
-    if (cl.includes("ipp") || cl.includes("inhibiteur de la pompe"))             return mn ? `Le ${mn}` : "Ce médicament pour l'estomac";
-    if (cl.includes("chimiothérapie") || cl.includes("anticancéreux"))           return mn ? `Le ${mn}` : "Ce traitement contre le cancer";
-    if (cl.includes("antihypertenseur") || cl.includes("cardiovasculaire"))      return mn ? `Le ${mn}` : "Ce traitement pour le cœur";
-    if (mn) return `Le ${mn}`;
+    if (cl.includes("opioïde") || cl.includes("opiacé"))                        return mn ? articulate(mn) : "Ce médicament contre la douleur";
+    if (cl.includes("corticoïde"))                                               return mn ? articulate(mn) : "La cortisone";
+    if (cl.includes("antibiotique") || cl.includes("anti-infect"))               return mn ? articulate(mn) : "Cet antibiotique";
+    if (cl.includes("ains") || cl.includes("anti-inflamm"))                      return mn ? articulate(mn) : "Cet anti-inflammatoire";
+    if (cl.includes("antidépresseur") || cl.includes("isrs") || cl.includes("irsn")) return mn ? articulate(mn) : "Cet antidépresseur";
+    if (cl.includes("diurétique"))                                               return mn ? articulate(mn) : "Ce diurétique";
+    if (cl.includes("statine"))                                                  return mn ? articulate(mn) : "Cette statine";
+    if (cl.includes("antiépileptique") || cl.includes("anticonvulsivant"))       return mn ? articulate(mn) : "Ce traitement antiépileptique";
+    if (cl.includes("bêta-bloquant"))                                            return mn ? articulate(mn) : "Ce bêta-bloquant";
+    if (cl.includes("ipp") || cl.includes("inhibiteur de la pompe"))             return mn ? articulate(mn) : "Ce médicament pour l'estomac";
+    if (cl.includes("chimiothérapie") || cl.includes("anticancéreux"))           return mn ? articulate(mn) : "Ce traitement contre le cancer";
+    if (cl.includes("antihypertenseur") || cl.includes("cardiovasculaire"))      return mn ? articulate(mn) : "Ce traitement pour le cœur";
+    if (mn) return articulate(mn);
     return "Votre médicament";
   }
 
@@ -981,7 +991,7 @@ function buildMedicalPhrase(produit: string, pathologie: string, categorie: stri
 
   // === FALLBACK ultime ===
   if (mn) {
-    return `Le ${mn} peut provoquer des inconforts. ${p} aide à les soulager pendant le traitement.`;
+    return `${articulate(mn)} peut provoquer des inconforts. ${p} aide à les soulager pendant le traitement.`;
   }
   return `${p} accompagne votre traitement pour en limiter les effets indésirables.`;
 }
@@ -990,8 +1000,10 @@ function buildFallbackMedical(produit: string, medName: string, classe: string, 
   const p  = withDeterminant(produit);
   const mn = medName ? medName.split(" ")[0] : "";
   const cl = classe || "";
+  // Élision : "L'Amoxicilline" plutôt que "Le Amoxicilline"
+  const article = mn && /[aeiouhâàéèêëîïôöùûü]/i.test(mn[0]) ? `L'${mn}` : `Le ${mn}`;
   if (cl) return `Les ${cl} peuvent provoquer des effets secondaires. ${p} aide à les limiter.`;
-  if (mn) return `Le ${mn} peut provoquer des inconforts. ${p} aide à les soulager pendant le traitement.`;
+  if (mn) return `${article} peut provoquer des inconforts. ${p} aide à les soulager pendant le traitement.`;
   return `${p} accompagne votre traitement pour en limiter les effets indésirables.`;
 }
 
