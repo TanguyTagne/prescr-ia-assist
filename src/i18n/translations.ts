@@ -20,10 +20,10 @@ export const translations = {
   "landing.cta.vsLgo": { fr: "Asclion vs LGO", en: "Asclion vs LGO" },
 
   "landing.how.title": { fr: "Comment Asclion fait grimper votre panier moyen", en: "How Asclion grows your average basket" },
-  "landing.how.step1.title": { fr: "Scannez ou tapez", en: "Scan or type" },
+  "landing.how.step1.title": { fr: "Scannez ", en: "Scan " },
   "landing.how.step1.desc": {
-    fr: "Connectez votre scanner ou l'IA lit l'ordonnance. Chaque délivrance devient une opportunité commerciale identifiée en quelques secondes.",
-    en: "Connect your scanner or let the AI read the prescription. Every dispensation becomes a sales opportunity identified in seconds.",
+    fr: "Scannez simplement votre produit comme d'habitude, l'IA s'occupe du reste. Chaque délivrance devient une opportunité commerciale identifiée en quelques secondes.",
+    en: "Simply scan your product as usual, the AI handles the rest. Every dispensation becomes a sales opportunity identified in seconds.",
   },
   "landing.how.step2.title": { fr: "L'IA repère les ventes associées", en: "AI spots cross-sell opportunities" },
   "landing.how.step2.desc": {
