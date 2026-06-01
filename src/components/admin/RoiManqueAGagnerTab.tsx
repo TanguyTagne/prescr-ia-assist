@@ -1,3 +1,4 @@
+// build: roi-manque-a-gagner tab live — v2026.06.01.3
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
