@@ -1,4 +1,3 @@
-// build: phraseIsForWrongMed runtime veto — v2026.06.01.2
 import { useState, useCallback, useEffect, useRef } from "react";
 import { X, Loader2, Mail, Lock, Eye, EyeOff, Monitor, HelpCircle, Pin, PinOff, Minimize2, Maximize2, LogOut, ScanLine } from "lucide-react";
 import OnboardingTour from "@/components/OnboardingTour";
@@ -109,6 +108,11 @@ const WidgetApp = () => {
   const blockedCipsRef = useRef<Set<string>>(new Set());
   // Dedup guard: keyboard path + IPC global path fire simultaneously on focused window
   const lastBarcodeScanRef = useRef<{ code: string; at: number }>({ code: "", at: 0 });
+  // ── Auto-reset de session (frictionless N°1) ─────────────────────────────
+  // Track le timestamp du dernier scan utile (= ajout d'un médicament à la session).
+  // Si > SESSION_TIMEOUT_MS et qu'un nouveau Rx arrive, on présume un nouveau client
+  // → reset auto, plus besoin de cliquer "Nouvelle ordonnance".
+  const lastAnalysisAtRef = useRef<number>(0);
   // Cached user/pharmacy context — populated once on mount to avoid a DB query on every scan
   const scanContextRef = useRef<{ userId: string; pharmacyId: string | null } | null>(null);
   useEffect(() => {
@@ -352,6 +356,28 @@ const WidgetApp = () => {
   const lookupAndStream = useCallback(async (code: string) => {
     const ts = new Date().toISOString();
     try {
+      // ── Frictionless N°1 : auto-reset session sur nouveau client ─────────
+      // Si une session est en cours, que ce scan n'est PAS un PC suggéré
+      // (auto-acceptation), et qu'il s'est écoulé > 2 min depuis la dernière
+      // analyse → on présume un nouveau client.
+      //
+      // IMPORTANT : ce reset ne s'applique JAMAIS quand le scan correspond
+      // à un PC suggéré (présent dans blockedCipsRef). L'auto-acceptation
+      // par scan reste donc fonctionnelle dans sa fenêtre de 5 min définie
+      // dans AnalysisResults.tsx — les deux mécaniques sont compatibles.
+      const SESSION_TIMEOUT_MS = 2 * 60 * 1000;
+      if (
+        resultRef.current &&
+        !blockedCipsRef.current.has(code) &&
+        lastAnalysisAtRef.current > 0 &&
+        Date.now() - lastAnalysisAtRef.current > SESSION_TIMEOUT_MS
+      ) {
+        logger.log(`[SESSION] Auto-reset (${Math.round((Date.now() - lastAnalysisAtRef.current) / 60000)} min inactif) — nouveau client présumé`);
+        setResult(null);
+        blockedCipsRef.current = new Set();
+        setBlockedProducts([]);
+      }
+
       // ── Pass 1 : lookup direct sur medicaments.cip_code ──────────────────
       const { data: directMed } = await supabase
         .from("medicaments")
@@ -462,6 +488,7 @@ const WidgetApp = () => {
         prependMedicament({ nom: med.nom_commercial, classe: "", recommendations });
         notifyAnalysisDone({ count: 1 });
         void logHidScan(code, { nom: med.nom_commercial, recommendations });
+        lastAnalysisAtRef.current = Date.now(); // marque session active
         return;
       }
 
@@ -483,6 +510,7 @@ const WidgetApp = () => {
         prependMedicament({ nom: mock.nom, classe: "", recommendations });
         notifyAnalysisDone({ count: 1 });
         void logHidScan(code, { nom: mock.nom, recommendations });
+        lastAnalysisAtRef.current = Date.now(); // marque session active
         return;
       }
 
