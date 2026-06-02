@@ -63,12 +63,12 @@ const AccessRequestForm = () => {
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Input placeholder={t("form.pharmacy_name")} required value={form.pharmacy_name} onChange={e => setForm(f => ({ ...f, pharmacy_name: e.target.value }))} />
-        <Input placeholder={t("form.contact_name")} required value={form.contact_name} onChange={e => setForm(f => ({ ...f, contact_name: e.target.value }))} />
-        <Input type="email" placeholder={t("form.email")} required value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
-        <Input placeholder={t("form.phone")} value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} />
-        <Input placeholder={t("form.city")} value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} />
-        <Input placeholder={t("form.lgo")} value={form.lgo_type} onChange={e => setForm(f => ({ ...f, lgo_type: e.target.value }))} />
+        <Input aria-label={t("form.pharmacy_name")} placeholder={t("form.pharmacy_name")} required value={form.pharmacy_name} onChange={e => setForm(f => ({ ...f, pharmacy_name: e.target.value }))} />
+        <Input aria-label={t("form.contact_name")} placeholder={t("form.contact_name")} required value={form.contact_name} onChange={e => setForm(f => ({ ...f, contact_name: e.target.value }))} />
+        <Input aria-label={t("form.email")} type="email" placeholder={t("form.email")} required value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
+        <Input aria-label={t("form.phone")} placeholder={t("form.phone")} value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} />
+        <Input aria-label={t("form.city")} placeholder={t("form.city")} value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} />
+        <Input aria-label={t("form.lgo")} placeholder={t("form.lgo")} value={form.lgo_type} onChange={e => setForm(f => ({ ...f, lgo_type: e.target.value }))} />
       </div>
       <label className="flex items-start gap-2 text-xs text-muted-foreground leading-relaxed">
         <Checkbox checked={accepted} onCheckedChange={(v) => setAccepted(v === true)} className="mt-0.5" />
