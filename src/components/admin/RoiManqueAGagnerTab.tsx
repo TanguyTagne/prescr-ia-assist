@@ -1,4 +1,3 @@
-// build: roi-manque-a-gagner tab live — v2026.06.01.3
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,6 +13,7 @@ import {
 import {
   TrendingUp, TrendingDown, Target, Euro, AlertCircle, Trophy,
   Loader2, RefreshCw, Award, Sparkles, ArrowUpRight, ArrowDownRight,
+  Zap, MousePointerClick,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -28,6 +28,10 @@ interface RoiStats {
     manque_a_gagner_euros: number;
     pcs_per_day_avg: number;
     days_active: number;
+    accepted_manual: number;
+    accepted_auto: number;
+    accepted_other: number;
+    auto_detection_rate: number;
   };
   benchmark: {
     avg_conversion_rate: number;
@@ -254,6 +258,77 @@ const RoiManqueAGagnerTab = () => {
               </CardContent>
             </Card>
           </div>
+
+          {/* ── Attribution des acceptations ─────────────────────────────── */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Zap className="h-4 w-4 text-amber-600" />
+                Attribution des acceptations
+              </CardTitle>
+              <p className="text-xs text-muted-foreground mt-1">
+                Asclion compte une acceptation soit quand le pharmacien clique « Accepter »,
+                soit quand le PC suggéré est scanné dans les 5 min qui suivent l'analyse
+                (auto-détection douchette).
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-3 md:grid-cols-3">
+                <div className="rounded-lg border p-3 bg-blue-50/30 border-blue-200">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <MousePointerClick className="h-3.5 w-3.5 text-blue-600" />
+                    Clic manuel
+                  </div>
+                  <div className="text-2xl font-bold mt-1 text-blue-700">
+                    {stats.kpis.accepted_manual}
+                  </div>
+                  <div className="text-[10px] text-muted-foreground">
+                    Le pharmacien a cliqué « Accepter »
+                  </div>
+                </div>
+                <div className="rounded-lg border p-3 bg-amber-50/30 border-amber-200">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Zap className="h-3.5 w-3.5 text-amber-600" />
+                    Auto-détection scan
+                  </div>
+                  <div className="text-2xl font-bold mt-1 text-amber-700">
+                    {stats.kpis.accepted_auto}
+                    <span className="text-sm font-normal text-muted-foreground ml-2">
+                      ({stats.kpis.auto_detection_rate}%)
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-muted-foreground">
+                    Le PC suggéré a été scanné après
+                  </div>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Award className="h-3.5 w-3.5" />
+                    Autres
+                  </div>
+                  <div className="text-2xl font-bold mt-1">
+                    {stats.kpis.accepted_other}
+                  </div>
+                  <div className="text-[10px] text-muted-foreground">
+                    LGO, F1/F2, autres
+                  </div>
+                </div>
+              </div>
+              {stats.kpis.auto_detection_rate >= 25 && (
+                <div className="mt-3 rounded-md bg-amber-50 border border-amber-200 p-2.5 text-xs">
+                  ⚡ <strong>{stats.kpis.auto_detection_rate}% des acceptations sont auto-détectées</strong> —
+                  c'est du CA qui serait perdu sans cette fonction. L'équipe peut continuer à oublier
+                  le bouton "Accepter", Asclion rattrape.
+                </div>
+              )}
+              {stats.kpis.auto_detection_rate === 0 && stats.kpis.total_accepted >= 10 && (
+                <div className="mt-3 rounded-md bg-blue-50 border border-blue-200 p-2.5 text-xs">
+                  💡 Aucune acceptation auto-détectée par scan. Vérifie que les CIPs des PCs suggérés
+                  sont bien dans la base (lookup multi-table dans AnalysisResults.tsx).
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           {/* ── PCs sous-performants ────────────────────────────────────── */}
           <Card>
