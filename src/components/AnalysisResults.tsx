@@ -1,3 +1,4 @@
+// build: frictionless v2026.06.02.2 — name fallback auto-acceptance
 import { useState, useEffect, useMemo, useRef } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { Pill, RotateCcw, AlertTriangle, MessageSquare, Loader2, Sparkles, Database, Check, Zap } from "lucide-react";
