@@ -1,4 +1,3 @@
-// build: frictionless v2026.06.02.2 — session auto-reset 2min
 import { useState, useCallback, useEffect, useRef } from "react";
 import { X, Loader2, Mail, Lock, Eye, EyeOff, Monitor, HelpCircle, Pin, PinOff, Minimize2, Maximize2, LogOut, ScanLine } from "lucide-react";
 import OnboardingTour from "@/components/OnboardingTour";
@@ -418,26 +417,34 @@ const WidgetApp = () => {
           .eq("medicament_id", med.id)
           .order("score_pertinence", { ascending: false });
 
-        // ── Spécificité du médicament ────────────────────────────────────
-        // Principe : plus un médicament traite de pathologies (= générique),
-        // moins les suggestions par pathologie sont fiables. À l'inverse,
-        // un médicament très spécifique (insuline, chimio…) permet des
-        // recommandations très précises.
+        // ── Règle stricte de spécificité ──────────────────────────────────
+        // Principe : on ne SUPPOSE JAMAIS une pathologie pour le client.
+        //
+        //   • 1 seule pathologie liée au médicament  → cette pathologie EST
+        //     l'indication exclusive → on peut être PRÉCIS dans les PCs.
+        //
+        //   • 2+ pathologies liées (ex: Ibuprofène = douleur ET fièvre ET
+        //     inflammation ET dysménorrhée ET…) → IMPOSSIBLE de deviner
+        //     pour quel motif le patient achète le médicament → on ne touche
+        //     PAS aux PCs par pathologie. On bascule sur les PCs liés
+        //     directement au médicament (génériques mais pertinents).
+        //
+        // Ça évite que l'Ibuprofène propose des PCs allergies juste parce
+        // que l'allergie est dans ses pathologies théoriques.
         const nbPathos = (pathLinks || []).length;
-        const specificity: "generic" | "moderate" | "specific" | "very_specific" =
-          nbPathos >= 10 ? "generic"        // ex: Doliprane (20+ pathos)
-          : nbPathos >= 5  ? "moderate"       // ex: Ibuprofène, IPP
-          : nbPathos >= 2  ? "specific"       // ex: bêta-bloquant
-          : "very_specific";                  // ex: insuline, anti-TNF
+        const specificity: "single_indication" | "multi_indication" =
+          nbPathos === 1 ? "single_indication"  // pathologie unique → précis
+                         : "multi_indication";   // 0 ou 2+ → PCs liés au médicament
 
         let recommendations: AnalysisResult["medicaments"][number]["recommendations"] = [];
         let produits: any[] | null = null;
 
-        if (specificity === "generic") {
-          // Médicament générique → on cherche d'abord des PCs LIÉS DIRECTEMENT
-          // au médicament (table produits_complementaires.medicament_id).
-          // Ces PCs sont par construction pertinents pour le médicament,
-          // peu importe la pathologie sous-jacente.
+        if (specificity === "multi_indication") {
+          // Médicament à indications multiples (ou aucune connue) → on cherche
+          // EXCLUSIVEMENT des PCs liés directement au médicament (medicament_id).
+          // Ces PCs sont par construction valables quelle que soit la motivation
+          // d'achat du patient (protection gastrique pour AINS, magnésium pour
+          // antalgique, brosse souple pour anticoagulant, etc.).
           const { data: directPcs } = await supabase
             .from("produits_complementaires")
             .select("produit, categorie, description, phrase_conseil, medicaments(cip_code)")
@@ -446,21 +453,16 @@ const WidgetApp = () => {
             .limit(2);
           produits = directPcs || [];
           if (produits.length === 0) {
-            logger.log(`[SCAN] ${ts} med=${med.nom_commercial} générique sans PC direct — aucune suggestion`);
+            logger.log(`[SCAN] ${ts} med=${med.nom_commercial} (${nbPathos} pathologies) sans PC direct — aucune suggestion plutôt qu'une supposition risquée`);
           }
         } else {
-          // Médicament plus spécifique → top N pathologies par score, et
-          // on remonte les PCs liés à ces pathologies. Plus c'est spécifique,
-          // plus on peut en proposer.
-          const topN =
-            specificity === "moderate"     ? 1  // moins on en sait, moins on extrapole
-            : specificity === "specific"     ? 2
-            : 3;                                // very_specific : on prend tout (max 3)
-          const pathIds = (pathLinks || []).slice(0, topN).map(p => p.pathologie_id);
+          // single_indication : une pathologie unique, c'est l'usage exclusif
+          // → on peut chercher des PCs spécifiques à cette pathologie.
+          const pathId = (pathLinks || [])[0].pathologie_id;
           const { data } = await supabase
             .from("produits_complementaires")
             .select("produit, categorie, description, phrase_conseil, medicaments(cip_code)")
-            .in("pathologie_id", pathIds)
+            .eq("pathologie_id", pathId)
             .order("priorite", { ascending: false })
             .limit(2);
           produits = data;
