@@ -22,10 +22,22 @@ interface AnalysisResultsProps {
   demoMode?: boolean;
 }
 
-// Fenêtre d'attribution HID : un scan dans les 10 min suivant l'analyse
+// Fenêtre d'attribution HID : un scan dans les 5 min suivant l'analyse
 // est considéré comme une vente du PC correspondant. La fenêtre est aussi
 // réinitialisée automatiquement à chaque nouvelle ordonnance (changement de `result`).
 const HID_ATTRIBUTION_WINDOW_MS = 5 * 60 * 1000;
+
+// Normalisation pour matching de noms : lowercase, sans accents, sans dosage
+// ni unité ni forme galénique. Permet de matcher "Magnésium bisglycinate 300mg"
+// avec "MAGNESIUM BISGLYCINATE 300MG NUTERGIA" malgré les variations.
+function normalizeName(s: string): string {
+  return s.toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/\d+\s*(mg|g|ml|ui|µg|comprim|gelule|gel|sachet|patch|cp|cpr|gel|tube|flacon)\w*/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
 const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsProps) => {
   const { t } = useI18n();
@@ -59,7 +71,14 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
   // scan douchette dont le CIP correspond à un PC proposé est marqué
   // accepté automatiquement (source = hid_auto). Évite la sous-attribution
   // quand le pharmacien oublie de cliquer sur "Accepter".
-  const proposedCipMapRef = useRef<Map<string, { medNom: string; produit: string; categorie?: string }>>(new Map());
+  //
+  // Double matching pour fiabilité :
+  //   1) proposedCipMapRef : CIP scanné → PC suggéré (direct, rapide)
+  //   2) proposedNamesMapRef : nom normalisé → PC suggéré (fallback
+  //      quand le CIP du produit n'est pas dans nos tables, mais que le
+  //      nom commercial associé à l'EAN matche)
+  const proposedCipMapRef   = useRef<Map<string, { medNom: string; produit: string; categorie?: string }>>(new Map());
+  const proposedNamesMapRef = useRef<Map<string, { medNom: string; produit: string; categorie?: string }>>(new Map());
   const mountedAtRef = useRef<number>(Date.now());
   // EAN auto-détectés depuis le dernier reset, pour permettre l'annulation par re-scan
   const autoDetectedEansRef = useRef<Set<string>>(new Set());
@@ -67,24 +86,18 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
   useEffect(() => {
     mountedAtRef.current = Date.now();
     proposedCipMapRef.current = new Map();
+    proposedNamesMapRef.current = new Map();
     autoDetectedEansRef.current = new Set();
 
     if (demoMode || allProductNames.length === 0) return;
 
-    // ── Résolution CIP multi-stratégies ─────────────────────────────────
-    // 1. Match exact dans medicaments.nom_commercial
-    // 2. Match normalisé (lowercase, sans accents, sans dosage)
-    // 3. Match ILIKE flexible (le 1er mot du PC est contenu dans le nom)
-    // 4. Fallback : table medicament_cip (BDPM) par medicament_nom
+    // ── Construction des index de matching ───────────────────────────────
+    // Pour chaque PC proposé, on essaie de résoudre son CIP via 3 stratégies.
+    // En parallèle on remplit proposedNamesMapRef pour permettre un fallback
+    // par nom commercial quand le CIP scanné n'existe pas dans nos tables.
     let cancelled = false;
     (async () => {
-      const normalize = (s: string) =>
-        s.toLowerCase()
-          .normalize("NFD")
-          .replace(/[̀-ͯ]/g, "")
-          .replace(/\d+\s*(mg|g|ml|ui|µg|comprim|gelule|gel|sachet|patch)\w*/gi, "")
-          .replace(/\s+/g, " ")
-          .trim();
+      const normalize = normalizeName;
 
       // Pass 1+2 : medicaments — récupère exact + normalisé en une seule query
       const firstWords = [...new Set(
@@ -102,7 +115,7 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
       const { data: bdpm } = await supabase
         .from("medicament_cip")
         .select("cip13, medicament_nom")
-        .or(orClauses.split("nom_commercial").join("medicament_nom"))
+        .or(orClauses.replaceAll("nom_commercial", "medicament_nom"))
         .limit(500);
 
       if (cancelled) return;
@@ -129,12 +142,19 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
         normIndex.get(norm)!.push(entry);
       }
 
-      const cipMap = new Map<string, { medNom: string; produit: string; categorie?: string }>();
+      const cipMap   = new Map<string, { medNom: string; produit: string; categorie?: string }>();
+      const namesMap = new Map<string, { medNom: string; produit: string; categorie?: string }>();
       const missed: string[] = [];
 
       for (const med of result.medicaments) {
         for (const rec of med.recommendations || []) {
           const target = rec.produit;
+          const entry  = { medNom: med.nom, produit: rec.produit, categorie: rec.categorie };
+
+          // Map "nom normalisé → PC" toujours peuplée (fallback indépendant du CIP)
+          namesMap.set(normalize(target), entry);
+
+          // Map "CIP → PC" — résolution multi-stratégies
           let resolved: Entry | null = null;
 
           // Étape 1 : match exact
@@ -159,19 +179,20 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
           }
 
           if (resolved) {
-            cipMap.set(resolved.cip, { medNom: med.nom, produit: rec.produit, categorie: rec.categorie });
+            cipMap.set(resolved.cip, entry);
           } else {
             missed.push(rec.produit);
           }
         }
       }
-      proposedCipMapRef.current = cipMap;
+      proposedCipMapRef.current   = cipMap;
+      proposedNamesMapRef.current = namesMap;
 
       if (missed.length > 0) {
-        // Log analytics — permet d'identifier les PCs sans CIP résoluble
-        // (utile pour le diagnostic de l'auto-acceptation)
+        // Log analytics — permet d'identifier les PCs sans CIP résoluble.
+        // Ces PCs peuvent quand même être auto-acceptés via le fallback nom commercial.
         // eslint-disable-next-line no-console
-        console.debug("[auto-accept] PCs sans CIP résoluble:", missed);
+        console.debug("[auto-accept] PCs sans CIP direct (fallback nom commercial actif):", missed);
       }
     })();
 
@@ -183,13 +204,62 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
 
   useEffect(() => {
     if (demoMode) return;
-    const handler = (e: Event) => {
+    const handler = async (e: Event) => {
       const detail = (e as CustomEvent<{ ean: string; at: number }>).detail;
       if (!detail?.ean) return;
       // Fenêtre d'attribution 5 min
       if (Date.now() - mountedAtRef.current > HID_ATTRIBUTION_WINDOW_MS) return;
-      const match = proposedCipMapRef.current.get(detail.ean);
+
+      // ── Étape 1 : match direct par CIP ─────────────────────────────────
+      let match = proposedCipMapRef.current.get(detail.ean) || null;
+
+      // ── Étape 2 : fallback par nom commercial ──────────────────────────
+      // Si aucun match CIP, on résout le nom du produit scanné via medicaments
+      // puis medicament_cip (BDPM), et on compare avec les noms normalisés
+      // des PC proposés. Permet d'attraper les cas où le CIP du scan n'est
+      // pas dans nos tables mais le nom commercial l'est.
+      if (!match && proposedNamesMapRef.current.size > 0) {
+        let scannedName: string | null = null;
+
+        const { data: m1 } = await supabase
+          .from("medicaments")
+          .select("nom_commercial")
+          .eq("cip_code", detail.ean)
+          .maybeSingle();
+        scannedName = (m1 as any)?.nom_commercial ?? null;
+
+        if (!scannedName) {
+          const { data: m2 } = await supabase
+            .from("medicament_cip")
+            .select("medicament_nom")
+            .eq("cip13", detail.ean)
+            .maybeSingle();
+          scannedName = (m2 as any)?.medicament_nom ?? null;
+        }
+
+        if (scannedName) {
+          const normScanned = normalizeName(scannedName);
+          // 2a — match exact normalisé
+          match = proposedNamesMapRef.current.get(normScanned) || null;
+          // 2b — match par préfixe (1er mot ≥ 4 chars)
+          if (!match) {
+            const firstWord = normScanned.split(" ")[0];
+            if (firstWord && firstWord.length >= 4) {
+              for (const [normPc, entry] of proposedNamesMapRef.current.entries()) {
+                if (normPc.startsWith(firstWord) || normScanned.startsWith(normPc.split(" ")[0])) {
+                  match = entry;
+                  // eslint-disable-next-line no-console
+                  console.debug(`[auto-accept] Match fallback nom : "${scannedName}" → "${entry.produit}"`);
+                  break;
+                }
+              }
+            }
+          }
+        }
+      }
+
       if (!match) return;
+
       // Toggle anti faux-positif : si l'EAN a déjà été auto-détecté dans la
       // fenêtre, le re-scan annule l'auto-acceptation (retour rayon, refus client…)
       if (autoDetectedEansRef.current.has(detail.ean)) {
