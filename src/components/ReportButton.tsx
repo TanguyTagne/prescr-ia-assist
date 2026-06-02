@@ -1,3 +1,4 @@
+// build: report v2026.06.02.5 — visible "pas le bon médicament ?" + vrai_nom input + cip_scanned context
 import { useState } from "react";
 import { Flag, Loader2, AlertTriangle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
