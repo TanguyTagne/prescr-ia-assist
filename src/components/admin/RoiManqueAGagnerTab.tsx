@@ -268,7 +268,7 @@ const RoiManqueAGagnerTab = () => {
               </CardTitle>
               <p className="text-xs text-muted-foreground mt-1">
                 Asclion compte une acceptation soit quand le pharmacien clique « Accepter »,
-                soit quand le PC suggéré est scanné dans les 5 min qui suivent l'analyse
+                soit quand le PC suggéré est scanné dans les 10 min qui suivent l'analyse
                 (auto-détection douchette).
               </p>
             </CardHeader>
