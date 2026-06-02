@@ -378,39 +378,65 @@ const WidgetApp = () => {
         setBlockedProducts([]);
       }
 
-      // ── Pass 1 : lookup direct sur medicaments.cip_code ──────────────────
-      const { data: directMed } = await supabase
-        .from("medicaments")
-        .select("id, nom_commercial, cip_code, molecule_id, atc_code")
-        .eq("cip_code", code)
+      // ── Pass 1 (PRIORITÉ) : table BDPM officielle medicament_cip ─────────
+      // Source de vérité : on identifie d'abord le médicament via le CIP
+      // dans la table BDPM (17 215 CIPs validés ANSM). Ça évite que des
+      // entrées corrompues dans `medicaments` (mauvais CIP collé à un mauvais
+      // nom) ne renvoient le faux médicament (ex: scan Cérulyse → Timoptol).
+      let med: { id: string; nom_commercial: string; cip_code: string | null; molecule_id: string | null; atc_code: string | null } | null = null;
+      const { data: cipRow } = await supabase
+        .from("medicament_cip")
+        .select("medicament_nom")
+        .eq("cip13", code)
         .maybeSingle();
 
-      // ── Pass 2 : fallback via medicament_cip (37 607 CIPs BDPM) ─────────
-      let med: typeof directMed = directMed;
-      if (!med) {
-        const { data: cipRow } = await supabase
-          .from("medicament_cip")
-          .select("medicament_nom")
-          .eq("cip13", code)
+      if (cipRow?.medicament_nom) {
+        // BDPM nous donne le nom officiel. On résout dans `medicaments`
+        // PAR NOM (pas par CIP) pour récupérer les métadonnées (atc, molécule).
+        const { data: byName } = await supabase
+          .from("medicaments")
+          .select("id, nom_commercial, cip_code, molecule_id, atc_code")
+          .ilike("nom_commercial", `${cipRow.medicament_nom}%`)
+          .order("nom_commercial", { ascending: true })
+          .limit(1)
           .maybeSingle();
+        if (byName) {
+          med = byName as any;
+          logger.log(`[SCAN] ${ts} ean=${code} match=bdpm name=${med!.nom_commercial}`);
+        }
+      }
 
-        if (cipRow?.medicament_nom) {
-          const { data: fallbackMed } = await supabase
-            .from("medicaments")
-            .select("id, nom_commercial, cip_code, molecule_id, atc_code")
-            .ilike("nom_commercial", `${cipRow.medicament_nom}%`)
-            .order("nom_commercial", { ascending: true })
-            .limit(1)
-            .maybeSingle();
-          if (fallbackMed) {
-            logger.log(`[SCAN] ${ts} ean=${code} match=medicament_cip name=${fallbackMed.nom_commercial}`);
-            med = fallbackMed;
+      // ── Pass 2 (FALLBACK) : lookup par cip_code dans medicaments ─────────
+      // Utilisé uniquement si BDPM n'a pas le CIP, OU si BDPM a trouvé un
+      // nom mais qu'on ne le retrouve pas dans `medicaments`. On VÉRIFIE
+      // alors la cohérence avec BDPM : si BDPM dit "CERULYSE" et que la
+      // table interne dit "TIMOPTOL" pour le même CIP, on REJETTE pour ne
+      // jamais présenter un mauvais médicament au pharmacien.
+      if (!med) {
+        const { data: directMed } = await supabase
+          .from("medicaments")
+          .select("id, nom_commercial, cip_code, molecule_id, atc_code")
+          .eq("cip_code", code)
+          .maybeSingle();
+        if (directMed) {
+          const bdpmName = cipRow?.medicament_nom?.toLowerCase().trim();
+          const dbName   = (directMed.nom_commercial || "").toLowerCase().trim();
+          // Si BDPM a un nom et qu'il diffère de la table interne → incohérence
+          const isCoherent = !bdpmName || dbName.startsWith(bdpmName.split(" ")[0]) || bdpmName.startsWith(dbName.split(" ")[0]);
+          if (isCoherent) {
+            med = directMed as any;
+            logger.log(`[SCAN] ${ts} ean=${code} match=cip_direct name=${med!.nom_commercial}`);
+          } else {
+            logger.warn(`[SCAN] ${ts} ean=${code} REJET — incohérence BDPM/medicaments : BDPM="${cipRow?.medicament_nom}" vs medicaments="${directMed.nom_commercial}". Aucune analyse présentée pour sécurité.`);
+            // On ne présente RIEN au pharmacien — mieux que de présenter un faux
+            toast.error(`Référencement incohérent pour le CIP ${code}. Signalez à l'admin.`);
+            void logScanEvent(code, "error", { errorMessage: `BDPM/medicaments mismatch: ${cipRow?.medicament_nom} vs ${directMed.nom_commercial}` });
+            return;
           }
         }
       }
 
       if (med) {
-        logger.log(`[SCAN] ${ts} ean=${code} match=db name=${med.nom_commercial}`);
         const { data: pathLinks } = await supabase
           .from("medicament_pathologie")
           .select("pathologie_id, score_pertinence, pathologies(nom_pathologie)")
