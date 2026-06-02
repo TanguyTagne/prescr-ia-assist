@@ -1541,6 +1541,33 @@ export type Database = {
         }
         Relationships: []
       }
+      pc_category_pricing: {
+        Row: {
+          categorie: string
+          computed_at: string
+          method: string
+          nb_pcs_referenced: number | null
+          prix_moyen_pondere: number
+          volume_total: number | null
+        }
+        Insert: {
+          categorie: string
+          computed_at?: string
+          method?: string
+          nb_pcs_referenced?: number | null
+          prix_moyen_pondere: number
+          volume_total?: number | null
+        }
+        Update: {
+          categorie?: string
+          computed_at?: string
+          method?: string
+          nb_pcs_referenced?: number | null
+          prix_moyen_pondere?: number
+          volume_total?: number | null
+        }
+        Relationships: []
+      }
       pc_feedback: {
         Row: {
           action: string
@@ -1607,6 +1634,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      pc_pricing: {
+        Row: {
+          categorie: string | null
+          cip13: string | null
+          id: string
+          notes: string | null
+          pc_nom: string
+          pc_nom_normalise: string
+          prix_max_ttc: number | null
+          prix_min_ttc: number | null
+          prix_unitaire_ttc: number
+          source: string
+          updated_at: string
+          volume_pondere: number | null
+        }
+        Insert: {
+          categorie?: string | null
+          cip13?: string | null
+          id?: string
+          notes?: string | null
+          pc_nom: string
+          pc_nom_normalise: string
+          prix_max_ttc?: number | null
+          prix_min_ttc?: number | null
+          prix_unitaire_ttc: number
+          source?: string
+          updated_at?: string
+          volume_pondere?: number | null
+        }
+        Update: {
+          categorie?: string | null
+          cip13?: string | null
+          id?: string
+          notes?: string | null
+          pc_nom?: string
+          pc_nom_normalise?: string
+          prix_max_ttc?: number | null
+          prix_min_ttc?: number | null
+          prix_unitaire_ttc?: number
+          source?: string
+          updated_at?: string
+          volume_pondere?: number | null
+        }
+        Relationships: []
       }
       pharma_questions: {
         Row: {

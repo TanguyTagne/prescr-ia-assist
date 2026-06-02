@@ -118,7 +118,7 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
       const { data: bdpm } = await supabase
         .from("medicament_cip")
         .select("cip13, medicament_nom")
-        .or(orClauses.replaceAll("nom_commercial", "medicament_nom"))
+        .or(orClauses.split("nom_commercial").join("medicament_nom"))
         .limit(500);
 
       if (cancelled) return;
