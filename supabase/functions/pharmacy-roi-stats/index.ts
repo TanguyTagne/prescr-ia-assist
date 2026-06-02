@@ -32,9 +32,10 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { buildCorsHeaders } from "../_shared/cors.ts";
 
-// ── Prix moyens estimés par catégorie PC (en €) ────────────────────────────
-// Source : moyennes officinales 2025. Configurable par pharmacie plus tard.
-const PRIX_MOYEN_PAR_CATEGORIE: Record<string, number> = {
+// ── Fallback final : moyenne grossière par catégorie ───────────────────────
+// Utilisé UNIQUEMENT si le PC n'est ni dans pc_pricing ni dans pc_category_pricing.
+// La vraie source de vérité est en base (pc_pricing + pc_category_pricing).
+const FALLBACK_PAR_CATEGORIE: Record<string, number> = {
   "complement":          12,
   "complément":          12,
   "complément alimentaire": 12,
@@ -57,10 +58,40 @@ const PRIX_MOYEN_PAR_CATEGORIE: Record<string, number> = {
 };
 const PRIX_DEFAULT = 8;
 
-function priceFor(categorie: string | null | undefined): number {
-  if (!categorie) return PRIX_DEFAULT;
-  const key = categorie.toLowerCase().trim();
-  return PRIX_MOYEN_PAR_CATEGORIE[key] ?? PRIX_DEFAULT;
+// Normalisation des noms (cohérente avec pc_pricing.pc_nom_normalise)
+function normalizePcName(s: string): string {
+  return s.toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/\d+\s*(mg|g|ml|ui|µg|comprim|gelule|gel|sachet|patch|cp|cpr|tube|flacon)\w*/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+// Résolveur de prix 3-niveaux : prix exact (par nom normalisé)
+//   → moyenne pondérée par catégorie → fallback constant
+function makePriceResolver(
+  exactPrices:    Map<string, number>,
+  categoryPrices: Map<string, number>,
+) {
+  return (pc_nom: string | null | undefined, categorie: string | null | undefined): number => {
+    // Niveau 1 : prix exact via nom normalisé
+    if (pc_nom) {
+      const norm = normalizePcName(pc_nom);
+      if (exactPrices.has(norm)) return exactPrices.get(norm)!;
+    }
+    // Niveau 2 : moyenne pondérée par catégorie
+    if (categorie) {
+      const catKey = categorie.toLowerCase().trim();
+      if (categoryPrices.has(catKey)) return categoryPrices.get(catKey)!;
+    }
+    // Niveau 3 : fallback constant
+    if (categorie) {
+      const k = categorie.toLowerCase().trim();
+      if (FALLBACK_PAR_CATEGORIE[k] !== undefined) return FALLBACK_PAR_CATEGORIE[k];
+    }
+    return PRIX_DEFAULT;
+  };
 }
 
 serve(async (req) => {
@@ -119,6 +150,23 @@ serve(async (req) => {
 
     const sinceIso = new Date(Date.now() - period_days * 86400e3).toISOString();
 
+    // ════ 0. Chargement des tarifs réels (1 fois par appel) ═══════════════
+    // pc_pricing       : prix exact par PC (top vendus)
+    // pc_category_pricing : moyenne pondérée par catégorie (fallback)
+    const [pricesRes, catPricesRes] = await Promise.all([
+      supabase.from("pc_pricing")
+        .select("pc_nom_normalise, prix_unitaire_ttc"),
+      supabase.from("pc_category_pricing")
+        .select("categorie, prix_moyen_pondere"),
+    ]);
+    const exactPrices = new Map<string, number>(
+      (pricesRes.data || []).map((r: any) => [r.pc_nom_normalise, Number(r.prix_unitaire_ttc)]),
+    );
+    const catPrices = new Map<string, number>(
+      (catPricesRes.data || []).map((r: any) => [r.categorie.toLowerCase().trim(), Number(r.prix_moyen_pondere)]),
+    );
+    const priceFor = makePriceResolver(exactPrices, catPrices);
+
     // ════ 1. KPIs pharmacie ═══════════════════════════════════════════════
     const { data: myFeedback, error: feedbackErr } = await supabase
       .from("pc_feedback")
@@ -133,8 +181,8 @@ serve(async (req) => {
     const rejected = my.filter(r => r.action === "rejected");
     const total    = my.length;
     const conversion_rate = total > 0 ? (accepted.length / total) * 100 : 0;
-    const ca_estime = accepted.reduce((sum, r) => sum + priceFor(r.pc_categorie), 0);
-    const manque    = rejected.reduce((sum, r) => sum + priceFor(r.pc_categorie), 0);
+    const ca_estime = accepted.reduce((sum, r) => sum + priceFor(r.pc_nom, r.pc_categorie), 0);
+    const manque    = rejected.reduce((sum, r) => sum + priceFor(r.pc_nom, r.pc_categorie), 0);
 
     // Détail attribution : clic manuel vs auto-détection par scan douchette
     const accepted_manual = accepted.filter(r => r.detection_source === "manual_click").length;
@@ -220,7 +268,7 @@ serve(async (req) => {
           network_rate: network_rate !== null ? Math.round(network_rate) : null,
           gap: Math.round(gap),
           my_count: s.total,
-          ca_perdu_estime: Math.round((s.total - s.accepted) * priceFor(s.categorie) * (gap / 100)),
+          ca_perdu_estime: Math.round((s.total - s.accepted) * priceFor(pc_nom, s.categorie) * (gap / 100)),
         };
       })
       .filter(p => p.network_rate !== null && p.gap >= 15) // gap d'au moins 15 points
