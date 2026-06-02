@@ -101,7 +101,7 @@ serve(async (req) => {
     // ════ 1. KPIs pharmacie ═══════════════════════════════════════════════
     const { data: myFeedback, error: feedbackErr } = await supabase
       .from("pc_feedback")
-      .select("action, pc_categorie, pc_nom, medicament_nom, created_at")
+      .select("action, pc_categorie, pc_nom, medicament_nom, created_at, detection_source")
       .eq("pharmacy_id", pharmacy_id)
       .gte("created_at", sinceIso);
 
@@ -114,6 +114,14 @@ serve(async (req) => {
     const conversion_rate = total > 0 ? (accepted.length / total) * 100 : 0;
     const ca_estime = accepted.reduce((sum, r) => sum + priceFor(r.pc_categorie), 0);
     const manque    = rejected.reduce((sum, r) => sum + priceFor(r.pc_categorie), 0);
+
+    // Détail attribution : clic manuel vs auto-détection par scan douchette
+    const accepted_manual = accepted.filter(r => r.detection_source === "manual_click").length;
+    const accepted_auto   = accepted.filter(r => r.detection_source === "hid_auto").length;
+    const accepted_other  = accepted.length - accepted_manual - accepted_auto;
+    const auto_detection_rate = accepted.length > 0
+      ? Math.round((accepted_auto / accepted.length) * 100)
+      : 0;
 
     // Jours actifs (jours avec au moins 1 feedback)
     const activeDays = new Set(my.map(r => r.created_at.slice(0, 10))).size;
@@ -245,6 +253,11 @@ serve(async (req) => {
         manque_a_gagner_euros: Math.round(manque),
         pcs_per_day_avg: Math.round(pcs_per_day_avg * 10) / 10,
         days_active: activeDays,
+        // Détail attribution
+        accepted_manual,
+        accepted_auto,
+        accepted_other,
+        auto_detection_rate,
       },
       benchmark: {
         avg_conversion_rate: Math.round(avg_conversion_rate),
