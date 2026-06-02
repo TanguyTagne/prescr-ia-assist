@@ -1,3 +1,4 @@
+// build: frictionless v2026.06.02.2 — session auto-reset 2min
 import { useState, useCallback, useEffect, useRef } from "react";
 import { X, Loader2, Mail, Lock, Eye, EyeOff, Monitor, HelpCircle, Pin, PinOff, Minimize2, Maximize2, LogOut, ScanLine } from "lucide-react";
 import OnboardingTour from "@/components/OnboardingTour";

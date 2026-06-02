@@ -1,3 +1,4 @@
+// build: frictionless v2026.06.02.2 — name fallback auto-acceptance
 import { useState, useEffect, useMemo, useRef } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { Pill, RotateCcw, AlertTriangle, MessageSquare, Loader2, Sparkles, Database, Check, Zap } from "lucide-react";
@@ -115,7 +116,7 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
       const { data: bdpm } = await supabase
         .from("medicament_cip")
         .select("cip13, medicament_nom")
-        .or(orClauses.replaceAll("nom_commercial", "medicament_nom"))
+        .or(orClauses.split("nom_commercial").join("medicament_nom"))
         .limit(500);
 
       if (cancelled) return;
