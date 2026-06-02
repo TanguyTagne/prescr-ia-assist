@@ -403,9 +403,12 @@ const OLD_TASK_NAMES = ["AsclionAtBoot"];
 
 function buildTaskXml({ kind, time, exePath }) {
   const exeEscaped = exePath.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  // Pas de délai sur le LogonTrigger : on veut que la tâche (qui démarre
+  // Asclion en mode HighestAvailable) gagne la course contre la HKCU Run key
+  // (qui démarrerait en mode user normal et bloquerait via single-instance-lock).
   const trigger =
     kind === "logon"
-      ? `<LogonTrigger><Enabled>true</Enabled><Delay>PT15S</Delay></LogonTrigger>`
+      ? `<LogonTrigger><Enabled>true</Enabled></LogonTrigger>`
       : `<CalendarTrigger>
            <StartBoundary>2026-01-01T${time}</StartBoundary>
            <Enabled>true</Enabled>
@@ -415,18 +418,27 @@ function buildTaskXml({ kind, time, exePath }) {
   const wakeToRun = kind === "daily" ? "<WakeToRun>true</WakeToRun>" : "";
   // GroupId S-1-5-32-545 = BUILTIN\Users → task runs in the context of
   // WHICHEVER user is currently logged in (interactive session, visible UI).
-  // RunLevel LeastPrivilege → no UAC prompt, no admin needed.
+  //
+  // RunLevel HighestAvailable → l'app tourne avec le niveau d'intégrité
+  // maximal disponible pour l'utilisateur :
+  //   • Si l'user est admin local (cas fréquent en officine) → High IL
+  //     → bypass UIPI, capture scan en background, SetForegroundWindow OK
+  //   • Si l'user est standard → Medium IL (comportement par défaut, OK)
+  //
+  // L'UAC n'est demandé QU'UNE FOIS à l'installation (installer NSIS élevé)
+  // lors de la création de la tâche. Les démarrages suivants sont silencieux.
+  // C'est le pattern utilisé par Steam, Discord, OBS, etc.
   return `<?xml version="1.0" encoding="UTF-16"?>
 <Task version="1.4" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
   <RegistrationInfo>
     <Author>Asclion</Author>
-    <Description>Lancement automatique d'Asclion (session interactive)</Description>
+    <Description>Lancement automatique d'Asclion (session interactive, niveau d'intégrité maximal disponible pour capture scan globale)</Description>
   </RegistrationInfo>
   <Triggers>${trigger}</Triggers>
   <Principals>
     <Principal id="Author">
       <GroupId>S-1-5-32-545</GroupId>
-      <RunLevel>LeastPrivilege</RunLevel>
+      <RunLevel>HighestAvailable</RunLevel>
     </Principal>
   </Principals>
   <Settings>
@@ -520,15 +532,11 @@ async function registerAutoLaunch() {
   // 0) Heal old broken installs: remove pre-fix SYSTEM tasks (session 0 ghosts)
   await cleanupOldTasks();
 
-  // 1) Primary mechanism: HKCU Run key (most reliable Windows auto-launch)
-  const runKeyResult = await setRunRegistryKey(true);
-  if (runKeyResult.ok) {
-    devLog("[AUTOLAUNCH] HKCU Run key set:", exePath);
-  } else {
-    devWarn("[AUTOLAUNCH] HKCU Run key failed:", runKeyResult.output);
-  }
-
-  // 2+3) Scheduled tasks (logon + daily catch-up), all running in user context
+  // 1) Scheduled tasks d'abord — c'est la voie de démarrage privilégiée car
+  //    elle utilise RunLevel=HighestAvailable (admin si possible → bypass
+  //    UIPI Windows pour la capture scan en background sans focus).
+  //    La HKCU Run key est créée APRÈS, uniquement comme fallback si les
+  //    tâches échouent.
   const results = [];
   for (const task of AUTOLAUNCH_TASKS) {
     const xmlPath = path.join(tmpDir, `${task.name}.xml`);
@@ -559,9 +567,29 @@ async function registerAutoLaunch() {
       error: registered ? null : lastError.slice(0, 500),
     });
     if (registered) {
-      devLog(`[AUTOLAUNCH] task "${task.name}" registered (user context).`);
+      devLog(`[AUTOLAUNCH] task "${task.name}" registered (HighestAvailable).`);
     } else {
       console.error(`[AUTOLAUNCH] task "${task.name}" failed:`, lastError);
+    }
+  }
+
+  // 2) HKCU Run key — fallback uniquement si AUCUNE tâche planifiée n'est en place
+  // (la tâche démarre en HighestAvailable, la Run key en user seulement →
+  //  on évite que la Run key gagne la course et bloque l'app en mode user).
+  const anyTaskRegistered = results.some(r => r.registered);
+  let runKeyResult;
+  if (anyTaskRegistered) {
+    // Tâche OK → on supprime la Run key si elle existe (héritage anciens installs)
+    await setRunRegistryKey(false);
+    runKeyResult = { ok: false, output: "skipped (scheduled task active)" };
+    devLog("[AUTOLAUNCH] HKCU Run key removed — scheduled task takes over.");
+  } else {
+    // Aucune tâche → fallback Run key (mais Asclion sera en user seulement)
+    runKeyResult = await setRunRegistryKey(true);
+    if (runKeyResult.ok) {
+      devLog("[AUTOLAUNCH] HKCU Run key set (fallback user-mode):", exePath);
+    } else {
+      devWarn("[AUTOLAUNCH] HKCU Run key failed:", runKeyResult.output);
     }
   }
 
