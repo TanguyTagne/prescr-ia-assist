@@ -121,6 +121,7 @@ const Auth = () => {
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
+                    aria-label="Email"
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -146,6 +147,7 @@ const Auth = () => {
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
+                      aria-label="Nom complet"
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
                       placeholder="Dr. Martin Dupont"
@@ -161,6 +163,7 @@ const Auth = () => {
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
+                    aria-label="Email"
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -187,6 +190,7 @@ const Auth = () => {
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
+                    aria-label="Mot de passe"
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
