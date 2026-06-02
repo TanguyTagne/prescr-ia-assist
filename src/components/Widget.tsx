@@ -392,17 +392,45 @@ const WidgetApp = () => {
 
       if (cipRow?.medicament_nom) {
         // BDPM nous donne le nom officiel. On résout dans `medicaments`
-        // PAR NOM (pas par CIP) pour récupérer les métadonnées (atc, molécule).
-        const { data: byName } = await supabase
+        // pour récupérer les métadonnées (atc, molécule). On essaie d'abord
+        // par CIP, puis par nom.
+        let byMeta: any = null;
+        const { data: byCip } = await supabase
           .from("medicaments")
           .select("id, nom_commercial, cip_code, molecule_id, atc_code")
-          .ilike("nom_commercial", `${cipRow.medicament_nom}%`)
-          .order("nom_commercial", { ascending: true })
-          .limit(1)
+          .eq("cip_code", code)
           .maybeSingle();
-        if (byName) {
-          med = byName as any;
-          logger.log(`[SCAN] ${ts} ean=${code} match=bdpm name=${med!.nom_commercial}`);
+        if (byCip) byMeta = byCip;
+
+        if (!byMeta) {
+          const { data: byName } = await supabase
+            .from("medicaments")
+            .select("id, nom_commercial, cip_code, molecule_id, atc_code")
+            .ilike("nom_commercial", `${cipRow.medicament_nom}%`)
+            .not("nom_commercial", "like", "__%") // exclut les orphelins flaggés
+            .order("nom_commercial", { ascending: true })
+            .limit(1)
+            .maybeSingle();
+          if (byName) byMeta = byName;
+        }
+
+        if (byMeta) {
+          // IMPORTANT : on force le nom_commercial à la valeur BDPM (source de
+          // vérité), même si la table `medicaments` a un nom différent ou
+          // corrompu ("Timoptol 0.5%" partout par exemple).
+          med = { ...byMeta, nom_commercial: cipRow.medicament_nom } as any;
+          logger.log(`[SCAN] ${ts} ean=${code} match=bdpm name=${cipRow.medicament_nom} (meta from medicaments.id=${byMeta.id.slice(0,8)})`);
+        } else {
+          // BDPM connaît le médicament, mais on n'a pas de métadonnées internes.
+          // On construit quand même un objet minimal pour l'affichage.
+          med = {
+            id: "",
+            nom_commercial: cipRow.medicament_nom,
+            cip_code: code,
+            molecule_id: null,
+            atc_code: null,
+          } as any;
+          logger.log(`[SCAN] ${ts} ean=${code} match=bdpm-only name=${cipRow.medicament_nom} (pas de méta interne)`);
         }
       }
 
