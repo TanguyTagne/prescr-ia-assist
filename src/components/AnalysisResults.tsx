@@ -25,7 +25,7 @@ interface AnalysisResultsProps {
 // Fenêtre d'attribution HID : un scan dans les 10 min suivant l'analyse
 // est considéré comme une vente du PC correspondant. La fenêtre est aussi
 // réinitialisée automatiquement à chaque nouvelle ordonnance (changement de `result`).
-const HID_ATTRIBUTION_WINDOW_MS = 10 * 60 * 1000;
+const HID_ATTRIBUTION_WINDOW_MS = 5 * 60 * 1000;
 
 const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsProps) => {
   const { t } = useI18n();
@@ -71,27 +71,108 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
 
     if (demoMode || allProductNames.length === 0) return;
 
-    // Récupère les CIP via medicaments.nom_commercial (match exact prioritaire)
+    // ── Résolution CIP multi-stratégies ─────────────────────────────────
+    // 1. Match exact dans medicaments.nom_commercial
+    // 2. Match normalisé (lowercase, sans accents, sans dosage)
+    // 3. Match ILIKE flexible (le 1er mot du PC est contenu dans le nom)
+    // 4. Fallback : table medicament_cip (BDPM) par medicament_nom
     let cancelled = false;
     (async () => {
-      const { data } = await supabase
+      const normalize = (s: string) =>
+        s.toLowerCase()
+          .normalize("NFD")
+          .replace(/[̀-ͯ]/g, "")
+          .replace(/\d+\s*(mg|g|ml|ui|µg|comprim|gelule|gel|sachet|patch)\w*/gi, "")
+          .replace(/\s+/g, " ")
+          .trim();
+
+      // Pass 1+2 : medicaments — récupère exact + normalisé en une seule query
+      const firstWords = [...new Set(
+        allProductNames.map(n => n.split(/[\s/(]/)[0]).filter(w => w.length >= 3),
+      )];
+      const orClauses = firstWords.map(w => `nom_commercial.ilike.${w}%`).join(",");
+      const { data: meds } = await supabase
         .from("medicaments")
         .select("nom_commercial, cip_code")
-        .in("nom_commercial", allProductNames)
-        .not("cip_code", "is", null);
-      if (cancelled || !data) return;
-      const nameToCip = new Map<string, string>();
-      for (const row of data as any[]) {
-        if (row.cip_code) nameToCip.set(row.nom_commercial, row.cip_code);
+        .or(orClauses)
+        .not("cip_code", "is", null)
+        .limit(500);
+
+      // Pass 3 : medicament_cip (BDPM) — pour les produits OTC souvent absents de medicaments
+      const { data: bdpm } = await supabase
+        .from("medicament_cip")
+        .select("cip13, medicament_nom")
+        .or(orClauses.replaceAll("nom_commercial", "medicament_nom"))
+        .limit(500);
+
+      if (cancelled) return;
+
+      // Construit l'index de matching : pour chaque CIP en base, ses formes normalisées
+      type Entry = { cip: string; rawName: string };
+      const normIndex = new Map<string, Entry[]>();
+      const exactIndex = new Map<string, Entry>();
+
+      for (const row of (meds || []) as any[]) {
+        if (!row.cip_code) continue;
+        const entry = { cip: row.cip_code, rawName: row.nom_commercial };
+        exactIndex.set(row.nom_commercial, entry);
+        const norm = normalize(row.nom_commercial);
+        if (!normIndex.has(norm)) normIndex.set(norm, []);
+        normIndex.get(norm)!.push(entry);
       }
+      for (const row of (bdpm || []) as any[]) {
+        if (!row.cip13) continue;
+        const entry = { cip: row.cip13, rawName: row.medicament_nom };
+        if (!exactIndex.has(row.medicament_nom)) exactIndex.set(row.medicament_nom, entry);
+        const norm = normalize(row.medicament_nom);
+        if (!normIndex.has(norm)) normIndex.set(norm, []);
+        normIndex.get(norm)!.push(entry);
+      }
+
       const cipMap = new Map<string, { medNom: string; produit: string; categorie?: string }>();
+      const missed: string[] = [];
+
       for (const med of result.medicaments) {
         for (const rec of med.recommendations || []) {
-          const cip = nameToCip.get(rec.produit);
-          if (cip) cipMap.set(cip, { medNom: med.nom, produit: rec.produit, categorie: rec.categorie });
+          const target = rec.produit;
+          let resolved: Entry | null = null;
+
+          // Étape 1 : match exact
+          resolved = exactIndex.get(target) || null;
+
+          // Étape 2 : match normalisé
+          if (!resolved) {
+            const norm = normalize(target);
+            const candidates = normIndex.get(norm);
+            if (candidates && candidates.length > 0) resolved = candidates[0];
+          }
+
+          // Étape 3 : match flexible (le 1er mot du PC commence un nom en base)
+          if (!resolved) {
+            const firstWord = normalize(target.split(/[\s/(]/)[0]);
+            for (const [norm, entries] of normIndex.entries()) {
+              if (norm.startsWith(firstWord) && firstWord.length >= 4) {
+                resolved = entries[0];
+                break;
+              }
+            }
+          }
+
+          if (resolved) {
+            cipMap.set(resolved.cip, { medNom: med.nom, produit: rec.produit, categorie: rec.categorie });
+          } else {
+            missed.push(rec.produit);
+          }
         }
       }
       proposedCipMapRef.current = cipMap;
+
+      if (missed.length > 0) {
+        // Log analytics — permet d'identifier les PCs sans CIP résoluble
+        // (utile pour le diagnostic de l'auto-acceptation)
+        // eslint-disable-next-line no-console
+        console.debug("[auto-accept] PCs sans CIP résoluble:", missed);
+      }
     })();
 
     return () => {
@@ -105,7 +186,7 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
     const handler = (e: Event) => {
       const detail = (e as CustomEvent<{ ean: string; at: number }>).detail;
       if (!detail?.ean) return;
-      // Fenêtre d'attribution 10 min
+      // Fenêtre d'attribution 5 min
       if (Date.now() - mountedAtRef.current > HID_ATTRIBUTION_WINDOW_MS) return;
       const match = proposedCipMapRef.current.get(detail.ean);
       if (!match) return;
