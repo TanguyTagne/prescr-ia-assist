@@ -1,3 +1,4 @@
+// build: electron v2026.06.02.3 — schtasks RunLevel=HighestAvailable, no LogonTrigger delay, HKCU Run key disabled when task present
 const { app, BrowserWindow, shell, ipcMain, Notification } = require("electron");
 const { autoUpdater } = require("electron-updater");
 const path = require("path");
