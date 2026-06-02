@@ -1,4 +1,3 @@
-// build: roi-manque-a-gagner tab live — v2026.06.02.1 (attribution split)
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -467,11 +466,33 @@ const RoiManqueAGagnerTab = () => {
             </Card>
           )}
 
-          {/* ── Footer info ──────────────────────────────────────────────── */}
-          <div className="text-xs text-muted-foreground bg-muted/30 rounded-lg p-3">
-            💡 <strong>Méthode</strong> — CA estimé sur la base des prix moyens officinaux par catégorie (complément 12€,
-            dispositif 15€, dermo 18€, OTC 6€, etc.). Le benchmark exclut les pharmacies avec moins de 10 propositions
-            sur la période. Le PC est marqué "sous-performant" à partir de 15 points d'écart vs réseau.
+          {/* ── Footer info — transparence du calcul ──────────────────── */}
+          <div className="text-xs text-muted-foreground bg-muted/30 rounded-lg p-3 space-y-2">
+            <div>
+              💡 <strong>Méthode de calcul du CA</strong> — 3 niveaux de précision :
+            </div>
+            <ol className="list-decimal ml-5 space-y-0.5">
+              <li>
+                <strong>Prix exact par produit</strong> — table <code>pc_pricing</code> mise à jour
+                mensuellement (sources : Vidal, catalogue grossiste).
+              </li>
+              <li>
+                <strong>Moyenne pondérée par catégorie</strong> — recalculée à partir des volumes
+                réels de chaque produit (les ventes de Magnésium pèsent plus que celles de produits rares).
+              </li>
+              <li>
+                <strong>Fallback générique</strong> — uniquement si aucune des 2 sources ci-dessus
+                ne contient le produit. Cas rare en pratique.
+              </li>
+            </ol>
+            <div>
+              Le benchmark exclut les pharmacies avec moins de 10 propositions sur la période.
+              Un PC est marqué « sous-performant » à partir de 15 points d'écart vs réseau.
+            </div>
+            <div className="text-[10px] italic">
+              Le détail des prix utilisés pour votre facturation est disponible sur demande.
+              Conformément à nos CGV, vous pouvez contester le calcul dans les 30 jours suivant l'émission de la facture.
+            </div>
           </div>
         </>
       )}
