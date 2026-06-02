@@ -16,6 +16,9 @@ export interface MedicamentInfo {
   code_atc?: string;
   conseil_associe?: string;
   recommendations?: Recommendation[];
+  // CIP du code-barre scanné — alimenté quand l'analyse vient d'un scan douchette.
+  // Permet au pharmacien de signaler un mauvais référencement avec le CIP exact.
+  cip_scanned?: string;
 }
 
 export interface Recommendation {
