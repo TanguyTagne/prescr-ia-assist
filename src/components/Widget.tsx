@@ -542,7 +542,7 @@ const WidgetApp = () => {
             setBlockedProducts((prev) => [...new Set([...prev, ...newNames])]);
           }
         }
-        prependMedicament({ nom: med.nom_commercial, classe: "", recommendations });
+        prependMedicament({ nom: med.nom_commercial, classe: "", recommendations, cip_scanned: code });
         notifyAnalysisDone({ count: 1 });
         void logHidScan(code, { nom: med.nom_commercial, recommendations });
         lastAnalysisAtRef.current = Date.now(); // marque session active
@@ -564,7 +564,7 @@ const WidgetApp = () => {
             ...new Set([...prev, ...recommendations.map((r) => r.produit)]),
           ]);
         }
-        prependMedicament({ nom: mock.nom, classe: "", recommendations });
+        prependMedicament({ nom: mock.nom, classe: "", recommendations, cip_scanned: code });
         notifyAnalysisDone({ count: 1 });
         void logHidScan(code, { nom: mock.nom, recommendations });
         lastAnalysisAtRef.current = Date.now(); // marque session active
