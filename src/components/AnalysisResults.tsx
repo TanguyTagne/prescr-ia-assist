@@ -430,7 +430,12 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
                 <ReportButton
                   type="medicament_different"
                   medicamentNom={med.nom}
-                  context={{ classe: med.classe, code_atc: med.code_atc, molecule: med.molecule }}
+                  context={{
+                    classe: med.classe,
+                    code_atc: med.code_atc,
+                    molecule: med.molecule,
+                    cip_scanned: med.cip_scanned ?? null,
+                  }}
                 />
               </div>
             )}
