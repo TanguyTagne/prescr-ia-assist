@@ -71,7 +71,7 @@ serve(async (req) => {
   const SERVICE_KEY  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const supabase     = createClient(SUPABASE_URL, SERVICE_KEY);
 
-  // ── Auth admin ─────────────────────────────────────────────────────────
+  // ── Auth ──────────────────────────────────────────────────────────────
   const authHeader = req.headers.get("authorization");
   if (!authHeader) {
     return new Response(JSON.stringify({ error: "Non autorisé" }), {
@@ -94,6 +94,27 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "pharmacy_id requis" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // ── Autorisation : l'user doit être admin OU avoir cette pharmacy_id ─
+    // dans son profil. Sans ça, un pharmacien pourrait lire les KPIs des
+    // autres pharmacies du réseau en passant n'importe quel pharmacy_id.
+    const { data: isAdmin } = await supabase.rpc("has_role", {
+      _user_id: user.id, _role: "admin",
+    });
+    if (!isAdmin) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("pharmacy_id")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (!profile || (profile as any).pharmacy_id !== pharmacy_id) {
+        return new Response(JSON.stringify({
+          error: "Accès non autorisé à cette pharmacie",
+        }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     const sinceIso = new Date(Date.now() - period_days * 86400e3).toISOString();
