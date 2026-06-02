@@ -1,4 +1,3 @@
-// build: frictionless v2026.06.02.2 — name fallback auto-acceptance
 import { useState, useEffect, useMemo, useRef } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { Pill, RotateCcw, AlertTriangle, MessageSquare, Loader2, Sparkles, Database, Check, Zap } from "lucide-react";
@@ -23,10 +22,13 @@ interface AnalysisResultsProps {
   demoMode?: boolean;
 }
 
-// Fenêtre d'attribution HID : un scan dans les 5 min suivant l'analyse
+// Fenêtre d'attribution HID : un scan dans les 10 min suivant l'analyse
 // est considéré comme une vente du PC correspondant. La fenêtre est aussi
 // réinitialisée automatiquement à chaque nouvelle ordonnance (changement de `result`).
-const HID_ATTRIBUTION_WINDOW_MS = 5 * 60 * 1000;
+// Note : l'auto-reset de session (Widget.tsx) reste à 2 min, mais ne se déclenche
+// QUE si le nouveau scan n'est PAS un PC suggéré — donc l'auto-attribution
+// 10 min reste valide tant que le pharmacien ne sert pas un nouveau client.
+const HID_ATTRIBUTION_WINDOW_MS = 10 * 60 * 1000;
 
 // Normalisation pour matching de noms : lowercase, sans accents, sans dosage
 // ni unité ni forme galénique. Permet de matcher "Magnésium bisglycinate 300mg"
@@ -68,7 +70,7 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
   }, [result.medicaments]);
 
   // ── Auto-attribution HID ────────────────────────────────────────────────
-  // Charge les CIP des PC proposés. Pendant 5 min après l'analyse, tout
+  // Charge les CIP des PC proposés. Pendant 10 min après l'analyse, tout
   // scan douchette dont le CIP correspond à un PC proposé est marqué
   // accepté automatiquement (source = hid_auto). Évite la sous-attribution
   // quand le pharmacien oublie de cliquer sur "Accepter".
@@ -116,7 +118,7 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
       const { data: bdpm } = await supabase
         .from("medicament_cip")
         .select("cip13, medicament_nom")
-        .or(orClauses.split("nom_commercial").join("medicament_nom"))
+        .or(orClauses.replaceAll("nom_commercial", "medicament_nom"))
         .limit(500);
 
       if (cancelled) return;
@@ -208,7 +210,7 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
     const handler = async (e: Event) => {
       const detail = (e as CustomEvent<{ ean: string; at: number }>).detail;
       if (!detail?.ean) return;
-      // Fenêtre d'attribution 5 min
+      // Fenêtre d'attribution 10 min
       if (Date.now() - mountedAtRef.current > HID_ATTRIBUTION_WINDOW_MS) return;
 
       // ── Étape 1 : match direct par CIP ─────────────────────────────────
