@@ -1,3 +1,4 @@
+// build: widget v2026.06.02.4 — BDPM-first CIP resolution + strict specificity (2+ pathos → med_id only)
 import { useState, useCallback, useEffect, useRef } from "react";
 import { X, Loader2, Mail, Lock, Eye, EyeOff, Monitor, HelpCircle, Pin, PinOff, Minimize2, Maximize2, LogOut, ScanLine } from "lucide-react";
 import OnboardingTour from "@/components/OnboardingTour";
