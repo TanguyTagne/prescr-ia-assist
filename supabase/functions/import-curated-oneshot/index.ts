@@ -1,5 +1,5 @@
 // One-shot: imports curated PCs (medicament_id, pc_1, pc_2, pc_3) into medicament_curated_pcs.
-// Trigger with: POST {} (no auth required, this is a private internal one-shot).
+// POST the CSV (with header row) as text/plain body.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -11,14 +11,12 @@ const cors = {
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
-    const url = new URL("./curated.csv", import.meta.url);
-    const text = await Deno.readTextFile(url);
+    const text = await req.text();
     const lines = text.split(/\r?\n/).filter(Boolean);
     lines.shift(); // header
 
     const rows: { medicament_id: string; pc_1: string | null; pc_2: string | null; pc_3: string | null }[] = [];
     for (const line of lines) {
-      // simple CSV parse (no quoted commas expected in our cleaned file)
       const cells: string[] = [];
       let cur = "";
       let inQ = false;
@@ -46,17 +44,14 @@ serve(async (req) => {
 
     const chunk = 500;
     let inserted = 0;
-    let errors: string[] = [];
+    const errors: string[] = [];
     for (let i = 0; i < rows.length; i += chunk) {
       const batch = rows.slice(i, i + chunk);
       const { error } = await supabase
         .from("medicament_curated_pcs")
         .upsert(batch, { onConflict: "medicament_id" });
-      if (error) {
-        errors.push(`batch@${i}: ${error.message}`);
-      } else {
-        inserted += batch.length;
-      }
+      if (error) errors.push(`batch@${i}: ${error.message}`);
+      else inserted += batch.length;
     }
 
     return new Response(JSON.stringify({ total: rows.length, inserted, errors }), {
