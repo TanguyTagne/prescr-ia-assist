@@ -1792,8 +1792,27 @@ serve(async (req) => {
       // See ambiguousFlags computation above.
       const singleMedAmbiguous = ambiguousFlags[i];
 
+      // ====== CURATED MPV PRIORITY ======
+      // If this medication has explicit curated medicament_pc_valide links,
+      // they are domain-correct (ear, eye, nose…) and OVERRIDE any
+      // pathology-derived recommendations. Never mix with unrelated pathology PCs.
+      const curatedForMed = (med.curated_pcs || []) as any[];
+      if (curatedForMed.length > 0) {
+        const mappedCurated = curatedForMed
+          .filter((p: any) => p && p.produit)
+          .map((p: any) => ({
+            produit: p.produit,
+            categorie: p.categorie || "Complément",
+            description: p.description || "",
+            priorite: Math.max(p.priorite || 0, 95),
+            pathologie: "",
+            phrase_conseil: p.phrase_conseil || undefined,
+          }));
+        recs.push(...pickDistinctProducts(mappedCurated, MAX_RECOMMENDATIONS_PER_MED));
+      }
 
       if (med.clinical_kb) {
+
         hasStructuredData = true;
         if (!singleMedAmbiguous) {
           const pathNames = (med.pathologies || []).map((p: any) => p.nom_pathologie);
