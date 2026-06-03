@@ -1018,7 +1018,22 @@ export type Database = {
           score?: number
           source?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "medicament_pc_valide_medicament_id_fkey"
+            columns: ["medicament_id"]
+            isOneToOne: false
+            referencedRelation: "medicaments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medicament_pc_valide_pc_id_fkey"
+            columns: ["pc_id"]
+            isOneToOne: false
+            referencedRelation: "produits_complementaires"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       medicaments: {
         Row: {
