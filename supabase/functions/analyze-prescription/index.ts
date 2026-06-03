@@ -1797,6 +1797,7 @@ serve(async (req) => {
       // they are domain-correct (ear, eye, nose…) and OVERRIDE any
       // pathology-derived recommendations. Never mix with unrelated pathology PCs.
       const curatedForMed = (med.curated_pcs || []) as any[];
+      console.log(`[curated-debug] med=${med.nom_commercial} clinical_kb=${med.clinical_kb} curated_count=${curatedForMed.length} sample=${JSON.stringify(curatedForMed.slice(0,1))}`);
       if (curatedForMed.length > 0) {
         const mappedCurated = curatedForMed
           .filter((p: any) => p && p.produit)
@@ -1809,6 +1810,7 @@ serve(async (req) => {
             phrase_conseil: p.phrase_conseil || undefined,
           }));
         recs.push(...pickDistinctProducts(mappedCurated, MAX_RECOMMENDATIONS_PER_MED));
+        console.log(`[curated-debug] after push recs=${recs.length}`);
       }
 
       if (med.clinical_kb) {
