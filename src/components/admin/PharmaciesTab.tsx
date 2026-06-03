@@ -113,14 +113,15 @@ const PharmaciesTab = ({ pharmacies, onRefresh }: PharmaciesTabProps) => {
       const existing = pharmacies.find(p => p.id === pharmacyId)?.lgo_config;
 
       if (existing) {
+        const updateData: any = {
+          api_base_url: lgoForm.api_base_url,
+          lgo_type: lgoForm.lgo_type,
+          updated_at: new Date().toISOString(),
+        };
+        if (lgoForm.api_key) updateData.api_key = lgoForm.api_key;
         await supabase
           .from("pharmacy_lgo_config" as any)
-          .update({
-            api_base_url: lgoForm.api_base_url,
-            api_key: lgoForm.api_key || existing.api_key,
-            lgo_type: lgoForm.lgo_type,
-            updated_at: new Date().toISOString(),
-          } as any)
+          .update(updateData)
           .eq("id", existing.id);
       } else {
         await supabase

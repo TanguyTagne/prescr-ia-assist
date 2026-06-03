@@ -179,7 +179,7 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
     try {
       const { data } = await supabase
         .from("pharmacy_lgo_config")
-        .select("*")
+        .select("id, lgo_type, api_base_url, enabled, pharmacy_id")
         .eq("pharmacy_id", pharmacyId)
         .maybeSingle();
       if (data) {
