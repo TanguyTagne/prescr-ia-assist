@@ -83,7 +83,7 @@ const Admin = () => {
 
       const pharmaList = (pharmRes.data || []) as PharmacyWithLGO[];
       if (pharmaList.length > 0) {
-        const { data: lgoConfigs } = await supabase.from("pharmacy_lgo_config" as any).select("*");
+        const { data: lgoConfigs } = await supabase.from("pharmacy_lgo_config" as any).select("id, pharmacy_id, lgo_type, api_base_url, enabled, created_at, updated_at");
         for (const p of pharmaList) {
           p.lgo_config = (lgoConfigs as any[])?.find((c: any) => c.pharmacy_id === p.id) || null;
         }
