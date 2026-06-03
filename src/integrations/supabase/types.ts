@@ -918,6 +918,44 @@ export type Database = {
         }
         Relationships: []
       }
+      medicament_curated_pcs: {
+        Row: {
+          created_at: string
+          medicament_id: string
+          pc_1: string | null
+          pc_2: string | null
+          pc_3: string | null
+          source: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          medicament_id: string
+          pc_1?: string | null
+          pc_2?: string | null
+          pc_3?: string | null
+          source?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          medicament_id?: string
+          pc_1?: string | null
+          pc_2?: string | null
+          pc_3?: string | null
+          source?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medicament_curated_pcs_medicament_id_fkey"
+            columns: ["medicament_id"]
+            isOneToOne: true
+            referencedRelation: "medicaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       medicament_pathologie: {
         Row: {
           id: string

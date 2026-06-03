@@ -402,14 +402,54 @@ async function clinicalLookup(
         .limit(20)
     : Promise.resolve({ data: [] });
 
+  // NEW: highest-priority curated source — medicament_curated_pcs (pc_1/pc_2/pc_3 per med)
+  // Imported from the CSV "asclion-medicaments-avec-pcs" (2026-06).
+  // These OVERRIDE everything else when present.
+  const curatedTopPromise = medicament?.id
+    ? supabase
+        .from("medicament_curated_pcs")
+        .select("pc_1, pc_2, pc_3")
+        .eq("medicament_id", medicament.id)
+        .maybeSingle()
+    : Promise.resolve({ data: null });
+
   const mapCuratedMpv = (rows: any[]) =>
     rows
       .map((r: any) => (r?.pc ? { ...r.pc, priorite: Math.max(r.score || 0, 90) } : null))
       .filter(Boolean);
 
+  // Build top-curated PC objects from pc_1/pc_2/pc_3 names, enriched from produits_complementaires when matchable.
+  const buildCuratedTop = async (row: { pc_1?: string | null; pc_2?: string | null; pc_3?: string | null } | null) => {
+    if (!row) return [];
+    const names = [row.pc_1, row.pc_2, row.pc_3].filter((s): s is string => !!s && s.trim().length > 0);
+    if (names.length === 0) return [];
+
+    // Lookup enrichment by exact (case-insensitive) name match
+    const { data: matched } = await supabase
+      .from("produits_complementaires")
+      .select("produit, categorie, description, phrase_conseil, type_produit, pathologies(nom_pathologie)")
+      .in("produit", names);
+    const byKey = new Map<string, any>();
+    for (const m of matched || []) byKey.set((m.produit || "").toLowerCase().trim(), m);
+
+    return names.map((name, idx) => {
+      const enrich = byKey.get(name.toLowerCase().trim());
+      return {
+        produit: name,
+        categorie: enrich?.categorie || "Conseil associé",
+        description: enrich?.description || "",
+        priorite: 100 - idx, // 100, 99, 98 → always above mpv (≤95) and pathology PCs
+        phrase_conseil: enrich?.phrase_conseil || undefined,
+        type_produit: enrich?.type_produit || undefined,
+        pathologies: enrich?.pathologies || null,
+        source_curated: "csv_top3",
+      };
+    });
+  };
+
   let curatedPcsOut: any[] = [];
   if (pathologieIds.length > 0) {
-    const [conseilsRes, produitsRes, protocolesRes, directMedPcsRes, curatedMpvRes] = await Promise.all([
+    const [conseilsRes, produitsRes, protocolesRes, directMedPcsRes, curatedMpvRes, curatedTopRes] = await Promise.all([
       supabase
         .from("conseils_associes")
         .select("*, pathologies(nom_pathologie)")
@@ -434,14 +474,17 @@ async function clinicalLookup(
         .eq("actif", true),
       directMedPcsPromise,
       curatedMpvPromise,
+      curatedTopPromise,
     ]);
     conseils = conseilsRes.data || [];
-    const curatedPcs = mapCuratedMpv((curatedMpvRes.data || []) as any[]);
-    curatedPcsOut = curatedPcs;
+    const curatedTop = await buildCuratedTop((curatedTopRes as any).data || null);
+    const curatedMpv = mapCuratedMpv((curatedMpvRes.data || []) as any[]);
+    // curatedTop wins over everything; keep mpv as secondary fallback
+    curatedPcsOut = [...curatedTop, ...curatedMpv];
     const directPcs = (directMedPcsRes.data || []).map((p: any) => ({ ...p, priorite: Math.max(p.priorite || 0, 85) }));
     const pathologyPcs = produitsRes.data || [];
     const seen = new Set<string>();
-    produits = [...curatedPcs, ...directPcs, ...pathologyPcs].filter((p: any) => {
+    produits = [...curatedPcsOut, ...directPcs, ...pathologyPcs].filter((p: any) => {
       const key = (p.produit || "").toLowerCase().trim();
       if (!key || seen.has(key)) return false;
       seen.add(key);
@@ -450,13 +493,18 @@ async function clinicalLookup(
     produits = filterPediatricSafe(produits, medicament);
     protocoles = protocolesRes.data || [];
   } else {
-    // No pathology — still serve curated mpv + direct medication-bound PCs
-    const [directMedPcsRes, curatedMpvRes] = await Promise.all([directMedPcsPromise, curatedMpvPromise]);
-    const curatedPcs = mapCuratedMpv((curatedMpvRes.data || []) as any[]);
-    curatedPcsOut = curatedPcs;
+    // No pathology — still serve top curated + mpv + direct medication-bound PCs
+    const [directMedPcsRes, curatedMpvRes, curatedTopRes] = await Promise.all([
+      directMedPcsPromise,
+      curatedMpvPromise,
+      curatedTopPromise,
+    ]);
+    const curatedTop = await buildCuratedTop((curatedTopRes as any).data || null);
+    const curatedMpv = mapCuratedMpv((curatedMpvRes.data || []) as any[]);
+    curatedPcsOut = [...curatedTop, ...curatedMpv];
     const directPcs = (directMedPcsRes.data || []).map((p: any) => ({ ...p, priorite: Math.max(p.priorite || 0, 85) }));
     const seen = new Set<string>();
-    produits = [...curatedPcs, ...directPcs].filter((p: any) => {
+    produits = [...curatedPcsOut, ...directPcs].filter((p: any) => {
       const key = (p.produit || "").toLowerCase().trim();
       if (!key || seen.has(key)) return false;
       seen.add(key);
@@ -464,6 +512,7 @@ async function clinicalLookup(
     });
     produits = filterPediatricSafe(produits, medicament);
   }
+
 
   return {
     found: true,
