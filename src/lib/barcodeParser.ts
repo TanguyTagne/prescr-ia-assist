@@ -18,6 +18,8 @@ export function parseBarcodeToCip(raw: string): string | null {
   const cleaned = raw.replace(/[\x1d()]/g, "").trim();
 
   // 1) Simple 13-digit code (EAN-13 / CIP-13)
+  //    Pharma CIP-13 commence par 3400 (FR). EAN-13 produits parapharma : autres préfixes.
+  //    On rejette les RPPS (11 chiffres) et autres identifiants non-produits.
   if (/^\d{13}$/.test(cleaned)) return cleaned;
 
   // 2) GS1 DataMatrix: starts with AI "01" + 14-digit GTIN (leading 0 + CIP-13)
@@ -32,8 +34,8 @@ export function parseBarcodeToCip(raw: string): string | null {
   // 3) CIP-7 (vieilles boîtes) — accepté pour mapping côté DB
   if (/^\d{7}$/.test(cleaned)) return cleaned;
 
-  // 4) Fallback: 8–14 digits
-  if (/^\d{8,14}$/.test(cleaned)) return cleaned;
-
+  // ❌ Pas de fallback 8-14 chiffres : on rejette les RPPS (11), ADELI (9),
+  //    numéros INSEE, etc. — un code non-produit ne doit jamais déclencher une analyse.
   return null;
 }
+

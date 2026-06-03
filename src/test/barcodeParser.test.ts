@@ -34,7 +34,10 @@ describe("parseBarcodeToCip", () => {
     expect(parseBarcodeToCip("123")).toBeNull();
   });
 
-  it("accepts 8-14 digit fallback codes", () => {
-    expect(parseBarcodeToCip("12345678")).toBe("12345678");
+  it("rejects RPPS / ADELI / other non-product IDs (8-12 or 14 digits)", () => {
+    expect(parseBarcodeToCip("10003475943")).toBeNull(); // RPPS 11 digits
+    expect(parseBarcodeToCip("11260401")).toBeNull();    // 8 digits
+    expect(parseBarcodeToCip("123456789012")).toBeNull(); // 12 digits
   });
+
 });
