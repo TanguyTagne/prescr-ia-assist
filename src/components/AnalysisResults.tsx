@@ -459,85 +459,79 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
         }
 
           {/* Recommendations for this medication */}
-          {med.recommendations && med.recommendations.length > 0 &&
-        <div className="space-y-1 pt-1 border-t border-border/50">
+          {med.recommendations && med.recommendations.length > 0 && (
+            <div className="space-y-1 pt-1 border-t border-border/50">
               <div className="flex items-center gap-1 text-[10px] text-primary font-semibold uppercase tracking-wider">
                 <Sparkles className="h-2.5 w-2.5" />
                 {t("results.complementary")}
               </div>
               {med.recommendations.map((rec, j) => {
-            const ordered = isOrdered(med.nom, rec.produit);
-            const orderSource = getOrderSource(med.nom, rec.produit);
-            const isAuto = orderSource === "hid_auto";
-            return (
-              <div key={j} className="px-1.5 rounded-md bg-secondary/50 py-[3px] space-y-0.5">
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1 flex-wrap">
-                          <span className="font-medium text-xs">{rec.produit}</span>
-                          {rec.priorite >= 80 &&
-                      <Badge className="bg-primary/20 text-primary text-[10px] px-1 py-0">{t("results.priority")}</Badge>
-                      }
-                          {isAuto &&
-                      <Badge
-                        className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 text-[10px] px-1 py-0 gap-0.5"
-                        title="Vente détectée automatiquement via scan douchette"
-                      >
-                              <Zap className="h-2 w-2" />auto
-                            </Badge>
-                      }
-                        </div>
+                const ordered = isOrdered(med.nom, rec.produit);
+                const orderSource = getOrderSource(med.nom, rec.produit);
+                const isAuto = orderSource === "hid_auto";
+                const shortHint = rec.phrase_conseil
+                  ? rec.phrase_conseil.split(/[.,;—]/)[0].slice(0, 45).trim()
+                  : null;
+                const dotColors = ["bg-primary", "bg-blue-400", "bg-amber-400"];
+                return (
+                  <div
+                    key={j}
+                    className={`flex items-center gap-2 px-2 py-1.5 rounded-lg border transition-colors ${
+                      ordered
+                        ? "bg-primary/10 border-primary/25"
+                        : "bg-secondary/40 border-border hover:border-primary/20"
+                    }`}
+                  >
+                    <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotColors[j] ?? "bg-muted-foreground"}`} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1 flex-wrap">
+                        <span className="font-semibold text-xs text-foreground">{rec.produit}</span>
+                        {rec.priorite >= 80 && (
+                          <Badge className="bg-primary/20 text-primary text-[9px] px-1 py-0">{t("results.priority")}</Badge>
+                        )}
+                        {isAuto && (
+                          <Badge
+                            className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 text-[9px] px-1 py-0 gap-0.5"
+                            title="Vente détectée automatiquement via scan douchette"
+                          >
+                            <Zap className="h-2 w-2" />auto
+                          </Badge>
+                        )}
                       </div>
-                      <button
-                    onClick={() => handleOrder(med.nom, rec.produit, rec.categorie)}
-                    disabled={ordered}
-                    aria-label={ordered ? `${rec.produit} ${t("results.acceptedAria")}` : `${t("results.acceptAria")} ${rec.produit}`}
-                    className={`shrink-0 flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
-                    ordered ?
-                    "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" :
-                    "bg-primary/10 hover:bg-primary/20 text-primary"}`
-                    }>
-                    
-                        {ordered ?
-                    <>
-                            <Check className="h-3 w-3" />
-                            {t("results.accepted")}
-                          </> :
-
-                    <>
-                            <Check className="h-3 w-3" />
-                            {t("results.accept")}
-                          </>
-                    }
-                      </button>
-
-                      {!demoMode && (
-                        <ReportButton
-                          type="pc_inadapte"
-                          medicamentNom={med.nom}
-                          pcNom={rec.produit}
-                          pcCategorie={rec.categorie}
-                          context={{ priorite: rec.priorite, pathologie: rec.pathologie }}
-                        />
+                      {shortHint && (
+                        <p className="text-[9.5px] text-muted-foreground mt-0.5 truncate">{shortHint}</p>
                       )}
-                    </div>
-                    {rec.phrase_conseil && (
-                      <p className="text-[13px] font-medium text-foreground leading-snug pl-0.5 pt-0.5 animate-fade-in">
-                        💬 « {rec.phrase_conseil} »
-                      </p>
-                    )}
-                    {/* Badge de traçabilité (source officielle, validation) */}
-                    <div className="pt-0.5">
                       <LineageBadge
                         productName={rec.produit}
                         info={lineage.get(rec.produit?.trim().toLowerCase())}
                       />
                     </div>
-                  </div>);
-
-          })}
+                    <button
+                      onClick={() => handleOrder(med.nom, rec.produit, rec.categorie)}
+                      disabled={ordered}
+                      aria-label={ordered ? `${rec.produit} ${t("results.acceptedAria")}` : `${t("results.acceptAria")} ${rec.produit}`}
+                      className={`shrink-0 flex items-center justify-center w-7 h-7 rounded-md transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                        ordered
+                          ? "bg-primary text-white"
+                          : "bg-primary/15 hover:bg-primary/30 text-primary"
+                      }`}
+                    >
+                      <Check className="h-3.5 w-3.5" />
+                    </button>
+                    {!demoMode && (
+                      <ReportButton
+                        type="pc_inadapte"
+                        medicamentNom={med.nom}
+                        pcNom={rec.produit}
+                        pcCategorie={rec.categorie}
+                        context={{ priorite: rec.priorite, pathologie: rec.pathologie }}
+                      />
+                    )}
+                  </div>
+                );
+              })}
             </div>
-        }
+          )}
         </div>
       )}
 
