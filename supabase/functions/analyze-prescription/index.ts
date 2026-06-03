@@ -1588,7 +1588,9 @@ serve(async (req) => {
           matched: true,
           clinical_kb: true,
           pathologies: clinical.pathologies || [],
+          curated_pcs: clinical.curated_pcs || [],
         };
+
       } else if (dbMed?.matched) {
         enrichedMeds[i] = { ...dbMed, clinical_kb: false };
         if (!sources.includes("Base Asclion (données structurées)")) sources.push("Base Asclion (données structurées)");
