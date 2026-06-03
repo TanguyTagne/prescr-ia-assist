@@ -407,6 +407,7 @@ async function clinicalLookup(
       .map((r: any) => (r?.pc ? { ...r.pc, priorite: Math.max(r.score || 0, 90) } : null))
       .filter(Boolean);
 
+  let curatedPcsOut: any[] = [];
   if (pathologieIds.length > 0) {
     const [conseilsRes, produitsRes, protocolesRes, directMedPcsRes, curatedMpvRes] = await Promise.all([
       supabase
@@ -436,6 +437,7 @@ async function clinicalLookup(
     ]);
     conseils = conseilsRes.data || [];
     const curatedPcs = mapCuratedMpv((curatedMpvRes.data || []) as any[]);
+    curatedPcsOut = curatedPcs;
     const directPcs = (directMedPcsRes.data || []).map((p: any) => ({ ...p, priorite: Math.max(p.priorite || 0, 85) }));
     const pathologyPcs = produitsRes.data || [];
     const seen = new Set<string>();
@@ -451,6 +453,7 @@ async function clinicalLookup(
     // No pathology — still serve curated mpv + direct medication-bound PCs
     const [directMedPcsRes, curatedMpvRes] = await Promise.all([directMedPcsPromise, curatedMpvPromise]);
     const curatedPcs = mapCuratedMpv((curatedMpvRes.data || []) as any[]);
+    curatedPcsOut = curatedPcs;
     const directPcs = (directMedPcsRes.data || []).map((p: any) => ({ ...p, priorite: Math.max(p.priorite || 0, 85) }));
     const seen = new Set<string>();
     produits = [...curatedPcs, ...directPcs].filter((p: any) => {
@@ -486,8 +489,10 @@ async function clinicalLookup(
     conseils,
     produits,
     protocoles,
+    curated_pcs: curatedPcsOut,
   };
 }
+
 
 // ====== LATENT NEED ENGINE ======
 
@@ -1583,7 +1588,9 @@ serve(async (req) => {
           matched: true,
           clinical_kb: true,
           pathologies: clinical.pathologies || [],
+          curated_pcs: clinical.curated_pcs || [],
         };
+
       } else if (dbMed?.matched) {
         enrichedMeds[i] = { ...dbMed, clinical_kb: false };
         if (!sources.includes("Base Asclion (données structurées)")) sources.push("Base Asclion (données structurées)");
@@ -1785,8 +1792,27 @@ serve(async (req) => {
       // See ambiguousFlags computation above.
       const singleMedAmbiguous = ambiguousFlags[i];
 
+      // ====== CURATED MPV PRIORITY ======
+      // If this medication has explicit curated medicament_pc_valide links,
+      // they are domain-correct (ear, eye, nose…) and OVERRIDE any
+      // pathology-derived recommendations. Never mix with unrelated pathology PCs.
+      const curatedForMed = (med.curated_pcs || []) as any[];
+      if (curatedForMed.length > 0) {
+        const mappedCurated = curatedForMed
+          .filter((p: any) => p && p.produit)
+          .map((p: any) => ({
+            produit: p.produit,
+            categorie: p.categorie || "Complément",
+            description: p.description || "",
+            priorite: Math.max(p.priorite || 0, 95),
+            pathologie: "",
+            phrase_conseil: p.phrase_conseil || undefined,
+          }));
+        recs.push(...pickDistinctProducts(mappedCurated, MAX_RECOMMENDATIONS_PER_MED));
+      }
 
       if (med.clinical_kb) {
+
         hasStructuredData = true;
         if (!singleMedAmbiguous) {
           const pathNames = (med.pathologies || []).map((p: any) => p.nom_pathologie);
