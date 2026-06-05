@@ -402,13 +402,13 @@ async function clinicalLookup(
         .limit(20)
     : Promise.resolve({ data: [] });
 
-  // NEW: highest-priority curated source — medicament_curated_pcs (pc_1/pc_2/pc_3 per med)
-  // Imported from the CSV "asclion-medicaments-avec-pcs" (2026-06).
+  // Highest-priority curated source — medicament_curated_pcs (pc_1/pc_2 per med)
+  // Imported from the corrected CSV "asclion-medicaments-avec-pcs-corrige" (2026-06).
   // These OVERRIDE everything else when present.
   const curatedTopPromise = medicament?.id
     ? supabase
         .from("medicament_curated_pcs")
-        .select("pc_1, pc_2, pc_3")
+        .select("pc_1, pc_2")
         .eq("medicament_id", medicament.id)
         .maybeSingle()
     : Promise.resolve({ data: null });
@@ -418,10 +418,10 @@ async function clinicalLookup(
       .map((r: any) => (r?.pc ? { ...r.pc, priorite: Math.max(r.score || 0, 90) } : null))
       .filter(Boolean);
 
-  // Build top-curated PC objects from pc_1/pc_2/pc_3 names, enriched from produits_complementaires when matchable.
-  const buildCuratedTop = async (row: { pc_1?: string | null; pc_2?: string | null; pc_3?: string | null } | null) => {
+  // Build top-curated PC objects from pc_1/pc_2 names, enriched from produits_complementaires when matchable.
+  const buildCuratedTop = async (row: { pc_1?: string | null; pc_2?: string | null } | null) => {
     if (!row) return [];
-    const names = [row.pc_1, row.pc_2, row.pc_3].filter((s): s is string => !!s && s.trim().length > 0);
+    const names = [row.pc_1, row.pc_2].filter((s): s is string => !!s && s.trim().length > 0).slice(0, 2);
     if (names.length === 0) return [];
 
     // Normalize: lowercase, strip parentheticals "(...)", collapse spaces
@@ -461,11 +461,11 @@ async function clinicalLookup(
         produit: name,
         categorie: enrich?.categorie || "Conseil associé",
         description: enrich?.description || "",
-        priorite: 100 - idx, // 100, 99, 98 → always above mpv (≤95) and pathology PCs
+        priorite: 100 - idx, // 100, 99 → always above mpv (≤95) and pathology PCs
         phrase_conseil: enrich?.phrase_conseil || undefined,
         type_produit: enrich?.type_produit || undefined,
         pathologies: enrich?.pathologies || null,
-        source_curated: "csv_top3",
+        source_curated: "asclion_csv_corrige",
       };
     });
   };
