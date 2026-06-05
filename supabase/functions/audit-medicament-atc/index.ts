@@ -20,7 +20,7 @@ const DEFAULT_MODEL = "google/gemini-2.5-flash";
 
 interface Med { id: string; nom_commercial: string; atc_code: string; class_name?: string | null; }
 
-async function classifyBatch(meds: Med[]): Promise<any[] | null> {
+async function classifyBatch(meds: Med[], model: string = DEFAULT_MODEL): Promise<any[] | null> {
   const sys = `Tu es pharmacologue clinique. Pour chaque médicament fourni (nom commercial + classe ATC actuelle),
 tu dois dire si la classe ATC est COHÉRENTE avec le nom commercial/la molécule.
 
@@ -39,7 +39,7 @@ Règles :
       method: "POST",
       headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: MODEL,
+        model,
         messages: [{ role: "system", content: sys }, { role: "user", content: user }],
         response_format: { type: "json_object" },
       }),
