@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Play, RefreshCw, Check } from "lucide-react";
+import { Loader2, Play, RefreshCw, Check, Download } from "lucide-react";
 import { toast } from "sonner";
 
 const AtcAuditTab = () => {
@@ -94,6 +94,29 @@ const AtcAuditTab = () => {
     await load();
   };
 
+  const exportCsv = async () => {
+    const { data } = await supabase
+      .from("medicament_atc_audit" as any)
+      .select("nom_commercial,current_atc,current_class_name,suggested_atc,suggested_class_name,confidence,reasoning,reviewed,created_at")
+      .eq("mismatch", true)
+      .order("confidence", { ascending: false })
+      .limit(10000);
+    const rows = (data as any[]) || [];
+    if (rows.length === 0) return toast.error("Aucune anomalie à exporter");
+    const headers = ["Médicament","ATC actuel","Classe actuelle","ATC suggéré","Classe suggérée","Confiance","Raison","Révisé","Date"];
+    const csv = [headers, ...rows.map(r => [r.nom_commercial,r.current_atc,r.current_class_name,r.suggested_atc,r.suggested_class_name,r.confidence,r.reasoning,r.reviewed?"oui":"non",r.created_at])]
+      .map(r => r.map((c: any) => `"${String(c ?? "").replace(/"/g,'""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `asclion-atc-anomalies-${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success(`${rows.length} anomalies exportées`);
+  };
+
+
   return (
     <div className="space-y-4">
       <Card>
@@ -115,9 +138,13 @@ const AtcAuditTab = () => {
             <RefreshCw className="h-3 w-3" />Recommencer du début
           </Button>
           <Button onClick={load} variant="ghost" size="sm">Rafraîchir</Button>
+          <Button onClick={exportCsv} variant="outline" size="sm" className="gap-1.5">
+            <Download className="h-3 w-3" />Exporter CSV
+          </Button>
           <Button onClick={applyAllFixes} size="sm" variant="default" className="gap-1.5 ml-auto bg-emerald-600 hover:bg-emerald-700">
             <Check className="h-3 w-3" />
             Appliquer corrections high confidence ({findings.filter((f) => f.suggested_atc && f.confidence === "high").length})
+
           </Button>
         </CardContent>
       </Card>

@@ -78,32 +78,46 @@ Deno.serve(async (req) => {
     const onlyMissing = body.only_missing !== false;
 
     // Pull meds with ATC
-    let query = supabase
-      .from("medicaments")
-      .select("id, nom_commercial, atc_code, classe_atc:atc_code(nom_classe)")
-      .not("atc_code", "is", null)
-      .order("nom_commercial")
-      .range(offset, offset + batchSize - 1);
-
-    const { data: meds, error: medsErr } = await query;
-    if (medsErr) throw medsErr;
-    if (!meds || meds.length === 0) {
-      return new Response(JSON.stringify({ done: true, processed: 0, offset }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    // Loop pages until we find unaudited meds (skips fully-audited ranges)
+    let cursor = offset;
+    let meds: any[] = [];
+    let toAudit: any[] = [];
+    let lastPageSize = 0;
+    let scanned = 0;
+    const MAX_SCAN = 5000;
+    const scanStart = Date.now();
+    while (scanned < MAX_SCAN) {
+      const { data: page, error: medsErr } = await supabase
+        .from("medicaments")
+        .select("id, nom_commercial, atc_code, classe_atc:atc_code(nom_classe)")
+        .not("atc_code", "is", null)
+        .order("nom_commercial")
+        .range(cursor, cursor + batchSize - 1);
+      if (medsErr) throw medsErr;
+      lastPageSize = page?.length || 0;
+      if (!page || page.length === 0) {
+        return new Response(JSON.stringify({ done: true, processed: 0, mismatches: 0, next_offset: cursor }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      meds = page;
+      if (onlyMissing) {
+        const { data: already } = await supabase
+          .from("medicament_atc_audit")
+          .select("medicament_id")
+          .in("medicament_id", page.map((m: any) => m.id));
+        const skip = new Set((already || []).map((a: any) => a.medicament_id));
+        toAudit = page.filter((m: any) => !skip.has(m.id));
+      } else {
+        toAudit = page;
+      }
+      if (toAudit.length > 0) break;
+      cursor += batchSize;
+      scanned += batchSize;
+      if (Date.now() - scanStart > 20_000) break;
     }
-
-    let toAudit = meds;
-    if (onlyMissing) {
-      const { data: already } = await supabase
-        .from("medicament_atc_audit")
-        .select("medicament_id")
-        .in("medicament_id", meds.map((m: any) => m.id));
-      const skip = new Set((already || []).map((a: any) => a.medicament_id));
-      toAudit = meds.filter((m: any) => !skip.has(m.id));
-    }
-
     if (toAudit.length === 0) {
-      return new Response(JSON.stringify({ processed: 0, next_offset: offset + batchSize, skipped: meds.length }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ processed: 0, mismatches: 0, next_offset: cursor + lastPageSize, skipped: scanned, done: lastPageSize < batchSize }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
+
 
     // Process in chunks of 25, sequentially for safer ATC verification.
     const CHUNK = 25;
@@ -160,14 +174,15 @@ Deno.serve(async (req) => {
       processedCount += wave.reduce((s, c) => s + c.length, 0);
     }
 
-    const nextOffset = stoppedEarly ? offset + processedCount : offset + batchSize;
+    const nextOffset = stoppedEarly ? cursor + processedCount : cursor + batchSize;
     return new Response(JSON.stringify({
       processed: processedCount,
       mismatches,
       next_offset: nextOffset,
       stopped_early: stoppedEarly,
-      done: !stoppedEarly && meds.length < batchSize,
+      done: !stoppedEarly && lastPageSize < batchSize,
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
 
   } catch (e) {
     console.error("audit-medicament-atc error", e);
