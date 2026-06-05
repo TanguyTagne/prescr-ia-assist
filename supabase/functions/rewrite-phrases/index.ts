@@ -6,20 +6,90 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const SYSTEM_PROMPT = `Tu es un expert en conseil officinal. Tu réécris des phrases conseil que le pharmacien dit au client pour lui proposer un produit complémentaire.
+const FORBIDDEN_WORDS = [
+  "médiateurs inflammatoires","pharmacocinétique","unguéal","adsorbe","biodisponibilité",
+  "neuromusculaire","microcirculation","kératine","cytokines","prostaglandines","COX",
+  "récepteurs","métabolisme","synthèse","excitabilité","stase veineuse","dysbiose",
+  "microflore","microbiome","adhésion bactérienne","muqueuse","tensionnel","diarrhéique",
+  "comédogène","hypertension artérielle","œdème","acidité gastrique","hypothyroïdie",
+  "œsophagienne","épithéliale","neurotransmetteurs","vasculaire","hémodynamique",
+  "catabolisme","anabolisme",
+];
 
-RÈGLES STRICTES :
-- 15-25 mots maximum, UNE seule phrase
-- Structure : [effet ressenti / besoin du patient] + [ce que le produit apporte concrètement]
-- Ton : pharmacien bienveillant qui conseille naturellement, PAS qui prescrit
-- Vouvoiement uniquement
-- INTERDIT (ne JAMAIS utiliser ces mots, même partiellement) : "médiateurs inflammatoires", "pharmacocinétique", "unguéal", "adsorbe", "biodisponibilité", "neuromusculaire", "microcirculation", "kératine", "cytokines", "prostaglandines", "COX", "récepteurs", "métabolisme", "synthèse", "excitabilité", "stase veineuse", "dysbiose", "microflore", "microbiome", "adhésion bactérienne", "muqueuse", "tensionnel", "diarrhéique", "comédogène", "hypertension artérielle", "œdème", "acidité gastrique", "hypothyroïdie", "œsophagienne", "épithéliale", "neurotransmetteurs", "vasculaire", "hémodynamique", "catabolisme", "anabolisme"
-- AUTORISÉ : "flore intestinale", "vitamine", "magnésium", "articulations", "circulation", "défenses naturelles", "énergie", "sommeil", "digestion", "peau", "cheveux", "confort", "bien-être", "tension", "transit"
-- Ne commence JAMAIS par le nom du produit
-- Utilise des mots simples que tout le monde comprend
-- La phrase doit donner envie d'acheter tout en restant crédible
+const SYSTEM_PROMPT = `Tu rédiges des micro-conseils ultra-courts pour un pharmacien (UI discrète).
 
-FORMAT : Retourne UNIQUEMENT un JSON array [{id, phrase}] sans markdown.`;
+FORMAT IMPÉRATIF :
+- **3 à 7 mots maximum**, **60 caractères max**
+- UNE phrase verbale, **bénéfice patient unique**, sans ponctuation finale
+- **Commence par un verbe d'action à la 3e personne** en minuscule
+- NE répète JAMAIS le nom du produit
+- Pas de majuscule initiale, pas de point final, pas de virgule
+
+VERBES PRÉFÉRÉS : apaise, calme, soulage, hydrate, protège, renforce, nourrit, désinfecte, facilite, complète, restaure, prévient, aide, accompagne, réduit, stimule
+
+EXEMPLES VALIDES :
+- "apaise les tensions"
+- "calme la diarrhée"
+- "désinfecte la gorge"
+- "soulage les douleurs articulaires"
+- "renforce les défenses naturelles"
+- "facilite la digestion"
+
+INTERDIT (mots techniques) : ${FORBIDDEN_WORDS.join(", ")}
+
+AUTORISÉ : flore intestinale, vitamine, magnésium, articulations, circulation, défenses naturelles, énergie, sommeil, digestion, peau, cheveux, confort, bien-être, tension, transit
+
+FORMAT RETOUR : UNIQUEMENT un JSON array [{"id":"...","phrase":"..."}] sans markdown.`;
+
+function validatePhrase(phrase: string, produit: string): { ok: boolean; reason?: string } {
+  if (!phrase) return { ok: false, reason: "empty" };
+  const trimmed = phrase.trim();
+  if (trimmed.length > 60) return { ok: false, reason: "too_long_chars" };
+  const wordCount = trimmed.split(/\s+/).length;
+  if (wordCount > 7) return { ok: false, reason: "too_long_words" };
+  if (wordCount < 2) return { ok: false, reason: "too_short" };
+  const lower = trimmed.toLowerCase();
+  const prodLower = (produit || "").toLowerCase().split(/\s+/)[0];
+  if (prodLower && prodLower.length > 3 && lower.includes(prodLower)) {
+    return { ok: false, reason: "contains_product_name" };
+  }
+  for (const w of FORBIDDEN_WORDS) {
+    if (lower.includes(w.toLowerCase())) return { ok: false, reason: `forbidden:${w}` };
+  }
+  return { ok: true };
+}
+
+async function callAI(LOVABLE_API_KEY: string, promptItems: any[]): Promise<{ id: string; phrase: string }[]> {
+  const prompt = `Génère un micro-conseil pour chacun de ces ${promptItems.length} produits. Retourne un JSON array [{"id":"...","phrase":"..."}].\n\n${JSON.stringify(promptItems, null, 0)}`;
+
+  const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${LOVABLE_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "google/gemini-2.5-flash",
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: prompt },
+      ],
+    }),
+  });
+
+  if (!aiResp.ok) {
+    const t = await aiResp.text();
+    throw new Error(`AI error ${aiResp.status}: ${t}`);
+  }
+
+  const aiData = await aiResp.json();
+  let content = aiData.choices?.[0]?.message?.content || "";
+  content = content.trim();
+  if (content.startsWith("```")) {
+    content = content.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+  }
+  return JSON.parse(content);
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -57,12 +127,11 @@ serve(async (req) => {
     }
   }
 
-
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
   );
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
 
   try {
     const { offset = 0, batch_size = 40, ids } = await req.json();
@@ -77,9 +146,7 @@ serve(async (req) => {
       query = query.order("id").range(offset, offset + batch_size - 1);
     }
 
-    // Fetch batch
     const { data: items, error: fetchErr } = await query;
-
     if (fetchErr) throw new Error(`Fetch error: ${fetchErr.message}`);
     if (!items || items.length === 0) {
       return new Response(JSON.stringify({ done: true, updated: 0, offset }), {
@@ -87,52 +154,46 @@ serve(async (req) => {
       });
     }
 
-    // Build prompt
     const promptItems = items.map((item: any) => ({
       id: item.id,
       produit: item.produit,
       pathologie: item.pathologies?.nom_pathologie || "inconnu",
-      phrase_actuelle: item.phrase_conseil || "",
     }));
 
-    const prompt = `Réécris ces ${promptItems.length} phrases conseil. Retourne un JSON array [{"id":"...","phrase":"..."}].\n\n${JSON.stringify(promptItems, null, 0)}`;
+    // First pass
+    let updates: { id: string; phrase: string }[] = await callAI(LOVABLE_API_KEY, promptItems);
+    const byId = new Map(items.map((i: any) => [i.id, i]));
 
-    // Call AI
-    const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: prompt },
-        ],
-      }),
-    });
-
-    if (!aiResp.ok) {
-      const t = await aiResp.text();
-      throw new Error(`AI error ${aiResp.status}: ${t}`);
+    // Validate + retry invalid ones once
+    const invalid: any[] = [];
+    const validUpdates: { id: string; phrase: string }[] = [];
+    for (const u of updates) {
+      const src: any = byId.get(u.id);
+      const phrase = (u.phrase || "").trim().replace(/[.;!?]+$/, "");
+      const check = validatePhrase(phrase, src?.produit || "");
+      if (check.ok) {
+        validUpdates.push({ id: u.id, phrase });
+      } else if (src) {
+        invalid.push({ id: src.id, produit: src.produit, pathologie: src.pathologies?.nom_pathologie || "inconnu" });
+      }
     }
 
-    const aiData = await aiResp.json();
-    let content = aiData.choices?.[0]?.message?.content || "";
-    
-    // Clean markdown fences
-    content = content.trim();
-    if (content.startsWith("```")) {
-      content = content.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+    if (invalid.length > 0) {
+      try {
+        const retry = await callAI(LOVABLE_API_KEY, invalid);
+        for (const u of retry) {
+          const src: any = byId.get(u.id);
+          const phrase = (u.phrase || "").trim().replace(/[.;!?]+$/, "");
+          const check = validatePhrase(phrase, src?.produit || "");
+          if (check.ok) validUpdates.push({ id: u.id, phrase });
+        }
+      } catch (_) { /* ignore retry failure */ }
     }
-
-    const updates: { id: string; phrase: string }[] = JSON.parse(content);
 
     // Update DB
     let updated = 0;
     const errors: string[] = [];
-    for (const u of updates) {
+    for (const u of validUpdates) {
       const { error } = await supabase
         .from("produits_complementaires")
         .update({ phrase_conseil: u.phrase })
@@ -144,6 +205,7 @@ serve(async (req) => {
     return new Response(JSON.stringify({
       done: items.length < batch_size,
       updated,
+      rejected: items.length - updated,
       errors: errors.length,
       error_details: errors.slice(0, 3),
       next_offset: offset + batch_size,
