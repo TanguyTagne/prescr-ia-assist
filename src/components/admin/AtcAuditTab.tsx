@@ -76,6 +76,34 @@ const AtcAuditTab = () => {
     }
   };
 
+  const rerunUncertain = async () => {
+    setRerunning(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("audit-medicament-atc", {
+        body: { mode: "rerun_uncertain", batch_size: 60, offset: rerunOffset, model: "google/gemini-2.5-pro", confidences: ["low", "medium"] },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      const processed = Number(data?.processed ?? 0);
+      const mm = Number(data?.mismatches ?? 0);
+      const nextOff = Number.isFinite(Number(data?.next_offset)) ? Number(data.next_offset) : rerunOffset + 60;
+      if (processed === 0) {
+        toast.info("Plus de low/medium à ré-auditer");
+        setRerunOffset(0);
+      } else {
+        toast.success(`Ré-audit Pro : ${processed} méd., ${mm} anomalies${data?.stopped_early ? " (time budget)" : ""}`);
+        setRerunOffset(nextOff);
+      }
+      await load();
+    } catch (e: any) {
+      toast.error(e.message || "Erreur ré-audit");
+    } finally {
+      setRerunning(false);
+    }
+  };
+
+
+
 
   const applyFix = async (f: any) => {
     if (!f.suggested_atc) return toast.error("Pas de code ATC suggéré");
