@@ -12,7 +12,7 @@ const AtcAuditTab = () => {
   const [loading, setLoading] = useState(false);
   const [running, setRunning] = useState(false);
   const [offset, setOffset] = useState(0);
-  const [stats, setStats] = useState({ total: 0, mismatches: 0 });
+  const [stats, setStats] = useState({ total: 0, mismatches: 0, highFixable: 0 });
 
   const load = async () => {
     setLoading(true);
