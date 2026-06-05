@@ -351,7 +351,15 @@ const AtcAuditTab = () => {
                   <TableRow key={f.id}>
                     <TableCell className="font-medium">{f.nom_commercial}</TableCell>
                     <TableCell><Badge variant="destructive">{f.current_atc}</Badge><div className="text-xs text-muted-foreground">{f.current_class_name}</div></TableCell>
-                    <TableCell>{f.suggested_atc ? <Badge>{f.suggested_atc}</Badge> : <span className="text-muted-foreground text-xs">—</span>}<div className="text-xs text-muted-foreground">{f.suggested_class_name}</div></TableCell>
+                    <TableCell>
+                      <Input
+                        value={editedAtc[f.id] ?? f.suggested_atc ?? ""}
+                        onChange={(e) => setEditedAtc((prev) => ({ ...prev, [f.id]: e.target.value }))}
+                        placeholder="ATC suggéré"
+                        className="h-6 w-28 text-xs"
+                      />
+                      <div className="text-xs text-muted-foreground mt-0.5">{f.suggested_class_name}</div>
+                    </TableCell>
                     <TableCell><Badge variant={f.confidence === "high" ? "default" : f.confidence === "medium" ? "secondary" : "outline"}>{f.confidence}</Badge></TableCell>
                     <TableCell className="text-xs max-w-md">{f.reasoning}</TableCell>
                     <TableCell className="flex gap-1 justify-end items-center flex-wrap">
