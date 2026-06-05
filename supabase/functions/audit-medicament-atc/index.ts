@@ -1,0 +1,159 @@
+// Audit ATC <-> Médicament : pour chaque médicament avec un code ATC,
+// demande à Gemini si la classe ATC correspond bien au nom commercial.
+// Stocke les anomalies dans medicament_atc_audit.
+//
+// Usage : POST { batch_size?: number, offset?: number, only_missing?: boolean }
+//   - batch_size : nb de meds à analyser (défaut 50, max 200)
+//   - offset     : pour pagination
+//   - only_missing : ne traite que les meds pas encore audités (défaut true)
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
+const MODEL = "google/gemini-2.5-flash";
+
+interface Med { id: string; nom_commercial: string; atc_code: string; class_name?: string | null; }
+
+async function classifyBatch(meds: Med[]): Promise<any[] | null> {
+  const sys = `Tu es pharmacologue clinique. Pour chaque médicament fourni (nom commercial + classe ATC actuelle),
+tu dois dire si la classe ATC est COHÉRENTE avec le nom commercial/la molécule.
+
+Réponds STRICTEMENT en JSON :
+{"results":[{"id":"...","mismatch":true|false,"suggested_atc":"<code 5 chars ou null>","suggested_class":"<nom court>","confidence":"high|medium|low","reason":"<1 phrase>"}]}
+
+Règles :
+- mismatch=true seulement si la classe ATC actuelle est CLAIREMENT erronée (ex: Gelaspan=substitut plasmatique mais classé en G04 urologie)
+- Si tu n'es pas sûr (génériques, noms ambigus), mets mismatch=false, confidence=low
+- suggested_atc = code ATC niveau 5 correct, sinon null`;
+
+  const user = "Médicaments à auditer :\n" + meds.map((m) => `- id=${m.id} | nom="${m.nom_commercial}" | atc=${m.atc_code} (${m.class_name ?? "?"})`).join("\n");
+
+  try {
+    const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: MODEL,
+        messages: [{ role: "system", content: sys }, { role: "user", content: user }],
+        response_format: { type: "json_object" },
+      }),
+    });
+    if (!r.ok) {
+      console.error("[classifyBatch] HTTP", r.status, await r.text().then((t) => t.slice(0, 300)));
+      return null;
+    }
+    const j = await r.json();
+    const txt = j?.choices?.[0]?.message?.content ?? "";
+    const parsed = JSON.parse(txt);
+    return parsed.results || [];
+  } catch (e) {
+    console.error("[classifyBatch] error", e);
+    return null;
+  }
+}
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  try {
+    const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
+
+    // Auth admin
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader) return new Response(JSON.stringify({ error: "Non autorisé" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    const { data: { user } } = await supabase.auth.getUser(authHeader.replace("Bearer ", ""));
+    if (!user) return new Response(JSON.stringify({ error: "Non autorisé" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    const { data: isAdmin } = await supabase.rpc("has_role", { _user_id: user.id, _role: "admin" });
+    if (!isAdmin) return new Response(JSON.stringify({ error: "Admin requis" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+    const body = req.method === "POST" ? await req.json().catch(() => ({})) : {};
+    const batchSize = Math.min(Math.max(Number(body.batch_size) || 50, 10), 200);
+    const offset = Math.max(Number(body.offset) || 0, 0);
+    const onlyMissing = body.only_missing !== false;
+
+    // Pull meds with ATC
+    let query = supabase
+      .from("medicaments")
+      .select("id, nom_commercial, atc_code, classe_atc:atc_code(nom_classe)")
+      .not("atc_code", "is", null)
+      .order("nom_commercial")
+      .range(offset, offset + batchSize - 1);
+
+    const { data: meds, error: medsErr } = await query;
+    if (medsErr) throw medsErr;
+    if (!meds || meds.length === 0) {
+      return new Response(JSON.stringify({ done: true, processed: 0, offset }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    let toAudit = meds;
+    if (onlyMissing) {
+      const { data: already } = await supabase
+        .from("medicament_atc_audit")
+        .select("medicament_id")
+        .in("medicament_id", meds.map((m: any) => m.id));
+      const skip = new Set((already || []).map((a: any) => a.medicament_id));
+      toAudit = meds.filter((m: any) => !skip.has(m.id));
+    }
+
+    if (toAudit.length === 0) {
+      return new Response(JSON.stringify({ processed: 0, next_offset: offset + batchSize, skipped: meds.length }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // Process in chunks of 25 to keep prompts manageable
+    const CHUNK = 25;
+    const findings: any[] = [];
+    let mismatches = 0;
+
+    for (let i = 0; i < toAudit.length; i += CHUNK) {
+      const chunk = toAudit.slice(i, i + CHUNK).map((m: any) => ({
+        id: m.id,
+        nom_commercial: m.nom_commercial,
+        atc_code: m.atc_code,
+        class_name: m.classe_atc?.nom_classe || null,
+      }));
+      const results = await classifyBatch(chunk);
+      if (!results) continue;
+
+      const rows = results.map((r: any) => {
+        const med = chunk.find((c) => c.id === r.id);
+        if (!med) return null;
+        if (r.mismatch) mismatches++;
+        return {
+          medicament_id: med.id,
+          nom_commercial: med.nom_commercial,
+          current_atc: med.atc_code,
+          current_class_name: med.class_name,
+          suggested_atc: r.suggested_atc || null,
+          suggested_class_name: r.suggested_class || null,
+          mismatch: !!r.mismatch,
+          confidence: r.confidence || "low",
+          reasoning: r.reason || null,
+        };
+      }).filter(Boolean);
+
+      if (rows.length > 0) {
+        const { error: upErr } = await supabase
+          .from("medicament_atc_audit")
+          .upsert(rows, { onConflict: "medicament_id" });
+        if (upErr) console.error("upsert error", upErr);
+        findings.push(...rows);
+      }
+    }
+
+    return new Response(JSON.stringify({
+      processed: toAudit.length,
+      mismatches,
+      next_offset: offset + batchSize,
+      done: meds.length < batchSize,
+    }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  } catch (e) {
+    console.error("audit-medicament-atc error", e);
+    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : String(e) }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
+});
