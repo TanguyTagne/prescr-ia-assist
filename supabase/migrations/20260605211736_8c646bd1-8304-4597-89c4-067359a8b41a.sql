@@ -1,0 +1,1 @@
+ALTER TABLE public.medicament_curated_pcs DROP COLUMN IF EXISTS pc_3;
