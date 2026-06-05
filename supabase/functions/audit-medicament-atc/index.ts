@@ -108,7 +108,7 @@ Deno.serve(async (req) => {
       let stopped = false;
       const RERUN_BUDGET_MS = 90_000;
       for (let i = 0; i < items.length; i += CHUNK) {
-        if (Date.now() - start > 110_000) { stopped = true; break; }
+        if (Date.now() - start > RERUN_BUDGET_MS) { stopped = true; break; }
         const chunk = items.slice(i, i + CHUNK);
         const results = await classifyBatch(chunk, model);
         if (!results) continue;
