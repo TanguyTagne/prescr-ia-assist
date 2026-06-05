@@ -282,6 +282,56 @@ const AtcAuditTab = () => {
       </Card>
 
       <Card>
+        <CardHeader><CardTitle className="text-sm">Ajouter / corriger un code ATC manuellement</CardTitle></CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex gap-2">
+            <Input
+              value={manualSearch}
+              onChange={(e) => setManualSearch(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && searchMedicaments()}
+              placeholder="Rechercher un médicament (nom commercial)..."
+              className="h-8 text-sm"
+            />
+            <Button size="sm" onClick={searchMedicaments} disabled={manualSearching} className="gap-1.5">
+              {manualSearching ? <Loader2 className="h-3 w-3 animate-spin" /> : <Search className="h-3 w-3" />}
+              Rechercher
+            </Button>
+          </div>
+          {manualResults.length > 0 && (
+            <Table>
+              <TableHeader><TableRow>
+                <TableHead>Médicament</TableHead>
+                <TableHead>ATC actuel</TableHead>
+                <TableHead>Nouveau code ATC</TableHead>
+                <TableHead className="w-24 text-right">Action</TableHead>
+              </TableRow></TableHeader>
+              <TableBody>
+                {manualResults.map((m) => (
+                  <TableRow key={m.id}>
+                    <TableCell className="text-sm">{m.nom_commercial} <span className="text-xs text-muted-foreground">{m.dosage} {m.forme_galenique}</span></TableCell>
+                    <TableCell><Badge variant="outline">{m.atc_code || "—"}</Badge></TableCell>
+                    <TableCell>
+                      <Input
+                        value={manualCodes[m.id] ?? ""}
+                        onChange={(e) => setManualCodes((c) => ({ ...c, [m.id]: e.target.value }))}
+                        placeholder="ex: N02BE01"
+                        className="h-7 w-32 text-xs"
+                      />
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button size="sm" className="h-7 text-xs" onClick={() => applyManualAtc(m.id, manualCodes[m.id] ?? "")}>Appliquer</Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+
+
+      <Card>
         <CardHeader><CardTitle className="text-sm">Anomalies à valider ({findings.length})</CardTitle></CardHeader>
         <CardContent>
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (
