@@ -72,6 +72,27 @@ const AtcAuditTab = () => {
     load();
   };
 
+  const applyAllFixes = async () => {
+    const fixable = findings.filter((f) => f.suggested_atc);
+    if (fixable.length === 0) return toast.error("Aucune correction applicable");
+    if (!confirm(`Appliquer ${fixable.length} corrections ATC en lot ?`)) return;
+    setLoading(true);
+    let ok = 0, fail = 0;
+    for (const f of fixable) {
+      const { error } = await supabase
+        .from("medicaments")
+        .update({ atc_code: f.suggested_atc })
+        .eq("id", f.medicament_id);
+      if (error) { fail++; continue; }
+      await supabase.from("medicament_atc_audit" as any)
+        .update({ reviewed: true, reviewed_at: new Date().toISOString() })
+        .eq("id", f.id);
+      ok++;
+    }
+    toast.success(`${ok} corrigés${fail ? `, ${fail} échecs` : ""}`);
+    await load();
+  };
+
   return (
     <div className="space-y-4">
       <Card>
