@@ -31,7 +31,14 @@ const AtcAuditTab = () => {
     const { count: totalCount } = await supabase
       .from("medicament_atc_audit" as any)
       .select("*", { count: "exact", head: true });
-    setStats({ total: totalCount || 0, mismatches: mismatchCount || 0 });
+    const { count: highCount } = await supabase
+      .from("medicament_atc_audit" as any)
+      .select("*", { count: "exact", head: true })
+      .eq("mismatch", true)
+      .eq("reviewed", false)
+      .eq("confidence", "high")
+      .not("suggested_atc", "is", null);
+    setStats({ total: totalCount || 0, mismatches: mismatchCount || 0, highFixable: highCount || 0 });
     setLoading(false);
   };
 
