@@ -193,8 +193,8 @@ Deno.serve(async (req) => {
     }
 
 
-    // Process in chunks of 25, sequentially for safer ATC verification.
-    const CHUNK = 25;
+    // Process in small chunks so the function always returns before the platform idle timeout.
+    const CHUNK = 10;
     const CONCURRENCY = 1;
     const findings: any[] = [];
     let mismatches = 0;
@@ -238,11 +238,11 @@ Deno.serve(async (req) => {
     };
 
     const startTs = Date.now();
-    const TIME_BUDGET_MS = 90_000;
+    const TIME_BUDGET_MS = 70_000;
     let processedCount = 0;
     let stoppedEarly = false;
     for (let i = 0; i < chunks.length; i += CONCURRENCY) {
-      if (Date.now() - startTs > TIME_BUDGET_MS) { stoppedEarly = true; break; }
+      if (Date.now() - startTs > TIME_BUDGET_MS - AI_TIMEOUT_MS) { stoppedEarly = true; break; }
       const wave = chunks.slice(i, i + CONCURRENCY);
       await Promise.all(wave.map(processChunk));
       processedCount += wave.reduce((s, c) => s + c.length, 0);
