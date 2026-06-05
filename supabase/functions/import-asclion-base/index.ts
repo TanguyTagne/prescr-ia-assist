@@ -112,16 +112,19 @@ serve(async (req) => {
       const seen = new Set<string>();
       const meds: any[] = [];
       const pcs: any[] = [];
+      const atcByCode = new Map<string, string>();
       for (const r of slice) {
         const id = r["id"];
         if (!id || seen.has(id)) continue;
         seen.add(id);
         const age = ALLOWED_AGE.has(r["cible_age"]) ? r["cible_age"] : "tous";
+        const atcCode = (r["atc_code"] || "").trim();
+        if (atcCode) atcByCode.set(atcCode, r["classe_therapeutique"] || atcCode);
         meds.push({
           id,
           nom_commercial: r["nom_commercial"] || "?",
           cip_code: cleanCip(r["cip_code"]),
-          atc_code: r["atc_code"] || null,
+          atc_code: atcCode || null,
           laboratoire: r["laboratoire"] || null,
           forme_galenique: r["forme_galenique"] || null,
           dosage: r["dosage"] || null,
@@ -151,6 +154,16 @@ serve(async (req) => {
           if (cipSeen.has(m.cip_code)) m.cip_code = null;
           else cipSeen.add(m.cip_code);
         }
+      }
+
+      const atcRows = [...atcByCode.entries()].map(([atc_code, nom_classe]) => ({
+        atc_code,
+        nom_classe: nom_classe || atc_code,
+        niveau: Math.max(1, Math.min(5, atc_code.length)),
+      }));
+      for (const b of chunks(atcRows, BATCH)) {
+        const { error } = await supabase.from("classe_atc").upsert(b, { onConflict: "atc_code" });
+        if (error) throw error;
       }
 
       let medsIns = 0, medsErr = 0;
