@@ -20,7 +20,7 @@ export default function AsclionBaseImportTab() {
     if (!confirm(`⚠️ Cela va SUPPRIMER tous les médicaments + PCs curated. Continuer ?`)) return;
     setWiping(true);
     try {
-      const { data, error } = await supabase.functions.invoke("import-asclion-base?mode=wipe", { body: {} });
+      const { data, error } = await supabase.functions.invoke("import-asclion-base", { body: { mode: "wipe" } });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       push(`✓ Wipe terminé : ${data?.deleted ?? "?"} médicaments supprimés`);
@@ -42,8 +42,8 @@ export default function AsclionBaseImportTab() {
     try {
       for (let i = 0; i < 50; i++) {
         const { data, error } = await supabase.functions.invoke(
-          `import-asclion-base?mode=import&offset=${offset}&limit=${PAGE}`,
-          { body: {} },
+          "import-asclion-base",
+          { body: { mode: "import", offset, limit: PAGE } },
         );
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
