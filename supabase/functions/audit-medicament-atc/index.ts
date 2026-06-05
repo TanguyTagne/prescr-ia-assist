@@ -171,10 +171,11 @@ Deno.serve(async (req) => {
       processedCount += wave.reduce((s, c) => s + c.length, 0);
     }
 
-    const nextOffset = stoppedEarly ? cursor + processedCount : cursor + batchSize;
+    const nextOffset = stoppedEarly ? offset : cursor;
     return new Response(JSON.stringify({
       processed: processedCount,
       mismatches,
+      anomalies: mismatches,
       next_offset: nextOffset,
       stopped_early: stoppedEarly,
       done: !stoppedEarly && lastPageSize < batchSize,
