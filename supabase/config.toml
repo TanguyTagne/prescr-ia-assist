@@ -1,19 +1,4 @@
 project_id = "oknjfjplseopgymijnca"
 
-[functions.analyze-prescription]
-verify_jwt = false
-
-[functions.scanner-webhook]
-verify_jwt = false
-
-[functions.audit-coverage]
-verify_jwt = false
-
-[functions.track-demo-session]
-verify_jwt = false
-
-[functions.submit-demo-lead]
-verify_jwt = false
-
-[functions.track-link-click]
+[functions.peek-import-csv]
 verify_jwt = false
