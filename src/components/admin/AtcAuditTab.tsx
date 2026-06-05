@@ -16,6 +16,11 @@ const AtcAuditTab = () => {
   const [rerunOffset, setRerunOffset] = useState(0);
   const [offset, setOffset] = useState(0);
   const [stats, setStats] = useState({ total: 0, mismatches: 0, highFixable: 0, uncertain: 0 });
+  const [manualAtc, setManualAtc] = useState<Record<string, string>>({});
+  const [manualSearch, setManualSearch] = useState("");
+  const [manualResults, setManualResults] = useState<any[]>([]);
+  const [manualSearching, setManualSearching] = useState(false);
+  const [manualCodes, setManualCodes] = useState<Record<string, string>>({});
 
   const load = async () => {
     setLoading(true);
