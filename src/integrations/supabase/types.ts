@@ -3428,6 +3428,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      wipe_asclion_base: { Args: never; Returns: Json }
     }
     Enums: {
       app_role: "admin" | "preparateur" | "manager" | "group_manager"

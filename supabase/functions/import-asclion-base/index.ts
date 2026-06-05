@@ -91,9 +91,9 @@ serve(async (req) => {
   try {
     // ── WIPE ────────────────────────────────────────────────────────────
     if (mode === "wipe") {
-      const { error: delErr, count } = await supabase.from("medicaments").delete({ count: "exact" }).not("id", "is", null);
-      if (delErr) throw delErr;
-      return new Response(JSON.stringify({ ok: true, deleted: count }), { headers: { ...cors, "Content-Type": "application/json" } });
+      const { data, error: wipeErr } = await supabase.rpc("wipe_asclion_base");
+      if (wipeErr) throw wipeErr;
+      return new Response(JSON.stringify(data ?? { ok: true, deleted: 0 }), { headers: { ...cors, "Content-Type": "application/json" } });
     }
 
     // ── IMPORT ──────────────────────────────────────────────────────────

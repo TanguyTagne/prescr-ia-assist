@@ -8,8 +8,13 @@
  */
 const ALLOWED_ORIGINS = [
   "https://prescr-ia-assist.lovable.app",
+  "https://www.asclion.com",
+  "https://asclion.com",
+  "https://prescria.eu",
   // Lovable preview pattern — covers *.lovable.app subdomains
   /^https:\/\/[a-z0-9-]+\.lovable\.app$/,
+  // Lovable project preview pattern — covers *.lovableproject.com subdomains
+  /^https:\/\/[a-z0-9-]+\.lovableproject\.com$/,
   // Local development
   "http://localhost:5173",
   "http://localhost:8080",
