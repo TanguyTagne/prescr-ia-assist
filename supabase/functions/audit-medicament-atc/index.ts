@@ -137,7 +137,7 @@ Deno.serve(async (req) => {
             confidence: r.confidence || "low",
             reasoning: `[${model}] ${r.reason || ""}`,
           };
-        }).filter(Boolean);
+        }).filter((row): row is NonNullable<typeof row> => row !== null);
         if (rows.length > 0) {
           const { error: upErr } = await supabase.from("medicament_atc_audit").upsert(rows, { onConflict: "medicament_id" });
           if (upErr) console.error("rerun upsert", upErr);
@@ -227,7 +227,7 @@ Deno.serve(async (req) => {
           confidence: r.confidence || "low",
           reasoning: r.reason || null,
         };
-      }).filter(Boolean);
+      }).filter((row): row is NonNullable<typeof row> => row !== null);
       if (rows.length > 0) {
         const { error: upErr } = await supabase
           .from("medicament_atc_audit")
