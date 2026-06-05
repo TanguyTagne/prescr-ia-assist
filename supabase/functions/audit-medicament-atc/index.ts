@@ -228,7 +228,7 @@ Deno.serve(async (req) => {
     };
 
     const startTs = Date.now();
-    const TIME_BUDGET_MS = 110_000;
+    const TIME_BUDGET_MS = 90_000;
     let processedCount = 0;
     let stoppedEarly = false;
     for (let i = 0; i < chunks.length; i += CONCURRENCY) {
