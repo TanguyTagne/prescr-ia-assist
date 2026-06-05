@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Loader2, PlayCircle, RefreshCw } from "lucide-react";
+import { Loader2, PlayCircle, RefreshCw, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 
 interface Run {
@@ -83,6 +83,31 @@ export default function AuditPcTab() {
             </Button>
           ))}
           <Button size="sm" variant="ghost" onClick={load}><RefreshCw className="h-3.5 w-3.5" /></Button>
+        </div>
+      </Card>
+
+      <Card className="p-4 space-y-3">
+        <h3 className="font-semibold">Régénération phrases conseil</h3>
+        <p className="text-sm text-muted-foreground">
+          Régénère les phrases conseil au nouveau format ultra-court (3-7 mots, bénéfice patient).
+          Opération longue : ~245 appels pour ~4 900 lignes.
+        </p>
+        <div className="flex gap-2 flex-wrap">
+          <Button size="sm" variant="outline" onClick={async () => {
+            setBusy("phrases_test");
+            try {
+              const { data, error } = await supabase.functions.invoke("rewrite-phrases", { body: { offset: 0, batch_size: 20 } });
+              if (error) throw error;
+              toast.success(`Test OK : ${data.updated} phrases régénérées / ${data.fetched} testées`);
+            } catch (e: any) {
+              toast.error(e?.message ?? "Erreur");
+            } finally {
+              setBusy(null);
+            }
+          }} disabled={!!busy}>
+            {busy === "phrases_test" ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <MessageSquare className="h-3.5 w-3.5 mr-1" />}
+            Tester 20 lignes
+          </Button>
         </div>
       </Card>
 
