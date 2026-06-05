@@ -82,6 +82,7 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
     proposedNamesMapRef.current = new Map();
     autoDetectedEansRef.current = new Set();
 
+    const allProductNames = result.medicaments.flatMap((m) => m.recommendations || []).map((r) => r.produit);
     if (demoMode || allProductNames.length === 0) return;
 
     // ── Construction des index de matching ───────────────────────────────
