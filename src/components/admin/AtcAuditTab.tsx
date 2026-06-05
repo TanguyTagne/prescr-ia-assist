@@ -41,11 +41,11 @@ const AtcAuditTab = () => {
     setRunning(true);
     try {
       const { data, error } = await supabase.functions.invoke("audit-medicament-atc", {
-        body: { batch_size: 50, offset, only_missing: true },
+        body: { batch_size: 500, offset, only_missing: true },
       });
       if (error) throw error;
       toast.success(`Lot traité : ${data.processed} méd. analysés, ${data.mismatches} anomalies détectées`);
-      setOffset(data.next_offset || offset + 50);
+      setOffset(data.next_offset || offset + 500);
       await load();
     } catch (e: any) {
       toast.error(e.message || "Erreur");
