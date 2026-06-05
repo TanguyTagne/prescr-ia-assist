@@ -1,0 +1,1 @@
+UPDATE public.produits_complementaires SET phrase_conseil = 'répare la paroi digestive' WHERE id = '4957ea33-0f64-41cc-abb6-29a380cab81b';
