@@ -86,7 +86,7 @@ const AtcAuditTab = () => {
       if (data?.error) throw new Error(data.error);
       const processed = Number(data?.processed ?? 0);
       const mm = Number(data?.mismatches ?? 0);
-      const nextOff = Number.isFinite(Number(data?.next_offset)) ? Number(data.next_offset) : rerunOffset + 60;
+      const nextOff = Number.isFinite(Number(data?.next_offset)) ? Number(data.next_offset) : rerunOffset + 24;
       if (processed === 0) {
         toast.info("Plus de low/medium à ré-auditer");
         setRerunOffset(0);
