@@ -101,13 +101,14 @@ Deno.serve(async (req) => {
       if (items.length === 0) {
         return new Response(JSON.stringify({ processed: 0, mismatches: 0, anomalies: 0, next_offset: offset, done: true, mode }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-      const CHUNK = 15;
+      const CHUNK = 8;
       let mm = 0;
       let processed = 0;
       const start = Date.now();
       let stopped = false;
+      const RERUN_BUDGET_MS = 90_000;
       for (let i = 0; i < items.length; i += CHUNK) {
-        if (Date.now() - start > 110_000) { stopped = true; break; }
+        if (Date.now() - start > RERUN_BUDGET_MS) { stopped = true; break; }
         const chunk = items.slice(i, i + CHUNK);
         const results = await classifyBatch(chunk, model);
         if (!results) continue;
@@ -227,7 +228,7 @@ Deno.serve(async (req) => {
     };
 
     const startTs = Date.now();
-    const TIME_BUDGET_MS = 110_000;
+    const TIME_BUDGET_MS = 90_000;
     let processedCount = 0;
     let stoppedEarly = false;
     for (let i = 0; i < chunks.length; i += CONCURRENCY) {
