@@ -199,7 +199,7 @@ Deno.serve(async (req) => {
     }
 
     const processChunk = async (chunk: any[]) => {
-      const results = await classifyBatch(chunk);
+      const results = await classifyBatch(chunk, model);
       if (!results) return;
       const rows = results.map((r: any) => {
         const med = chunk.find((c) => c.id === r.id);
