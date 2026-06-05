@@ -41,11 +41,11 @@ const AtcAuditTab = () => {
     setRunning(true);
     try {
       const { data, error } = await supabase.functions.invoke("audit-medicament-atc", {
-        body: { batch_size: 200, offset, only_missing: true },
+        body: { batch_size: 100, offset, only_missing: true },
       });
       if (error) throw error;
       toast.success(`Lot : ${data.processed} méd., ${data.mismatches} anomalies${data.stopped_early ? " (time budget)" : ""}`);
-      setOffset(data.next_offset || offset + 200);
+      setOffset(data.next_offset || offset + 100);
       await load();
     } catch (e: any) {
       toast.error(e.message || "Erreur");
@@ -109,7 +109,7 @@ const AtcAuditTab = () => {
         <CardContent className="flex gap-2 flex-wrap">
           <Button onClick={runBatch} disabled={running} size="sm" className="gap-1.5">
             {running ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3" />}
-            Lancer un lot (500 méd, offset {offset})
+            Lancer un lot (100 méd, offset {offset})
           </Button>
           <Button onClick={() => { setOffset(0); load(); }} variant="outline" size="sm" className="gap-1.5">
             <RefreshCw className="h-3 w-3" />Recommencer du début
