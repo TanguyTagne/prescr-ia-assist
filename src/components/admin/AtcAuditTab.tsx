@@ -40,7 +40,12 @@ const AtcAuditTab = () => {
       .eq("reviewed", false)
       .eq("confidence", "high")
       .not("suggested_atc", "is", null);
-    setStats({ total: totalCount || 0, mismatches: mismatchCount || 0, highFixable: highCount || 0 });
+    const { count: uncertainCount } = await supabase
+      .from("medicament_atc_audit" as any)
+      .select("*", { count: "exact", head: true })
+      .in("confidence", ["low", "medium"])
+      .eq("reviewed", false);
+    setStats({ total: totalCount || 0, mismatches: mismatchCount || 0, highFixable: highCount || 0, uncertain: uncertainCount || 0 });
     setLoading(false);
   };
 
