@@ -149,17 +149,26 @@ Deno.serve(async (req) => {
       }
     };
 
+    const startTs = Date.now();
+    const TIME_BUDGET_MS = 110_000;
+    let processedCount = 0;
+    let stoppedEarly = false;
     for (let i = 0; i < chunks.length; i += CONCURRENCY) {
-      await Promise.all(chunks.slice(i, i + CONCURRENCY).map(processChunk));
+      if (Date.now() - startTs > TIME_BUDGET_MS) { stoppedEarly = true; break; }
+      const wave = chunks.slice(i, i + CONCURRENCY);
+      await Promise.all(wave.map(processChunk));
+      processedCount += wave.reduce((s, c) => s + c.length, 0);
     }
 
-
+    const nextOffset = stoppedEarly ? offset + processedCount : offset + batchSize;
     return new Response(JSON.stringify({
-      processed: toAudit.length,
+      processed: processedCount,
       mismatches,
-      next_offset: offset + batchSize,
-      done: meds.length < batchSize,
+      next_offset: nextOffset,
+      stopped_early: stoppedEarly,
+      done: !stoppedEarly && meds.length < batchSize,
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
   } catch (e) {
     console.error("audit-medicament-atc error", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : String(e) }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
