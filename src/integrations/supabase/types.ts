@@ -986,7 +986,6 @@ export type Database = {
           medicament_id: string
           pc_1: string | null
           pc_2: string | null
-          pc_3: string | null
           source: string
           updated_at: string
         }
@@ -995,7 +994,6 @@ export type Database = {
           medicament_id: string
           pc_1?: string | null
           pc_2?: string | null
-          pc_3?: string | null
           source?: string
           updated_at?: string
         }
@@ -1004,7 +1002,6 @@ export type Database = {
           medicament_id?: string
           pc_1?: string | null
           pc_2?: string | null
-          pc_3?: string | null
           source?: string
           updated_at?: string
         }
