@@ -2149,11 +2149,14 @@ serve(async (req) => {
       const finalRecs = pickDistinctProducts(filteredRecs, maxPCPerMed);
 
 
-      // Generate phrase_conseil for each PC: [context/problem] + [simple explanation] + [patient benefit]
-      // Also regenerate when the stored phrase names a different drug (cross-contamination guard).
+      // Use only curated short DB phrase_conseil (3-7 words). If missing or wrong-drug, show nothing.
+      // Long auto-generated phrases are intentionally disabled — we'll curate them progressively.
+      const MAX_WORDS_HINT = 9;
       for (const r of finalRecs) {
-        if (!r.phrase_conseil || phraseIsForWrongMed(r.phrase_conseil, med)) {
-          r.phrase_conseil = generatePhraseConseil(r, med);
+        const p = (r.phrase_conseil || "").trim();
+        const wc = p ? p.split(/\s+/).length : 0;
+        if (!p || wc > MAX_WORDS_HINT || phraseIsForWrongMed(p, med)) {
+          r.phrase_conseil = null;
         }
         allProposedPCs.push(normalizeText(r.produit));
       }
