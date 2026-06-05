@@ -138,9 +138,13 @@ const AtcAuditTab = () => {
             <RefreshCw className="h-3 w-3" />Recommencer du début
           </Button>
           <Button onClick={load} variant="ghost" size="sm">Rafraîchir</Button>
+          <Button onClick={exportCsv} variant="outline" size="sm" className="gap-1.5">
+            <Download className="h-3 w-3" />Exporter CSV
+          </Button>
           <Button onClick={applyAllFixes} size="sm" variant="default" className="gap-1.5 ml-auto bg-emerald-600 hover:bg-emerald-700">
             <Check className="h-3 w-3" />
             Appliquer corrections high confidence ({findings.filter((f) => f.suggested_atc && f.confidence === "high").length})
+
           </Button>
         </CardContent>
       </Card>
