@@ -26,6 +26,7 @@ import TrackingLinksTab from "@/components/admin/TrackingLinksTab";
 import SignalementsTab from "@/components/admin/SignalementsTab";
 import AuditPcTab from "@/components/admin/AuditPcTab";
 import AtcAuditTab from "@/components/admin/AtcAuditTab";
+import AsclionBaseImportTab from "@/components/admin/AsclionBaseImportTab";
 import AcceptedPcsTab from "@/components/admin/AcceptedPcsTab";
 import HardwareDiagnosticTab from "@/components/admin/HardwareDiagnosticTab";
 import RemoteScannerDiagnosticTab from "@/components/admin/RemoteScannerDiagnosticTab";
@@ -221,6 +222,10 @@ const Admin = () => {
             <PackageSearch className="h-3.5 w-3.5" />
             Audit ATC ↔ Médicament
           </Button>
+          <Button variant={tab === "asclion-base" ? "default" : "outline"} size="sm" onClick={() => setTab("asclion-base")} className="gap-1.5 border-red-300 text-red-700 hover:bg-red-50">
+            <PackageSearch className="h-3.5 w-3.5" />
+            Import base Asclion (2 PCs)
+          </Button>
           <Button variant={tab === "roi-manque-a-gagner" ? "default" : "outline"} size="sm" onClick={() => setTab("roi-manque-a-gagner")} className="gap-1.5 border-emerald-300 text-emerald-700 hover:bg-emerald-50 data-[variant=default]:bg-emerald-600">
             <Trophy className="h-3.5 w-3.5" />
             ROI & Manque à gagner
@@ -260,6 +265,7 @@ const Admin = () => {
         {tab === "remote-diag" && <RemoteScannerDiagnosticTab />}
         {tab === "medicaments-manquants" && <MedicamentsManquantsTab />}
         {tab === "atc-audit" && <AtcAuditTab />}
+        {tab === "asclion-base" && <AsclionBaseImportTab />}
         {tab === "roi-manque-a-gagner" && <RoiManqueAGagnerTab />}
         {tab === "security" && <SecurityTab />}
       </div>
