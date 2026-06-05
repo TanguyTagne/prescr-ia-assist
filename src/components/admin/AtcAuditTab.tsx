@@ -124,6 +124,40 @@ const AtcAuditTab = () => {
     load();
   };
 
+  const applyManualAtc = async (medicamentId: string, atcCode: string, auditId?: string) => {
+    const code = (atcCode || "").trim().toUpperCase();
+    if (!code) return toast.error("Code ATC vide");
+    // Ensure code exists in classe_atc (FK)
+    const { data: existing } = await supabase.from("classe_atc").select("atc_code").eq("atc_code", code).maybeSingle();
+    if (!existing) {
+      const { error: insErr } = await supabase.from("classe_atc").upsert({ atc_code: code, nom_classe: code }, { onConflict: "atc_code" });
+      if (insErr) return toast.error(`Classe ATC : ${insErr.message}`);
+    }
+    const { error } = await supabase.from("medicaments").update({ atc_code: code }).eq("id", medicamentId);
+    if (error) return toast.error(error.message);
+    if (auditId) {
+      await supabase.from("medicament_atc_audit" as any)
+        .update({ reviewed: true, reviewed_at: new Date().toISOString() })
+        .eq("id", auditId);
+    }
+    toast.success(`ATC ${code} appliqué`);
+    load();
+  };
+
+  const searchMedicaments = async () => {
+    const q = manualSearch.trim();
+    if (q.length < 2) return toast.error("Min 2 caractères");
+    setManualSearching(true);
+    const { data, error } = await supabase
+      .from("medicaments")
+      .select("id, nom_commercial, dosage, forme_galenique, atc_code")
+      .ilike("nom_commercial", `%${q}%`)
+      .limit(30);
+    setManualSearching(false);
+    if (error) return toast.error(error.message);
+    setManualResults((data as any[]) || []);
+  };
+
   const markReviewed = async (id: string) => {
     await supabase.from("medicament_atc_audit" as any).update({ reviewed: true, reviewed_at: new Date().toISOString() }).eq("id", id);
     load();
