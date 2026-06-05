@@ -17,6 +17,7 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
 const DEFAULT_MODEL = "google/gemini-2.5-flash";
+const AI_TIMEOUT_MS = 35_000;
 
 interface Med { id: string; nom_commercial: string; atc_code: string; class_name?: string | null; }
 
@@ -33,15 +34,19 @@ Règles :
 - suggested_atc = code ATC niveau 5 correct, sinon null`;
 
   const user = "Médicaments à auditer :\n" + meds.map((m) => `- id=${m.id} | nom="${m.nom_commercial}" | atc=${m.atc_code} (${m.class_name ?? "?"})`).join("\n");
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), AI_TIMEOUT_MS);
 
   try {
     const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
+      signal: controller.signal,
       headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model,
         messages: [{ role: "system", content: sys }, { role: "user", content: user }],
         response_format: { type: "json_object" },
+        temperature: 0,
       }),
     });
     if (!r.ok) {
@@ -55,6 +60,8 @@ Règles :
   } catch (e) {
     console.error("[classifyBatch] error", e);
     return null;
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
@@ -73,11 +80,14 @@ Deno.serve(async (req) => {
     if (!isAdmin) return new Response(JSON.stringify({ error: "Admin requis" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
     const body = req.method === "POST" ? await req.json().catch(() => ({})) : {};
-    const batchSize = Math.min(Math.max(Number(body.batch_size) || 50, 10), 100);
+    const requestedBatchSize = Number(body.batch_size) || 50;
     const offset = Math.max(Number(body.offset) || 0, 0);
     const onlyMissing = body.only_missing !== false;
     const mode = String(body.mode || "scan"); // "scan" | "rerun_uncertain"
     const model = String(body.model || DEFAULT_MODEL);
+    const batchSize = mode === "rerun_uncertain"
+      ? Math.min(Math.max(requestedBatchSize, 1), 8)
+      : Math.min(Math.max(requestedBatchSize, 10), 100);
 
     // ===== MODE rerun_uncertain : ré-audite les low/medium avec un modèle plus puissant =====
     if (mode === "rerun_uncertain") {
@@ -101,14 +111,14 @@ Deno.serve(async (req) => {
       if (items.length === 0) {
         return new Response(JSON.stringify({ processed: 0, mismatches: 0, anomalies: 0, next_offset: offset, done: true, mode }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-      const CHUNK = 8;
+      const CHUNK = 2;
       let mm = 0;
       let processed = 0;
       const start = Date.now();
       let stopped = false;
-      const RERUN_BUDGET_MS = 90_000;
+      const RERUN_BUDGET_MS = 70_000;
       for (let i = 0; i < items.length; i += CHUNK) {
-        if (Date.now() - start > RERUN_BUDGET_MS) { stopped = true; break; }
+        if (Date.now() - start > RERUN_BUDGET_MS - AI_TIMEOUT_MS) { stopped = true; break; }
         const chunk = items.slice(i, i + CHUNK);
         const results = await classifyBatch(chunk, model);
         if (!results) continue;
@@ -127,7 +137,7 @@ Deno.serve(async (req) => {
             confidence: r.confidence || "low",
             reasoning: `[${model}] ${r.reason || ""}`,
           };
-        }).filter(Boolean);
+        }).filter((row): row is NonNullable<typeof row> => row !== null);
         if (rows.length > 0) {
           const { error: upErr } = await supabase.from("medicament_atc_audit").upsert(rows, { onConflict: "medicament_id" });
           if (upErr) console.error("rerun upsert", upErr);
@@ -183,8 +193,8 @@ Deno.serve(async (req) => {
     }
 
 
-    // Process in chunks of 25, sequentially for safer ATC verification.
-    const CHUNK = 25;
+    // Process in small chunks so the function always returns before the platform idle timeout.
+    const CHUNK = 10;
     const CONCURRENCY = 1;
     const findings: any[] = [];
     let mismatches = 0;
@@ -217,7 +227,7 @@ Deno.serve(async (req) => {
           confidence: r.confidence || "low",
           reasoning: r.reason || null,
         };
-      }).filter(Boolean);
+      }).filter((row): row is NonNullable<typeof row> => row !== null);
       if (rows.length > 0) {
         const { error: upErr } = await supabase
           .from("medicament_atc_audit")
@@ -228,11 +238,11 @@ Deno.serve(async (req) => {
     };
 
     const startTs = Date.now();
-    const TIME_BUDGET_MS = 90_000;
+    const TIME_BUDGET_MS = 70_000;
     let processedCount = 0;
     let stoppedEarly = false;
     for (let i = 0; i < chunks.length; i += CONCURRENCY) {
-      if (Date.now() - startTs > TIME_BUDGET_MS) { stoppedEarly = true; break; }
+      if (Date.now() - startTs > TIME_BUDGET_MS - AI_TIMEOUT_MS) { stoppedEarly = true; break; }
       const wave = chunks.slice(i, i + CONCURRENCY);
       await Promise.all(wave.map(processChunk));
       processedCount += wave.reduce((s, c) => s + c.length, 0);

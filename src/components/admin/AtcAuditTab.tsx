@@ -80,13 +80,13 @@ const AtcAuditTab = () => {
     setRerunning(true);
     try {
       const { data, error } = await supabase.functions.invoke("audit-medicament-atc", {
-        body: { mode: "rerun_uncertain", batch_size: 24, offset: rerunOffset, model: "google/gemini-2.5-pro", confidences: ["low", "medium"] },
+        body: { mode: "rerun_uncertain", batch_size: 8, offset: rerunOffset, model: "google/gemini-2.5-pro", confidences: ["low", "medium"] },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       const processed = Number(data?.processed ?? 0);
       const mm = Number(data?.mismatches ?? 0);
-      const nextOff = Number.isFinite(Number(data?.next_offset)) ? Number(data.next_offset) : rerunOffset + 24;
+      const nextOff = Number.isFinite(Number(data?.next_offset)) ? Number(data.next_offset) : rerunOffset + 8;
       if (processed === 0) {
         toast.info("Plus de low/medium à ré-auditer");
         setRerunOffset(0);
