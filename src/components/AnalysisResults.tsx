@@ -5,11 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { AnalysisResult } from "@/lib/prescriptionAnalyzer";
 import LegalDisclaimer from "./LegalDisclaimer";
-import LineageBadge from "./LineageBadge";
+
 import ReportButton from "./ReportButton";
 import { trackEvent } from "@/hooks/useAnalytics";
 import { usePcFeedback } from "@/hooks/usePcFeedback";
-import { useProductLineage } from "@/hooks/useProductLineage";
+
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/i18n/I18nProvider";
