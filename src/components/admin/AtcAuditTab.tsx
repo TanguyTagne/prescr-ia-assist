@@ -229,6 +229,10 @@ const AtcAuditTab = () => {
           <Button onClick={exportCsv} variant="outline" size="sm" className="gap-1.5">
             <Download className="h-3 w-3" />Exporter CSV
           </Button>
+          <Button onClick={rerunUncertain} disabled={rerunning} size="sm" variant="secondary" className="gap-1.5" title="Ré-audite les low/medium avec Gemini 2.5 Pro">
+            {rerunning ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+            Ré-auditer low/medium avec Pro ({stats.uncertain}) — offset {rerunOffset}
+          </Button>
           <Button onClick={applyAllFixes} size="sm" variant="default" className="gap-1.5 ml-auto bg-emerald-600 hover:bg-emerald-700">
             <Check className="h-3 w-3" />
             Appliquer corrections high confidence ({stats.highFixable})
