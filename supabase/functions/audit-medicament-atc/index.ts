@@ -105,21 +105,25 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ processed: 0, next_offset: offset + batchSize, skipped: meds.length }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Process in chunks of 25 to keep prompts manageable
+    // Process in chunks of 25, in parallel (cap concurrency to avoid rate limits)
     const CHUNK = 25;
+    const CONCURRENCY = 5;
     const findings: any[] = [];
     let mismatches = 0;
 
+    const chunks: any[][] = [];
     for (let i = 0; i < toAudit.length; i += CHUNK) {
-      const chunk = toAudit.slice(i, i + CHUNK).map((m: any) => ({
+      chunks.push(toAudit.slice(i, i + CHUNK).map((m: any) => ({
         id: m.id,
         nom_commercial: m.nom_commercial,
         atc_code: m.atc_code,
         class_name: m.classe_atc?.nom_classe || null,
-      }));
-      const results = await classifyBatch(chunk);
-      if (!results) continue;
+      })));
+    }
 
+    const processChunk = async (chunk: any[]) => {
+      const results = await classifyBatch(chunk);
+      if (!results) return;
       const rows = results.map((r: any) => {
         const med = chunk.find((c) => c.id === r.id);
         if (!med) return null;
@@ -136,7 +140,6 @@ Deno.serve(async (req) => {
           reasoning: r.reason || null,
         };
       }).filter(Boolean);
-
       if (rows.length > 0) {
         const { error: upErr } = await supabase
           .from("medicament_atc_audit")
@@ -144,7 +147,12 @@ Deno.serve(async (req) => {
         if (upErr) console.error("upsert error", upErr);
         findings.push(...rows);
       }
+    };
+
+    for (let i = 0; i < chunks.length; i += CONCURRENCY) {
+      await Promise.all(chunks.slice(i, i + CONCURRENCY).map(processChunk));
     }
+
 
     return new Response(JSON.stringify({
       processed: toAudit.length,
