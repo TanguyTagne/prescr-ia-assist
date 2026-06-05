@@ -80,11 +80,14 @@ Deno.serve(async (req) => {
     if (!isAdmin) return new Response(JSON.stringify({ error: "Admin requis" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
     const body = req.method === "POST" ? await req.json().catch(() => ({})) : {};
-    const batchSize = Math.min(Math.max(Number(body.batch_size) || 50, 10), 100);
+    const requestedBatchSize = Number(body.batch_size) || 50;
     const offset = Math.max(Number(body.offset) || 0, 0);
     const onlyMissing = body.only_missing !== false;
     const mode = String(body.mode || "scan"); // "scan" | "rerun_uncertain"
     const model = String(body.model || DEFAULT_MODEL);
+    const batchSize = mode === "rerun_uncertain"
+      ? Math.min(Math.max(requestedBatchSize, 1), 8)
+      : Math.min(Math.max(requestedBatchSize, 10), 100);
 
     // ===== MODE rerun_uncertain : ré-audite les low/medium avec un modèle plus puissant =====
     if (mode === "rerun_uncertain") {
@@ -108,14 +111,14 @@ Deno.serve(async (req) => {
       if (items.length === 0) {
         return new Response(JSON.stringify({ processed: 0, mismatches: 0, anomalies: 0, next_offset: offset, done: true, mode }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-      const CHUNK = 8;
+      const CHUNK = 2;
       let mm = 0;
       let processed = 0;
       const start = Date.now();
       let stopped = false;
-      const RERUN_BUDGET_MS = 90_000;
+      const RERUN_BUDGET_MS = 70_000;
       for (let i = 0; i < items.length; i += CHUNK) {
-        if (Date.now() - start > RERUN_BUDGET_MS) { stopped = true; break; }
+        if (Date.now() - start > RERUN_BUDGET_MS - AI_TIMEOUT_MS) { stopped = true; break; }
         const chunk = items.slice(i, i + CHUNK);
         const results = await classifyBatch(chunk, model);
         if (!results) continue;
