@@ -113,7 +113,7 @@ const AtcAuditTab = () => {
 
 
   const applyFix = async (f: any) => {
-    const atc = (editedAtc[f.id] ?? f.suggested_atc || "").trim().toUpperCase();
+    const atc = ((editedAtc[f.id] ?? f.suggested_atc) || "").trim().toUpperCase();
     if (!atc) return toast.error("Pas de code ATC suggéré");
     if (!confirm(`Remplacer ${f.current_atc} → ${atc} pour ${f.nom_commercial} ?`)) return;
     const { error } = await supabase
