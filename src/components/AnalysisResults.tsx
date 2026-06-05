@@ -480,9 +480,6 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
                             <span className="text-[11px] text-muted-foreground font-normal truncate">{shortHint}</span>
                           </>
                         )}
-                        {rec.priorite >= 80 && (
-                          <Badge className="bg-primary/20 text-primary text-[9px] px-1 py-0">{t("results.priority")}</Badge>
-                        )}
                         {isAuto && (
                           <Badge
                             className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 text-[9px] px-1 py-0 gap-0.5"
@@ -492,10 +489,6 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
                           </Badge>
                         )}
                       </div>
-                      <LineageBadge
-                        productName={rec.produit}
-                        info={lineage.get(rec.produit?.trim().toLowerCase())}
-                      />
                     </div>
                     <button
                       onClick={() => handleOrder(med.nom, rec.produit, rec.categorie)}
