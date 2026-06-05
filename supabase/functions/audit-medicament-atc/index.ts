@@ -17,6 +17,7 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
 const DEFAULT_MODEL = "google/gemini-2.5-flash";
+const AI_TIMEOUT_MS = 35_000;
 
 interface Med { id: string; nom_commercial: string; atc_code: string; class_name?: string | null; }
 
@@ -33,15 +34,19 @@ Règles :
 - suggested_atc = code ATC niveau 5 correct, sinon null`;
 
   const user = "Médicaments à auditer :\n" + meds.map((m) => `- id=${m.id} | nom="${m.nom_commercial}" | atc=${m.atc_code} (${m.class_name ?? "?"})`).join("\n");
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), AI_TIMEOUT_MS);
 
   try {
     const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
+      signal: controller.signal,
       headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model,
         messages: [{ role: "system", content: sys }, { role: "user", content: user }],
         response_format: { type: "json_object" },
+        temperature: 0,
       }),
     });
     if (!r.ok) {
@@ -55,6 +60,8 @@ Règles :
   } catch (e) {
     console.error("[classifyBatch] error", e);
     return null;
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
