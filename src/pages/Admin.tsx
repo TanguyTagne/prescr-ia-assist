@@ -25,6 +25,7 @@ import MesDonneesPanel from "@/components/admin/MesDonneesPanel";
 import TrackingLinksTab from "@/components/admin/TrackingLinksTab";
 import SignalementsTab from "@/components/admin/SignalementsTab";
 import AuditPcTab from "@/components/admin/AuditPcTab";
+import AtcAuditTab from "@/components/admin/AtcAuditTab";
 import AcceptedPcsTab from "@/components/admin/AcceptedPcsTab";
 import HardwareDiagnosticTab from "@/components/admin/HardwareDiagnosticTab";
 import RemoteScannerDiagnosticTab from "@/components/admin/RemoteScannerDiagnosticTab";
