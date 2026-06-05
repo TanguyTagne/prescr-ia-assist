@@ -108,7 +108,7 @@ const AtcAuditTab = () => {
         <CardContent className="flex gap-2 flex-wrap">
           <Button onClick={runBatch} disabled={running} size="sm" className="gap-1.5">
             {running ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3" />}
-            Lancer un lot (50 méd, offset {offset})
+            Lancer un lot (500 méd, offset {offset})
           </Button>
           <Button onClick={() => { setOffset(0); load(); }} variant="outline" size="sm" className="gap-1.5">
             <RefreshCw className="h-3 w-3" />Recommencer du début
