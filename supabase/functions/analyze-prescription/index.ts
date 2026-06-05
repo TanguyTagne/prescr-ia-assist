@@ -2172,14 +2172,43 @@ serve(async (req) => {
       const finalRecs = pickDistinctProducts(filteredRecs, maxPCPerMed);
 
 
-      // Use only curated short DB phrase_conseil (3-7 words). If missing or wrong-drug, show nothing.
-      // Long auto-generated phrases are intentionally disabled — we'll curate them progressively.
+      // Use only curated short DB phrase_conseil (3-7 words). If missing, try a fuzzy DB lookup
+      // so every displayed PC has a short phrase. Long auto-generated phrases stay disabled.
       const MAX_WORDS_HINT = 9;
+      const normPc = (s: string) => (s || "").toLowerCase().replace(/\([^)]*\)/g, " ").replace(/\s+/g, " ").trim();
       for (const r of finalRecs) {
-        const p = (r.phrase_conseil || "").trim();
-        const wc = p ? p.split(/\s+/).length : 0;
+        let p = (r.phrase_conseil || "").trim();
+        let wc = p ? p.split(/\s+/).length : 0;
         if (!p || wc > MAX_WORDS_HINT || phraseIsForWrongMed(p, med)) {
-          r.phrase_conseil = null;
+          // Fuzzy DB fallback: find a row whose normalized produit matches the rec's name
+          const key = normPc(r.produit);
+          if (key) {
+            const head = key.split(" ").slice(0, 2).join(" ");
+            const { data: rows } = await supabase
+              .from("produits_complementaires")
+              .select("produit, phrase_conseil")
+              .or(`produit.ilike.%${key}%,produit.ilike.${head}%`)
+              .not("phrase_conseil", "is", null)
+              .limit(5);
+            const hit = (rows || []).find((row: any) => {
+              const k = normPc(row.produit);
+              const ph = (row.phrase_conseil || "").trim();
+              if (!ph) return false;
+              const w = ph.split(/\s+/).length;
+              if (w > MAX_WORDS_HINT) return false;
+              if (phraseIsForWrongMed(ph, med)) return false;
+              return k === key || k.startsWith(key) || key.startsWith(k) || (head && k.includes(head));
+            });
+            if (hit) {
+              r.phrase_conseil = hit.phrase_conseil;
+              p = hit.phrase_conseil;
+              wc = p.split(/\s+/).length;
+            } else {
+              r.phrase_conseil = null;
+            }
+          } else {
+            r.phrase_conseil = null;
+          }
         }
         allProposedPCs.push(normalizeText(r.produit));
       }
