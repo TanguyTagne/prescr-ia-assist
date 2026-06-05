@@ -44,8 +44,16 @@ const AtcAuditTab = () => {
         body: { batch_size: 100, offset, only_missing: true },
       });
       if (error) throw error;
-      toast.success(`Lot : ${data.processed} méd., ${data.mismatches} anomalies${data.stopped_early ? " (time budget)" : ""}`);
-      setOffset(data.next_offset || offset + 100);
+      if (data?.error) throw new Error(data.error);
+      const processed = Number(data?.processed ?? data?.processed_count ?? 0);
+      const mismatchCount = Number(data?.mismatches ?? data?.anomalies ?? 0);
+      const nextOffset = Number.isFinite(Number(data?.next_offset)) ? Number(data.next_offset) : offset + 100;
+      if (processed === 0) {
+        toast.info(data?.done ? "Audit terminé : aucun nouveau médicament à analyser" : `Plage déjà auditée, passage à l'offset ${nextOffset}`);
+      } else {
+        toast.success(`Lot : ${processed} méd., ${mismatchCount} anomalies${data?.stopped_early ? " (time budget)" : ""}`);
+      }
+      setOffset(nextOffset);
       await load();
     } catch (e: any) {
       toast.error(e.message || "Erreur");

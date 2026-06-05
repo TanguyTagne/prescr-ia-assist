@@ -77,16 +77,15 @@ Deno.serve(async (req) => {
     const offset = Math.max(Number(body.offset) || 0, 0);
     const onlyMissing = body.only_missing !== false;
 
-    // Pull meds with ATC
-    // Loop pages until we find unaudited meds (skips fully-audited ranges)
+    // Pull meds with ATC.
+    // Loop pages until we collect a full batch of unaudited meds (skips already-audited ranges).
     let cursor = offset;
-    let meds: any[] = [];
     let toAudit: any[] = [];
     let lastPageSize = 0;
     let scanned = 0;
     const MAX_SCAN = 5000;
     const scanStart = Date.now();
-    while (scanned < MAX_SCAN) {
+    while (toAudit.length < batchSize && scanned < MAX_SCAN) {
       const { data: page, error: medsErr } = await supabase
         .from("medicaments")
         .select("id, nom_commercial, atc_code, classe_atc:atc_code(nom_classe)")
@@ -96,26 +95,24 @@ Deno.serve(async (req) => {
       if (medsErr) throw medsErr;
       lastPageSize = page?.length || 0;
       if (!page || page.length === 0) {
-        return new Response(JSON.stringify({ done: true, processed: 0, mismatches: 0, next_offset: cursor }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        return new Response(JSON.stringify({ done: true, processed: 0, mismatches: 0, anomalies: 0, next_offset: cursor }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-      meds = page;
+      let candidates = page;
       if (onlyMissing) {
         const { data: already } = await supabase
           .from("medicament_atc_audit")
           .select("medicament_id")
           .in("medicament_id", page.map((m: any) => m.id));
         const skip = new Set((already || []).map((a: any) => a.medicament_id));
-        toAudit = page.filter((m: any) => !skip.has(m.id));
-      } else {
-        toAudit = page;
+        candidates = page.filter((m: any) => !skip.has(m.id));
       }
-      if (toAudit.length > 0) break;
+      toAudit.push(...candidates.slice(0, batchSize - toAudit.length));
       cursor += batchSize;
       scanned += batchSize;
-      if (Date.now() - scanStart > 20_000) break;
+      if (lastPageSize < batchSize || Date.now() - scanStart > 20_000) break;
     }
     if (toAudit.length === 0) {
-      return new Response(JSON.stringify({ processed: 0, mismatches: 0, next_offset: cursor + lastPageSize, skipped: scanned, done: lastPageSize < batchSize }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ processed: 0, mismatches: 0, anomalies: 0, next_offset: cursor, skipped: scanned, done: lastPageSize < batchSize }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
 
@@ -174,10 +171,11 @@ Deno.serve(async (req) => {
       processedCount += wave.reduce((s, c) => s + c.length, 0);
     }
 
-    const nextOffset = stoppedEarly ? cursor + processedCount : cursor + batchSize;
+    const nextOffset = stoppedEarly ? offset : cursor;
     return new Response(JSON.stringify({
       processed: processedCount,
       mismatches,
+      anomalies: mismatches,
       next_offset: nextOffset,
       stopped_early: stoppedEarly,
       done: !stoppedEarly && lastPageSize < batchSize,
