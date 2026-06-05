@@ -114,6 +114,10 @@ const AtcAuditTab = () => {
             <RefreshCw className="h-3 w-3" />Recommencer du début
           </Button>
           <Button onClick={load} variant="ghost" size="sm">Rafraîchir</Button>
+          <Button onClick={applyAllFixes} size="sm" variant="default" className="gap-1.5 ml-auto bg-emerald-600 hover:bg-emerald-700">
+            <Check className="h-3 w-3" />
+            Appliquer toutes les corrections ({findings.filter((f) => f.suggested_atc).length})
+          </Button>
         </CardContent>
       </Card>
 
