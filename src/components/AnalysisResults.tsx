@@ -50,16 +50,6 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
   const { recordFeedback } = usePcFeedback();
 
 
-  // Lineage : précharge la traçabilité (source officielle, validation) pour
-  // tous les produits affichés afin d'alimenter le badge "Source" sous chaque PC.
-  const allProductNames = useMemo(
-    () =>
-      result.medicaments
-        .flatMap((m) => m.recommendations || [])
-        .map((r) => r.produit),
-    [result.medicaments]
-  );
-  const { lineage } = useProductLineage(allProductNames);
 
   // Flatten recommandations triées par priorité — utilisé pour raccourcis F1/F2/F3.
   const flatRecs = useMemo(() => {
