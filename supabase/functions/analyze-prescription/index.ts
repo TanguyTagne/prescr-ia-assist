@@ -424,16 +424,39 @@ async function clinicalLookup(
     const names = [row.pc_1, row.pc_2, row.pc_3].filter((s): s is string => !!s && s.trim().length > 0);
     if (names.length === 0) return [];
 
-    // Lookup enrichment by exact (case-insensitive) name match
+    // Normalize: lowercase, strip parentheticals "(...)", collapse spaces
+    const norm = (s: string) => s.toLowerCase().replace(/\([^)]*\)/g, " ").replace(/\s+/g, " ").trim();
+
+    // 1) Exact (case-insensitive) match
     const { data: matched } = await supabase
       .from("produits_complementaires")
       .select("produit, categorie, description, phrase_conseil, type_produit, pathologies(nom_pathologie)")
       .in("produit", names);
     const byKey = new Map<string, any>();
-    for (const m of matched || []) byKey.set((m.produit || "").toLowerCase().trim(), m);
+    for (const m of matched || []) byKey.set(norm(m.produit || ""), m);
+
+    // 2) Fuzzy fallback (ILIKE) for any unmatched names — picks the row whose
+    //    normalized name contains, or is contained in, the requested name.
+    const unmatched = names.filter((n) => !byKey.get(norm(n)));
+    for (const name of unmatched) {
+      const key = norm(name);
+      if (!key) continue;
+      const tokens = key.split(" ").filter(Boolean);
+      const head = tokens.slice(0, 2).join(" ");
+      const { data: rows } = await supabase
+        .from("produits_complementaires")
+        .select("produit, categorie, description, phrase_conseil, type_produit, pathologies(nom_pathologie)")
+        .or(`produit.ilike.%${key}%,produit.ilike.${head}%`)
+        .limit(5);
+      const best = (rows || []).find((r) => {
+        const k = norm(r.produit || "");
+        return k === key || k.startsWith(key) || key.startsWith(k) || (head && k.includes(head));
+      });
+      if (best) byKey.set(key, best);
+    }
 
     return names.map((name, idx) => {
-      const enrich = byKey.get(name.toLowerCase().trim());
+      const enrich = byKey.get(norm(name));
       return {
         produit: name,
         categorie: enrich?.categorie || "Conseil associé",
