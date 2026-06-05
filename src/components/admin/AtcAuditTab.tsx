@@ -17,6 +17,7 @@ const AtcAuditTab = () => {
   const [offset, setOffset] = useState(0);
   const [stats, setStats] = useState({ total: 0, mismatches: 0, highFixable: 0, uncertain: 0 });
   const [manualAtc, setManualAtc] = useState<Record<string, string>>({});
+  const [editedAtc, setEditedAtc] = useState<Record<string, string>>({});
   const [manualSearch, setManualSearch] = useState("");
   const [manualResults, setManualResults] = useState<any[]>([]);
   const [manualSearching, setManualSearching] = useState(false);
@@ -112,11 +113,12 @@ const AtcAuditTab = () => {
 
 
   const applyFix = async (f: any) => {
-    if (!f.suggested_atc) return toast.error("Pas de code ATC suggéré");
-    if (!confirm(`Remplacer ${f.current_atc} → ${f.suggested_atc} pour ${f.nom_commercial} ?`)) return;
+    const atc = ((editedAtc[f.id] ?? f.suggested_atc) || "").trim().toUpperCase();
+    if (!atc) return toast.error("Pas de code ATC suggéré");
+    if (!confirm(`Remplacer ${f.current_atc} → ${atc} pour ${f.nom_commercial} ?`)) return;
     const { error } = await supabase
       .from("medicaments")
-      .update({ atc_code: f.suggested_atc })
+      .update({ atc_code: atc })
       .eq("id", f.medicament_id);
     if (error) return toast.error(error.message);
     await supabase.from("medicament_atc_audit" as any).update({ reviewed: true, reviewed_at: new Date().toISOString() }).eq("id", f.id);
@@ -349,7 +351,15 @@ const AtcAuditTab = () => {
                   <TableRow key={f.id}>
                     <TableCell className="font-medium">{f.nom_commercial}</TableCell>
                     <TableCell><Badge variant="destructive">{f.current_atc}</Badge><div className="text-xs text-muted-foreground">{f.current_class_name}</div></TableCell>
-                    <TableCell>{f.suggested_atc ? <Badge>{f.suggested_atc}</Badge> : <span className="text-muted-foreground text-xs">—</span>}<div className="text-xs text-muted-foreground">{f.suggested_class_name}</div></TableCell>
+                    <TableCell>
+                      <Input
+                        value={editedAtc[f.id] ?? f.suggested_atc ?? ""}
+                        onChange={(e) => setEditedAtc((prev) => ({ ...prev, [f.id]: e.target.value }))}
+                        placeholder="ATC suggéré"
+                        className="h-6 w-28 text-xs"
+                      />
+                      <div className="text-xs text-muted-foreground mt-0.5">{f.suggested_class_name}</div>
+                    </TableCell>
                     <TableCell><Badge variant={f.confidence === "high" ? "default" : f.confidence === "medium" ? "secondary" : "outline"}>{f.confidence}</Badge></TableCell>
                     <TableCell className="text-xs max-w-md">{f.reasoning}</TableCell>
                     <TableCell className="flex gap-1 justify-end items-center flex-wrap">
