@@ -80,7 +80,7 @@ const AtcAuditTab = () => {
     setRerunning(true);
     try {
       const { data, error } = await supabase.functions.invoke("audit-medicament-atc", {
-        body: { mode: "rerun_uncertain", batch_size: 60, offset: rerunOffset, model: "google/gemini-2.5-pro", confidences: ["low", "medium"] },
+        body: { mode: "rerun_uncertain", batch_size: 24, offset: rerunOffset, model: "google/gemini-2.5-pro", confidences: ["low", "medium"] },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
