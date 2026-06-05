@@ -259,6 +259,7 @@ const Admin = () => {
         {tab === "hardware" && <HardwareDiagnosticTab />}
         {tab === "remote-diag" && <RemoteScannerDiagnosticTab />}
         {tab === "medicaments-manquants" && <MedicamentsManquantsTab />}
+        {tab === "atc-audit" && <AtcAuditTab />}
         {tab === "roi-manque-a-gagner" && <RoiManqueAGagnerTab />}
         {tab === "security" && <SecurityTab />}
       </div>
