@@ -41,11 +41,11 @@ const AtcAuditTab = () => {
     setRunning(true);
     try {
       const { data, error } = await supabase.functions.invoke("audit-medicament-atc", {
-        body: { batch_size: 50, offset, only_missing: true },
+        body: { batch_size: 500, offset, only_missing: true },
       });
       if (error) throw error;
       toast.success(`Lot traité : ${data.processed} méd. analysés, ${data.mismatches} anomalies détectées`);
-      setOffset(data.next_offset || offset + 50);
+      setOffset(data.next_offset || offset + 500);
       await load();
     } catch (e: any) {
       toast.error(e.message || "Erreur");
@@ -73,9 +73,9 @@ const AtcAuditTab = () => {
   };
 
   const applyAllFixes = async () => {
-    const fixable = findings.filter((f) => f.suggested_atc);
-    if (fixable.length === 0) return toast.error("Aucune correction applicable");
-    if (!confirm(`Appliquer ${fixable.length} corrections ATC en lot ?`)) return;
+    const fixable = findings.filter((f) => f.suggested_atc && f.confidence === "high");
+    if (fixable.length === 0) return toast.error("Aucune correction high-confidence applicable");
+    if (!confirm(`Appliquer ${fixable.length} corrections ATC (high confidence uniquement) ?`)) return;
     setLoading(true);
     let ok = 0, fail = 0;
     for (const f of fixable) {
@@ -108,7 +108,7 @@ const AtcAuditTab = () => {
         <CardContent className="flex gap-2 flex-wrap">
           <Button onClick={runBatch} disabled={running} size="sm" className="gap-1.5">
             {running ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3" />}
-            Lancer un lot (50 méd, offset {offset})
+            Lancer un lot (500 méd, offset {offset})
           </Button>
           <Button onClick={() => { setOffset(0); load(); }} variant="outline" size="sm" className="gap-1.5">
             <RefreshCw className="h-3 w-3" />Recommencer du début
@@ -116,7 +116,7 @@ const AtcAuditTab = () => {
           <Button onClick={load} variant="ghost" size="sm">Rafraîchir</Button>
           <Button onClick={applyAllFixes} size="sm" variant="default" className="gap-1.5 ml-auto bg-emerald-600 hover:bg-emerald-700">
             <Check className="h-3 w-3" />
-            Appliquer toutes les corrections ({findings.filter((f) => f.suggested_atc).length})
+            Appliquer corrections high confidence ({findings.filter((f) => f.suggested_atc && f.confidence === "high").length})
           </Button>
         </CardContent>
       </Card>

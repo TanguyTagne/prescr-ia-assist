@@ -73,7 +73,7 @@ Deno.serve(async (req) => {
     if (!isAdmin) return new Response(JSON.stringify({ error: "Admin requis" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
     const body = req.method === "POST" ? await req.json().catch(() => ({})) : {};
-    const batchSize = Math.min(Math.max(Number(body.batch_size) || 50, 10), 200);
+    const batchSize = Math.min(Math.max(Number(body.batch_size) || 50, 10), 1000);
     const offset = Math.max(Number(body.offset) || 0, 0);
     const onlyMissing = body.only_missing !== false;
 
