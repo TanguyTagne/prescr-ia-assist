@@ -73,9 +73,9 @@ const AtcAuditTab = () => {
   };
 
   const applyAllFixes = async () => {
-    const fixable = findings.filter((f) => f.suggested_atc);
-    if (fixable.length === 0) return toast.error("Aucune correction applicable");
-    if (!confirm(`Appliquer ${fixable.length} corrections ATC en lot ?`)) return;
+    const fixable = findings.filter((f) => f.suggested_atc && f.confidence === "high");
+    if (fixable.length === 0) return toast.error("Aucune correction high-confidence applicable");
+    if (!confirm(`Appliquer ${fixable.length} corrections ATC (high confidence uniquement) ?`)) return;
     setLoading(true);
     let ok = 0, fail = 0;
     for (const f of fixable) {
