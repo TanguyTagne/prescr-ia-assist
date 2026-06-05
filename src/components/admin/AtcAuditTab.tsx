@@ -292,7 +292,7 @@ const AtcAuditTab = () => {
                 <TableHead>ATC suggéré</TableHead>
                 <TableHead>Confiance</TableHead>
                 <TableHead>Raison</TableHead>
-                <TableHead className="w-40 text-right">Actions</TableHead>
+                <TableHead className="w-64 text-right">Actions</TableHead>
               </TableRow></TableHeader>
               <TableBody>
                 {findings.map((f) => (
@@ -302,8 +302,15 @@ const AtcAuditTab = () => {
                     <TableCell>{f.suggested_atc ? <Badge>{f.suggested_atc}</Badge> : <span className="text-muted-foreground text-xs">—</span>}<div className="text-xs text-muted-foreground">{f.suggested_class_name}</div></TableCell>
                     <TableCell><Badge variant={f.confidence === "high" ? "default" : f.confidence === "medium" ? "secondary" : "outline"}>{f.confidence}</Badge></TableCell>
                     <TableCell className="text-xs max-w-md">{f.reasoning}</TableCell>
-                    <TableCell className="flex gap-1 justify-end">
+                    <TableCell className="flex gap-1 justify-end items-center flex-wrap">
                       {f.suggested_atc && <Button size="sm" onClick={() => applyFix(f)} className="h-7 text-xs">Appliquer</Button>}
+                      <Input
+                        value={manualAtc[f.id] ?? ""}
+                        onChange={(e) => setManualAtc((m) => ({ ...m, [f.id]: e.target.value }))}
+                        placeholder="ATC manuel"
+                        className="h-7 w-24 text-xs"
+                      />
+                      <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => applyManualAtc(f.medicament_id, manualAtc[f.id] ?? "", f.id)}>OK</Button>
                       <Button size="icon" variant="ghost" onClick={() => markReviewed(f.id)} className="h-7 w-7" title="Ignorer"><Check className="h-3 w-3" /></Button>
                     </TableCell>
                   </TableRow>
