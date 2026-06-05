@@ -25,6 +25,7 @@ import MesDonneesPanel from "@/components/admin/MesDonneesPanel";
 import TrackingLinksTab from "@/components/admin/TrackingLinksTab";
 import SignalementsTab from "@/components/admin/SignalementsTab";
 import AuditPcTab from "@/components/admin/AuditPcTab";
+import AtcAuditTab from "@/components/admin/AtcAuditTab";
 import AcceptedPcsTab from "@/components/admin/AcceptedPcsTab";
 import HardwareDiagnosticTab from "@/components/admin/HardwareDiagnosticTab";
 import RemoteScannerDiagnosticTab from "@/components/admin/RemoteScannerDiagnosticTab";
@@ -65,7 +66,7 @@ const Admin = () => {
   const [requests, setRequests] = useState<AccessRequest[]>([]);
   const [pharmacies, setPharmacies] = useState<PharmacyWithLGO[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<"requests" | "pharmacies" | "kpis" | "investor" | "coverage" | "sales" | "perf" | "benchmark" | "registers" | "demo-sessions" | "demo-leads" | "tracking-links" | "groupements" | "tracabilite" | "conformite" | "rgpd" | "quotas" | "mes-donnees" | "signalements" | "audit-pc" | "accepted-pcs" | "hardware" | "remote-diag" | "medicaments-manquants" | "roi-manque-a-gagner" | "security">("kpis");
+  const [tab, setTab] = useState<"requests" | "pharmacies" | "kpis" | "investor" | "coverage" | "sales" | "perf" | "benchmark" | "registers" | "demo-sessions" | "demo-leads" | "tracking-links" | "groupements" | "tracabilite" | "conformite" | "rgpd" | "quotas" | "mes-donnees" | "signalements" | "audit-pc" | "accepted-pcs" | "hardware" | "remote-diag" | "medicaments-manquants" | "atc-audit" | "roi-manque-a-gagner" | "security">("kpis");
 
   useEffect(() => {
     loadData();
@@ -216,6 +217,10 @@ const Admin = () => {
             <PackageSearch className="h-3.5 w-3.5" />
             Médicaments manquants
           </Button>
+          <Button variant={tab === "atc-audit" ? "default" : "outline"} size="sm" onClick={() => setTab("atc-audit")} className="gap-1.5 border-amber-300 text-amber-700 hover:bg-amber-50">
+            <PackageSearch className="h-3.5 w-3.5" />
+            Audit ATC ↔ Médicament
+          </Button>
           <Button variant={tab === "roi-manque-a-gagner" ? "default" : "outline"} size="sm" onClick={() => setTab("roi-manque-a-gagner")} className="gap-1.5 border-emerald-300 text-emerald-700 hover:bg-emerald-50 data-[variant=default]:bg-emerald-600">
             <Trophy className="h-3.5 w-3.5" />
             ROI & Manque à gagner
@@ -254,6 +259,7 @@ const Admin = () => {
         {tab === "hardware" && <HardwareDiagnosticTab />}
         {tab === "remote-diag" && <RemoteScannerDiagnosticTab />}
         {tab === "medicaments-manquants" && <MedicamentsManquantsTab />}
+        {tab === "atc-audit" && <AtcAuditTab />}
         {tab === "roi-manque-a-gagner" && <RoiManqueAGagnerTab />}
         {tab === "security" && <SecurityTab />}
       </div>

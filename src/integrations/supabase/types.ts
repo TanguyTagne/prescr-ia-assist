@@ -885,6 +885,68 @@ export type Database = {
         }
         Relationships: []
       }
+      medicament_atc_audit: {
+        Row: {
+          confidence: string | null
+          created_at: string
+          current_atc: string | null
+          current_class_name: string | null
+          id: string
+          medicament_id: string
+          mismatch: boolean
+          nom_commercial: string
+          reasoning: string | null
+          reviewed: boolean
+          reviewed_at: string | null
+          reviewed_by: string | null
+          suggested_atc: string | null
+          suggested_class_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          confidence?: string | null
+          created_at?: string
+          current_atc?: string | null
+          current_class_name?: string | null
+          id?: string
+          medicament_id: string
+          mismatch?: boolean
+          nom_commercial: string
+          reasoning?: string | null
+          reviewed?: boolean
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          suggested_atc?: string | null
+          suggested_class_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          confidence?: string | null
+          created_at?: string
+          current_atc?: string | null
+          current_class_name?: string | null
+          id?: string
+          medicament_id?: string
+          mismatch?: boolean
+          nom_commercial?: string
+          reasoning?: string | null
+          reviewed?: boolean
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          suggested_atc?: string | null
+          suggested_class_name?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medicament_atc_audit_medicament_id_fkey"
+            columns: ["medicament_id"]
+            isOneToOne: true
+            referencedRelation: "medicaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       medicament_cip: {
         Row: {
           cip13: string
