@@ -11,8 +11,10 @@ const AtcAuditTab = () => {
   const [findings, setFindings] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [running, setRunning] = useState(false);
+  const [rerunning, setRerunning] = useState(false);
+  const [rerunOffset, setRerunOffset] = useState(0);
   const [offset, setOffset] = useState(0);
-  const [stats, setStats] = useState({ total: 0, mismatches: 0, highFixable: 0 });
+  const [stats, setStats] = useState({ total: 0, mismatches: 0, highFixable: 0, uncertain: 0 });
 
   const load = async () => {
     setLoading(true);
