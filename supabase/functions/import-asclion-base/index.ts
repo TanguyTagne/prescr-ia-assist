@@ -84,25 +84,22 @@ serve(async (req) => {
   if (!isAdmin) return new Response(JSON.stringify({ error: "Admin requis" }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
 
   const url = new URL(req.url);
-  const mode = url.searchParams.get("mode") ?? "";
+  let bodyJson: any = {};
+  try { bodyJson = await req.json(); } catch { /* no body */ }
+  const mode = url.searchParams.get("mode") ?? bodyJson.mode ?? "";
 
   try {
     // ── WIPE ────────────────────────────────────────────────────────────
     if (mode === "wipe") {
-      // cascade supprime medicament_curated_pcs, medicament_pathologie,
-      // medicament_atc_audit, medicament_pc_valide, produits_complementaires
-      // liés via FK ON DELETE CASCADE.
-      const { error } = await supabase.rpc("exec_sql", { sql: "DELETE FROM public.medicaments" }).single().then(r => r, () => ({ error: null }));
-      // Fallback: simple delete via PostgREST (ignore filter requirement using neq)
       const { error: delErr, count } = await supabase.from("medicaments").delete({ count: "exact" }).not("id", "is", null);
       if (delErr) throw delErr;
-      return new Response(JSON.stringify({ ok: true, deleted: count, exec_sql_err: error?.message ?? null }), { headers: { ...cors, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ ok: true, deleted: count }), { headers: { ...cors, "Content-Type": "application/json" } });
     }
 
     // ── IMPORT ──────────────────────────────────────────────────────────
     if (mode === "import") {
-      const offset = parseInt(url.searchParams.get("offset") ?? "0", 10);
-      const limit = parseInt(url.searchParams.get("limit") ?? "1000", 10);
+      const offset = parseInt(url.searchParams.get("offset") ?? String(bodyJson.offset ?? 0), 10);
+      const limit = parseInt(url.searchParams.get("limit") ?? String(bodyJson.limit ?? 1000), 10);
 
       const { data: blob, error: stErr } = await supabase.storage.from(BUCKET).download(FILE);
       if (stErr || !blob) throw new Error(`Fichier introuvable: ${stErr?.message ?? "blob null"}`);
