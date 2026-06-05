@@ -89,22 +89,60 @@ const AtcAuditTab = () => {
   };
 
   const applyAllFixes = async () => {
-    const fixable = findings.filter((f) => f.suggested_atc && f.confidence === "high");
+    // Fetch ALL high-confidence fixable anomalies, not just the 200 loaded in the table
+    const { data: allFixable, error: fetchErr } = await supabase
+      .from("medicament_atc_audit" as any)
+      .select("id, medicament_id, suggested_atc, suggested_class_name, current_atc")
+      .eq("mismatch", true)
+      .eq("reviewed", false)
+      .eq("confidence", "high")
+      .not("suggested_atc", "is", null)
+      .limit(10000);
+    if (fetchErr) return toast.error(fetchErr.message);
+    const fixable = (allFixable as any[]) || [];
     if (fixable.length === 0) return toast.error("Aucune correction high-confidence applicable");
     if (!confirm(`Appliquer ${fixable.length} corrections ATC (high confidence uniquement) ?`)) return;
     setLoading(true);
-    let ok = 0, fail = 0;
-    for (const f of fixable) {
-      const { error } = await supabase
-        .from("medicaments")
-        .update({ atc_code: f.suggested_atc })
-        .eq("id", f.medicament_id);
-      if (error) { fail++; continue; }
-      await supabase.from("medicament_atc_audit" as any)
-        .update({ reviewed: true, reviewed_at: new Date().toISOString() })
-        .eq("id", f.id);
-      ok++;
+
+    // Pre-ensure all suggested_atc codes exist in classe_atc (FK constraint)
+    const uniqueCodes = Array.from(new Set(fixable.map((f) => f.suggested_atc).filter(Boolean)));
+    const { data: existing } = await supabase
+      .from("classe_atc")
+      .select("atc_code")
+      .in("atc_code", uniqueCodes);
+    const existingSet = new Set((existing || []).map((e: any) => e.atc_code));
+    const missing = fixable
+      .filter((f) => !existingSet.has(f.suggested_atc))
+      .reduce((acc: any[], f) => {
+        if (!acc.find((a) => a.atc_code === f.suggested_atc)) {
+          acc.push({ atc_code: f.suggested_atc, nom_classe: f.suggested_class_name || f.suggested_atc });
+        }
+        return acc;
+      }, []);
+    if (missing.length > 0) {
+      const { error: insErr } = await supabase.from("classe_atc").upsert(missing, { onConflict: "atc_code" });
+      if (insErr) console.error("classe_atc upsert", insErr);
     }
+
+    let ok = 0, fail = 0;
+    const failures: string[] = [];
+    // Batch in parallel waves of 20
+    const WAVE = 20;
+    for (let i = 0; i < fixable.length; i += WAVE) {
+      const wave = fixable.slice(i, i + WAVE);
+      await Promise.all(wave.map(async (f) => {
+        const { error } = await supabase
+          .from("medicaments")
+          .update({ atc_code: f.suggested_atc })
+          .eq("id", f.medicament_id);
+        if (error) { fail++; failures.push(`${f.suggested_atc}: ${error.message}`); return; }
+        await supabase.from("medicament_atc_audit" as any)
+          .update({ reviewed: true, reviewed_at: new Date().toISOString() })
+          .eq("id", f.id);
+        ok++;
+      }));
+    }
+    if (failures.length > 0) console.error("Apply failures sample:", failures.slice(0, 5));
     toast.success(`${ok} corrigés${fail ? `, ${fail} échecs` : ""}`);
     await load();
   };
