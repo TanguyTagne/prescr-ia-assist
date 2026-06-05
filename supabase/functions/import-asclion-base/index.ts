@@ -98,8 +98,8 @@ serve(async (req) => {
 
     // ── IMPORT ──────────────────────────────────────────────────────────
     if (mode === "import") {
-      const offset = parseInt(url.searchParams.get("offset") ?? "0", 10);
-      const limit = parseInt(url.searchParams.get("limit") ?? "1000", 10);
+      const offset = parseInt(url.searchParams.get("offset") ?? String(bodyJson.offset ?? 0), 10);
+      const limit = parseInt(url.searchParams.get("limit") ?? String(bodyJson.limit ?? 1000), 10);
 
       const { data: blob, error: stErr } = await supabase.storage.from(BUCKET).download(FILE);
       if (stErr || !blob) throw new Error(`Fichier introuvable: ${stErr?.message ?? "blob null"}`);
