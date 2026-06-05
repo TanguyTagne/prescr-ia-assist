@@ -113,11 +113,12 @@ const AtcAuditTab = () => {
 
 
   const applyFix = async (f: any) => {
-    if (!f.suggested_atc) return toast.error("Pas de code ATC suggéré");
-    if (!confirm(`Remplacer ${f.current_atc} → ${f.suggested_atc} pour ${f.nom_commercial} ?`)) return;
+    const atc = (editedAtc[f.id] ?? f.suggested_atc || "").trim().toUpperCase();
+    if (!atc) return toast.error("Pas de code ATC suggéré");
+    if (!confirm(`Remplacer ${f.current_atc} → ${atc} pour ${f.nom_commercial} ?`)) return;
     const { error } = await supabase
       .from("medicaments")
-      .update({ atc_code: f.suggested_atc })
+      .update({ atc_code: atc })
       .eq("id", f.medicament_id);
     if (error) return toast.error(error.message);
     await supabase.from("medicament_atc_audit" as any).update({ reviewed: true, reviewed_at: new Date().toISOString() }).eq("id", f.id);
