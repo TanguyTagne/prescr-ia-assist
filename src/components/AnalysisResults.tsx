@@ -469,9 +469,7 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
                 const ordered = isOrdered(med.nom, rec.produit);
                 const orderSource = getOrderSource(med.nom, rec.produit);
                 const isAuto = orderSource === "hid_auto";
-                const shortHint = rec.phrase_conseil
-                  ? rec.phrase_conseil.split(/[.,;—]/)[0].slice(0, 45).trim()
-                  : null;
+                const shortHint = rec.phrase_conseil?.trim() || null;
                 const dotColors = ["bg-primary", "bg-blue-400", "bg-amber-400"];
                 return (
                   <div
@@ -486,6 +484,12 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1 flex-wrap">
                         <span className="font-semibold text-xs text-foreground">{rec.produit}</span>
+                        {shortHint && (
+                          <>
+                            <span className="text-[10px] text-muted-foreground">·</span>
+                            <span className="text-[11px] text-muted-foreground font-normal truncate">{shortHint}</span>
+                          </>
+                        )}
                         {rec.priorite >= 80 && (
                           <Badge className="bg-primary/20 text-primary text-[9px] px-1 py-0">{t("results.priority")}</Badge>
                         )}
@@ -498,9 +502,6 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
                           </Badge>
                         )}
                       </div>
-                      {shortHint && (
-                        <p className="text-[9.5px] text-muted-foreground mt-0.5 truncate">{shortHint}</p>
-                      )}
                       <LineageBadge
                         productName={rec.produit}
                         info={lineage.get(rec.produit?.trim().toLowerCase())}
