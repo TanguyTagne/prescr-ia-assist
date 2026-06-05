@@ -11,8 +11,10 @@ const AtcAuditTab = () => {
   const [findings, setFindings] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [running, setRunning] = useState(false);
+  const [rerunning, setRerunning] = useState(false);
+  const [rerunOffset, setRerunOffset] = useState(0);
   const [offset, setOffset] = useState(0);
-  const [stats, setStats] = useState({ total: 0, mismatches: 0, highFixable: 0 });
+  const [stats, setStats] = useState({ total: 0, mismatches: 0, highFixable: 0, uncertain: 0 });
 
   const load = async () => {
     setLoading(true);
@@ -38,7 +40,12 @@ const AtcAuditTab = () => {
       .eq("reviewed", false)
       .eq("confidence", "high")
       .not("suggested_atc", "is", null);
-    setStats({ total: totalCount || 0, mismatches: mismatchCount || 0, highFixable: highCount || 0 });
+    const { count: uncertainCount } = await supabase
+      .from("medicament_atc_audit" as any)
+      .select("*", { count: "exact", head: true })
+      .in("confidence", ["low", "medium"])
+      .eq("reviewed", false);
+    setStats({ total: totalCount || 0, mismatches: mismatchCount || 0, highFixable: highCount || 0, uncertain: uncertainCount || 0 });
     setLoading(false);
   };
 
@@ -68,6 +75,34 @@ const AtcAuditTab = () => {
       setRunning(false);
     }
   };
+
+  const rerunUncertain = async () => {
+    setRerunning(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("audit-medicament-atc", {
+        body: { mode: "rerun_uncertain", batch_size: 60, offset: rerunOffset, model: "google/gemini-2.5-pro", confidences: ["low", "medium"] },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      const processed = Number(data?.processed ?? 0);
+      const mm = Number(data?.mismatches ?? 0);
+      const nextOff = Number.isFinite(Number(data?.next_offset)) ? Number(data.next_offset) : rerunOffset + 60;
+      if (processed === 0) {
+        toast.info("Plus de low/medium à ré-auditer");
+        setRerunOffset(0);
+      } else {
+        toast.success(`Ré-audit Pro : ${processed} méd., ${mm} anomalies${data?.stopped_early ? " (time budget)" : ""}`);
+        setRerunOffset(nextOff);
+      }
+      await load();
+    } catch (e: any) {
+      toast.error(e.message || "Erreur ré-audit");
+    } finally {
+      setRerunning(false);
+    }
+  };
+
+
 
 
   const applyFix = async (f: any) => {
@@ -193,6 +228,10 @@ const AtcAuditTab = () => {
           <Button onClick={load} variant="ghost" size="sm">Rafraîchir</Button>
           <Button onClick={exportCsv} variant="outline" size="sm" className="gap-1.5">
             <Download className="h-3 w-3" />Exporter CSV
+          </Button>
+          <Button onClick={rerunUncertain} disabled={rerunning} size="sm" variant="secondary" className="gap-1.5" title="Ré-audite les low/medium avec Gemini 2.5 Pro">
+            {rerunning ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+            Ré-auditer low/medium avec Pro ({stats.uncertain}) — offset {rerunOffset}
           </Button>
           <Button onClick={applyAllFixes} size="sm" variant="default" className="gap-1.5 ml-auto bg-emerald-600 hover:bg-emerald-700">
             <Check className="h-3 w-3" />

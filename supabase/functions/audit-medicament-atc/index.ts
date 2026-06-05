@@ -16,11 +16,11 @@ const corsHeaders = {
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
-const MODEL = "google/gemini-2.5-flash";
+const DEFAULT_MODEL = "google/gemini-2.5-flash";
 
 interface Med { id: string; nom_commercial: string; atc_code: string; class_name?: string | null; }
 
-async function classifyBatch(meds: Med[]): Promise<any[] | null> {
+async function classifyBatch(meds: Med[], model: string = DEFAULT_MODEL): Promise<any[] | null> {
   const sys = `Tu es pharmacologue clinique. Pour chaque médicament fourni (nom commercial + classe ATC actuelle),
 tu dois dire si la classe ATC est COHÉRENTE avec le nom commercial/la molécule.
 
@@ -39,7 +39,7 @@ Règles :
       method: "POST",
       headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: MODEL,
+        model,
         messages: [{ role: "system", content: sys }, { role: "user", content: user }],
         response_format: { type: "json_object" },
       }),
@@ -76,6 +76,72 @@ Deno.serve(async (req) => {
     const batchSize = Math.min(Math.max(Number(body.batch_size) || 50, 10), 100);
     const offset = Math.max(Number(body.offset) || 0, 0);
     const onlyMissing = body.only_missing !== false;
+    const mode = String(body.mode || "scan"); // "scan" | "rerun_uncertain"
+    const model = String(body.model || DEFAULT_MODEL);
+
+    // ===== MODE rerun_uncertain : ré-audite les low/medium avec un modèle plus puissant =====
+    if (mode === "rerun_uncertain") {
+      const confidences: string[] = Array.isArray(body.confidences) && body.confidences.length
+        ? body.confidences
+        : ["low", "medium"];
+      const { data: uncertain, error: unErr } = await supabase
+        .from("medicament_atc_audit")
+        .select("medicament_id, nom_commercial, current_atc, current_class_name")
+        .in("confidence", confidences)
+        .eq("reviewed", false)
+        .order("updated_at", { ascending: true })
+        .range(offset, offset + batchSize - 1);
+      if (unErr) throw unErr;
+      const items = (uncertain || []).map((u: any) => ({
+        id: u.medicament_id,
+        nom_commercial: u.nom_commercial,
+        atc_code: u.current_atc,
+        class_name: u.current_class_name,
+      }));
+      if (items.length === 0) {
+        return new Response(JSON.stringify({ processed: 0, mismatches: 0, anomalies: 0, next_offset: offset, done: true, mode }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const CHUNK = 15;
+      let mm = 0;
+      let processed = 0;
+      const start = Date.now();
+      let stopped = false;
+      for (let i = 0; i < items.length; i += CHUNK) {
+        if (Date.now() - start > 110_000) { stopped = true; break; }
+        const chunk = items.slice(i, i + CHUNK);
+        const results = await classifyBatch(chunk, model);
+        if (!results) continue;
+        const rows = results.map((r: any) => {
+          const med = chunk.find((c) => c.id === r.id);
+          if (!med) return null;
+          if (r.mismatch) mm++;
+          return {
+            medicament_id: med.id,
+            nom_commercial: med.nom_commercial,
+            current_atc: med.atc_code,
+            current_class_name: med.class_name,
+            suggested_atc: r.suggested_atc || null,
+            suggested_class_name: r.suggested_class || null,
+            mismatch: !!r.mismatch,
+            confidence: r.confidence || "low",
+            reasoning: `[${model}] ${r.reason || ""}`,
+          };
+        }).filter(Boolean);
+        if (rows.length > 0) {
+          const { error: upErr } = await supabase.from("medicament_atc_audit").upsert(rows, { onConflict: "medicament_id" });
+          if (upErr) console.error("rerun upsert", upErr);
+        }
+        processed += chunk.length;
+      }
+      return new Response(JSON.stringify({
+        processed, mismatches: mm, anomalies: mm,
+        next_offset: stopped ? offset + processed : offset + items.length,
+        stopped_early: stopped,
+        done: !stopped && items.length < batchSize,
+        mode, model,
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
 
     // Pull meds with ATC.
     // Loop pages until we collect a full batch of unaudited meds (skips already-audited ranges).
@@ -133,7 +199,7 @@ Deno.serve(async (req) => {
     }
 
     const processChunk = async (chunk: any[]) => {
-      const results = await classifyBatch(chunk);
+      const results = await classifyBatch(chunk, model);
       if (!results) return;
       const rows = results.map((r: any) => {
         const med = chunk.find((c) => c.id === r.id);
