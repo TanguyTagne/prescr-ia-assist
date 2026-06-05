@@ -174,14 +174,15 @@ Deno.serve(async (req) => {
       processedCount += wave.reduce((s, c) => s + c.length, 0);
     }
 
-    const nextOffset = stoppedEarly ? offset + processedCount : offset + batchSize;
+    const nextOffset = stoppedEarly ? cursor + processedCount : cursor + batchSize;
     return new Response(JSON.stringify({
       processed: processedCount,
       mismatches,
       next_offset: nextOffset,
       stopped_early: stoppedEarly,
-      done: !stoppedEarly && meds.length < batchSize,
+      done: !stoppedEarly && lastPageSize < batchSize,
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
 
   } catch (e) {
     console.error("audit-medicament-atc error", e);
