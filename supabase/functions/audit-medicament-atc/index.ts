@@ -3,7 +3,7 @@
 // Stocke les anomalies dans medicament_atc_audit.
 //
 // Usage : POST { batch_size?: number, offset?: number, only_missing?: boolean }
-//   - batch_size : nb de meds à analyser (défaut 50, max 200)
+//   - batch_size : nb de meds à analyser (défaut 50, max 100)
 //   - offset     : pour pagination
 //   - only_missing : ne traite que les meds pas encore audités (défaut true)
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -73,7 +73,7 @@ Deno.serve(async (req) => {
     if (!isAdmin) return new Response(JSON.stringify({ error: "Admin requis" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
     const body = req.method === "POST" ? await req.json().catch(() => ({})) : {};
-    const batchSize = Math.min(Math.max(Number(body.batch_size) || 50, 10), 1000);
+    const batchSize = Math.min(Math.max(Number(body.batch_size) || 50, 10), 100);
     const offset = Math.max(Number(body.offset) || 0, 0);
     const onlyMissing = body.only_missing !== false;
 
@@ -105,9 +105,9 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ processed: 0, next_offset: offset + batchSize, skipped: meds.length }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Process in chunks of 25, in parallel (cap concurrency to avoid rate limits)
+    // Process in chunks of 25, sequentially for safer ATC verification.
     const CHUNK = 25;
-    const CONCURRENCY = 5;
+    const CONCURRENCY = 1;
     const findings: any[] = [];
     let mismatches = 0;
 
