@@ -536,6 +536,7 @@ const PharmacyDiagRow = ({ row, latestVersion }: { row: HeartbeatRow; latestVers
   const paths = useMemo(() => computePaths(row.scanner_status), [row.scanner_status]);
   const health = useMemo(() => healthScore(paths), [paths]);
   const isDesktop = row.platform === "desktop";
+  const elevated = row.scanner_status?.elevated;
 
   const versionState: "up-to-date" | "outdated" | "unknown" = !latestVersion
     ? "unknown"
@@ -567,6 +568,33 @@ const PharmacyDiagRow = ({ row, latestVersion }: { row: HeartbeatRow; latestVers
           </div>
         </div>
         <div className="flex items-center gap-1.5 flex-wrap justify-end">
+          {isDesktop && elevated === true && (
+            <Badge
+              variant="outline"
+              className="bg-emerald-50 text-emerald-700 border-emerald-300 text-[10px] gap-1"
+              title="Asclion tourne en High Integrity Level (admin Windows) — capture scan garantie en background même si le LGO a le focus."
+            >
+              <ShieldCheck className="h-2.5 w-2.5" /> admin
+            </Badge>
+          )}
+          {isDesktop && elevated === false && (
+            <Badge
+              variant="outline"
+              className="bg-amber-50 text-amber-800 border-amber-300 text-[10px] gap-1"
+              title="Asclion tourne en Medium Integrity Level (user). Si le LGO est elevé, Windows UIPI bloquera la capture en background. Redémarrer le poste pour appliquer la migration silencieuse vers HighestAvailable."
+            >
+              <ShieldAlert className="h-2.5 w-2.5" /> user
+            </Badge>
+          )}
+          {isDesktop && (elevated === null || elevated === undefined) && (
+            <Badge
+              variant="outline"
+              className="bg-slate-50 text-slate-600 border-slate-300 text-[10px]"
+              title="Niveau de privilège pas encore détecté — heartbeat antérieur à la version qui expose le flag elevated."
+            >
+              priv ?
+            </Badge>
+          )}
           {versionState === "up-to-date" && (
             <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300 text-[10px]">
               à jour
