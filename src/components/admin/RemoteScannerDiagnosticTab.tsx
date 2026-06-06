@@ -411,7 +411,7 @@ const RemoteScannerDiagnosticTab = () => {
           </div>
 
           {/* Summary tiles */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-2">
             <div className="rounded-lg border bg-card px-3 py-2">
               <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Instances connectées</p>
               <p className="text-2xl font-bold">{summary.total}</p>
@@ -419,6 +419,23 @@ const RemoteScannerDiagnosticTab = () => {
             <div className="rounded-lg border bg-card px-3 py-2">
               <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Postes desktop</p>
               <p className="text-2xl font-bold">{summary.desktop}</p>
+            </div>
+            <div
+              className="rounded-lg border bg-card px-3 py-2"
+              title="Postes desktop tournant en High Integrity Level (admin Windows). Garantit la capture des douchettes en background, même quand le LGO a le focus."
+            >
+              <p className="text-[10px] uppercase tracking-wide text-emerald-700 flex items-center gap-1">
+                <ShieldCheck className="h-3 w-3" /> Admin Windows
+              </p>
+              <p className="text-2xl font-bold text-emerald-700">
+                {summary.elevated}
+                <span className="text-sm font-normal text-muted-foreground">
+                  /{summary.desktop}
+                </span>
+              </p>
+              {summary.notElevated > 0 && (
+                <p className="text-[10px] text-amber-700 mt-0.5">{summary.notElevated} en mode user</p>
+              )}
             </div>
             <div className="rounded-lg border bg-card px-3 py-2">
               <p className="text-[10px] uppercase tracking-wide text-emerald-700">À jour</p>
@@ -435,6 +452,7 @@ const RemoteScannerDiagnosticTab = () => {
               <p className="text-2xl font-bold text-amber-700">{summary.staleScan}</p>
             </div>
           </div>
+
 
           {/* Filters */}
           <div className="flex flex-wrap items-center gap-2">
@@ -482,6 +500,17 @@ const RemoteScannerDiagnosticTab = () => {
             >
               Pas de scan &gt;24h
             </Button>
+            <Button
+              variant={filter === "notElevated" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setFilter("notElevated")}
+              className={filter === "notElevated" ? "" : "border-amber-300 text-amber-700 hover:bg-amber-50"}
+              title="Postes desktop qui ne tournent pas en admin Windows — capture scan fragile si le LGO est elevé"
+            >
+              <ShieldAlert className="h-3 w-3 mr-1" />
+              Pas en admin
+            </Button>
+
           </div>
 
           {/* Rows */}
