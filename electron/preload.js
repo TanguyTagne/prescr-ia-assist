@@ -55,6 +55,13 @@ contextBridge.exposeInMainWorld("electronAPI", {
     reinstall: () => ipcRenderer.invoke("autolaunch:reinstall"),
   },
 
+  // System privileges — admin/user integrity level detection.
+  // Utilisé par le diag admin pour identifier les postes où la capture
+  // scan en background est garantie (elevated=true) vs. fragile (elevated=false).
+  system: {
+    isElevated: () => ipcRenderer.invoke("system:is-elevated"),
+  },
+
   // Direct HID scanner control (node-hid based, antivirus-friendly)
   scanner: {
     list: () => ipcRenderer.invoke("scanner:list"),

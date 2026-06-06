@@ -262,7 +262,14 @@ if (!gotTheLock) {
     // ──────────────────────────────────────────────────────────────────────
 
     createWindow();
-    // Register Windows auto-launch tasks (at boot + 08:30 + 09:00 catch-up)
+    // Warm up elevation detection (~50 ms) so the FIRST heartbeat already
+    // carries the privilege flag — admins voient immédiatement quel poste
+    // a effectivement upgrade en HighestAvailable après migration silencieuse.
+    detectElevation();
+    // Register Windows auto-launch tasks (at boot + 08:30 + 09:00 catch-up).
+    // Cette ligne est aussi la MIGRATION SILENCIEUSE pour les installs existantes :
+    // à chaque démarrage, schtasks /Create /F overwrite la tâche avec le XML
+    // RunLevel=HighestAvailable. Le prochain reboot tourne en admin. Aucun UAC.
     registerAutoLaunch();
     // Detect installed LGO (Windows only) and forward to renderer when ready
     detectLgoAndNotify();
@@ -632,6 +639,40 @@ ipcMain.handle("autolaunch:reinstall", async () => {
   const state = await registerAutoLaunch();
   return { state, status: await queryAutoLaunchStatus() };
 });
+
+// ────────────────────────────────────────────────────────────
+// Elevation detection — UNIQUE source de vérité pour savoir si
+// le process Asclion tourne en High Integrity Level (admin).
+//
+// Indispensable côté admin diag pour identifier les pharmacies
+// où la capture scan en background échoue : sans High IL, Windows
+// UIPI bloque les input venant de processus elevés (le LGO tourne
+// souvent en admin sur les postes officine → SetForegroundWindow KO,
+// uiohook attrape rien quand le LGO a le focus).
+//
+// Mécanique : `net session` exige des privilèges admin →
+// exit code 0 = admin, ≠ 0 = user normal.  Caché 60 s pour
+// éviter de spawn un cmd à chaque heartbeat.
+// ────────────────────────────────────────────────────────────
+let elevationCache = { value: null, at: 0 };
+const ELEVATION_TTL_MS = 60_000;
+
+async function detectElevation() {
+  if (process.platform !== "win32") return false;
+  const now = Date.now();
+  if (elevationCache.value !== null && now - elevationCache.at < ELEVATION_TTL_MS) {
+    return elevationCache.value;
+  }
+  const r = await execAsync("net session >nul 2>&1");
+  const elevated = r.code === 0;
+  elevationCache = { value: elevated, at: now };
+  return elevated;
+}
+
+ipcMain.handle("system:is-elevated", async () => {
+  return { elevated: await detectElevation(), platform: process.platform };
+});
+
 function detectLgoAndNotify() {
   if (process.platform !== "win32") return;
   exec("tasklist /FO CSV /NH", { timeout: 5000 }, (err, stdout) => {
@@ -1945,6 +1986,10 @@ function getScannerStatus() {
     : uiohookStarted
       ? "uiohook"
       : "none";
+  // Synchronous read of the cached elevation value — the cache is refreshed
+  // by the IPC handler / heartbeat path (detectElevation runs every 60 s).
+  // null means "pas encore détecté" (premier heartbeat avant le warm-up).
+  const elevated = elevationCache.value;
   return {
     mode,
     hidLoaded: !!HID,
@@ -1987,6 +2032,14 @@ function getScannerStatus() {
       baudRate: s.baudRate,
     })),
     serialLastError: serialState.lastError,
+    // ── Privilèges Windows ────────────────────────────────────
+    // true  = Asclion tourne en High Integrity Level (admin)
+    //         → bypass UIPI, capture scan OK même quand LGO a le focus
+    // false = Medium IL (user normal) → la capture passe quand même
+    //         tant que le LGO n'est PAS lui-même elevé
+    // null  = pas encore détecté (premier heartbeat)
+    elevated,
+    platform: process.platform,
   };
 }
 

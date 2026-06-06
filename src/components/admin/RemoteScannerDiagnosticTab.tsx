@@ -9,6 +9,8 @@ import {
   Activity,
   Clock,
   Building2,
+  ShieldCheck,
+  ShieldAlert,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -59,6 +61,10 @@ type ScannerStatus = {
   serialLastError?: string | null;
   clipboardEnabled?: boolean;
   webHidEnabled?: boolean;
+  // Windows admin / High Integrity Level — true = Asclion bypass UIPI
+  // → capture scan en background même quand le LGO a le focus
+  elevated?: boolean | null;
+  platform?: string;
 };
 
 type HeartbeatRow = {
@@ -194,7 +200,7 @@ const RemoteScannerDiagnosticTab = () => {
   const [rows, setRows] = useState<HeartbeatRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<"all" | "broken" | "stale" | "desktop" | "outdated">("all");
+  const [filter, setFilter] = useState<"all" | "broken" | "stale" | "desktop" | "outdated" | "notElevated">("all");
   const [latestVersion, setLatestVersion] = useState<string | null>(null);
 
   // The "latest deployed" version is whatever /version.json currently serves.
@@ -325,6 +331,11 @@ const RemoteScannerDiagnosticTab = () => {
         if (ageHours < 24) return false;
       }
       if (filter === "outdated" && !isOutdated(r)) return false;
+      if (filter === "notElevated") {
+        // Filtre les postes desktop Windows qui ne tournent PAS en admin
+        if (r.platform !== "desktop") return false;
+        if (r.scanner_status?.elevated === true) return false;
+      }
       return true;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -347,7 +358,14 @@ const RemoteScannerDiagnosticTab = () => {
     const outdated = latestVersion
       ? rows.filter((r) => !r.app_version || r.app_version !== latestVersion).length
       : 0;
-    return { total, desktop, noActiveCapture, staleScan, upToDate, outdated };
+    // Privilèges Windows — uniquement parmi les postes desktop
+    const desktopRows = rows.filter((r) => r.platform === "desktop");
+    const elevated = desktopRows.filter((r) => r.scanner_status?.elevated === true).length;
+    const notElevated = desktopRows.filter((r) => r.scanner_status?.elevated === false).length;
+    const elevationUnknown = desktopRows.filter(
+      (r) => r.scanner_status?.elevated === undefined || r.scanner_status?.elevated === null,
+    ).length;
+    return { total, desktop, noActiveCapture, staleScan, upToDate, outdated, elevated, notElevated, elevationUnknown };
   }, [rows, latestVersion]);
 
 
@@ -393,7 +411,7 @@ const RemoteScannerDiagnosticTab = () => {
           </div>
 
           {/* Summary tiles */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-2">
             <div className="rounded-lg border bg-card px-3 py-2">
               <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Instances connectées</p>
               <p className="text-2xl font-bold">{summary.total}</p>
@@ -401,6 +419,23 @@ const RemoteScannerDiagnosticTab = () => {
             <div className="rounded-lg border bg-card px-3 py-2">
               <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Postes desktop</p>
               <p className="text-2xl font-bold">{summary.desktop}</p>
+            </div>
+            <div
+              className="rounded-lg border bg-card px-3 py-2"
+              title="Postes desktop tournant en High Integrity Level (admin Windows). Garantit la capture des douchettes en background, même quand le LGO a le focus."
+            >
+              <p className="text-[10px] uppercase tracking-wide text-emerald-700 flex items-center gap-1">
+                <ShieldCheck className="h-3 w-3" /> Admin Windows
+              </p>
+              <p className="text-2xl font-bold text-emerald-700">
+                {summary.elevated}
+                <span className="text-sm font-normal text-muted-foreground">
+                  /{summary.desktop}
+                </span>
+              </p>
+              {summary.notElevated > 0 && (
+                <p className="text-[10px] text-amber-700 mt-0.5">{summary.notElevated} en mode user</p>
+              )}
             </div>
             <div className="rounded-lg border bg-card px-3 py-2">
               <p className="text-[10px] uppercase tracking-wide text-emerald-700">À jour</p>
@@ -417,6 +452,7 @@ const RemoteScannerDiagnosticTab = () => {
               <p className="text-2xl font-bold text-amber-700">{summary.staleScan}</p>
             </div>
           </div>
+
 
           {/* Filters */}
           <div className="flex flex-wrap items-center gap-2">
@@ -464,6 +500,17 @@ const RemoteScannerDiagnosticTab = () => {
             >
               Pas de scan &gt;24h
             </Button>
+            <Button
+              variant={filter === "notElevated" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setFilter("notElevated")}
+              className={filter === "notElevated" ? "" : "border-amber-300 text-amber-700 hover:bg-amber-50"}
+              title="Postes desktop qui ne tournent pas en admin Windows — capture scan fragile si le LGO est elevé"
+            >
+              <ShieldAlert className="h-3 w-3 mr-1" />
+              Pas en admin
+            </Button>
+
           </div>
 
           {/* Rows */}
@@ -489,6 +536,7 @@ const PharmacyDiagRow = ({ row, latestVersion }: { row: HeartbeatRow; latestVers
   const paths = useMemo(() => computePaths(row.scanner_status), [row.scanner_status]);
   const health = useMemo(() => healthScore(paths), [paths]);
   const isDesktop = row.platform === "desktop";
+  const elevated = row.scanner_status?.elevated;
 
   const versionState: "up-to-date" | "outdated" | "unknown" = !latestVersion
     ? "unknown"
@@ -520,6 +568,33 @@ const PharmacyDiagRow = ({ row, latestVersion }: { row: HeartbeatRow; latestVers
           </div>
         </div>
         <div className="flex items-center gap-1.5 flex-wrap justify-end">
+          {isDesktop && elevated === true && (
+            <Badge
+              variant="outline"
+              className="bg-emerald-50 text-emerald-700 border-emerald-300 text-[10px] gap-1"
+              title="Asclion tourne en High Integrity Level (admin Windows) — capture scan garantie en background même si le LGO a le focus."
+            >
+              <ShieldCheck className="h-2.5 w-2.5" /> admin
+            </Badge>
+          )}
+          {isDesktop && elevated === false && (
+            <Badge
+              variant="outline"
+              className="bg-amber-50 text-amber-800 border-amber-300 text-[10px] gap-1"
+              title="Asclion tourne en Medium Integrity Level (user). Si le LGO est elevé, Windows UIPI bloquera la capture en background. Redémarrer le poste pour appliquer la migration silencieuse vers HighestAvailable."
+            >
+              <ShieldAlert className="h-2.5 w-2.5" /> user
+            </Badge>
+          )}
+          {isDesktop && (elevated === null || elevated === undefined) && (
+            <Badge
+              variant="outline"
+              className="bg-slate-50 text-slate-600 border-slate-300 text-[10px]"
+              title="Niveau de privilège pas encore détecté — heartbeat antérieur à la version qui expose le flag elevated."
+            >
+              priv ?
+            </Badge>
+          )}
           {versionState === "up-to-date" && (
             <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300 text-[10px]">
               à jour
