@@ -59,6 +59,10 @@ type ScannerStatus = {
   serialLastError?: string | null;
   clipboardEnabled?: boolean;
   webHidEnabled?: boolean;
+  // Windows admin / High Integrity Level — true = Asclion bypass UIPI
+  // → capture scan en background même quand le LGO a le focus
+  elevated?: boolean | null;
+  platform?: string;
 };
 
 type HeartbeatRow = {
@@ -194,7 +198,7 @@ const RemoteScannerDiagnosticTab = () => {
   const [rows, setRows] = useState<HeartbeatRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<"all" | "broken" | "stale" | "desktop" | "outdated">("all");
+  const [filter, setFilter] = useState<"all" | "broken" | "stale" | "desktop" | "outdated" | "notElevated">("all");
   const [latestVersion, setLatestVersion] = useState<string | null>(null);
 
   // The "latest deployed" version is whatever /version.json currently serves.
@@ -325,6 +329,11 @@ const RemoteScannerDiagnosticTab = () => {
         if (ageHours < 24) return false;
       }
       if (filter === "outdated" && !isOutdated(r)) return false;
+      if (filter === "notElevated") {
+        // Filtre les postes desktop Windows qui ne tournent PAS en admin
+        if (r.platform !== "desktop") return false;
+        if (r.scanner_status?.elevated === true) return false;
+      }
       return true;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -347,7 +356,14 @@ const RemoteScannerDiagnosticTab = () => {
     const outdated = latestVersion
       ? rows.filter((r) => !r.app_version || r.app_version !== latestVersion).length
       : 0;
-    return { total, desktop, noActiveCapture, staleScan, upToDate, outdated };
+    // Privilèges Windows — uniquement parmi les postes desktop
+    const desktopRows = rows.filter((r) => r.platform === "desktop");
+    const elevated = desktopRows.filter((r) => r.scanner_status?.elevated === true).length;
+    const notElevated = desktopRows.filter((r) => r.scanner_status?.elevated === false).length;
+    const elevationUnknown = desktopRows.filter(
+      (r) => r.scanner_status?.elevated === undefined || r.scanner_status?.elevated === null,
+    ).length;
+    return { total, desktop, noActiveCapture, staleScan, upToDate, outdated, elevated, notElevated, elevationUnknown };
   }, [rows, latestVersion]);
 
 
