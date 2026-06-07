@@ -170,9 +170,22 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
     onNewFile,
   });
 
-  // HID barcode scanner detection
+  // HID barcode scanner detection (keyboard path — used on web and when Electron
+  // global hook is unavailable). We dispatch SCANNER.DOM_EVENT in addition to
+  // invoking onBarcodeScan so AnalysisResults' auto-attribution listener also
+  // sees the scan (it only listens to the DOM event). Widget's dedup window
+  // (SCANNER.DEDUP_WINDOW_MS) absorbs the resulting double-fire.
   useBarcodeScanner({
-    onScan: onBarcodeScan,
+    onScan: (code) => {
+      try {
+        window.dispatchEvent(
+          new CustomEvent(SCANNER.DOM_EVENT, { detail: { ean: code, at: Date.now() } }),
+        );
+      } catch {
+        /* noop */
+      }
+      onBarcodeScan(code);
+    },
     enabled: true,
   });
 
