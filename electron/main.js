@@ -1,4 +1,4 @@
-// build: electron v2026.06.07.4 — fix single-instance lock race condition on elevation (--from-elevation flag)
+// build: electron v2026.06.07.5 — auto-elevation au démarrage (UAC auto si user mode, zero clic pharmacien)
 const { app, BrowserWindow, shell, ipcMain, Notification } = require("electron");
 const { autoUpdater } = require("electron-updater");
 const path = require("path");
@@ -308,12 +308,38 @@ if (isAutolaunchRepairMode) {
     });
     // ──────────────────────────────────────────────────────────────────────
 
-    createWindow();
-    // Warm up elevation detection so the FIRST heartbeat already carries the
-    // privilege flag. If the app is still running as a normal user, immediately
-    // ask Windows for the one-time UAC consent needed to create the elevated
-    // scheduled task for existing installs.
+    // ── Auto-élévation au démarrage ─────────────────────────────────────────
+    // Si l'app tourne en user mode (LogonTask pas fiable selon configs UAC),
+    // on déclenche AUTOMATIQUEMENT le flow VBS d'élévation. L'utilisateur voit
+    // UAC apparaître, accepte, et l'app se relance en admin. Pas besoin de
+    // bouton — c'est zero-touch pour le pharmacien.
+    //
+    // Si l'utilisateur refuse UAC : l'app continue en user mode (createWindow
+    // est appelé après), avec le bouton "Activer admin" disponible en repli.
     const elevated = await detectElevation();
+    if (!elevated && process.platform === "win32") {
+      devLog("[STARTUP] not elevated → auto-spawning VBS elevation prompt");
+      const r = spawnVbsRelaunchAsAdmin();
+      if (r.ok) {
+        // Le VBS va déclencher UAC. Si l'user accepte, la nouvelle instance
+        // admin nous tuera via --kill-pid=PID. On garde notre fenêtre cachée
+        // pendant 8s — soit on est tués, soit on continue en user mode (UAC refusé).
+        devLog("[STARTUP] VBS spawned, waiting for elevation outcome...");
+        // Pas createWindow() ici : on ne montre la fenêtre user-mode qu'APRÈS
+        // expiration du timeout (sinon flash visuel quand UAC est accepté).
+        setTimeout(() => {
+          if (!mainWindow) {
+            devLog("[STARTUP] UAC refused or timed out → falling back to user mode");
+            createWindow();
+          }
+        }, 8000);
+      } else {
+        devWarn("[STARTUP] VBS spawn failed, falling back to user mode:", r.error);
+        createWindow();
+      }
+    } else {
+      createWindow();
+    }
     const autolaunchState = await registerAutoLaunch();
     void maybePromptElevatedAutolaunchRepair({ elevated, autolaunchState, reason: "startup" });
     // Detect installed LGO (Windows only) and forward to renderer when ready
@@ -782,7 +808,7 @@ ipcMain.handle("autolaunch:reinstall", async () => {
 });
 
 // ────────────────────────────────────────────────────────────
-// Relance Asclion en admin TOUT DE SUITE via VBScript natif.
+// Relance Asclion en admin via VBScript natif.
 //
 // Pourquoi VBScript et pas PowerShell directement ?
 //   • PowerShell `Start-Process -Verb RunAs` est souvent bloqué par les
@@ -795,40 +821,23 @@ ipcMain.handle("autolaunch:reinstall", async () => {
 //     EDR ne la filtre, et UAC s'affiche systématiquement.
 //
 // Si l'utilisateur accepte → la nouvelle instance démarre en admin et
-// l'ancienne se quitte (kill différé 3s). S'il refuse → rien ne se passe,
-// l'app reste en mode user.
+// l'ancienne se quitte. S'il refuse → rien ne se passe, l'app reste en mode user.
 // ────────────────────────────────────────────────────────────
-ipcMain.handle("system:relaunch-as-admin", async () => {
+function spawnVbsRelaunchAsAdmin() {
   if (process.platform !== "win32") return { ok: false, error: "not Windows" };
-  const elevated = await detectElevation();
-  if (elevated) return { ok: true, alreadyElevated: true };
 
   const vbsPath = path.join(app.getPath("temp"), `asclion-elevate-${process.pid}-${Date.now()}.vbs`);
   try {
     const exePath = process.execPath;
-    // Escape pour VBScript : double-quote = "" dans une string VBS
     const exeEscaped = exePath.replace(/"/g, '""');
     const replacePid = process.pid;
-    // Args passés à la nouvelle instance admin :
-    //   --from-elevation : flag identification
-    //   --kill-pid=N     : PID de l'ancienne instance que la nouvelle doit tuer
-    //                      AVANT de tenter de prendre le single-instance lock.
-    // Sans ce flag, la nouvelle instance se suicide via app.quit() car le lock
-    // est encore détenu par l'ancienne (race condition).
     const elevationArgs = `${FROM_ELEVATION_ARG} --kill-pid=${replacePid}`;
 
-    // VBScript :
-    //   1) ShellExecute "runas" → UAC consent dialog
-    //   2) Passe les args élévation à la nouvelle instance
-    //   3) Pas de kill différé ici — la nouvelle instance le fait elle-même via taskkill au démarrage
-    // On Error Resume Next pour que le script termine proprement si l'UAC est refusé.
     const vbsContent = [
       `Option Explicit`,
       `Dim objShell`,
       `On Error Resume Next`,
       `Set objShell = CreateObject("Shell.Application")`,
-      `' ShellExecute(file, args, dir, verb, show)`,
-      `' verb "runas" = invoque UAC consent dialog ; show=1 = SW_SHOWNORMAL`,
       `objShell.ShellExecute "${exeEscaped}", "${elevationArgs}", "", "runas", 1`,
       `WScript.Quit 0`,
     ].join("\r\n");
@@ -836,8 +845,6 @@ ipcMain.handle("system:relaunch-as-admin", async () => {
     fs.writeFileSync(vbsPath, vbsContent, { encoding: "utf8" });
     devLog("[RELAUNCH-ADMIN] VBS helper written:", vbsPath);
 
-    // Lance wscript.exe sur le VBS — wscript a sa propre window context donc UAC s'affiche.
-    // detached + ignore : on doit survivre au kill de notre propre process.
     const child = spawn(
       "wscript.exe",
       [vbsPath],
@@ -845,7 +852,7 @@ ipcMain.handle("system:relaunch-as-admin", async () => {
     );
     child.unref();
 
-    // Nettoyage différé du fichier VBS (après que wscript ait fini de l'exécuter)
+    // Cleanup différé du .vbs
     setTimeout(() => {
       try { fs.unlinkSync(vbsPath); } catch { /* ignore */ }
     }, 30_000);
@@ -857,6 +864,13 @@ ipcMain.handle("system:relaunch-as-admin", async () => {
     try { fs.unlinkSync(vbsPath); } catch { /* ignore */ }
     return { ok: false, error: msg };
   }
+}
+
+ipcMain.handle("system:relaunch-as-admin", async () => {
+  if (process.platform !== "win32") return { ok: false, error: "not Windows" };
+  const elevated = await detectElevation();
+  if (elevated) return { ok: true, alreadyElevated: true };
+  return spawnVbsRelaunchAsAdmin();
 });
 
 // ────────────────────────────────────────────────────────────
