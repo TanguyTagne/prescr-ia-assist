@@ -91,7 +91,10 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           tag_name: v${{ github.run_number }}
           name: Asclion v${{ github.run_number }}
-          files: electron/dist/*.exe
+          files: |
+            electron/dist/*.exe
+            electron/dist/*.yml
+            electron/dist/*.blockmap
           generate_release_notes: true
 
       # Garde uniquement la dernière release (supprime les anciennes + leurs tags)
