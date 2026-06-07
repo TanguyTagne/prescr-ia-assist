@@ -1,4 +1,4 @@
-// build: electron v2026.06.07.3 — UAC via VBScript native (EDR-friendly), fallback if PowerShell blocked
+// build: electron v2026.06.07.4 — fix single-instance lock race condition on elevation (--from-elevation flag)
 const { app, BrowserWindow, shell, ipcMain, Notification } = require("electron");
 const { autoUpdater } = require("electron-updater");
 const path = require("path");
@@ -204,6 +204,29 @@ const repairTargetSidArg = process.argv.find((arg) => arg.startsWith("--target-u
 const REPAIR_TARGET_USER_SID = repairTargetSidArg ? repairTargetSidArg.split("=").slice(1).join("=").trim() : null;
 const repairReplacePidArg = process.argv.find((arg) => arg.startsWith("--replace-pid="));
 const REPAIR_REPLACE_PID = repairReplacePidArg ? Number(repairReplacePidArg.split("=").slice(1).join("=")) : 0;
+
+// ── Flag --from-elevation : la nouvelle instance vient d'être lancée en admin
+// via UAC depuis un ancien process Asclion en mode user. Elle doit FORCER le
+// kill de l'ancienne instance (qui détient encore le single-instance lock) AVANT
+// de tenter de prendre le lock elle-même, sinon elle se suicide immédiatement
+// via `else if (!gotTheLock) app.quit()` et l'utilisateur se retrouve sans app.
+const FROM_ELEVATION_ARG = "--from-elevation";
+const isFromElevation = process.argv.includes(FROM_ELEVATION_ARG);
+const elevationKillPidArg = process.argv.find((arg) => arg.startsWith("--kill-pid="));
+const ELEVATION_KILL_PID = elevationKillPidArg ? Number(elevationKillPidArg.split("=").slice(1).join("=")) : 0;
+
+if (isFromElevation && ELEVATION_KILL_PID > 0 && process.platform === "win32") {
+  // Synchrone : on tue l'ancien PID, on attend qu'il libère le lock, puis on continue.
+  // execSync est ici acceptable car on est avant app.whenReady() — l'event loop
+  // n'a aucun travail à faire de toute façon.
+  const { execSync } = require("child_process");
+  try {
+    execSync(`taskkill /PID ${ELEVATION_KILL_PID} /F /T`, { windowsHide: true, stdio: "ignore" });
+  } catch { /* le process est peut-être déjà mort, ignore */ }
+  // Petit délai pour que Windows libère vraiment le mutex single-instance.
+  // 500ms est largement suffisant — Windows libère typiquement en <50ms.
+  try { execSync("powershell.exe -NoProfile -Command \"Start-Sleep -Milliseconds 500\"", { windowsHide: true, stdio: "ignore" }); } catch { /* ignore */ }
+}
 
 // Single instance lock — prevent multiple windows, except the short-lived
 // elevated repair helper launched via UAC for legacy per-user installs.
@@ -786,28 +809,27 @@ ipcMain.handle("system:relaunch-as-admin", async () => {
     // Escape pour VBScript : double-quote = "" dans une string VBS
     const exeEscaped = exePath.replace(/"/g, '""');
     const replacePid = process.pid;
+    // Args passés à la nouvelle instance admin :
+    //   --from-elevation : flag identification
+    //   --kill-pid=N     : PID de l'ancienne instance que la nouvelle doit tuer
+    //                      AVANT de tenter de prendre le single-instance lock.
+    // Sans ce flag, la nouvelle instance se suicide via app.quit() car le lock
+    // est encore détenu par l'ancienne (race condition).
+    const elevationArgs = `${FROM_ELEVATION_ARG} --kill-pid=${replacePid}`;
 
-    // VBScript : 1) UAC prompt pour lancer Asclion en admin ; 2) kill l'ancienne PID
-    // après 3s pour laisser la nouvelle instance prendre le single-instance lock.
-    // On Error Resume Next garantit qu'on essaie le kill même si l'UAC est refusé.
+    // VBScript :
+    //   1) ShellExecute "runas" → UAC consent dialog
+    //   2) Passe les args élévation à la nouvelle instance
+    //   3) Pas de kill différé ici — la nouvelle instance le fait elle-même via taskkill au démarrage
+    // On Error Resume Next pour que le script termine proprement si l'UAC est refusé.
     const vbsContent = [
       `Option Explicit`,
-      `Dim objShell, objWMI, procs, proc`,
+      `Dim objShell`,
       `On Error Resume Next`,
       `Set objShell = CreateObject("Shell.Application")`,
       `' ShellExecute(file, args, dir, verb, show)`,
-      `' verb "runas" = invoque UAC consent dialog`,
-      `objShell.ShellExecute "${exeEscaped}", "", "", "runas", 1`,
-      `If Err.Number <> 0 Then`,
-      `  WScript.Quit 1`,
-      `End If`,
-      `' Délai 3s avant de tuer l'ancien process, le temps que le nouveau prenne le lock`,
-      `WScript.Sleep 3000`,
-      `Set objWMI = GetObject("winmgmts:\\\\.\\root\\cimv2")`,
-      `Set procs = objWMI.ExecQuery("SELECT * FROM Win32_Process WHERE ProcessId = ${replacePid}")`,
-      `For Each proc in procs`,
-      `  proc.Terminate()`,
-      `Next`,
+      `' verb "runas" = invoque UAC consent dialog ; show=1 = SW_SHOWNORMAL`,
+      `objShell.ShellExecute "${exeEscaped}", "${elevationArgs}", "", "runas", 1`,
       `WScript.Quit 0`,
     ].join("\r\n");
 
