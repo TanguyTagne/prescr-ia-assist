@@ -2092,6 +2092,7 @@ function getScannerStatus() {
   // by the IPC handler / heartbeat path (detectElevation runs every 60 s).
   // null means "pas encore détecté" (premier heartbeat avant le warm-up).
   const elevated = elevationCache.value;
+  const autolaunchState = readAutolaunchState();
   return {
     mode,
     hidLoaded: !!HID,
@@ -2141,6 +2142,17 @@ function getScannerStatus() {
     //         tant que le LGO n'est PAS lui-même elevé
     // null  = pas encore détecté (premier heartbeat)
     elevated,
+    autolaunch: autolaunchState
+      ? {
+          userSid: autolaunchState.userSid || null,
+          taskRegistered: Array.isArray(autolaunchState.tasks) && autolaunchState.tasks.some((t) => t.registered),
+          taskErrors: Array.isArray(autolaunchState.tasks)
+            ? autolaunchState.tasks.filter((t) => !t.registered && t.error).map((t) => `${t.name}: ${t.error}`).slice(0, 3)
+            : [],
+          repairPrompt: autolaunchState.repairPrompt || null,
+          updatedAt: autolaunchState.updatedAt || null,
+        }
+      : null,
     platform: process.platform,
   };
 }
