@@ -67,7 +67,8 @@ type ScannerStatus = {
   autolaunch?: {
     taskRegistered?: boolean;
     taskErrors?: string[];
-    repairPrompt?: { attempted?: boolean; reason?: string; error?: string | null; at?: string } | null;
+    repairPrompt?: { attempted?: boolean; reason?: string; error?: string | null; method?: string | null; scriptPath?: string | null; at?: string } | null;
+    activationScript?: { ok?: boolean; path?: string | null; error?: string | null } | null;
     updatedAt?: string | null;
   } | null;
   platform?: string;
@@ -690,8 +691,13 @@ const PharmacyDiagRow = ({ row, latestVersion }: { row: HeartbeatRow; latestVers
         <div className="text-[10px] bg-amber-50 border border-amber-200 text-amber-900 rounded px-2 py-1.5">
           <span className="font-semibold">Auto-admin :</span>{" "}
           tâche planifiée {autolaunch.taskRegistered ? "créée" : "non créée"}
-          {autolaunch.repairPrompt?.attempted ? " · prompt UAC demandé" : ""}
+          {autolaunch.repairPrompt?.attempted ? " · prompt UAC/script demandé" : ""}
           {autolaunch.repairPrompt?.error ? ` · erreur UAC : ${autolaunch.repairPrompt.error}` : ""}
+          {autolaunch.activationScript?.ok && autolaunch.activationScript.path && (
+            <span className="block opacity-80 mt-1">
+              Script disponible : <code className="font-mono">{autolaunch.activationScript.path}</code>
+            </span>
+          )}
           {autolaunch.taskErrors && autolaunch.taskErrors.length > 0 && (
             <span className="block opacity-80 mt-1">{autolaunch.taskErrors.join(" · ")}</span>
           )}
