@@ -1,4 +1,4 @@
-// build: electron v2026.06.07.2 — UAC dialog fix (removed -WindowStyle Hidden), manual re-prompt, system:relaunch-as-admin IPC
+// build: electron v2026.06.07.3 — UAC via VBScript native (EDR-friendly), fallback if PowerShell blocked
 const { app, BrowserWindow, shell, ipcMain, Notification } = require("electron");
 const { autoUpdater } = require("electron-updater");
 const path = require("path");
@@ -759,35 +759,80 @@ ipcMain.handle("autolaunch:reinstall", async () => {
 });
 
 // ────────────────────────────────────────────────────────────
-// Relance Asclion en admin TOUT DE SUITE (vs autolaunch qui agit
-// au prochain logon Windows). Affiche systématiquement UAC.
-// Si l'utilisateur accepte → la nouvelle instance démarre en admin
-// et l'ancienne se quitte. S'il refuse → l'app reste en mode user.
+// Relance Asclion en admin TOUT DE SUITE via VBScript natif.
+//
+// Pourquoi VBScript et pas PowerShell directement ?
+//   • PowerShell `Start-Process -Verb RunAs` est souvent bloqué par les
+//     EDR/antivirus en officine (SentinelOne, Sophos, CrowdStrike)
+//     car c'est un pattern d'attaque connu (LOLBin abuse).
+//   • Avec `detached:true + stdio:ignore` PowerShell perd l'association
+//     parent-window → certaines configs UAC refusent d'afficher le dialogue.
+//   • VBScript appelle directement Shell.Application.ShellExecute avec
+//     verbe "runas" → API Windows native via shell32.dll, presque aucun
+//     EDR ne la filtre, et UAC s'affiche systématiquement.
+//
+// Si l'utilisateur accepte → la nouvelle instance démarre en admin et
+// l'ancienne se quitte (kill différé 3s). S'il refuse → rien ne se passe,
+// l'app reste en mode user.
 // ────────────────────────────────────────────────────────────
 ipcMain.handle("system:relaunch-as-admin", async () => {
   if (process.platform !== "win32") return { ok: false, error: "not Windows" };
   const elevated = await detectElevation();
   if (elevated) return { ok: true, alreadyElevated: true };
+
+  const vbsPath = path.join(app.getPath("temp"), `asclion-elevate-${process.pid}-${Date.now()}.vbs`);
   try {
-    const exe = escapePowerShellSingleQuoted(process.execPath);
+    const exePath = process.execPath;
+    // Escape pour VBScript : double-quote = "" dans une string VBS
+    const exeEscaped = exePath.replace(/"/g, '""');
     const replacePid = process.pid;
-    // PS lance Asclion en admin (Verb RunAs → UAC), puis attend 2s, puis kill l'ancienne PID.
-    // Le delay garantit que la nouvelle instance a le temps de prendre le lock single-instance
-    // avant que l'ancienne libère le sien (sinon race condition possible).
-    const command =
-      `Start-Process -FilePath '${exe}' -Verb RunAs; ` +
-      `Start-Sleep -Seconds 2; Stop-Process -Id ${replacePid} -Force -ErrorAction SilentlyContinue`;
-    devLog("[RELAUNCH-ADMIN] spawning PS:", command);
+
+    // VBScript : 1) UAC prompt pour lancer Asclion en admin ; 2) kill l'ancienne PID
+    // après 3s pour laisser la nouvelle instance prendre le single-instance lock.
+    // On Error Resume Next garantit qu'on essaie le kill même si l'UAC est refusé.
+    const vbsContent = [
+      `Option Explicit`,
+      `Dim objShell, objWMI, procs, proc`,
+      `On Error Resume Next`,
+      `Set objShell = CreateObject("Shell.Application")`,
+      `' ShellExecute(file, args, dir, verb, show)`,
+      `' verb "runas" = invoque UAC consent dialog`,
+      `objShell.ShellExecute "${exeEscaped}", "", "", "runas", 1`,
+      `If Err.Number <> 0 Then`,
+      `  WScript.Quit 1`,
+      `End If`,
+      `' Délai 3s avant de tuer l'ancien process, le temps que le nouveau prenne le lock`,
+      `WScript.Sleep 3000`,
+      `Set objWMI = GetObject("winmgmts:\\\\.\\root\\cimv2")`,
+      `Set procs = objWMI.ExecQuery("SELECT * FROM Win32_Process WHERE ProcessId = ${replacePid}")`,
+      `For Each proc in procs`,
+      `  proc.Terminate()`,
+      `Next`,
+      `WScript.Quit 0`,
+    ].join("\r\n");
+
+    fs.writeFileSync(vbsPath, vbsContent, { encoding: "utf8" });
+    devLog("[RELAUNCH-ADMIN] VBS helper written:", vbsPath);
+
+    // Lance wscript.exe sur le VBS — wscript a sa propre window context donc UAC s'affiche.
+    // detached + ignore : on doit survivre au kill de notre propre process.
     const child = spawn(
-      "powershell.exe",
-      ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", command],
+      "wscript.exe",
+      [vbsPath],
       { windowsHide: false, detached: true, stdio: "ignore" },
     );
     child.unref();
-    return { ok: true, prompted: true };
+
+    // Nettoyage différé du fichier VBS (après que wscript ait fini de l'exécuter)
+    setTimeout(() => {
+      try { fs.unlinkSync(vbsPath); } catch { /* ignore */ }
+    }, 30_000);
+
+    return { ok: true, prompted: true, method: "vbs" };
   } catch (e) {
     const msg = String(e && e.message ? e.message : e);
     devWarn("[RELAUNCH-ADMIN] failed:", msg);
+    try { fs.unlinkSync(vbsPath); } catch { /* ignore */ }
     return { ok: false, error: msg };
   }
 });
