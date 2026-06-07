@@ -34,10 +34,29 @@ describe("parseBarcodeToCip", () => {
     expect(parseBarcodeToCip("123")).toBeNull();
   });
 
-  it("rejects RPPS / ADELI / other non-product IDs (8-12 or 14 digits)", () => {
-    expect(parseBarcodeToCip("10003475943")).toBeNull(); // RPPS 11 digits
-    expect(parseBarcodeToCip("11260401")).toBeNull();    // 8 digits
-    expect(parseBarcodeToCip("123456789012")).toBeNull(); // 12 digits
+  it("extracts CIP-13 from a Data Matrix payload prefixed with ISO/IEC 15424 ]d2", () => {
+    expect(parseBarcodeToCip("]d2010340093546127621ABC123456789017261231")).toBe("3400935461276");
   });
 
+  it("strips ]C1 Code-128-GS1 symbology prefix", () => {
+    expect(parseBarcodeToCip("]C1010340099912345617260131")).toBe("3400999123456");
+  });
+});
+
+describe("parseGS1DataMatrix", () => {
+  it("extracts CIP-13 from raw ]d2 payload", () => {
+    expect(parseGS1DataMatrix("]d2010340093546127621ABC..17261231")).toBe("3400935461276");
+  });
+
+  it("extracts CIP-13 when no symbology prefix is present", () => {
+    expect(parseGS1DataMatrix("010340099912345617260131101LOT123")).toBe("3400999123456");
+  });
+
+  it("returns null for plain EAN-13 input (not a Data Matrix payload)", () => {
+    expect(parseGS1DataMatrix("3400999123456")).toBeNull();
+  });
+
+  it("returns null for garbage", () => {
+    expect(parseGS1DataMatrix("hello")).toBeNull();
+  });
 });
