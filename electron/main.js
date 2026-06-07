@@ -897,8 +897,9 @@ async function detectElevation() {
   if (elevationCache.value !== null && now - elevationCache.at < ELEVATION_TTL_MS) {
     return elevationCache.value;
   }
-  const r = await execAsync("net session >nul 2>&1");
-  const elevated = r.code === 0;
+  const r = await execAsync("whoami /groups /fo csv");
+  const groups = `${r.stdout || ""} ${r.stderr || ""}`;
+  const elevated = /S-1-16-(12288|16384)/.test(groups) || (await execAsync("net session >nul 2>&1")).code === 0;
   elevationCache = { value: elevated, at: now };
   return elevated;
 }
