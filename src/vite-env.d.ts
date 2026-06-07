@@ -56,6 +56,7 @@ declare global {
       status: () => Promise<unknown>;
       reinstall: () => Promise<any>;
       createAdminScript: () => Promise<{ ok: boolean; path: string | null; error: string | null }>;
+      openAdminScript: () => Promise<{ ok: boolean; path: string | null; error: string | null; opened?: boolean }>;
     };
     system?: {
       isElevated: () => Promise<{ elevated: boolean; platform: string }>;
