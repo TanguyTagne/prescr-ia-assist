@@ -1,4 +1,4 @@
-// build: electron v2026.06.07.1 — per-user schtasks UserId + RunLevel=HighestAvailable, UAC repair for legacy installs
+// build: electron v2026.06.07.2 — UAC dialog fix (removed -WindowStyle Hidden), manual re-prompt, system:relaunch-as-admin IPC
 const { app, BrowserWindow, shell, ipcMain, Notification } = require("electron");
 const { autoUpdater } = require("electron-updater");
 const path = require("path");
@@ -574,163 +574,14 @@ function readAutolaunchState() {
     return null;
   }
 }
-
-function getAdminActivationScriptPath() {
-  const fileName = "Activer-Asclion-admin.bat";
-  try {
-    return path.join(app.getPath("desktop"), fileName);
-  } catch {
-    return path.join(app.getPath("userData"), fileName);
-  }
-}
-
-function escapeVbsString(value) {
-  return String(value == null ? "" : value).replace(/"/g, '""');
-}
-
-function writeAdminElevationLauncher({ reason = "manual", targetUserSid = null, replacePid = process.pid } = {}) {
-  if (process.platform !== "win32") return { ok: false, path: null, error: "not Windows" };
-  try {
-    const launcherPath = path.join(app.getPath("userData"), "asclion-uac-launcher.vbs");
-    const exePath = process.execPath;
-    const targetArg = targetUserSid ? ` --target-user-sid=${targetUserSid}` : "";
-    const replaceArg = replacePid ? ` --replace-pid=${replacePid}` : "";
-    const args = `${REPAIR_AUTOLAUNCH_ARG} --reason=${reason || "manual"}${targetArg}${replaceArg}`;
-    const content = [
-      'Set shell = CreateObject("Shell.Application")',
-      `shell.ShellExecute "${escapeVbsString(exePath)}", "${escapeVbsString(args)}", "${escapeVbsString(path.dirname(exePath))}", "runas", 1`,
-      "If Err.Number <> 0 Then WScript.Quit 1",
-    ].join("\r\n");
-    fs.writeFileSync(launcherPath, content, { encoding: "utf8" });
-    return { ok: true, path: launcherPath, error: null };
-  } catch (e) {
-    return { ok: false, path: null, error: String(e && e.message ? e.message : e) };
-  }
-}
-
-function writeAdminActivationScript({ reason = "manual", targetUserSid = null } = {}) {
-  if (process.platform !== "win32") return { ok: false, path: null, error: "not Windows" };
-  try {
-    const scriptPath = getAdminActivationScriptPath();
-    const exeForBat = process.execPath.replace(/%/g, "%%");
-    const exeForVbs = process.execPath.replace(/"/g, '""');
-    const workDirForVbs = path.dirname(process.execPath).replace(/"/g, '""');
-    const fixedTargetLine = targetUserSid ? `if not defined TARGET_SID set "TARGET_SID=${targetUserSid}"` : "";
-    const content = [
-      "@echo off",
-      "chcp 65001 >nul",
-      "title Asclion - Activation mode admin",
-      "setlocal EnableExtensions",
-      `set "ASCLION_EXE=${exeForBat}"`,
-      "set \"ASCLION_LOG=%TEMP%\\asclion-admin-activation.log\"",
-      `set "ASCLION_VBS=%TEMP%\\asclion-uac-launcher.vbs"`,
-      "echo.",
-      "echo ==============================================",
-      "echo   Activation du demarrage admin Asclion",
-      "echo ==============================================",
-      "echo.",
-      "for /f \"tokens=2 delims=,\" %%S in ('whoami /user /fo csv /nh') do set \"TARGET_SID=%%~S\"",
-      fixedTargetLine,
-      "set \"ASCLION_SCRIPT=%~f0\"",
-      "if /i \"%~1\"==\"elevated\" goto elevated",
-      "net session >nul 2>&1",
-      "if %errorlevel% neq 0 (",
-      "  echo [%DATE% %TIME%] Demande UAC pour %TARGET_SID% >> \"%ASCLION_LOG%\"",
-      "  echo Une fenetre Windows de confirmation va s'ouvrir.",
-      "  echo Cliquez sur OUI pour autoriser Asclion une seule fois.",
-      "  echo.",
-      "  > \"%ASCLION_VBS%\" echo Set shell = CreateObject(\"Shell.Application\")",
-      `  >> "%ASCLION_VBS%" echo shell.ShellExecute "${exeForVbs}", "${REPAIR_AUTOLAUNCH_ARG} --reason=${reason || "manual-bat"} --target-user-sid=%TARGET_SID% --replace-pid=${process.pid}", "${workDirForVbs}", "runas", 1`,
-      "  wscript.exe //nologo \"%ASCLION_VBS%\"",
-      "  if %errorlevel% neq 0 (",
-      "    echo ERREUR: Windows a bloque la demande admin automatique.",
-      "    echo Faites clic droit sur ce fichier, puis Executer en tant qu'administrateur.",
-      "    start \"\" explorer.exe /select,\"%ASCLION_SCRIPT%\"",
-      "    pause",
-      "  ) else (",
-      "    echo Demande envoyee. Si rien n'apparait, faites clic droit sur ce fichier puis Executer en tant qu'administrateur.",
-      "    timeout /t 20 /nobreak >nul",
-      "  )",
-      "  exit /b",
-      ")",
-      ":elevated",
-      "if not \"%~2\"==\"\" set \"TARGET_SID=%~2\"",
-      "echo Configuration de la tache planifiee elevee...",
-      "if not exist \"%ASCLION_EXE%\" (",
-      "  echo ERREUR: Asclion.exe introuvable.",
-      "  echo %ASCLION_EXE%",
-      "  pause",
-      "  exit /b 1",
-      ")",
-      `"%ASCLION_EXE%" ${REPAIR_AUTOLAUNCH_ARG} --reason=${reason} --target-user-sid=%TARGET_SID% --no-restart-after-repair`,
-      "echo.",
-      "echo Redemarrage d'Asclion via le lancement admin...",
-      "taskkill /IM Asclion.exe /F >nul 2>nul",
-      "timeout /t 1 /nobreak >nul",
-      "schtasks /Run /TN \"AsclionAtLogon\" >nul 2>nul",
-      "if %errorlevel% neq 0 (",
-      "  echo La tache n'a pas pu etre lancee maintenant, lancement direct en admin...",
-      "  start \"\" \"%ASCLION_EXE%\"",
-      ") else (",
-      "  echo OK: Asclion est relance via la tache admin.",
-      ")",
-      "echo.",
-      "echo Termine. Le diagnostic distant doit passer de user a admin apres le prochain heartbeat.",
-      "timeout /t 5 /nobreak >nul",
-      "exit /b 0",
-      "",
-    ].join("\r\n");
-    fs.writeFileSync(scriptPath, content, { encoding: "utf8" });
-    return { ok: true, path: scriptPath, launcherPath: path.join(app.getPath("userData"), "asclion-uac-launcher.vbs"), logPath: path.join(app.getPath("temp"), "asclion-admin-activation.log"), error: null };
-  } catch (e) {
-    return { ok: false, path: null, error: String(e && e.message ? e.message : e) };
-  }
-}
 async function registerAutoLaunch() {
   if (process.platform !== "win32") return { runKey: null, tasks: [] };
   const exePath = process.execPath;
   const tmpDir = app.getPath("temp");
   const userSid = REPAIR_TARGET_USER_SID || await getCurrentUserSid();
-  const elevatedNow = await detectElevation();
 
   // 0) Heal old broken installs: remove pre-fix SYSTEM tasks (session 0 ghosts)
-  if (elevatedNow || isAutolaunchRepairMode) {
-    await cleanupOldTasks();
-  }
-
-  // Si Asclion tourne encore en mode user, NE PAS recréer/écraser les tâches
-  // planifiées : Windows peut accepter une tâche "HighestAvailable" créée sans
-  // élévation mais elle reste lancée en medium IL. On écrit seulement le .bat
-  // d'activation puis on laisse le helper UAC faire la vraie création élevée.
-  if (!elevatedNow && !isAutolaunchRepairMode) {
-    const activationScript = writeAdminActivationScript({ reason: "user-startup" });
-    const status = await queryAutoLaunchStatus();
-    const existingTasks = (status.tasks || []).map((task) => ({
-      name: task.name,
-      kind: task.kind,
-      time: AUTOLAUNCH_TASKS.find((t) => t.name === task.name)?.time || null,
-      registered: !!task.exists,
-      mode: "unknown",
-      error: task.exists ? null : "Activation admin requise: accepter l'UAC ou lancer Activer-Asclion-admin.bat",
-    }));
-    const anyTaskRegistered = existingTasks.some((task) => task.registered);
-    let runKeyResult;
-    if (anyTaskRegistered) {
-      await setRunRegistryKey(false);
-      runKeyResult = { ok: false, output: "skipped (scheduled task present)" };
-    } else {
-      runKeyResult = await setRunRegistryKey(true);
-    }
-    const state = {
-      userSid,
-      elevatedNow: false,
-      runKey: { enabled: runKeyResult.ok, value: exePath, error: runKeyResult.ok ? null : runKeyResult.output },
-      tasks: existingTasks,
-      activationScript,
-    };
-    writeAutolaunchState(state);
-    return state;
-  }
+  await cleanupOldTasks();
 
   // 1) Scheduled tasks d'abord — c'est la voie de démarrage privilégiée car
   //    elle utilise RunLevel=HighestAvailable (admin si possible → bypass
@@ -794,15 +645,10 @@ async function registerAutoLaunch() {
     }
   }
 
-  // 3) Filet de sécurité humain : un .bat visible sur le Bureau, lançable par
-  //    double-clic si Windows/EDR bloque le prompt automatique PowerShell.
-  const activationScript = writeAdminActivationScript({ reason: "desktop-script" });
-
   const state = {
     userSid,
     runKey: { enabled: runKeyResult.ok, value: exePath, error: runKeyResult.ok ? null : runKeyResult.output },
     tasks: results,
-    activationScript,
   };
   writeAutolaunchState(state);
   return state;
@@ -840,49 +686,41 @@ function escapePowerShellSingleQuoted(value) {
 function launchElevatedAutolaunchRepair(reason, targetUserSid) {
   if (process.platform !== "win32") return { ok: false, error: "not Windows" };
   try {
-    const activationScript = writeAdminActivationScript({ reason: reason || "manual", targetUserSid });
-    const launcher = writeAdminElevationLauncher({ reason: reason || "manual", targetUserSid, replacePid: process.pid });
-    if (launcher.ok && launcher.path) {
-      const child = spawn("wscript.exe", ["//nologo", launcher.path], {
-        cwd: path.dirname(process.execPath),
-        windowsHide: false,
-        detached: true,
-        stdio: "ignore",
-      });
-      child.unref();
-      return {
-        ok: true,
-        error: activationScript.error || null,
-        method: "shellexecute-runas-vbs",
-        scriptPath: activationScript.path,
-        launcherPath: launcher.path,
-        logPath: activationScript.logPath || null,
-      };
-    }
-
-    if (activationScript.ok && activationScript.path) shell.showItemInFolder(activationScript.path);
-
-    // Fallback direct si le BAT n'a pas pu être écrit. Fenêtre normale : ne pas
-    // cacher l'UAC, sinon certains postes donnent l'impression que rien ne se passe.
     const exe = escapePowerShellSingleQuoted(process.execPath);
     const targetArg = targetUserSid ? ` --target-user-sid=${targetUserSid}` : "";
     const restartArg = reason === "startup" || reason === "manual" ? ` --replace-pid=${process.pid}` : "";
     const arg = escapePowerShellSingleQuoted(`${REPAIR_AUTOLAUNCH_ARG} --reason=${reason || "startup"}${targetArg}${restartArg}`);
-    const command = `Start-Process -FilePath '${exe}' -ArgumentList '${arg}' -Verb RunAs -WindowStyle Normal`;
+    // NOTE: pas de -WindowStyle Hidden — sur certaines versions de Windows
+    // cette option supprime le dialogue UAC au lieu de juste masquer la fenêtre
+    // post-consent. Le process élevé n'a pas de window visible de toute façon
+    // (registerAutoLaunch tourne en headless puis app.quit()).
+    const command = `Start-Process -FilePath '${exe}' -ArgumentList '${arg}' -Verb RunAs`;
+    devLog("[AUTOLAUNCH] launching elevated helper:", command);
     const child = spawn(
       "powershell.exe",
       ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", command],
       { windowsHide: false, detached: true, stdio: "ignore" },
     );
     child.unref();
-    return { ok: true, error: launcher.error || activationScript.error || null, method: "direct-runas", scriptPath: activationScript.path || null, launcherPath: launcher.path || null };
+    return { ok: true, error: null };
   } catch (e) {
     return { ok: false, error: String(e && e.message ? e.message : e) };
   }
 }
-async function maybePromptElevatedAutolaunchRepair({ elevated, autolaunchState, reason, force = false }) {
-  if (process.platform !== "win32" || elevated || (!force && autolaunchRepairPromptedThisRun)) {
-    return { prompted: false, skipped: true };
+async function maybePromptElevatedAutolaunchRepair({ elevated, autolaunchState, reason }) {
+  if (process.platform !== "win32") {
+    return { prompted: false, skipped: true, skipReason: "not-windows" };
+  }
+  // Si déjà admin → pas besoin de prompt UAC, on a juste à réenregistrer la tâche.
+  // registerAutoLaunch() a déjà tourné côté caller, donc on signale juste "ok".
+  if (elevated) {
+    return { prompted: false, skipped: true, skipReason: "already-elevated", alreadyElevated: true };
+  }
+  // Le clic manuel re-déclenche TOUJOURS UAC (sinon l'utilisateur ne peut pas
+  // réessayer après avoir annulé/loupé la 1re fenêtre). Seul le auto-prompt
+  // au démarrage est limité à 1× par run.
+  if (reason !== "manual" && autolaunchRepairPromptedThisRun) {
+    return { prompted: false, skipped: true, skipReason: "already-prompted-this-run" };
   }
   autolaunchRepairPromptedThisRun = true;
   const targetUserSid = await getCurrentUserSid();
@@ -894,10 +732,6 @@ async function maybePromptElevatedAutolaunchRepair({ elevated, autolaunchState, 
       attempted: repair.ok,
       reason: reason || "startup",
       error: repair.error || null,
-      method: repair.method || null,
-      scriptPath: repair.scriptPath || null,
-      launcherPath: repair.launcherPath || null,
-      logPath: repair.logPath || null,
       at: new Date().toISOString(),
     },
   });
@@ -905,7 +739,7 @@ async function maybePromptElevatedAutolaunchRepair({ elevated, autolaunchState, 
     try {
       new Notification({
         title: "Asclion",
-        body: "Autorisez la fenêtre Windows pour activer le démarrage admin. Un script Activer-Asclion-admin.bat est aussi disponible sur le Bureau.",
+        body: "Autorisez la fenêtre Windows pour activer le démarrage admin. Le statut passera en admin au prochain redémarrage Windows.",
         icon: path.join(__dirname, "assets", "icon.ico"),
         silent: true,
       }).show();
@@ -913,29 +747,49 @@ async function maybePromptElevatedAutolaunchRepair({ elevated, autolaunchState, 
       /* ignore */
     }
   }
-  return { prompted: repair.ok, error: repair.error, method: repair.method || null, scriptPath: repair.scriptPath || null, launcherPath: repair.launcherPath || null, logPath: repair.logPath || null };
+  return { prompted: repair.ok, error: repair.error };
 }
 
 ipcMain.handle("autolaunch:status", async () => queryAutoLaunchStatus());
 ipcMain.handle("autolaunch:reinstall", async () => {
   const elevated = await detectElevation();
   const state = await registerAutoLaunch();
-  const repair = await maybePromptElevatedAutolaunchRepair({ elevated, autolaunchState: state, reason: "manual", force: true });
+  const repair = await maybePromptElevatedAutolaunchRepair({ elevated, autolaunchState: state, reason: "manual" });
   return { state, repair, status: await queryAutoLaunchStatus() };
 });
-ipcMain.handle("autolaunch:create-admin-script", async () => {
-  const script = writeAdminActivationScript({ reason: "manual-script" });
-  const existing = readAutolaunchState() || {};
-  writeAutolaunchState({ ...existing, activationScript: script });
-  return script;
-});
-ipcMain.handle("autolaunch:open-admin-script", async () => {
-  const script = writeAdminActivationScript({ reason: "manual-open" });
-  if (script.ok && script.path) {
-    shell.showItemInFolder(script.path);
-    return { ...script, opened: true };
+
+// ────────────────────────────────────────────────────────────
+// Relance Asclion en admin TOUT DE SUITE (vs autolaunch qui agit
+// au prochain logon Windows). Affiche systématiquement UAC.
+// Si l'utilisateur accepte → la nouvelle instance démarre en admin
+// et l'ancienne se quitte. S'il refuse → l'app reste en mode user.
+// ────────────────────────────────────────────────────────────
+ipcMain.handle("system:relaunch-as-admin", async () => {
+  if (process.platform !== "win32") return { ok: false, error: "not Windows" };
+  const elevated = await detectElevation();
+  if (elevated) return { ok: true, alreadyElevated: true };
+  try {
+    const exe = escapePowerShellSingleQuoted(process.execPath);
+    const replacePid = process.pid;
+    // PS lance Asclion en admin (Verb RunAs → UAC), puis attend 2s, puis kill l'ancienne PID.
+    // Le delay garantit que la nouvelle instance a le temps de prendre le lock single-instance
+    // avant que l'ancienne libère le sien (sinon race condition possible).
+    const command =
+      `Start-Process -FilePath '${exe}' -Verb RunAs; ` +
+      `Start-Sleep -Seconds 2; Stop-Process -Id ${replacePid} -Force -ErrorAction SilentlyContinue`;
+    devLog("[RELAUNCH-ADMIN] spawning PS:", command);
+    const child = spawn(
+      "powershell.exe",
+      ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", command],
+      { windowsHide: false, detached: true, stdio: "ignore" },
+    );
+    child.unref();
+    return { ok: true, prompted: true };
+  } catch (e) {
+    const msg = String(e && e.message ? e.message : e);
+    devWarn("[RELAUNCH-ADMIN] failed:", msg);
+    return { ok: false, error: msg };
   }
-  return { ...script, opened: false };
 });
 
 // ────────────────────────────────────────────────────────────
@@ -961,9 +815,8 @@ async function detectElevation() {
   if (elevationCache.value !== null && now - elevationCache.at < ELEVATION_TTL_MS) {
     return elevationCache.value;
   }
-  const r = await execAsync("whoami /groups /fo csv");
-  const groups = `${r.stdout || ""} ${r.stderr || ""}`;
-  const elevated = /S-1-16-(12288|16384)/.test(groups) || (await execAsync("net session >nul 2>&1")).code === 0;
+  const r = await execAsync("net session >nul 2>&1");
+  const elevated = r.code === 0;
   elevationCache = { value: elevated, at: now };
   return elevated;
 }
@@ -2347,7 +2200,6 @@ function getScannerStatus() {
             ? autolaunchState.tasks.filter((t) => !t.registered && t.error).map((t) => `${t.name}: ${t.error}`).slice(0, 3)
             : [],
           repairPrompt: autolaunchState.repairPrompt || null,
-          activationScript: autolaunchState.activationScript || null,
           updatedAt: autolaunchState.updatedAt || null,
         }
       : null,
@@ -2357,10 +2209,7 @@ function getScannerStatus() {
 
 // IPC — exposed to renderer via preload `electronAPI.scanner`
 ipcMain.handle("scanner:list", () => listHidDevices());
-ipcMain.handle("scanner:status", async () => {
-  await detectElevation();
-  return getScannerStatus();
-});
+ipcMain.handle("scanner:status", () => getScannerStatus());
 ipcMain.handle("scanner:bind", (_e, devicePath) => {
   const all = listHidDevices();
   const target = all.find((d) => d.path === devicePath);
