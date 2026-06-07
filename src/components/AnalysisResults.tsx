@@ -463,45 +463,39 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
                 const shortHint = rec.phrase_conseil?.trim() || null;
                 const dotColors = ["bg-primary", "bg-blue-400", "bg-amber-400"];
                 return (
-                  <div
-                    key={j}
-                    className={`flex items-center gap-2 px-2 py-1.5 rounded-lg border transition-colors ${
-                      ordered
-                        ? "bg-primary/10 border-primary/25"
-                        : "bg-secondary/40 border-border hover:border-primary/20"
-                    }`}
-                  >
-                    <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotColors[j] ?? "bg-muted-foreground"}`} />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1 flex-wrap">
-                        <span className="font-semibold text-xs text-foreground">{rec.produit}</span>
-                        {shortHint && (
-                          <>
-                            <span className="text-[10px] text-muted-foreground">·</span>
-                            <span className="text-[11px] text-muted-foreground font-normal truncate">{shortHint}</span>
-                          </>
-                        )}
-                        {isAuto && (
-                          <Badge
-                            className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 text-[9px] px-1 py-0 gap-0.5"
-                            title="Vente détectée automatiquement via scan douchette"
-                          >
-                            <Zap className="h-2 w-2" />auto
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
+                  <div key={j} className="flex items-center gap-1">
                     <button
-                      onClick={() => handleOrder(med.nom, rec.produit, rec.categorie)}
+                      type="button"
+                      onClick={() => !ordered && handleOrder(med.nom, rec.produit, rec.categorie)}
                       disabled={ordered}
                       aria-label={ordered ? `${rec.produit} ${t("results.acceptedAria")}` : `${t("results.acceptAria")} ${rec.produit}`}
-                      className={`shrink-0 flex items-center justify-center w-7 h-7 rounded-md transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                      aria-pressed={ordered}
+                      className={`flex-1 min-w-0 flex items-center gap-2 px-2 py-1.5 rounded-lg border text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                         ordered
-                          ? "bg-primary text-white"
-                          : "bg-primary/15 hover:bg-primary/30 text-primary"
+                          ? "bg-muted/60 border-border opacity-60 cursor-default"
+                          : "bg-secondary/40 border-border hover:border-primary/40 hover:bg-primary/5 cursor-pointer"
                       }`}
                     >
-                      <Check className="h-3.5 w-3.5" />
+                      <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${ordered ? "bg-muted-foreground" : (dotColors[j] ?? "bg-muted-foreground")}`} />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1 flex-wrap">
+                          <span className={`font-semibold text-xs ${ordered ? "text-muted-foreground line-through" : "text-foreground"}`}>{rec.produit}</span>
+                          {shortHint && (
+                            <>
+                              <span className="text-[10px] text-muted-foreground">·</span>
+                              <span className="text-[11px] text-muted-foreground font-normal truncate">{shortHint}</span>
+                            </>
+                          )}
+                          {isAuto && (
+                            <Badge
+                              className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 text-[9px] px-1 py-0 gap-0.5"
+                              title="Vente détectée automatiquement via scan douchette"
+                            >
+                              <Zap className="h-2 w-2" />auto
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
                     </button>
                     {!demoMode && (
                       <ReportButton
