@@ -1013,14 +1013,16 @@ function resetScanBuffer(reason = null) {
  */
 function parseBarcodeToCip(raw) {
   if (!raw) return null;
-  const cleaned = raw.replace(/[\x1d()]/g, "").trim();
+  // Strip ISO/IEC 15424 symbology identifier (]d2 / ]C1 / ]e0 …), FNC1 (\x1d), parens
+  const cleaned = raw
+    .replace(/^\](?:d[12]|C1|e[01]|Q[13])/i, "")
+    .replace(/[\x1d()]/g, "")
+    .trim();
   if (/^\d{13}$/.test(cleaned)) return cleaned;
   const gs1 = cleaned.match(/01(\d{14})/);
   if (gs1) {
     const gtin = gs1[1];
     // GTIN-14 pharmaceutique : l'indicateur de packaging est toujours 0 → slice(1)
-    // FIX: log warning si on tombe sur le fallback slice(-13) pour faciliter le debug
-    //      en cas de GTIN avec indicateur non-zéro (conditionnement multiple, etc.)
     let cip13;
     if (gtin.startsWith("0")) {
       cip13 = gtin.slice(1);

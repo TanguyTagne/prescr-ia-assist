@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useBarcodeScanner, type BarcodeDebugEvent } from "@/hooks/useBarcodeScanner";
+import { parseBarcodeToCip, parseGS1DataMatrix } from "@/lib/barcodeParser";
 import { useFolderWatcher, type WatcherDebugEvent } from "@/hooks/useFolderWatcher";
 import { isAsclionDesktopRuntime } from "@/lib/runtime";
 import { supabase } from "@/integrations/supabase/client";
@@ -272,6 +273,10 @@ const HardwareDiagnosticTab = () => {
 
       {/* ── Détection matérielle (HID direct via node-hid) ────────────────── */}
       <ScannerDetectionPanel />
+
+      {/* ── Test manuel parser GS1 Data Matrix ────────────────────────────── */}
+      <DataMatrixTester />
+
 
       {/* ── Monitoring scans — toutes les pharmacies ─────────────────────── */}
       <Card>
@@ -658,6 +663,88 @@ const HardwareDiagnosticTab = () => {
         </CardContent>
       </Card>
     </div>
+  );
+};
+
+const SAMPLE_DATAMATRIX = "]d2010340093546127621ABC123456789017261231";
+
+const DataMatrixTester = () => {
+  const [input, setInput] = useState<string>(SAMPLE_DATAMATRIX);
+  const [result, setResult] = useState<{
+    cip13: string | null;
+    viaPipeline: string | null;
+    viaGs1: string | null;
+  } | null>(null);
+
+  const runTest = useCallback(() => {
+    const viaPipeline = parseBarcodeToCip(input);
+    const viaGs1 = parseGS1DataMatrix(input);
+    setResult({ cip13: viaPipeline ?? viaGs1, viaPipeline, viaGs1 });
+  }, [input]);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <ScanLine className="h-5 w-5 text-primary" />
+          Test parser GS1 Data Matrix
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <p className="text-xs text-muted-foreground">
+          Collez ici un scan brut (EAN-13 ou Data Matrix 2D avec préfixe{" "}
+          <code className="font-mono">]d2</code> / parenthèses GS1 / séparateurs FNC1) pour vérifier
+          l'extraction du CIP-13.
+        </p>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="]d2010340093546127621…"
+            className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm font-mono"
+          />
+          <Button onClick={runTest} className="gap-1.5">
+            <ScanLine className="h-4 w-4" />
+            Tester
+          </Button>
+          <Button variant="outline" onClick={() => setInput(SAMPLE_DATAMATRIX)} className="gap-1.5">
+            Exemple
+          </Button>
+        </div>
+
+        {result && (
+          <div className="rounded-lg border border-border bg-card p-3 space-y-2 text-sm">
+            <div className="flex items-center gap-2">
+              {result.cip13 ? (
+                <CheckCircle2 className="h-4 w-4 text-green-600" />
+              ) : (
+                <AlertCircle className="h-4 w-4 text-destructive" />
+              )}
+              <span className="font-semibold">
+                {result.cip13 ? "CIP-13 extrait" : "Aucun CIP-13 exploitable"}
+              </span>
+              {result.cip13 && (
+                <code className="font-mono text-base ml-2">{result.cip13}</code>
+              )}
+            </div>
+            <div className="text-xs text-muted-foreground space-y-0.5 pl-6">
+              <div>
+                Pipeline (<code>parseBarcodeToCip</code>) :{" "}
+                <code className="font-mono">{result.viaPipeline ?? "null"}</code>
+              </div>
+              <div>
+                Data Matrix seul (<code>parseGS1DataMatrix</code>) :{" "}
+                <code className="font-mono">{result.viaGs1 ?? "null"}</code>
+              </div>
+              {result.cip13?.startsWith("34009") && (
+                <div className="text-green-700">Préfixe 34009 ✓ (CIP-13 français valide)</div>
+              )}
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 };
 
