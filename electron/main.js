@@ -1,9 +1,9 @@
-// build: electron v2026.06.02.3 — schtasks RunLevel=HighestAvailable, no LogonTrigger delay, HKCU Run key disabled when task present
+// build: electron v2026.06.07.1 — per-user schtasks UserId + RunLevel=HighestAvailable, UAC repair for legacy installs
 const { app, BrowserWindow, shell, ipcMain, Notification } = require("electron");
 const { autoUpdater } = require("electron-updater");
 const path = require("path");
 const fs = require("fs");
-const { exec } = require("child_process");
+const { exec, spawn } = require("child_process");
 // Load uiohook-napi lazily — if the native binary fails to load (rare),
 // the app keeps working without the global scanner.
 let uIOhook = null;
@@ -197,9 +197,33 @@ function createWindow() {
       .catch((e) => devWarn("[WEBHID] init script failed:", e));
   });
 }
-// Single instance lock — prevent multiple windows
+const REPAIR_AUTOLAUNCH_ARG = "--asclion-repair-autolaunch";
+const isAutolaunchRepairMode = process.argv.includes(REPAIR_AUTOLAUNCH_ARG);
+const noRestartAfterRepair = process.argv.includes("--no-restart-after-repair");
+const repairTargetSidArg = process.argv.find((arg) => arg.startsWith("--target-user-sid="));
+const REPAIR_TARGET_USER_SID = repairTargetSidArg ? repairTargetSidArg.split("=").slice(1).join("=").trim() : null;
+const repairReplacePidArg = process.argv.find((arg) => arg.startsWith("--replace-pid="));
+const REPAIR_REPLACE_PID = repairReplacePidArg ? Number(repairReplacePidArg.split("=").slice(1).join("=")) : 0;
+
+// Single instance lock — prevent multiple windows, except the short-lived
+// elevated repair helper launched via UAC for legacy per-user installs.
 const gotTheLock = app.requestSingleInstanceLock();
-if (!gotTheLock) {
+if (isAutolaunchRepairMode) {
+  app.whenReady().then(async () => {
+    await registerAutoLaunch();
+    if (!noRestartAfterRepair && process.platform === "win32") {
+      const replace = Number.isFinite(REPAIR_REPLACE_PID) && REPAIR_REPLACE_PID > 0
+        ? `taskkill /PID ${REPAIR_REPLACE_PID} /F >nul 2>nul & timeout /t 1 /nobreak >nul & `
+        : "";
+      spawn("cmd.exe", ["/d", "/s", "/c", `timeout /t 2 /nobreak >nul & ${replace}schtasks /Run /TN "AsclionAtLogon"`], {
+        windowsHide: true,
+        detached: true,
+        stdio: "ignore",
+      }).unref();
+    }
+    app.quit();
+  });
+} else if (!gotTheLock) {
   app.quit();
 } else {
   app.on("second-instance", () => {
@@ -262,15 +286,13 @@ if (!gotTheLock) {
     // ──────────────────────────────────────────────────────────────────────
 
     createWindow();
-    // Warm up elevation detection (~50 ms) so the FIRST heartbeat already
-    // carries the privilege flag — admins voient immédiatement quel poste
-    // a effectivement upgrade en HighestAvailable après migration silencieuse.
-    detectElevation();
-    // Register Windows auto-launch tasks (at boot + 08:30 + 09:00 catch-up).
-    // Cette ligne est aussi la MIGRATION SILENCIEUSE pour les installs existantes :
-    // à chaque démarrage, schtasks /Create /F overwrite la tâche avec le XML
-    // RunLevel=HighestAvailable. Le prochain reboot tourne en admin. Aucun UAC.
-    registerAutoLaunch();
+    // Warm up elevation detection so the FIRST heartbeat already carries the
+    // privilege flag. If the app is still running as a normal user, immediately
+    // ask Windows for the one-time UAC consent needed to create the elevated
+    // scheduled task for existing installs.
+    const elevated = await detectElevation();
+    const autolaunchState = await registerAutoLaunch();
+    void maybePromptElevatedAutolaunchRepair({ elevated, autolaunchState, reason: "startup" });
     // Detect installed LGO (Windows only) and forward to renderer when ready
     detectLgoAndNotify();
     // Boot scanner stack: direct HID read (preferred, AV-friendly) + uiohook fallback
@@ -409,8 +431,9 @@ const AUTOLAUNCH_TASKS = [
 // Deleted on every registerAutoLaunch() call so existing installs heal.
 const OLD_TASK_NAMES = ["AsclionAtBoot"];
 
-function buildTaskXml({ kind, time, exePath }) {
+function buildTaskXml({ kind, time, exePath, userSid }) {
   const exeEscaped = exePath.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const sidEscaped = String(userSid || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   // Pas de délai sur le LogonTrigger : on veut que la tâche (qui démarre
   // Asclion en mode HighestAvailable) gagne la course contre la HKCU Run key
   // (qui démarrerait en mode user normal et bloquerait via single-instance-lock).
@@ -424,11 +447,13 @@ function buildTaskXml({ kind, time, exePath }) {
          </CalendarTrigger>`;
   // WakeToRun only meaningful for calendar triggers (logon = user already woke up).
   const wakeToRun = kind === "daily" ? "<WakeToRun>true</WakeToRun>" : "";
-  // GroupId S-1-5-32-545 = BUILTIN\Users → task runs in the context of
-  // WHICHEVER user is currently logged in (interactive session, visible UI).
+  // IMPORTANT: on cible le SID de L'UTILISATEUR CONNECTÉ, pas le groupe
+  // BUILTIN\Users. Avec GroupId=Users, Windows lance la tâche en niveau
+  // medium même si l'utilisateur est admin local → c'était la cause du
+  // diagnostic distant bloqué sur "user" après redémarrage.
   //
-  // RunLevel HighestAvailable → l'app tourne avec le niveau d'intégrité
-  // maximal disponible pour l'utilisateur :
+  // UserId + InteractiveToken + RunLevel HighestAvailable → l'app tourne avec
+  // le niveau d'intégrité maximal disponible pour ce compte Windows :
   //   • Si l'user est admin local (cas fréquent en officine) → High IL
   //     → bypass UIPI, capture scan en background, SetForegroundWindow OK
   //   • Si l'user est standard → Medium IL (comportement par défaut, OK)
@@ -445,7 +470,8 @@ function buildTaskXml({ kind, time, exePath }) {
   <Triggers>${trigger}</Triggers>
   <Principals>
     <Principal id="Author">
-      <GroupId>S-1-5-32-545</GroupId>
+      <UserId>${sidEscaped}</UserId>
+      <LogonType>InteractiveToken</LogonType>
       <RunLevel>HighestAvailable</RunLevel>
     </Principal>
   </Principals>
@@ -522,6 +548,15 @@ function execAsync(cmd) {
     });
   });
 }
+async function getCurrentUserSid() {
+  if (process.platform !== "win32") return null;
+  const r = await execAsync("whoami /user /fo csv /nh");
+  if (r.code !== 0) return null;
+  const match = r.stdout.match(/"([^"]+)"\s*,\s*"([^"]+)"/);
+  if (match?.[2]) return match[2].trim();
+  const parts = r.stdout.trim().split(",");
+  return parts.length > 1 ? parts[parts.length - 1].replace(/"/g, "").trim() : null;
+}
 function writeAutolaunchState(state) {
   try {
     fs.writeFileSync(
@@ -532,10 +567,18 @@ function writeAutolaunchState(state) {
     devWarn("autolaunch state save failed:", e);
   }
 }
+function readAutolaunchState() {
+  try {
+    return JSON.parse(fs.readFileSync(path.join(app.getPath("userData"), "autolaunch-state.json"), "utf-8"));
+  } catch {
+    return null;
+  }
+}
 async function registerAutoLaunch() {
   if (process.platform !== "win32") return { runKey: null, tasks: [] };
   const exePath = process.execPath;
   const tmpDir = app.getPath("temp");
+  const userSid = REPAIR_TARGET_USER_SID || await getCurrentUserSid();
 
   // 0) Heal old broken installs: remove pre-fix SYSTEM tasks (session 0 ghosts)
   await cleanupOldTasks();
@@ -551,7 +594,8 @@ async function registerAutoLaunch() {
     let registered = false;
     let lastError = "";
     try {
-      const xml = buildTaskXml({ kind: task.kind, time: task.time, exePath });
+      if (!userSid) throw new Error("Windows user SID unavailable");
+      const xml = buildTaskXml({ kind: task.kind, time: task.time, exePath, userSid });
       fs.writeFileSync(xmlPath, "﻿" + xml, { encoding: "utf16le" });
       // No /RU SYSTEM — Principal in XML defines GroupId=Users (interactive session).
       // /F = force overwrite if task already exists.
@@ -602,6 +646,7 @@ async function registerAutoLaunch() {
   }
 
   const state = {
+    userSid,
     runKey: { enabled: runKeyResult.ok, value: exePath, error: runKeyResult.ok ? null : runKeyResult.output },
     tasks: results,
   };
@@ -634,10 +679,67 @@ async function queryAutoLaunchStatus() {
   return { platform: "win32", tasks, runKey };
 }
 
+let autolaunchRepairPromptedThisRun = false;
+function escapePowerShellSingleQuoted(value) {
+  return String(value).replace(/'/g, "''");
+}
+function launchElevatedAutolaunchRepair(reason, targetUserSid) {
+  if (process.platform !== "win32") return { ok: false, error: "not Windows" };
+  try {
+    const exe = escapePowerShellSingleQuoted(process.execPath);
+    const targetArg = targetUserSid ? ` --target-user-sid=${targetUserSid}` : "";
+    const restartArg = reason === "startup" || reason === "manual" ? ` --replace-pid=${process.pid}` : "";
+    const arg = escapePowerShellSingleQuoted(`${REPAIR_AUTOLAUNCH_ARG} --reason=${reason || "startup"}${targetArg}${restartArg}`);
+    const command = `Start-Process -FilePath '${exe}' -ArgumentList '${arg}' -Verb RunAs -WindowStyle Hidden`;
+    const child = spawn(
+      "powershell.exe",
+      ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", command],
+      { windowsHide: false, detached: true, stdio: "ignore" },
+    );
+    child.unref();
+    return { ok: true, error: null };
+  } catch (e) {
+    return { ok: false, error: String(e && e.message ? e.message : e) };
+  }
+}
+async function maybePromptElevatedAutolaunchRepair({ elevated, autolaunchState, reason }) {
+  if (process.platform !== "win32" || elevated || autolaunchRepairPromptedThisRun) {
+    return { prompted: false, skipped: true };
+  }
+  autolaunchRepairPromptedThisRun = true;
+  const targetUserSid = await getCurrentUserSid();
+  const repair = launchElevatedAutolaunchRepair(reason, targetUserSid);
+  writeAutolaunchState({
+    ...(autolaunchState || {}),
+    elevatedNow: false,
+    repairPrompt: {
+      attempted: repair.ok,
+      reason: reason || "startup",
+      error: repair.error || null,
+      at: new Date().toISOString(),
+    },
+  });
+  if (repair.ok && Notification.isSupported()) {
+    try {
+      new Notification({
+        title: "Asclion",
+        body: "Autorisez la fenêtre Windows pour activer le démarrage admin. Le statut passera en admin au prochain redémarrage Windows.",
+        icon: path.join(__dirname, "assets", "icon.ico"),
+        silent: true,
+      }).show();
+    } catch {
+      /* ignore */
+    }
+  }
+  return { prompted: repair.ok, error: repair.error };
+}
+
 ipcMain.handle("autolaunch:status", async () => queryAutoLaunchStatus());
 ipcMain.handle("autolaunch:reinstall", async () => {
+  const elevated = await detectElevation();
   const state = await registerAutoLaunch();
-  return { state, status: await queryAutoLaunchStatus() };
+  const repair = await maybePromptElevatedAutolaunchRepair({ elevated, autolaunchState: state, reason: "manual" });
+  return { state, repair, status: await queryAutoLaunchStatus() };
 });
 
 // ────────────────────────────────────────────────────────────
@@ -1990,6 +2092,7 @@ function getScannerStatus() {
   // by the IPC handler / heartbeat path (detectElevation runs every 60 s).
   // null means "pas encore détecté" (premier heartbeat avant le warm-up).
   const elevated = elevationCache.value;
+  const autolaunchState = readAutolaunchState();
   return {
     mode,
     hidLoaded: !!HID,
@@ -2039,6 +2142,17 @@ function getScannerStatus() {
     //         tant que le LGO n'est PAS lui-même elevé
     // null  = pas encore détecté (premier heartbeat)
     elevated,
+    autolaunch: autolaunchState
+      ? {
+          userSid: autolaunchState.userSid || null,
+          taskRegistered: Array.isArray(autolaunchState.tasks) && autolaunchState.tasks.some((t) => t.registered),
+          taskErrors: Array.isArray(autolaunchState.tasks)
+            ? autolaunchState.tasks.filter((t) => !t.registered && t.error).map((t) => `${t.name}: ${t.error}`).slice(0, 3)
+            : [],
+          repairPrompt: autolaunchState.repairPrompt || null,
+          updatedAt: autolaunchState.updatedAt || null,
+        }
+      : null,
     platform: process.platform,
   };
 }
