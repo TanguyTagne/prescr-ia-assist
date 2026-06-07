@@ -53,6 +53,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   autolaunch: {
     status: () => ipcRenderer.invoke("autolaunch:status"),
     reinstall: () => ipcRenderer.invoke("autolaunch:reinstall"),
+    createAdminScript: () => ipcRenderer.invoke("autolaunch:create-admin-script"),
   },
 
   // System privileges — admin/user integrity level detection.

@@ -1,6 +1,10 @@
 ; Custom NSIS hooks for Asclion installer
 ; Cleans up Windows Task Scheduler entries created by the app at runtime.
 
+!macro customHeader
+  RequestExecutionLevel admin
+!macroend
+
 !macro customInstall
   DetailPrint "Configuration du démarrage automatique admin Asclion..."
   ExecWait '"$INSTDIR\\Asclion.exe" --asclion-repair-autolaunch --reason=install --no-restart-after-repair'

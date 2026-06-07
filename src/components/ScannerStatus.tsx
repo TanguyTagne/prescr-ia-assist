@@ -1,11 +1,11 @@
-import { useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useScanQueue, type ScanEvent } from "@/hooks/useScanQueue";
 import { useFolderWatcher } from "@/hooks/useFolderWatcher";
 import { useBarcodeScanner } from "@/hooks/useBarcodeScanner";
 import {
   X, Wifi, WifiOff, ShoppingCart, FileText, Package,
   Settings, Copy, Check, Plus, Trash2, Monitor, ScanBarcode, Key,
-  FolderSearch, Loader2,
+  FolderSearch, Loader2, ShieldAlert, ShieldCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -102,8 +102,52 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
   const [lgoSaving, setLgoSaving] = useState(false);
   const [lgoLoaded, setLgoLoaded] = useState(false);
   const [lgoConnected, setLgoConnected] = useState(false);
+  const [adminMode, setAdminMode] = useState<"unknown" | "admin" | "user" | "web">("unknown");
+  const [adminActivating, setAdminActivating] = useState(false);
 
   const isFolderApiSupported = typeof window !== "undefined" && "showDirectoryPicker" in window;
+  const isDesktopRuntime = typeof window !== "undefined" && !!(window as any).electronAPI?.isDesktop;
+
+  useEffect(() => {
+    if (!isDesktopRuntime) {
+      setAdminMode("web");
+      return;
+    }
+    let cancelled = false;
+    const refreshAdminMode = async () => {
+      try {
+        const result = await (window as any).electronAPI?.system?.isElevated?.();
+        if (!cancelled) setAdminMode(result?.elevated ? "admin" : "user");
+      } catch {
+        if (!cancelled) setAdminMode("unknown");
+      }
+    };
+    refreshAdminMode();
+    const timer = setInterval(refreshAdminMode, 30_000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [isDesktopRuntime]);
+
+  const handleActivateAdmin = async () => {
+    const api = (window as any).electronAPI?.autolaunch;
+    if (!api?.reinstall) return;
+    setAdminActivating(true);
+    try {
+      const result = await api.reinstall();
+      const scriptPath = result?.repair?.scriptPath || result?.state?.activationScript?.path;
+      toast.success("Activation admin lancée", {
+        description: scriptPath
+          ? "Cliquez Oui dans la fenêtre Windows. Un script Activer-Asclion-admin.bat est aussi sur le Bureau."
+          : "Cliquez Oui dans la fenêtre Windows, puis laissez Asclion se relancer.",
+      });
+    } catch (err: any) {
+      toast.error("Activation admin impossible", { description: String(err?.message || err).slice(0, 180) });
+    } finally {
+      setAdminActivating(false);
+    }
+  };
 
   // Folder watcher for document scanner
   const { isWatching, folderName, startWatching, stopWatching } = useFolderWatcher({
@@ -286,6 +330,19 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
           </Button>
         </div>
       </div>
+
+      {isDesktopRuntime && adminMode === "user" && (
+        <div className="rounded-md border border-primary/30 bg-primary/10 px-2.5 py-2 text-[11px] flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <ShieldAlert className="h-3.5 w-3.5 text-primary shrink-0" />
+            <span className="text-foreground font-medium truncate">Mode admin requis pour capter les scans derrière le LGO</span>
+          </div>
+          <Button size="sm" className="h-7 text-[11px] gap-1.5 shrink-0" onClick={handleActivateAdmin} disabled={adminActivating}>
+            {adminActivating ? <Loader2 className="h-3 w-3 animate-spin" /> : <ShieldCheck className="h-3 w-3" />}
+            Activer
+          </Button>
+        </div>
+      )}
 
       {/* Latest scan notification */}
       {latestScan && latestScan.status === "completed" && (

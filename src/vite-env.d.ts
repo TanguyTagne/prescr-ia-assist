@@ -52,6 +52,14 @@ declare global {
     onNotificationClick: (callback: () => void) => () => void;
     onLgoDetected: (callback: (payload: { lgo: string }) => void) => () => void;
     onGlobalBarcode: (callback: (payload: { ean: string; at: number }) => void) => () => void;
+    autolaunch?: {
+      status: () => Promise<unknown>;
+      reinstall: () => Promise<any>;
+      createAdminScript: () => Promise<{ ok: boolean; path: string | null; error: string | null }>;
+    };
+    system?: {
+      isElevated: () => Promise<{ elevated: boolean; platform: string }>;
+    };
     scanner?: ScannerAPI;
   }
 
