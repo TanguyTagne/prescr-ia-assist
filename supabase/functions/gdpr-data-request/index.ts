@@ -90,7 +90,7 @@ serve(async (req) => {
         supabase.from("sales_transactions" as any).select("*").eq("pharmacy_id", pharmacyId),
         supabase.from("pharmacy_registers").select("*").eq("pharmacy_id", pharmacyId),
         supabase.from("patient_reminders").select("*").eq("pharmacy_id", pharmacyId),
-        supabase.from("pharmacy_lgo_config" as any).select("pharmacy_id, lgo_type, api_base_url, auth_method, enabled, created_at, updated_at").eq("pharmacy_id", pharmacyId),
+        supabase.from("pharmacy_lgo_config" as any).select("id, pharmacy_id, lgo_type, api_base_url, auth_method, enabled, created_at, updated_at").eq("pharmacy_id", pharmacyId),
         supabase.from("product_mapping" as any).select("*").eq("pharmacy_id", pharmacyId),
         supabase.from("pharmacy_preferences").select("*").eq("pharmacy_id", pharmacyId),
         supabase.from("pharmacy_quotas").select("*").eq("pharmacy_id", pharmacyId),
