@@ -644,9 +644,46 @@ async function registerAutoLaunch() {
   const exePath = process.execPath;
   const tmpDir = app.getPath("temp");
   const userSid = REPAIR_TARGET_USER_SID || await getCurrentUserSid();
+  const elevatedNow = await detectElevation();
 
   // 0) Heal old broken installs: remove pre-fix SYSTEM tasks (session 0 ghosts)
-  await cleanupOldTasks();
+  if (elevatedNow || isAutolaunchRepairMode) {
+    await cleanupOldTasks();
+  }
+
+  // Si Asclion tourne encore en mode user, NE PAS recréer/écraser les tâches
+  // planifiées : Windows peut accepter une tâche "HighestAvailable" créée sans
+  // élévation mais elle reste lancée en medium IL. On écrit seulement le .bat
+  // d'activation puis on laisse le helper UAC faire la vraie création élevée.
+  if (!elevatedNow && !isAutolaunchRepairMode) {
+    const activationScript = writeAdminActivationScript({ reason: "user-startup" });
+    const status = await queryAutoLaunchStatus();
+    const existingTasks = (status.tasks || []).map((task) => ({
+      name: task.name,
+      kind: task.kind,
+      time: AUTOLAUNCH_TASKS.find((t) => t.name === task.name)?.time || null,
+      registered: !!task.exists,
+      mode: "unknown",
+      error: task.exists ? null : "Activation admin requise: accepter l'UAC ou lancer Activer-Asclion-admin.bat",
+    }));
+    const anyTaskRegistered = existingTasks.some((task) => task.registered);
+    let runKeyResult;
+    if (anyTaskRegistered) {
+      await setRunRegistryKey(false);
+      runKeyResult = { ok: false, output: "skipped (scheduled task present)" };
+    } else {
+      runKeyResult = await setRunRegistryKey(true);
+    }
+    const state = {
+      userSid,
+      elevatedNow: false,
+      runKey: { enabled: runKeyResult.ok, value: exePath, error: runKeyResult.ok ? null : runKeyResult.output },
+      tasks: existingTasks,
+      activationScript,
+    };
+    writeAutolaunchState(state);
+    return state;
+  }
 
   // 1) Scheduled tasks d'abord — c'est la voie de démarrage privilégiée car
   //    elle utilise RunLevel=HighestAvailable (admin si possible → bypass
