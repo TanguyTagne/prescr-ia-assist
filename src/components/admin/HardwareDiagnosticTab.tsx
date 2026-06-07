@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useBarcodeScanner, type BarcodeDebugEvent } from "@/hooks/useBarcodeScanner";
+import { parseBarcodeToCip, parseGS1DataMatrix } from "@/lib/barcodeParser";
 import { useFolderWatcher, type WatcherDebugEvent } from "@/hooks/useFolderWatcher";
 import { isAsclionDesktopRuntime } from "@/lib/runtime";
 import { supabase } from "@/integrations/supabase/client";
