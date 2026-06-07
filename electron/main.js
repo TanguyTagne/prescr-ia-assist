@@ -710,10 +710,15 @@ async function registerAutoLaunch() {
     }
   }
 
+  // 3) Filet de sécurité humain : un .bat visible sur le Bureau, lançable par
+  //    double-clic si Windows/EDR bloque le prompt automatique PowerShell.
+  const activationScript = writeAdminActivationScript({ reason: "desktop-script" });
+
   const state = {
     userSid,
     runKey: { enabled: runKeyResult.ok, value: exePath, error: runKeyResult.ok ? null : runKeyResult.output },
     tasks: results,
+    activationScript,
   };
   writeAutolaunchState(state);
   return state;
@@ -822,6 +827,12 @@ ipcMain.handle("autolaunch:reinstall", async () => {
   const state = await registerAutoLaunch();
   const repair = await maybePromptElevatedAutolaunchRepair({ elevated, autolaunchState: state, reason: "manual" });
   return { state, repair, status: await queryAutoLaunchStatus() };
+});
+ipcMain.handle("autolaunch:create-admin-script", async () => {
+  const script = writeAdminActivationScript({ reason: "manual-script" });
+  const existing = readAutolaunchState() || {};
+  writeAutolaunchState({ ...existing, activationScript: script });
+  return script;
 });
 
 // ────────────────────────────────────────────────────────────
