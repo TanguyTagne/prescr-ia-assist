@@ -681,7 +681,8 @@ function launchElevatedAutolaunchRepair(reason, targetUserSid) {
   try {
     const exe = escapePowerShellSingleQuoted(process.execPath);
     const targetArg = targetUserSid ? ` --target-user-sid=${targetUserSid}` : "";
-    const arg = escapePowerShellSingleQuoted(`${REPAIR_AUTOLAUNCH_ARG} --reason=${reason || "startup"}${targetArg}`);
+    const restartArg = reason === "startup" || reason === "manual" ? ` --replace-pid=${process.pid}` : "";
+    const arg = escapePowerShellSingleQuoted(`${REPAIR_AUTOLAUNCH_ARG} --reason=${reason || "startup"}${targetArg}${restartArg}`);
     const command = `Start-Process -FilePath '${exe}' -ArgumentList '${arg}' -Verb RunAs -WindowStyle Hidden`;
     const child = spawn(
       "powershell.exe",
