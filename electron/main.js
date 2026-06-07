@@ -584,41 +584,78 @@ function getAdminActivationScriptPath() {
   }
 }
 
-function writeAdminActivationScript({ reason = "manual" } = {}) {
+function escapeVbsString(value) {
+  return String(value == null ? "" : value).replace(/"/g, '""');
+}
+
+function writeAdminElevationLauncher({ reason = "manual", targetUserSid = null, replacePid = process.pid } = {}) {
+  if (process.platform !== "win32") return { ok: false, path: null, error: "not Windows" };
+  try {
+    const launcherPath = path.join(app.getPath("userData"), "asclion-uac-launcher.vbs");
+    const exePath = process.execPath;
+    const targetArg = targetUserSid ? ` --target-user-sid=${targetUserSid}` : "";
+    const replaceArg = replacePid ? ` --replace-pid=${replacePid}` : "";
+    const args = `${REPAIR_AUTOLAUNCH_ARG} --reason=${reason || "manual"}${targetArg}${replaceArg}`;
+    const content = [
+      'Set shell = CreateObject("Shell.Application")',
+      `shell.ShellExecute "${escapeVbsString(exePath)}", "${escapeVbsString(args)}", "${escapeVbsString(path.dirname(exePath))}", "runas", 1`,
+      "If Err.Number <> 0 Then WScript.Quit 1",
+    ].join("\r\n");
+    fs.writeFileSync(launcherPath, content, { encoding: "utf8" });
+    return { ok: true, path: launcherPath, error: null };
+  } catch (e) {
+    return { ok: false, path: null, error: String(e && e.message ? e.message : e) };
+  }
+}
+
+function writeAdminActivationScript({ reason = "manual", targetUserSid = null } = {}) {
   if (process.platform !== "win32") return { ok: false, path: null, error: "not Windows" };
   try {
     const scriptPath = getAdminActivationScriptPath();
     const exeForBat = process.execPath.replace(/%/g, "%%");
+    const exeForVbs = process.execPath.replace(/"/g, '""');
+    const workDirForVbs = path.dirname(process.execPath).replace(/"/g, '""');
+    const fixedTargetLine = targetUserSid ? `if not defined TARGET_SID set "TARGET_SID=${targetUserSid}"` : "";
     const content = [
       "@echo off",
       "chcp 65001 >nul",
       "title Asclion - Activation mode admin",
       "setlocal EnableExtensions",
+      `set "ASCLION_EXE=${exeForBat}"`,
+      "set \"ASCLION_LOG=%TEMP%\\asclion-admin-activation.log\"",
+      `set "ASCLION_VBS=%TEMP%\\asclion-uac-launcher.vbs"`,
       "echo.",
       "echo ==============================================",
       "echo   Activation du demarrage admin Asclion",
       "echo ==============================================",
       "echo.",
       "for /f \"tokens=2 delims=,\" %%S in ('whoami /user /fo csv /nh') do set \"TARGET_SID=%%~S\"",
+      fixedTargetLine,
       "set \"ASCLION_SCRIPT=%~f0\"",
       "if /i \"%~1\"==\"elevated\" goto elevated",
       "net session >nul 2>&1",
       "if %errorlevel% neq 0 (",
+      "  echo [%DATE% %TIME%] Demande UAC pour %TARGET_SID% >> \"%ASCLION_LOG%\"",
       "  echo Une fenetre Windows de confirmation va s'ouvrir.",
       "  echo Cliquez sur OUI pour autoriser Asclion une seule fois.",
-      "  echo Si elle n'apparait pas, verifiez la barre des taches Windows.",
-      "  powershell.exe -NoProfile -ExecutionPolicy Bypass -Command \"$p = Start-Process -FilePath 'cmd.exe' -ArgumentList ('/d /s /c call \\\"' + $env:ASCLION_SCRIPT + '\\\" elevated ' + $env:TARGET_SID) -Verb RunAs -WindowStyle Normal -PassThru; if ($p) { exit 0 } else { exit 1 }\"",
+      "  echo.",
+      "  > \"%ASCLION_VBS%\" echo Set shell = CreateObject(\"Shell.Application\")",
+      `  >> "%ASCLION_VBS%" echo shell.ShellExecute "${exeForVbs}", "${REPAIR_AUTOLAUNCH_ARG} --reason=${reason || "manual-bat"} --target-user-sid=%TARGET_SID% --replace-pid=${process.pid}", "${workDirForVbs}", "runas", 1`,
+      "  wscript.exe //nologo \"%ASCLION_VBS%\"",
       "  if %errorlevel% neq 0 (",
       "    echo ERREUR: Windows a bloque la demande admin automatique.",
       "    echo Faites clic droit sur ce fichier, puis Executer en tant qu'administrateur.",
+      "    start \"\" explorer.exe /select,\"%ASCLION_SCRIPT%\"",
       "    pause",
+      "  ) else (",
+      "    echo Demande envoyee. Si rien n'apparait, faites clic droit sur ce fichier puis Executer en tant qu'administrateur.",
+      "    timeout /t 20 /nobreak >nul",
       "  )",
       "  exit /b",
       ")",
       ":elevated",
       "if not \"%~2\"==\"\" set \"TARGET_SID=%~2\"",
       "echo Configuration de la tache planifiee elevee...",
-      `set "ASCLION_EXE=${exeForBat}"`,
       "if not exist \"%ASCLION_EXE%\" (",
       "  echo ERREUR: Asclion.exe introuvable.",
       "  echo %ASCLION_EXE%",
@@ -644,7 +681,7 @@ function writeAdminActivationScript({ reason = "manual" } = {}) {
       "",
     ].join("\r\n");
     fs.writeFileSync(scriptPath, content, { encoding: "utf8" });
-    return { ok: true, path: scriptPath, error: null };
+    return { ok: true, path: scriptPath, launcherPath: path.join(app.getPath("userData"), "asclion-uac-launcher.vbs"), logPath: path.join(app.getPath("temp"), "asclion-admin-activation.log"), error: null };
   } catch (e) {
     return { ok: false, path: null, error: String(e && e.message ? e.message : e) };
   }
@@ -803,19 +840,27 @@ function escapePowerShellSingleQuoted(value) {
 function launchElevatedAutolaunchRepair(reason, targetUserSid) {
   if (process.platform !== "win32") return { ok: false, error: "not Windows" };
   try {
-    const activationScript = writeAdminActivationScript({ reason: reason || "manual" });
-    if (activationScript.ok && activationScript.path) {
-      // Launch the BAT visibly first. The BAT itself triggers UAC through
-      // Shell.Application -> cmd.exe /runas, which is more reliable than trying
-      // to elevate a .bat file directly with PowerShell (often fails silently).
-      const child = spawn(
-        "cmd.exe",
-        ["/d", "/s", "/c", `call "${activationScript.path}"`],
-        { cwd: path.dirname(activationScript.path), windowsHide: false, detached: true, stdio: "ignore" },
-      );
+    const activationScript = writeAdminActivationScript({ reason: reason || "manual", targetUserSid });
+    const launcher = writeAdminElevationLauncher({ reason: reason || "manual", targetUserSid, replacePid: process.pid });
+    if (launcher.ok && launcher.path) {
+      const child = spawn("wscript.exe", ["//nologo", launcher.path], {
+        cwd: path.dirname(process.execPath),
+        windowsHide: false,
+        detached: true,
+        stdio: "ignore",
+      });
       child.unref();
-      return { ok: true, error: null, method: "visible-desktop-bat", scriptPath: activationScript.path };
+      return {
+        ok: true,
+        error: activationScript.error || null,
+        method: "shellexecute-runas-vbs",
+        scriptPath: activationScript.path,
+        launcherPath: launcher.path,
+        logPath: activationScript.logPath || null,
+      };
     }
+
+    if (activationScript.ok && activationScript.path) shell.showItemInFolder(activationScript.path);
 
     // Fallback direct si le BAT n'a pas pu être écrit. Fenêtre normale : ne pas
     // cacher l'UAC, sinon certains postes donnent l'impression que rien ne se passe.
@@ -830,7 +875,7 @@ function launchElevatedAutolaunchRepair(reason, targetUserSid) {
       { windowsHide: false, detached: true, stdio: "ignore" },
     );
     child.unref();
-    return { ok: true, error: activationScript.error || null, method: "direct-runas", scriptPath: null };
+    return { ok: true, error: launcher.error || activationScript.error || null, method: "direct-runas", scriptPath: activationScript.path || null, launcherPath: launcher.path || null };
   } catch (e) {
     return { ok: false, error: String(e && e.message ? e.message : e) };
   }
@@ -851,6 +896,8 @@ async function maybePromptElevatedAutolaunchRepair({ elevated, autolaunchState, 
       error: repair.error || null,
       method: repair.method || null,
       scriptPath: repair.scriptPath || null,
+      launcherPath: repair.launcherPath || null,
+      logPath: repair.logPath || null,
       at: new Date().toISOString(),
     },
   });
@@ -866,7 +913,7 @@ async function maybePromptElevatedAutolaunchRepair({ elevated, autolaunchState, 
       /* ignore */
     }
   }
-  return { prompted: repair.ok, error: repair.error, method: repair.method || null, scriptPath: repair.scriptPath || null };
+  return { prompted: repair.ok, error: repair.error, method: repair.method || null, scriptPath: repair.scriptPath || null, launcherPath: repair.launcherPath || null, logPath: repair.logPath || null };
 }
 
 ipcMain.handle("autolaunch:status", async () => queryAutoLaunchStatus());
@@ -881,6 +928,14 @@ ipcMain.handle("autolaunch:create-admin-script", async () => {
   const existing = readAutolaunchState() || {};
   writeAutolaunchState({ ...existing, activationScript: script });
   return script;
+});
+ipcMain.handle("autolaunch:open-admin-script", async () => {
+  const script = writeAdminActivationScript({ reason: "manual-open" });
+  if (script.ok && script.path) {
+    shell.showItemInFolder(script.path);
+    return { ...script, opened: true };
+  }
+  return { ...script, opened: false };
 });
 
 // ────────────────────────────────────────────────────────────
