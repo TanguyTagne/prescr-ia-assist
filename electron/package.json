@@ -50,7 +50,8 @@
           "arch": ["x64"]
         }
       ],
-      "icon": "assets/icon.ico"
+      "icon": "assets/icon.ico",
+      "requestedExecutionLevel": "highestAvailable"
     },
     "nsis": {
       "oneClick": true,
