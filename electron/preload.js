@@ -53,15 +53,17 @@ contextBridge.exposeInMainWorld("electronAPI", {
   autolaunch: {
     status: () => ipcRenderer.invoke("autolaunch:status"),
     reinstall: () => ipcRenderer.invoke("autolaunch:reinstall"),
-    createAdminScript: () => ipcRenderer.invoke("autolaunch:create-admin-script"),
-    openAdminScript: () => ipcRenderer.invoke("autolaunch:open-admin-script"),
   },
 
-  // System privileges — admin/user integrity level detection.
+  // System privileges — admin/user integrity level detection + admin relaunch.
   // Utilisé par le diag admin pour identifier les postes où la capture
   // scan en background est garantie (elevated=true) vs. fragile (elevated=false).
   system: {
     isElevated: () => ipcRenderer.invoke("system:is-elevated"),
+    // Relance Asclion en admin immédiatement (déclenche UAC). Si l'utilisateur
+    // accepte, la nouvelle instance démarre en admin et celle-ci se quitte.
+    // À utiliser depuis un bouton "Activer le mode admin" côté UI.
+    relaunchAsAdmin: () => ipcRenderer.invoke("system:relaunch-as-admin"),
   },
 
   // Direct HID scanner control (node-hid based, antivirus-friendly)
