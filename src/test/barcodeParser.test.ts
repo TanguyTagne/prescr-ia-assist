@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseBarcodeToCip } from "@/lib/barcodeParser";
+import { parseBarcodeToCip, parseGS1DataMatrix } from "@/lib/barcodeParser";
 
 describe("parseBarcodeToCip", () => {
   it("returns null for empty input", () => {
