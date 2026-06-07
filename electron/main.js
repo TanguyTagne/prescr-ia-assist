@@ -584,41 +584,82 @@ function getAdminActivationScriptPath() {
   }
 }
 
-function writeAdminActivationScript({ reason = "manual" } = {}) {
+function escapeVbsString(value) {
+  return String(value == null ? "" : value).replace(/"/g, '""');
+}
+
+function quoteCmdArg(value) {
+  return `"${String(value == null ? "" : value).replace(/"/g, '""')}"`;
+}
+
+function writeAdminElevationLauncher({ reason = "manual", targetUserSid = null, replacePid = process.pid } = {}) {
+  if (process.platform !== "win32") return { ok: false, path: null, error: "not Windows" };
+  try {
+    const launcherPath = path.join(app.getPath("userData"), "asclion-uac-launcher.vbs");
+    const exePath = process.execPath;
+    const targetArg = targetUserSid ? ` --target-user-sid=${targetUserSid}` : "";
+    const replaceArg = replacePid ? ` --replace-pid=${replacePid}` : "";
+    const args = `${REPAIR_AUTOLAUNCH_ARG} --reason=${reason || "manual"}${targetArg}${replaceArg}`;
+    const content = [
+      'Set shell = CreateObject("Shell.Application")',
+      `shell.ShellExecute "${escapeVbsString(exePath)}", "${escapeVbsString(args)}", "${escapeVbsString(path.dirname(exePath))}", "runas", 1`,
+      "If Err.Number <> 0 Then WScript.Quit 1",
+    ].join("\r\n");
+    fs.writeFileSync(launcherPath, content, { encoding: "utf8" });
+    return { ok: true, path: launcherPath, error: null };
+  } catch (e) {
+    return { ok: false, path: null, error: String(e && e.message ? e.message : e) };
+  }
+}
+
+function writeAdminActivationScript({ reason = "manual", targetUserSid = null } = {}) {
   if (process.platform !== "win32") return { ok: false, path: null, error: "not Windows" };
   try {
     const scriptPath = getAdminActivationScriptPath();
     const exeForBat = process.execPath.replace(/%/g, "%%");
+    const exeForVbs = process.execPath.replace(/"/g, '""');
+    const workDirForVbs = path.dirname(process.execPath).replace(/"/g, '""');
+    const fixedTargetLine = targetUserSid ? `if not defined TARGET_SID set "TARGET_SID=${targetUserSid}"` : "";
     const content = [
       "@echo off",
       "chcp 65001 >nul",
       "title Asclion - Activation mode admin",
       "setlocal EnableExtensions",
+      `set "ASCLION_EXE=${exeForBat}"`,
+      "set \"ASCLION_LOG=%TEMP%\\asclion-admin-activation.log\"",
+      `set "ASCLION_VBS=%TEMP%\\asclion-uac-launcher.vbs"`,
       "echo.",
       "echo ==============================================",
       "echo   Activation du demarrage admin Asclion",
       "echo ==============================================",
       "echo.",
       "for /f \"tokens=2 delims=,\" %%S in ('whoami /user /fo csv /nh') do set \"TARGET_SID=%%~S\"",
+      fixedTargetLine,
       "set \"ASCLION_SCRIPT=%~f0\"",
       "if /i \"%~1\"==\"elevated\" goto elevated",
       "net session >nul 2>&1",
       "if %errorlevel% neq 0 (",
+      "  echo [%DATE% %TIME%] Demande UAC pour %TARGET_SID% >> \"%ASCLION_LOG%\"",
       "  echo Une fenetre Windows de confirmation va s'ouvrir.",
       "  echo Cliquez sur OUI pour autoriser Asclion une seule fois.",
-      "  echo Si elle n'apparait pas, verifiez la barre des taches Windows.",
-      "  powershell.exe -NoProfile -ExecutionPolicy Bypass -Command \"$p = Start-Process -FilePath 'cmd.exe' -ArgumentList ('/d /s /c call \\\"' + $env:ASCLION_SCRIPT + '\\\" elevated ' + $env:TARGET_SID) -Verb RunAs -WindowStyle Normal -PassThru; if ($p) { exit 0 } else { exit 1 }\"",
+      "  echo.",
+      "  > \"%ASCLION_VBS%\" echo Set shell = CreateObject(\"Shell.Application\")",
+      `  >> "%ASCLION_VBS%" echo shell.ShellExecute "${exeForVbs}", "${REPAIR_AUTOLAUNCH_ARG} --reason=${reason || "manual-bat"} --target-user-sid=%TARGET_SID% --replace-pid=${process.pid}", "${workDirForVbs}", "runas", 1`,
+      "  wscript.exe //nologo \"%ASCLION_VBS%\"",
       "  if %errorlevel% neq 0 (",
       "    echo ERREUR: Windows a bloque la demande admin automatique.",
       "    echo Faites clic droit sur ce fichier, puis Executer en tant qu'administrateur.",
+      "    start \"\" explorer.exe /select,\"%ASCLION_SCRIPT%\"",
       "    pause",
+      "  ) else (",
+      "    echo Demande envoyee. Si rien n'apparait, faites clic droit sur ce fichier puis Executer en tant qu'administrateur.",
+      "    timeout /t 20 /nobreak >nul",
       "  )",
       "  exit /b",
       ")",
       ":elevated",
       "if not \"%~2\"==\"\" set \"TARGET_SID=%~2\"",
       "echo Configuration de la tache planifiee elevee...",
-      `set "ASCLION_EXE=${exeForBat}"`,
       "if not exist \"%ASCLION_EXE%\" (",
       "  echo ERREUR: Asclion.exe introuvable.",
       "  echo %ASCLION_EXE%",
@@ -644,7 +685,7 @@ function writeAdminActivationScript({ reason = "manual" } = {}) {
       "",
     ].join("\r\n");
     fs.writeFileSync(scriptPath, content, { encoding: "utf8" });
-    return { ok: true, path: scriptPath, error: null };
+    return { ok: true, path: scriptPath, launcherPath: path.join(app.getPath("userData"), "asclion-uac-launcher.vbs"), logPath: path.join(app.getPath("temp"), "asclion-admin-activation.log"), error: null };
   } catch (e) {
     return { ok: false, path: null, error: String(e && e.message ? e.message : e) };
   }
