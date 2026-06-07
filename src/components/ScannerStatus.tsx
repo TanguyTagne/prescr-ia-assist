@@ -331,6 +331,19 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
         </div>
       </div>
 
+      {isDesktopRuntime && adminMode === "user" && (
+        <div className="rounded-md border border-primary/30 bg-primary/10 px-2.5 py-2 text-[11px] flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <ShieldAlert className="h-3.5 w-3.5 text-primary shrink-0" />
+            <span className="text-foreground font-medium truncate">Mode admin requis pour capter les scans derrière le LGO</span>
+          </div>
+          <Button size="sm" className="h-7 text-[11px] gap-1.5 shrink-0" onClick={handleActivateAdmin} disabled={adminActivating}>
+            {adminActivating ? <Loader2 className="h-3 w-3 animate-spin" /> : <ShieldCheck className="h-3 w-3" />}
+            Activer
+          </Button>
+        </div>
+      )}
+
       {/* Latest scan notification */}
       {latestScan && latestScan.status === "completed" && (
         <ScanNotification scan={latestScan} onDismiss={dismissScan} onViewResult={onViewResult} />
