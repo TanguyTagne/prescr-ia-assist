@@ -1,6 +1,6 @@
 {
   "name": "asclion-desktop",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "Asclion — Assistant Pharmacie intelligent",
   "main": "main.js",
   "author": "Asclion",
@@ -50,8 +50,7 @@
           "arch": ["x64"]
         }
       ],
-      "icon": "assets/icon.ico",
-      "requestedExecutionLevel": "highestAvailable"
+      "icon": "assets/icon.ico"
     },
     "nsis": {
       "oneClick": true,
