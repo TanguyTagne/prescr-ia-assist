@@ -593,18 +593,26 @@ function writeAdminActivationScript({ reason = "manual" } = {}) {
       "@echo off",
       "chcp 65001 >nul",
       "title Asclion - Activation mode admin",
+      "setlocal EnableExtensions",
       "echo.",
       "echo ==============================================",
       "echo   Activation du demarrage admin Asclion",
       "echo ==============================================",
       "echo.",
       "for /f \"tokens=2 delims=,\" %%S in ('whoami /user /fo csv /nh') do set \"TARGET_SID=%%~S\"",
+      "set \"ASCLION_SCRIPT=%~f0\"",
       "if /i \"%~1\"==\"elevated\" goto elevated",
       "net session >nul 2>&1",
       "if %errorlevel% neq 0 (",
       "  echo Une fenetre Windows de confirmation va s'ouvrir.",
       "  echo Cliquez sur OUI pour autoriser Asclion une seule fois.",
-      "  powershell.exe -NoProfile -ExecutionPolicy Bypass -Command \"Start-Process -FilePath '%~f0' -ArgumentList ('elevated ' + $env:TARGET_SID) -Verb RunAs\"",
+      "  echo Si elle n'apparait pas, verifiez la barre des taches Windows.",
+      "  powershell.exe -NoProfile -ExecutionPolicy Bypass -Command \"$p = Start-Process -FilePath 'cmd.exe' -ArgumentList ('/d /s /c call \\\"' + $env:ASCLION_SCRIPT + '\\\" elevated ' + $env:TARGET_SID) -Verb RunAs -WindowStyle Normal -PassThru; if ($p) { exit 0 } else { exit 1 }\"",
+      "  if %errorlevel% neq 0 (",
+      "    echo ERREUR: Windows a bloque la demande admin automatique.",
+      "    echo Faites clic droit sur ce fichier, puis Executer en tant qu'administrateur.",
+      "    pause",
+      "  )",
       "  exit /b",
       ")",
       ":elevated",
@@ -797,15 +805,16 @@ function launchElevatedAutolaunchRepair(reason, targetUserSid) {
   try {
     const activationScript = writeAdminActivationScript({ reason: reason || "manual" });
     if (activationScript.ok && activationScript.path) {
-      const script = escapePowerShellSingleQuoted(activationScript.path);
-      const command = `Start-Process -FilePath '${script}' -Verb RunAs -WindowStyle Normal`;
+      // Launch the BAT visibly first. The BAT itself triggers UAC through
+      // Shell.Application -> cmd.exe /runas, which is more reliable than trying
+      // to elevate a .bat file directly with PowerShell (often fails silently).
       const child = spawn(
-        "powershell.exe",
-        ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", command],
-        { windowsHide: false, detached: true, stdio: "ignore" },
+        "cmd.exe",
+        ["/d", "/s", "/c", `call "${activationScript.path}"`],
+        { cwd: path.dirname(activationScript.path), windowsHide: false, detached: true, stdio: "ignore" },
       );
       child.unref();
-      return { ok: true, error: null, method: "desktop-bat", scriptPath: activationScript.path };
+      return { ok: true, error: null, method: "visible-desktop-bat", scriptPath: activationScript.path };
     }
 
     // Fallback direct si le BAT n'a pas pu être écrit. Fenêtre normale : ne pas
@@ -826,8 +835,8 @@ function launchElevatedAutolaunchRepair(reason, targetUserSid) {
     return { ok: false, error: String(e && e.message ? e.message : e) };
   }
 }
-async function maybePromptElevatedAutolaunchRepair({ elevated, autolaunchState, reason }) {
-  if (process.platform !== "win32" || elevated || autolaunchRepairPromptedThisRun) {
+async function maybePromptElevatedAutolaunchRepair({ elevated, autolaunchState, reason, force = false }) {
+  if (process.platform !== "win32" || elevated || (!force && autolaunchRepairPromptedThisRun)) {
     return { prompted: false, skipped: true };
   }
   autolaunchRepairPromptedThisRun = true;
@@ -857,14 +866,14 @@ async function maybePromptElevatedAutolaunchRepair({ elevated, autolaunchState, 
       /* ignore */
     }
   }
-  return { prompted: repair.ok, error: repair.error };
+  return { prompted: repair.ok, error: repair.error, method: repair.method || null, scriptPath: repair.scriptPath || null };
 }
 
 ipcMain.handle("autolaunch:status", async () => queryAutoLaunchStatus());
 ipcMain.handle("autolaunch:reinstall", async () => {
   const elevated = await detectElevation();
   const state = await registerAutoLaunch();
-  const repair = await maybePromptElevatedAutolaunchRepair({ elevated, autolaunchState: state, reason: "manual" });
+  const repair = await maybePromptElevatedAutolaunchRepair({ elevated, autolaunchState: state, reason: "manual", force: true });
   return { state, repair, status: await queryAutoLaunchStatus() };
 });
 ipcMain.handle("autolaunch:create-admin-script", async () => {
