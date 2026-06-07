@@ -64,6 +64,12 @@ type ScannerStatus = {
   // Windows admin / High Integrity Level — true = Asclion bypass UIPI
   // → capture scan en background même quand le LGO a le focus
   elevated?: boolean | null;
+  autolaunch?: {
+    taskRegistered?: boolean;
+    taskErrors?: string[];
+    repairPrompt?: { attempted?: boolean; reason?: string; error?: string | null; at?: string } | null;
+    updatedAt?: string | null;
+  } | null;
   platform?: string;
 };
 
@@ -537,6 +543,7 @@ const PharmacyDiagRow = ({ row, latestVersion }: { row: HeartbeatRow; latestVers
   const health = useMemo(() => healthScore(paths), [paths]);
   const isDesktop = row.platform === "desktop";
   const elevated = row.scanner_status?.elevated;
+  const autolaunch = row.scanner_status?.autolaunch;
 
   const versionState: "up-to-date" | "outdated" | "unknown" = !latestVersion
     ? "unknown"
@@ -581,7 +588,7 @@ const PharmacyDiagRow = ({ row, latestVersion }: { row: HeartbeatRow; latestVers
             <Badge
               variant="outline"
               className="bg-amber-50 text-amber-800 border-amber-300 text-[10px] gap-1"
-              title="Asclion tourne en Medium Integrity Level (user). Si le LGO est elevé, Windows UIPI bloquera la capture en background. Redémarrer le poste pour appliquer la migration silencieuse vers HighestAvailable."
+              title="Asclion tourne en Medium Integrity Level (user). La nouvelle version déclenche une réparation UAC puis relance Asclion via la tâche planifiée admin."
             >
               <ShieldAlert className="h-2.5 w-2.5" /> user
             </Badge>
@@ -676,6 +683,18 @@ const PharmacyDiagRow = ({ row, latestVersion }: { row: HeartbeatRow; latestVers
           )}
           {row.scanner_status._meta === "init" &&
             "scanner_status non rempli — bug dans le code heartbeat (à signaler)."}
+        </div>
+      )}
+
+      {isDesktop && elevated === false && autolaunch && (
+        <div className="text-[10px] bg-amber-50 border border-amber-200 text-amber-900 rounded px-2 py-1.5">
+          <span className="font-semibold">Auto-admin :</span>{" "}
+          tâche planifiée {autolaunch.taskRegistered ? "créée" : "non créée"}
+          {autolaunch.repairPrompt?.attempted ? " · prompt UAC demandé" : ""}
+          {autolaunch.repairPrompt?.error ? ` · erreur UAC : ${autolaunch.repairPrompt.error}` : ""}
+          {autolaunch.taskErrors && autolaunch.taskErrors.length > 0 && (
+            <span className="block opacity-80 mt-1">{autolaunch.taskErrors.join(" · ")}</span>
+          )}
         </div>
       )}
 
