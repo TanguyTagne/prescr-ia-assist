@@ -1,6 +1,6 @@
 // build: widget v2026.06.02.4 — BDPM-first CIP resolution + strict specificity (2+ pathos → med_id only)
 import { useState, useCallback, useEffect, useRef } from "react";
-import { X, Loader2, Mail, Lock, Eye, EyeOff, Monitor, HelpCircle, Pin, PinOff, Minimize2, Maximize2, LogOut, ScanLine } from "lucide-react";
+import { X, Loader2, Mail, Lock, Eye, EyeOff, Monitor, HelpCircle, Pin, PinOff, Minimize2, Maximize2, LogOut, ScanLine, Shield, ShieldAlert } from "lucide-react";
 import OnboardingTour from "@/components/OnboardingTour";
 import AnalysisSkeleton from "@/components/AnalysisSkeleton";
 import { Button } from "@/components/ui/button";
@@ -782,6 +782,76 @@ const PipControls = () => {
   );
 };
 
+// Bouton "Mode admin" — visible uniquement dans l'app desktop Electron.
+// Affiche un bouclier vert si l'app tourne déjà en admin (High Integrity Level),
+// ou un bouclier ambre cliquable si on est en user normal.
+// Au clic → déclenche UAC, et si l'utilisateur accepte, l'app se relance en admin.
+// Une fois en admin, la tâche planifiée se réenregistre avec RunLevel=HighestAvailable
+// → chaque démarrage Windows suivant lance Asclion en admin automatiquement, sans UAC.
+const AdminModeButton = () => {
+  const api = (typeof window !== "undefined" ? (window as any).electronAPI?.system : null) as
+    | { isElevated: () => Promise<{ elevated: boolean; platform: string }>; relaunchAsAdmin: () => Promise<{ ok: boolean; alreadyElevated?: boolean; prompted?: boolean; error?: string }> }
+    | null;
+  const [elevated, setElevated] = useState<boolean | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!api?.isElevated) return;
+    api.isElevated().then((r) => setElevated(r.elevated)).catch(() => {});
+  }, [api]);
+
+  // Pas Electron ou pas Windows → on n'affiche rien
+  if (!api || !api.relaunchAsAdmin) return null;
+  // État inconnu → on attend le 1er check pour éviter un flash
+  if (elevated === null) return null;
+
+  const handleClick = async () => {
+    if (elevated || busy) return;
+    setBusy(true);
+    try {
+      const r = await api.relaunchAsAdmin();
+      if (r.alreadyElevated) {
+        toast.success("Asclion tourne déjà en mode admin");
+        setElevated(true);
+      } else if (r.ok) {
+        toast.info("Autorisez la fenêtre Windows qui apparaît — Asclion va se relancer en admin.", { duration: 6000 });
+      } else {
+        toast.error(`Échec : ${r.error || "raison inconnue"}`);
+      }
+    } catch (e: any) {
+      toast.error(`Erreur : ${e?.message || String(e)}`);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (elevated) {
+    return (
+      <div
+        className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium text-primary-foreground/90"
+        title="Asclion tourne en mode administrateur — capture scan en arrière-plan garantie."
+      >
+        <Shield className="h-3 w-3 text-green-300" />
+        <span className="uppercase tracking-wider">Admin</span>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      disabled={busy}
+      title="Asclion tourne en mode utilisateur. Cliquez pour relancer en mode administrateur (capture scan en arrière-plan plus fiable)."
+      aria-label="Activer le mode administrateur"
+      className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium text-primary-foreground/90 hover:bg-primary-foreground/10 transition-colors disabled:opacity-50"
+    >
+      {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <ShieldAlert className="h-3 w-3 text-amber-300" />}
+      <span className="uppercase tracking-wider">Activer admin</span>
+    </button>
+  );
+};
+
 const Widget = ({ forceOpen = false }: {forceOpen?: boolean;}) => {
   const isDesktopRuntime = forceOpen || isAsclionDesktopRuntime();
 
@@ -833,6 +903,7 @@ const Widget = ({ forceOpen = false }: {forceOpen?: boolean;}) => {
             <ScannerIndicator />
             <LgoPreviewPicker current={lgoType} onChange={setPreviewLgo} isOverride={isPreview} />
             <div className="flex-1" />
+            <AdminModeButton />
             <PipControls />
             <SoundToggle />
             <RegisterSelector />
