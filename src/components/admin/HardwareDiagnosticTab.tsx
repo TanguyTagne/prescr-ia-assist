@@ -274,6 +274,10 @@ const HardwareDiagnosticTab = () => {
       {/* ── Détection matérielle (HID direct via node-hid) ────────────────── */}
       <ScannerDetectionPanel />
 
+      {/* ── Test manuel parser GS1 Data Matrix ────────────────────────────── */}
+      <DataMatrixTester />
+
+
       {/* ── Monitoring scans — toutes les pharmacies ─────────────────────── */}
       <Card>
         <CardHeader>
