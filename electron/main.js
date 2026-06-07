@@ -588,10 +588,6 @@ function escapeVbsString(value) {
   return String(value == null ? "" : value).replace(/"/g, '""');
 }
 
-function quoteCmdArg(value) {
-  return `"${String(value == null ? "" : value).replace(/"/g, '""')}"`;
-}
-
 function writeAdminElevationLauncher({ reason = "manual", targetUserSid = null, replacePid = process.pid } = {}) {
   if (process.platform !== "win32") return { ok: false, path: null, error: "not Windows" };
   try {
