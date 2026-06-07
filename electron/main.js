@@ -1,4 +1,4 @@
-// build: electron v2026.06.07.5 — auto-elevation au démarrage (UAC auto si user mode, zero clic pharmacien)
+// build: electron v2026.06.07.6 — revert auto-elevation (annoying), fix second-instance window recreation
 const { app, BrowserWindow, shell, ipcMain, Notification } = require("electron");
 const { autoUpdater } = require("electron-updater");
 const path = require("path");
@@ -250,9 +250,16 @@ if (isAutolaunchRepairMode) {
   app.quit();
 } else {
   app.on("second-instance", () => {
-    if (mainWindow) {
+    // Si la fenêtre existe encore (juste minimized/cachée) → la ramener au premier plan.
+    // Si elle a été détruite par un clic sur X → la recréer pour que le pharmacien
+    // voie l'app revenir (sans avoir à passer par UAC, le process actuel garde son
+    // niveau d'intégrité). C'est ce qui permet "ferme + ré-ouvre = pas d'UAC".
+    if (mainWindow && !mainWindow.isDestroyed()) {
       if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.show();
       mainWindow.focus();
+    } else {
+      createWindow();
     }
   });
   app.whenReady().then(async () => {
@@ -308,38 +315,13 @@ if (isAutolaunchRepairMode) {
     });
     // ──────────────────────────────────────────────────────────────────────
 
-    // ── Auto-élévation au démarrage ─────────────────────────────────────────
-    // Si l'app tourne en user mode (LogonTask pas fiable selon configs UAC),
-    // on déclenche AUTOMATIQUEMENT le flow VBS d'élévation. L'utilisateur voit
-    // UAC apparaître, accepte, et l'app se relance en admin. Pas besoin de
-    // bouton — c'est zero-touch pour le pharmacien.
-    //
-    // Si l'utilisateur refuse UAC : l'app continue en user mode (createWindow
-    // est appelé après), avec le bouton "Activer admin" disponible en repli.
+    createWindow();
+    // Warm up elevation detection so the FIRST heartbeat already carries the
+    // privilege flag. La tâche planifiée AsclionAtLogon (HighestAvailable) fait
+    // le job d'élévation automatique au logon Windows — pas besoin d'UAC à chaque
+    // lancement. Le bouton AdminModeButton dans le header sert de fallback
+    // manuel si la tâche n'a pas pu être créée ou ne fire pas.
     const elevated = await detectElevation();
-    if (!elevated && process.platform === "win32") {
-      devLog("[STARTUP] not elevated → auto-spawning VBS elevation prompt");
-      const r = spawnVbsRelaunchAsAdmin();
-      if (r.ok) {
-        // Le VBS va déclencher UAC. Si l'user accepte, la nouvelle instance
-        // admin nous tuera via --kill-pid=PID. On garde notre fenêtre cachée
-        // pendant 8s — soit on est tués, soit on continue en user mode (UAC refusé).
-        devLog("[STARTUP] VBS spawned, waiting for elevation outcome...");
-        // Pas createWindow() ici : on ne montre la fenêtre user-mode qu'APRÈS
-        // expiration du timeout (sinon flash visuel quand UAC est accepté).
-        setTimeout(() => {
-          if (!mainWindow) {
-            devLog("[STARTUP] UAC refused or timed out → falling back to user mode");
-            createWindow();
-          }
-        }, 8000);
-      } else {
-        devWarn("[STARTUP] VBS spawn failed, falling back to user mode:", r.error);
-        createWindow();
-      }
-    } else {
-      createWindow();
-    }
     const autolaunchState = await registerAutoLaunch();
     void maybePromptElevatedAutolaunchRepair({ elevated, autolaunchState, reason: "startup" });
     // Detect installed LGO (Windows only) and forward to renderer when ready
