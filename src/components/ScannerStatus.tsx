@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useScanQueue, type ScanEvent } from "@/hooks/useScanQueue";
 import { useFolderWatcher } from "@/hooks/useFolderWatcher";
 import { useBarcodeScanner } from "@/hooks/useBarcodeScanner";
+import { SCANNER } from "@/constants/scanner";
 import {
   X, Wifi, WifiOff, ShoppingCart, FileText, Package,
   Settings, Copy, Check, Plus, Trash2, Monitor, ScanBarcode, Key,
