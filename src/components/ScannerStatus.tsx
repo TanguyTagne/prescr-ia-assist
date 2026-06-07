@@ -5,7 +5,7 @@ import { useBarcodeScanner } from "@/hooks/useBarcodeScanner";
 import {
   X, Wifi, WifiOff, ShoppingCart, FileText, Package,
   Settings, Copy, Check, Plus, Trash2, Monitor, ScanBarcode, Key,
-  FolderSearch, Loader2, ShieldAlert, ShieldCheck,
+  FolderSearch, Loader2, ShieldAlert, ShieldCheck, FolderOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -104,6 +104,7 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
   const [lgoConnected, setLgoConnected] = useState(false);
   const [adminMode, setAdminMode] = useState<"unknown" | "admin" | "user" | "web">("unknown");
   const [adminActivating, setAdminActivating] = useState(false);
+  const [activationScriptPath, setActivationScriptPath] = useState<string | null>(null);
 
   const isFolderApiSupported = typeof window !== "undefined" && "showDirectoryPicker" in window;
   const isDesktopRuntime = typeof window !== "undefined" && !!(window as any).electronAPI?.isDesktop;
@@ -136,16 +137,31 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
     setAdminActivating(true);
     try {
       const result = await api.reinstall();
-      const scriptPath = result?.repair?.scriptPath || result?.state?.activationScript?.path;
+      const scriptPath = result?.repair?.scriptPath || result?.state?.activationScript?.path || null;
+      setActivationScriptPath(scriptPath);
       toast.success("Activation admin lancée", {
         description: scriptPath
-          ? "Cliquez Oui dans la fenêtre Windows. Un script Activer-Asclion-admin.bat est aussi sur le Bureau."
+          ? "Cliquez Oui dans Windows. Si rien n’apparaît, ouvrez le script affiché sur le Bureau."
           : "Cliquez Oui dans la fenêtre Windows, puis laissez Asclion se relancer.",
       });
     } catch (err: any) {
       toast.error("Activation admin impossible", { description: String(err?.message || err).slice(0, 180) });
     } finally {
       setAdminActivating(false);
+    }
+  };
+
+  const handleOpenAdminScript = async () => {
+    const api = (window as any).electronAPI?.autolaunch;
+    if (!api?.openAdminScript && !api?.createAdminScript) return;
+    try {
+      const result = api.openAdminScript ? await api.openAdminScript() : await api.createAdminScript();
+      if (result?.path) setActivationScriptPath(result.path);
+      toast.success("Script d’activation ouvert", {
+        description: "Faites clic droit dessus, puis Exécuter en tant qu’administrateur si la fenêtre Windows ne s’ouvre pas.",
+      });
+    } catch (err: any) {
+      toast.error("Impossible d’ouvrir le script", { description: String(err?.message || err).slice(0, 180) });
     }
   };
 
