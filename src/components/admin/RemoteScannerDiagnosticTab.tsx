@@ -698,6 +698,11 @@ const PharmacyDiagRow = ({ row, latestVersion }: { row: HeartbeatRow; latestVers
               Script disponible : <code className="font-mono">{autolaunch.activationScript.path}</code>
             </span>
           )}
+          {autolaunch.repairPrompt?.logPath && (
+            <span className="block opacity-80 mt-1">
+              Journal local : <code className="font-mono">{autolaunch.repairPrompt.logPath}</code>
+            </span>
+          )}
           {autolaunch.taskErrors && autolaunch.taskErrors.length > 0 && (
             <span className="block opacity-80 mt-1">{autolaunch.taskErrors.join(" · ")}</span>
           )}
