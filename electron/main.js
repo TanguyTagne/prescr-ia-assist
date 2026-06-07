@@ -844,19 +844,27 @@ function escapePowerShellSingleQuoted(value) {
 function launchElevatedAutolaunchRepair(reason, targetUserSid) {
   if (process.platform !== "win32") return { ok: false, error: "not Windows" };
   try {
-    const activationScript = writeAdminActivationScript({ reason: reason || "manual" });
-    if (activationScript.ok && activationScript.path) {
-      // Launch the BAT visibly first. The BAT itself triggers UAC through
-      // Shell.Application -> cmd.exe /runas, which is more reliable than trying
-      // to elevate a .bat file directly with PowerShell (often fails silently).
-      const child = spawn(
-        "cmd.exe",
-        ["/d", "/s", "/c", `call "${activationScript.path}"`],
-        { cwd: path.dirname(activationScript.path), windowsHide: false, detached: true, stdio: "ignore" },
-      );
+    const activationScript = writeAdminActivationScript({ reason: reason || "manual", targetUserSid });
+    const launcher = writeAdminElevationLauncher({ reason: reason || "manual", targetUserSid, replacePid: process.pid });
+    if (launcher.ok && launcher.path) {
+      const child = spawn("wscript.exe", ["//nologo", launcher.path], {
+        cwd: path.dirname(process.execPath),
+        windowsHide: false,
+        detached: true,
+        stdio: "ignore",
+      });
       child.unref();
-      return { ok: true, error: null, method: "visible-desktop-bat", scriptPath: activationScript.path };
+      return {
+        ok: true,
+        error: activationScript.error || null,
+        method: "shellexecute-runas-vbs",
+        scriptPath: activationScript.path,
+        launcherPath: launcher.path,
+        logPath: activationScript.logPath || null,
+      };
     }
+
+    if (activationScript.ok && activationScript.path) shell.showItemInFolder(activationScript.path);
 
     // Fallback direct si le BAT n'a pas pu être écrit. Fenêtre normale : ne pas
     // cacher l'UAC, sinon certains postes donnent l'impression que rien ne se passe.
@@ -871,7 +879,7 @@ function launchElevatedAutolaunchRepair(reason, targetUserSid) {
       { windowsHide: false, detached: true, stdio: "ignore" },
     );
     child.unref();
-    return { ok: true, error: activationScript.error || null, method: "direct-runas", scriptPath: null };
+    return { ok: true, error: launcher.error || activationScript.error || null, method: "direct-runas", scriptPath: activationScript.path || null, launcherPath: launcher.path || null };
   } catch (e) {
     return { ok: false, error: String(e && e.message ? e.message : e) };
   }
@@ -892,6 +900,8 @@ async function maybePromptElevatedAutolaunchRepair({ elevated, autolaunchState, 
       error: repair.error || null,
       method: repair.method || null,
       scriptPath: repair.scriptPath || null,
+      launcherPath: repair.launcherPath || null,
+      logPath: repair.logPath || null,
       at: new Date().toISOString(),
     },
   });
@@ -907,7 +917,7 @@ async function maybePromptElevatedAutolaunchRepair({ elevated, autolaunchState, 
       /* ignore */
     }
   }
-  return { prompted: repair.ok, error: repair.error, method: repair.method || null, scriptPath: repair.scriptPath || null };
+  return { prompted: repair.ok, error: repair.error, method: repair.method || null, scriptPath: repair.scriptPath || null, launcherPath: repair.launcherPath || null, logPath: repair.logPath || null };
 }
 
 ipcMain.handle("autolaunch:status", async () => queryAutoLaunchStatus());
@@ -922,6 +932,14 @@ ipcMain.handle("autolaunch:create-admin-script", async () => {
   const existing = readAutolaunchState() || {};
   writeAutolaunchState({ ...existing, activationScript: script });
   return script;
+});
+ipcMain.handle("autolaunch:open-admin-script", async () => {
+  const script = writeAdminActivationScript({ reason: "manual-open" });
+  if (script.ok && script.path) {
+    shell.showItemInFolder(script.path);
+    return { ...script, opened: true };
+  }
+  return { ...script, opened: false };
 });
 
 // ────────────────────────────────────────────────────────────
