@@ -574,6 +574,71 @@ function readAutolaunchState() {
     return null;
   }
 }
+
+function getAdminActivationScriptPath() {
+  const fileName = "Activer-Asclion-admin.bat";
+  try {
+    return path.join(app.getPath("desktop"), fileName);
+  } catch {
+    return path.join(app.getPath("userData"), fileName);
+  }
+}
+
+function writeAdminActivationScript({ reason = "manual" } = {}) {
+  if (process.platform !== "win32") return { ok: false, path: null, error: "not Windows" };
+  try {
+    const scriptPath = getAdminActivationScriptPath();
+    const exeForBat = process.execPath.replace(/%/g, "%%");
+    const content = [
+      "@echo off",
+      "chcp 65001 >nul",
+      "title Asclion - Activation mode admin",
+      "echo.",
+      "echo ==============================================",
+      "echo   Activation du demarrage admin Asclion",
+      "echo ==============================================",
+      "echo.",
+      "if /i \"%~1\"==\"elevated\" goto elevated",
+      "net session >nul 2>&1",
+      "if %errorlevel% neq 0 (",
+      "  echo Une fenetre Windows de confirmation va s'ouvrir.",
+      "  echo Cliquez sur OUI pour autoriser Asclion une seule fois.",
+      "  powershell.exe -NoProfile -ExecutionPolicy Bypass -Command \"Start-Process -FilePath '%~f0' -ArgumentList 'elevated' -Verb RunAs\"",
+      "  exit /b",
+      ")",
+      ":elevated",
+      "echo Configuration de la tache planifiee elevee...",
+      `set "ASCLION_EXE=${exeForBat}"`,
+      "if not exist \"%ASCLION_EXE%\" (",
+      "  echo ERREUR: Asclion.exe introuvable.",
+      "  echo %ASCLION_EXE%",
+      "  pause",
+      "  exit /b 1",
+      ")",
+      `"%ASCLION_EXE%" ${REPAIR_AUTOLAUNCH_ARG} --reason=${reason} --no-restart-after-repair`,
+      "echo.",
+      "echo Redemarrage d'Asclion via le lancement admin...",
+      "taskkill /IM Asclion.exe /F >nul 2>nul",
+      "timeout /t 1 /nobreak >nul",
+      "schtasks /Run /TN \"AsclionAtLogon\" >nul 2>nul",
+      "if %errorlevel% neq 0 (",
+      "  echo La tache n'a pas pu etre lancee maintenant, lancement direct en admin...",
+      "  start \"\" \"%ASCLION_EXE%\"",
+      ") else (",
+      "  echo OK: Asclion est relance via la tache admin.",
+      ")",
+      "echo.",
+      "echo Termine. Le diagnostic distant doit passer de user a admin apres le prochain heartbeat.",
+      "timeout /t 5 /nobreak >nul",
+      "exit /b 0",
+      "",
+    ].join("\r\n");
+    fs.writeFileSync(scriptPath, content, { encoding: "utf8" });
+    return { ok: true, path: scriptPath, error: null };
+  } catch (e) {
+    return { ok: false, path: null, error: String(e && e.message ? e.message : e) };
+  }
+}
 async function registerAutoLaunch() {
   if (process.platform !== "win32") return { runKey: null, tasks: [] };
   const exePath = process.execPath;
@@ -686,18 +751,33 @@ function escapePowerShellSingleQuoted(value) {
 function launchElevatedAutolaunchRepair(reason, targetUserSid) {
   if (process.platform !== "win32") return { ok: false, error: "not Windows" };
   try {
+    const activationScript = writeAdminActivationScript({ reason: reason || "manual" });
+    if (activationScript.ok && activationScript.path) {
+      const script = escapePowerShellSingleQuoted(activationScript.path);
+      const command = `Start-Process -FilePath '${script}' -Verb RunAs -WindowStyle Normal`;
+      const child = spawn(
+        "powershell.exe",
+        ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", command],
+        { windowsHide: false, detached: true, stdio: "ignore" },
+      );
+      child.unref();
+      return { ok: true, error: null, method: "desktop-bat", scriptPath: activationScript.path };
+    }
+
+    // Fallback direct si le BAT n'a pas pu être écrit. Fenêtre normale : ne pas
+    // cacher l'UAC, sinon certains postes donnent l'impression que rien ne se passe.
     const exe = escapePowerShellSingleQuoted(process.execPath);
     const targetArg = targetUserSid ? ` --target-user-sid=${targetUserSid}` : "";
     const restartArg = reason === "startup" || reason === "manual" ? ` --replace-pid=${process.pid}` : "";
     const arg = escapePowerShellSingleQuoted(`${REPAIR_AUTOLAUNCH_ARG} --reason=${reason || "startup"}${targetArg}${restartArg}`);
-    const command = `Start-Process -FilePath '${exe}' -ArgumentList '${arg}' -Verb RunAs -WindowStyle Hidden`;
+    const command = `Start-Process -FilePath '${exe}' -ArgumentList '${arg}' -Verb RunAs -WindowStyle Normal`;
     const child = spawn(
       "powershell.exe",
       ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", command],
       { windowsHide: false, detached: true, stdio: "ignore" },
     );
     child.unref();
-    return { ok: true, error: null };
+    return { ok: true, error: activationScript.error || null, method: "direct-runas", scriptPath: null };
   } catch (e) {
     return { ok: false, error: String(e && e.message ? e.message : e) };
   }
@@ -716,6 +796,8 @@ async function maybePromptElevatedAutolaunchRepair({ elevated, autolaunchState, 
       attempted: repair.ok,
       reason: reason || "startup",
       error: repair.error || null,
+      method: repair.method || null,
+      scriptPath: repair.scriptPath || null,
       at: new Date().toISOString(),
     },
   });
@@ -723,7 +805,7 @@ async function maybePromptElevatedAutolaunchRepair({ elevated, autolaunchState, 
     try {
       new Notification({
         title: "Asclion",
-        body: "Autorisez la fenêtre Windows pour activer le démarrage admin. Le statut passera en admin au prochain redémarrage Windows.",
+        body: "Autorisez la fenêtre Windows pour activer le démarrage admin. Un script Activer-Asclion-admin.bat est aussi disponible sur le Bureau.",
         icon: path.join(__dirname, "assets", "icon.ico"),
         silent: true,
       }).show();
@@ -2150,6 +2232,7 @@ function getScannerStatus() {
             ? autolaunchState.tasks.filter((t) => !t.registered && t.error).map((t) => `${t.name}: ${t.error}`).slice(0, 3)
             : [],
           repairPrompt: autolaunchState.repairPrompt || null,
+          activationScript: autolaunchState.activationScript || null,
           updatedAt: autolaunchState.updatedAt || null,
         }
       : null,
@@ -2159,7 +2242,10 @@ function getScannerStatus() {
 
 // IPC — exposed to renderer via preload `electronAPI.scanner`
 ipcMain.handle("scanner:list", () => listHidDevices());
-ipcMain.handle("scanner:status", () => getScannerStatus());
+ipcMain.handle("scanner:status", async () => {
+  await detectElevation();
+  return getScannerStatus();
+});
 ipcMain.handle("scanner:bind", (_e, devicePath) => {
   const all = listHidDevices();
   const target = all.find((d) => d.path === devicePath);
