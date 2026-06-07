@@ -91,9 +91,13 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           tag_name: v${{ github.run_number }}
           name: Asclion v${{ github.run_number }}
+          # IMPORTANT : inclure latest.yml ET les .blockmap, pas seulement le .exe.
+          # Sans latest.yml dans la release, electron-updater ne peut PAS détecter
+          # les nouvelles versions → les installs existants restent figés sur
+          # leur version actuelle pour toujours.
           files: |
             electron/dist/*.exe
-            electron/dist/*.yml
+            electron/dist/latest.yml
             electron/dist/*.blockmap
           generate_release_notes: true
 
