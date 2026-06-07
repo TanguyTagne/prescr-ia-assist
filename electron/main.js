@@ -567,6 +567,13 @@ function writeAutolaunchState(state) {
     devWarn("autolaunch state save failed:", e);
   }
 }
+function readAutolaunchState() {
+  try {
+    return JSON.parse(fs.readFileSync(path.join(app.getPath("userData"), "autolaunch-state.json"), "utf-8"));
+  } catch {
+    return null;
+  }
+}
 async function registerAutoLaunch() {
   if (process.platform !== "win32") return { runKey: null, tasks: [] };
   const exePath = process.execPath;
