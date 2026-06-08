@@ -432,22 +432,6 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
             )}
           </div>
 
-          {med.conseil_associe &&
-        <button
-          onClick={() => toggleConseil(i)}
-          aria-expanded={expandedConseils.has(i)}
-          aria-label={`${expandedConseils.has(i) ? t("results.hide") : t("results.show")} ${t("results.adviceFor")} ${med.nom}`}
-          className="flex items-center gap-1 text-xs text-primary/90 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded transition-colors w-full text-left">
-          
-              {expandedConseils.has(i) ? <ChevronDown className="h-3 w-3 shrink-0" /> : <ChevronRight className="h-3 w-3 shrink-0" />}
-              <span className="font-semibold">{t("results.advice")}</span>
-            </button>
-        }
-          {med.conseil_associe && expandedConseils.has(i) &&
-        <p className="text-xs text-foreground leading-relaxed pl-4 animate-fade-in">
-              {med.conseil_associe}
-            </p>
-        }
 
           {/* Recommendations for this medication */}
           {med.recommendations && med.recommendations.length > 0 && (
