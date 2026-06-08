@@ -46,7 +46,23 @@ const PharmaciesTab = ({ pharmacies, onRefresh }: PharmaciesTabProps) => {
   const [accountForm, setAccountForm] = useState({ email: "", password: "", full_name: "", role: "preparateur" });
   const [submittingAccount, setSubmittingAccount] = useState(false);
   const [connections, setConnections] = useState<Record<string, { total: number; desktop: number; web: number; users: number; lastActivity: string | null }>>({});
+  const [accountCounts, setAccountCounts] = useState<Record<string, number>>({});
   const [detailPharmacy, setDetailPharmacy] = useState<{ id: string; name: string } | null>(null);
+
+  // Count user accounts per pharmacy (so we can flag pharmacies with no account)
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase.from("profiles").select("pharmacy_id").not("pharmacy_id", "is", null);
+      if (cancelled || !data) return;
+      const map: Record<string, number> = {};
+      for (const row of data as any[]) {
+        if (row.pharmacy_id) map[row.pharmacy_id] = (map[row.pharmacy_id] || 0) + 1;
+      }
+      setAccountCounts(map);
+    })();
+    return () => { cancelled = true; };
+  }, [pharmacies]);
 
   // Live connection counts (refresh every 30s)
   useEffect(() => {
@@ -306,6 +322,12 @@ const PharmaciesTab = ({ pharmacies, onRefresh }: PharmaciesTabProps) => {
                   {pharm.city && <p className="text-xs text-muted-foreground">{pharm.city}</p>}
                 </button>
                 {getStatusBadge(status)}
+                {(accountCounts[pharm.id] || 0) === 0 && (
+                  <Badge variant="destructive" className="text-[10px] gap-1" title="Aucun utilisateur n'est rattaché à cette pharmacie — créez un compte pour activer l'accès">
+                    <AlertTriangle className="h-2.5 w-2.5" />
+                    Aucun compte
+                  </Badge>
+                )}
                 <Badge
                   variant="outline"
                   className={`text-[10px] gap-1 ${isOnline ? "border-emerald-300 text-emerald-700 bg-emerald-50" : "border-muted-foreground/30 text-muted-foreground"}`}
