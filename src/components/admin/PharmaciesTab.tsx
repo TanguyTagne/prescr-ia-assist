@@ -50,19 +50,16 @@ const PharmaciesTab = ({ pharmacies, onRefresh }: PharmaciesTabProps) => {
   const [detailPharmacy, setDetailPharmacy] = useState<{ id: string; name: string } | null>(null);
 
   // Count user accounts per pharmacy (so we can flag pharmacies with no account)
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const { data } = await supabase.from("profiles").select("pharmacy_id").not("pharmacy_id", "is", null);
-      if (cancelled || !data) return;
-      const map: Record<string, number> = {};
-      for (const row of data as any[]) {
-        if (row.pharmacy_id) map[row.pharmacy_id] = (map[row.pharmacy_id] || 0) + 1;
-      }
-      setAccountCounts(map);
-    })();
-    return () => { cancelled = true; };
-  }, [pharmacies]);
+  const reloadAccountCounts = async () => {
+    const { data } = await supabase.from("profiles").select("pharmacy_id").not("pharmacy_id", "is", null);
+    if (!data) return;
+    const map: Record<string, number> = {};
+    for (const row of data as any[]) {
+      if (row.pharmacy_id) map[row.pharmacy_id] = (map[row.pharmacy_id] || 0) + 1;
+    }
+    setAccountCounts(map);
+  };
+  useEffect(() => { reloadAccountCounts(); }, [pharmacies]);
 
   // Live connection counts (refresh every 30s)
   useEffect(() => {
@@ -117,6 +114,7 @@ const PharmaciesTab = ({ pharmacies, onRefresh }: PharmaciesTabProps) => {
       setAccountForm({ email: "", password: "", full_name: "", role: "preparateur" });
       setCreatingAccount(null);
       onRefresh();
+      reloadAccountCounts();
     } catch (err: any) {
       toast.error(err.message || "Erreur lors de la création");
     } finally {
@@ -153,6 +151,7 @@ const PharmaciesTab = ({ pharmacies, onRefresh }: PharmaciesTabProps) => {
       toast.success("Configuration LGO enregistrée");
       setEditingLGO(null);
       onRefresh();
+      reloadAccountCounts();
     } catch (err: any) {
       toast.error(err.message || "Erreur");
     }
@@ -175,6 +174,7 @@ const PharmaciesTab = ({ pharmacies, onRefresh }: PharmaciesTabProps) => {
       };
       toast.success(labels[newStatus] || "Statut mis à jour");
       onRefresh();
+      reloadAccountCounts();
     } catch (err: any) {
       toast.error(err.message || "Erreur");
     } finally {
@@ -225,6 +225,7 @@ const PharmaciesTab = ({ pharmacies, onRefresh }: PharmaciesTabProps) => {
       setNewPharmacy({ name: "", city: "", postal_code: "", email: "", password: "", full_name: "", role: "manager" });
       setShowCreatePharmacy(false);
       onRefresh();
+      reloadAccountCounts();
     } catch (err: any) {
       toast.error(err.message || "Erreur lors de la création");
     } finally {
