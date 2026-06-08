@@ -726,6 +726,12 @@ function phraseIsForWrongMed(phrase: string, med: any): boolean {
   return true; // named drug(s) don't match current med → regenerate
 }
 
+const MEDICAMENT_AS_PC_RE = /\b(doliprane|dafalgan|efferalgan|parac[eé]tamol|ibuprof[eè]ne|nurofen|advil|spedifen|aspirine|kardegic|amoxicilline|augmentin|clamoxyl|cod[eé]ine|tramadol|morphine|spasfon|smecta|gaviscon|om[eé]prazole|esomeprazole|pantoprazole|aerius|cetirizine|levocetirizine)\b/i;
+
+function looksLikeMedicationRecommendation(produit: string | undefined | null): boolean {
+  return MEDICAMENT_AS_PC_RE.test(produit || "");
+}
+
 // Medical phrase generator: [pathologie/conséquence] + [mécanisme produit] + [bénéfice précis]
 // Rules: 15-25 words, no "confort"/"bien-être"/"au quotidien", must contain medical mechanism
 function generatePhraseConseil(rec: any, med: any): string {
@@ -1827,7 +1833,6 @@ serve(async (req) => {
     for (let i = 0; i < enrichedMeds.length; i++) {
       const med = enrichedMeds[i];
       const recs: any[] = [];
-      let advice: string | null = null;
 
       // ====== AMBIGUITY GUARD ======
       // See ambiguousFlags computation above.
@@ -1853,19 +1858,6 @@ serve(async (req) => {
         recs.push(...pickDistinctProducts(mappedCurated, MAX_RECOMMENDATIONS_PER_MED));
         hasStructuredData = true;
       }
-
-
-
-
-      if (!advice) {
-        const pathIds = med.pathologies?.map((p: any) => p.id) || [];
-        const scopedConseils = allDbConseils
-          .filter((c: any) => !pathIds.length || pathIds.includes(c.pathologie_id))
-          .sort((a: any, b: any) => (b.priorite || 0) - (a.priorite || 0));
-        advice = pickMainAdviceFromConseils(scopedConseils);
-      }
-
-      if (advice) medMainAdvice.set(i, advice);
 
       // Apply latent need boost (max 1 per basket, invisible in UX)
       if (!latentNeedUsed && latentNeeds.length > 0) {
@@ -1902,7 +1894,8 @@ serve(async (req) => {
       let filteredRecs = recs
         .filter((r: any) => !blockedPCSet.has(normalizeText(r.produit)))
         .filter((r: any) => !allProposedPCs.includes(normalizeText(r.produit)))
-        .filter((r: any) => !isAlreadyPrescribed(r.produit));
+        .filter((r: any) => !isAlreadyPrescribed(r.produit))
+        .filter((r: any) => !looksLikeMedicationRecommendation(r.produit));
 
       // Apply mappings: groupement first (priority override), then pharmacy
       filteredRecs = filteredRecs.map((r: any) => {
@@ -2058,7 +2051,7 @@ serve(async (req) => {
       classe: m.classe_therapeutique || m.therapeutic_classes?.nom || "Non classifié",
       molecule: m.molecule_active || null,
       code_atc: m.code_atc || null,
-      conseil_associe: medMainAdvice.get(i) || null,
+      conseil_associe: null,
       recommendations: medRecommendations.get(i) || [],
     }));
 

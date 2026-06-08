@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { Pill, BarChart3, LogOut, ShieldX, PauseCircle, MessageSquare, Sparkles, RefreshCw, Loader2 } from "lucide-react";
+import { Pill, BarChart3, LogOut, ShieldX, PauseCircle, Sparkles, RefreshCw, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import LegalDisclaimer from "@/components/LegalDisclaimer";
@@ -190,13 +190,6 @@ const Index = () => {
                     {formatTime(item.created_at)}
                   </span>
                 </header>
-
-                {item.conseil_associe && (
-                  <div className="flex items-start gap-1.5 mb-2 p-2 rounded-md bg-muted/50">
-                    <MessageSquare className="h-3 w-3 text-primary mt-0.5 shrink-0" />
-                    <p className="text-[11px] text-foreground/80 leading-relaxed">{item.conseil_associe}</p>
-                  </div>
-                )}
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {item.pcs.map((pc, i) => (
