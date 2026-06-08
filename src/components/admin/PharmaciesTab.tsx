@@ -46,7 +46,23 @@ const PharmaciesTab = ({ pharmacies, onRefresh }: PharmaciesTabProps) => {
   const [accountForm, setAccountForm] = useState({ email: "", password: "", full_name: "", role: "preparateur" });
   const [submittingAccount, setSubmittingAccount] = useState(false);
   const [connections, setConnections] = useState<Record<string, { total: number; desktop: number; web: number; users: number; lastActivity: string | null }>>({});
+  const [accountCounts, setAccountCounts] = useState<Record<string, number>>({});
   const [detailPharmacy, setDetailPharmacy] = useState<{ id: string; name: string } | null>(null);
+
+  // Count user accounts per pharmacy (so we can flag pharmacies with no account)
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase.from("profiles").select("pharmacy_id").not("pharmacy_id", "is", null);
+      if (cancelled || !data) return;
+      const map: Record<string, number> = {};
+      for (const row of data as any[]) {
+        if (row.pharmacy_id) map[row.pharmacy_id] = (map[row.pharmacy_id] || 0) + 1;
+      }
+      setAccountCounts(map);
+    })();
+    return () => { cancelled = true; };
+  }, [pharmacies]);
 
   // Live connection counts (refresh every 30s)
   useEffect(() => {
