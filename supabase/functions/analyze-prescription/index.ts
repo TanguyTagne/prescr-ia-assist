@@ -470,71 +470,40 @@ async function clinicalLookup(
     });
   };
 
+  // STRICT CURATED-ONLY MODE — only `medicament_curated_pcs` (pc_1/pc_2 from
+  // the "Asclion medicaments finals" CSV) feeds the recommendations. No
+  // pathology, ATC, class, mpv or directMedPcs PC fallback.
   let curatedPcsOut: any[] = [];
-  if (pathologieIds.length > 0) {
-    const [conseilsRes, produitsRes, protocolesRes, directMedPcsRes, curatedMpvRes, curatedTopRes] = await Promise.all([
-      supabase
-        .from("conseils_associes")
-        .select("*, pathologies(nom_pathologie)")
-        .in("pathologie_id", pathologieIds)
-        .order("priorite", { ascending: false }),
-      supabase
-        .from("produits_complementaires")
-        .select("*, pathologies(nom_pathologie)")
-        .in("pathologie_id", pathologieIds)
-        .order("priorite", { ascending: false }),
-      supabase
-        .from("protocole_pathologie")
-        .select(`
-          *, pathologies(nom_pathologie),
-          conseil_1:conseils_associes!protocole_pathologie_conseil_1_id_fkey(conseil, description),
-          conseil_2:conseils_associes!protocole_pathologie_conseil_2_id_fkey(conseil, description),
-          produit_1:produits_complementaires!protocole_pathologie_produit_complementaire_1_id_fkey(produit, categorie, description, priorite, phrase_conseil),
-          produit_2:produits_complementaires!protocole_pathologie_produit_complementaire_2_id_fkey(produit, categorie, description, priorite, phrase_conseil),
-          produit_3:produits_complementaires!protocole_pathologie_produit_complementaire_3_id_fkey(produit, categorie, description, priorite, phrase_conseil)
-        `)
-        .in("pathologie_id", pathologieIds)
-        .eq("actif", true),
-      directMedPcsPromise,
-      curatedMpvPromise,
-      curatedTopPromise,
-    ]);
-    conseils = conseilsRes.data || [];
-    const curatedTop = await buildCuratedTop((curatedTopRes as any).data || null);
-    const curatedMpv = mapCuratedMpv((curatedMpvRes.data || []) as any[]);
-    // curatedTop wins over everything; keep mpv as secondary fallback
-    curatedPcsOut = [...curatedTop, ...curatedMpv];
-    const directPcs = (directMedPcsRes.data || []).map((p: any) => ({ ...p, priorite: Math.max(p.priorite || 0, 85) }));
-    const pathologyPcs = produitsRes.data || [];
-    const seen = new Set<string>();
-    produits = [...curatedPcsOut, ...directPcs, ...pathologyPcs].filter((p: any) => {
-      const key = (p.produit || "").toLowerCase().trim();
-      if (!key || seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-    produits = filterPediatricSafe(produits, medicament);
-    protocoles = protocolesRes.data || [];
-  } else {
-    // No pathology — still serve top curated + mpv + direct medication-bound PCs
-    const [directMedPcsRes, curatedMpvRes, curatedTopRes] = await Promise.all([
-      directMedPcsPromise,
-      curatedMpvPromise,
-      curatedTopPromise,
-    ]);
-    const curatedTop = await buildCuratedTop((curatedTopRes as any).data || null);
-    const curatedMpv = mapCuratedMpv((curatedMpvRes.data || []) as any[]);
-    curatedPcsOut = [...curatedTop, ...curatedMpv];
-    const directPcs = (directMedPcsRes.data || []).map((p: any) => ({ ...p, priorite: Math.max(p.priorite || 0, 85) }));
-    const seen = new Set<string>();
-    produits = [...curatedPcsOut, ...directPcs].filter((p: any) => {
-      const key = (p.produit || "").toLowerCase().trim();
-      if (!key || seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-    produits = filterPediatricSafe(produits, medicament);
-  }
+  const [conseilsRes, protocolesRes, curatedTopRes] = await Promise.all([
+    pathologieIds.length > 0
+      ? supabase
+          .from("conseils_associes")
+          .select("*, pathologies(nom_pathologie)")
+          .in("pathologie_id", pathologieIds)
+          .order("priorite", { ascending: false })
+      : Promise.resolve({ data: [] as any[] }),
+    pathologieIds.length > 0
+      ? supabase
+          .from("protocole_pathologie")
+          .select(`
+            *, pathologies(nom_pathologie),
+            conseil_1:conseils_associes!protocole_pathologie_conseil_1_id_fkey(conseil, description),
+            conseil_2:conseils_associes!protocole_pathologie_conseil_2_id_fkey(conseil, description),
+            produit_1:produits_complementaires!protocole_pathologie_produit_complementaire_1_id_fkey(produit, categorie, description, priorite, phrase_conseil),
+            produit_2:produits_complementaires!protocole_pathologie_produit_complementaire_2_id_fkey(produit, categorie, description, priorite, phrase_conseil),
+            produit_3:produits_complementaires!protocole_pathologie_produit_complementaire_3_id_fkey(produit, categorie, description, priorite, phrase_conseil)
+          `)
+          .in("pathologie_id", pathologieIds)
+          .eq("actif", true)
+      : Promise.resolve({ data: [] as any[] }),
+    curatedTopPromise,
+  ]);
+  conseils = conseilsRes.data || [];
+  const curatedTop = await buildCuratedTop((curatedTopRes as any).data || null);
+  curatedPcsOut = curatedTop;
+  produits = filterPediatricSafe(curatedTop, medicament);
+  protocoles = protocolesRes.data || [];
+
 
 
   return {
@@ -1864,219 +1833,28 @@ serve(async (req) => {
       // See ambiguousFlags computation above.
       const singleMedAmbiguous = ambiguousFlags[i];
 
-      // ====== CURATED MPV PRIORITY ======
-      // If this medication has explicit curated medicament_pc_valide links,
-      // they are domain-correct (ear, eye, nose…) and OVERRIDE any
-      // pathology-derived recommendations. Never mix with unrelated pathology PCs.
+      // ====== STRICT CURATED-ONLY MODE (Asclion medicaments finals — 2026-06) ======
+      // Decision produit : on NE déduit JAMAIS un PC depuis la pathologie, l'ATC,
+      // la classe thérapeutique, un protocole ou la KB clinique. La SEULE source
+      // autorisée est `medicament_curated_pcs` (pc_1 + pc_2 du CSV "asclion
+      // medicaments finals"). Si un médicament n'a pas d'entrée → 0 reco.
       const curatedForMed = (med.curated_pcs || []) as any[];
       if (curatedForMed.length > 0) {
         const mappedCurated = curatedForMed
           .filter((p: any) => p && p.produit)
           .map((p: any) => ({
             produit: p.produit,
-            categorie: p.categorie || "Complément",
+            categorie: p.categorie || "Conseil associé",
             description: p.description || "",
             priorite: Math.max(p.priorite || 0, 95),
             pathologie: "",
             phrase_conseil: p.phrase_conseil || undefined,
           }));
         recs.push(...pickDistinctProducts(mappedCurated, MAX_RECOMMENDATIONS_PER_MED));
-      }
-
-      if (med.clinical_kb) {
-
         hasStructuredData = true;
-        if (!singleMedAmbiguous) {
-          const pathNames = (med.pathologies || []).map((p: any) => p.nom_pathologie);
-          for (const pName of pathNames) {
-            allContexts.push(`Traitement souvent associé à : ${pName}`);
-          }
-        }
-
-        const clinical = clinicalResults.find((c: any) => c.index === i);
-
-        // Use protocols from clinicalLookup first (per-medication, already filtered)
-        // — but ONLY if we are not in the single-med ambiguous case.
-        const perMedProtocols = singleMedAmbiguous ? [] : (clinical?.protocoles || []);
-        let matchedProtocol = perMedProtocols.length > 0
-          ? perMedProtocols.sort((a: any, b: any) => (b?.priorite_produit_1 || 0) - (a?.priorite_produit_1 || 0))[0]
-          : null;
-
-        // Fallback to global protocol search (also skipped when ambiguous)
-        if (!matchedProtocol && !singleMedAmbiguous) {
-          matchedProtocol = findProtocolForPathologies(allProtocols, med.pathologies || []);
-        }
-
-        if (matchedProtocol) {
-          // New protocole_pathologie format (has conseil_1 object)
-          if (matchedProtocol.conseil_1) {
-            const c1 = matchedProtocol.conseil_1;
-            const c2 = matchedProtocol.conseil_2;
-            advice = c1.conseil + (c1.description ? ` (${c1.description})` : "");
-            if (c2?.conseil) {
-              advice += `. ${c2.conseil}${c2.description ? ` (${c2.description})` : ""}`;
-            }
-
-            const protocolProducts = [
-              matchedProtocol.produit_1 ? { ...matchedProtocol.produit_1, just: matchedProtocol.justification_1, prio: matchedProtocol.priorite_produit_1 } : null,
-              matchedProtocol.produit_2 ? { ...matchedProtocol.produit_2, just: matchedProtocol.justification_2, prio: matchedProtocol.priorite_produit_2 } : null,
-              matchedProtocol.produit_3 ? { ...matchedProtocol.produit_3, just: matchedProtocol.justification_3, prio: matchedProtocol.priorite_produit_3 } : null,
-            ]
-              .filter(Boolean)
-              .map((p: any) => ({
-                produit: p.produit,
-                categorie: p.categorie || "Complément",
-                description: p.just || p.description || "",
-                priorite: p.prio || p.priorite || 50,
-                pathologie: matchedProtocol.pathologie_nom || matchedProtocol.pathologies?.nom_pathologie || "",
-                phrase_conseil: p.phrase_conseil || undefined,
-              }));
-
-            recs.push(...pickDistinctProducts(protocolProducts, MAX_RECOMMENDATIONS_PER_MED));
-          } else {
-            // Legacy pathology_protocol format
-            advice = matchedProtocol.conseil;
-            const protocolProducts = [matchedProtocol.produit_1, matchedProtocol.produit_2]
-              .filter(Boolean)
-              .map((productName: string, idx: number) => {
-                const fromClinical = (clinical?.produits || []).find((p: any) =>
-                  normalizeText(p?.produit || "") === normalizeText(productName)
-                );
-                return {
-                  produit: productName,
-                  categorie: fromClinical?.categorie || "Complément",
-                  description: fromClinical?.description || "Produit pertinent",
-                  priorite: fromClinical?.priorite || (matchedProtocol.priority || 80) - idx,
-                  pathologie: fromClinical?.pathologies?.nom_pathologie || matchedProtocol.pathologie,
-                  phrase_conseil: fromClinical?.phrase_conseil || undefined,
-                };
-              });
-            recs.push(...pickDistinctProducts(protocolProducts, MAX_RECOMMENDATIONS_PER_MED));
-          }
-        }
-
-        // Fallback on existing clinical product rows (skip pathology-specific when ambiguous)
-        if (recs.length === 0 && clinical?.produits && !singleMedAmbiguous) {
-          const mappedClinicalProducts = (clinical.produits || []).map((p: any) => ({
-            produit: p.produit,
-            categorie: p.categorie || "Complément",
-            description: p.description || "",
-            priorite: p.priorite || 50,
-            pathologie: p.pathologies?.nom_pathologie || "",
-            phrase_conseil: p.phrase_conseil || undefined,
-          }));
-
-          recs.push(...pickDistinctProducts(mappedClinicalProducts, MAX_RECOMMENDATIONS_PER_MED));
-        }
-
-        if (!advice && clinical?.conseils?.length) {
-          advice = pickMainAdviceFromConseils(clinical.conseils);
-        }
-      } else if (med.matched && !med.clinical_kb && !med.ai_enriched) {
-        const therapeuticData = await getTherapeuticData(supabase, med);
-        if (therapeuticData) {
-          hasStructuredData = true;
-          for (const ctx of therapeuticData) {
-            allContexts.push(ctx.description);
-          }
-        }
-      } else if (med.ai_enriched && med.ai_contexts) {
-        for (const ctx of med.ai_contexts) allContexts.push(ctx.description);
       }
 
-      // Fallback 1: products from pathologies already loaded in current prescription scope
-      // Skip when single med is ambiguous → prefer ATC/class-based general PCs below.
-      if (recs.length === 0 && med.pathologies?.length > 0 && !singleMedAmbiguous) {
-        const pathIds = med.pathologies.map((p: any) => p.id);
-        const pathProducts = allDbProduits
-          .filter((p: any) => pathIds.includes(p.pathologie_id))
-          .map((p: any) => ({
-            produit: p.produit,
-            categorie: p.categorie || "Complément",
-            description: p.description || "",
-            priorite: p.priorite || 50,
-            pathologie: p.pathologies?.nom_pathologie || "",
-            phrase_conseil: p.phrase_conseil || undefined,
-          }));
 
-        recs.push(...pickDistinctProducts(pathProducts, MAX_RECOMMENDATIONS_PER_MED));
-      }
-
-      // Fallback 1bis (AMBIGUOUS MED): pick PCs only from GENERIC pathologies
-      // (e.g. "Infection bactérienne" for amoxicilline) — avoids picking specific
-      // clinical pictures (Otite, Scarlatine…) we cannot infer from the prescription alone.
-
-
-
-      if (recs.length === 0 && singleMedAmbiguous) {
-        // Direct DB query: PCs linked to generic pathologies for THIS molecule
-        const moleculeId = (clinicalResults.find((c: any) => c.index === i) as any)?.molecule?.id;
-        if (moleculeId) {
-          const { data: mpRows } = await supabase
-            .from("molecule_pathologie")
-            .select("pathologies(id, nom_pathologie)")
-            .eq("molecule_id", moleculeId);
-          const genericIds = (mpRows || [])
-            .map((r: any) => r.pathologies)
-            .filter((p: any) => p && GENERIC_PATHO_RE.test(p.nom_pathologie || ""))
-            .map((p: any) => p.id);
-          if (genericIds.length > 0) {
-            const { data: genericPcs } = await supabase
-              .from("produits_complementaires")
-              .select("*")
-              .in("pathologie_id", genericIds)
-              .order("priorite", { ascending: false })
-              .limit(20);
-            const mapped = (genericPcs || []).map((p: any) => ({
-              produit: p.produit,
-              categorie: p.categorie || "Complément",
-              description: p.description || "",
-              priorite: p.priorite || 50,
-              pathologie: "", // hide pathology label — stay non-diagnostic
-              phrase_conseil: p.phrase_conseil || undefined,
-            }));
-            recs.push(...pickDistinctProducts(mapped, MAX_RECOMMENDATIONS_PER_MED));
-          }
-        }
-      }
-
-      // Fallback 2: ATC linked products
-      if (recs.length === 0 && med.code_atc && atcFallbackMap.has(med.code_atc)) {
-        let atcSource = atcFallbackMap.get(med.code_atc) || [];
-        // When ambiguous, keep ONLY generic-pathology PCs to stay non-diagnostic
-        if (singleMedAmbiguous) {
-          atcSource = atcSource.filter((r: any) => isGenericPatho(r.pathologie)).map((r: any) => ({ ...r, pathologie: "" }));
-        }
-        const atcRecs = pickDistinctProducts(atcSource, MAX_RECOMMENDATIONS_PER_MED);
-        recs.push(...atcRecs);
-        if (atcRecs.length > 0) {
-          hasStructuredData = true;
-          if (!singleMedAmbiguous) {
-            for (const rec of atcRecs) {
-              if (rec.pathologie) allContexts.push(`Traitement souvent associé à : ${rec.pathologie}`);
-            }
-          }
-        }
-      }
-
-      // Fallback 3: class linked products
-      if (recs.length === 0 && med.classe_therapeutique && classFallbackMap.has(med.classe_therapeutique)) {
-        let classSource = classFallbackMap.get(med.classe_therapeutique) || [];
-        if (singleMedAmbiguous) {
-          classSource = classSource.filter((r: any) => isGenericPatho(r.pathologie)).map((r: any) => ({ ...r, pathologie: "" }));
-        }
-        const classRecs = pickDistinctProducts(classSource, MAX_RECOMMENDATIONS_PER_MED);
-        recs.push(...classRecs);
-        if (classRecs.length > 0) {
-          hasStructuredData = true;
-          if (!singleMedAmbiguous) {
-            for (const rec of classRecs) {
-              if (rec.pathologie) allContexts.push(`Traitement souvent associé à : ${rec.pathologie}`);
-            }
-          }
-        }
-
-      }
 
 
       if (!advice) {
