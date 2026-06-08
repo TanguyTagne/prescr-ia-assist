@@ -18,7 +18,7 @@ const BUCKET = "imports";
 const FILE = "asclion-medicaments-final.csv";
 const BATCH = 200;
 
-function parseCsvLine(line: string): string[] {
+function parseCsvLine(line: string, delim: string): string[] {
   const out: string[] = [];
   let cur = "", inQ = false;
   for (let i = 0; i < line.length; i++) {
@@ -26,23 +26,41 @@ function parseCsvLine(line: string): string[] {
     if (ch === '"') {
       if (inQ && line[i + 1] === '"') { cur += '"'; i++; }
       else inQ = !inQ;
-    } else if (ch === "," && !inQ) { out.push(cur); cur = ""; }
+    } else if (ch === delim && !inQ) { out.push(cur); cur = ""; }
     else cur += ch;
   }
   out.push(cur);
   return out;
 }
 
+function detectDelim(headerLine: string): string {
+  // Comptage hors des guillemets pour deviner le séparateur (`,` ou `;` ou `\t`).
+  let semi = 0, comma = 0, tab = 0, inQ = false;
+  for (const ch of headerLine) {
+    if (ch === '"') inQ = !inQ;
+    else if (!inQ) {
+      if (ch === ';') semi++;
+      else if (ch === ',') comma++;
+      else if (ch === '\t') tab++;
+    }
+  }
+  if (semi >= comma && semi >= tab) return ';';
+  if (tab >= comma) return '\t';
+  return ',';
+}
+
 function parseCsv(text: string): Record<string, string>[] {
   const cleaned = text.startsWith("\uFEFF") ? text.slice(1) : text;
   const lines = cleaned.split("\n");
   if (lines.length < 2) return [];
-  const headers = parseCsvLine(lines[0].replace(/\r$/, "")).map(h => h.trim());
+  const headerLine = lines[0].replace(/\r$/, "");
+  const delim = detectDelim(headerLine);
+  const headers = parseCsvLine(headerLine, delim).map(h => h.trim().replace(/^"|"$/g, ""));
   const rows: Record<string, string>[] = [];
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i].replace(/\r$/, "");
     if (!line.trim()) continue;
-    const vals = parseCsvLine(line);
+    const vals = parseCsvLine(line, delim);
     const row: Record<string, string> = {};
     headers.forEach((h, idx) => row[h] = (vals[idx] ?? "").trim());
     rows.push(row);
