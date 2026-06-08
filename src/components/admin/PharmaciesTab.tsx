@@ -114,6 +114,7 @@ const PharmaciesTab = ({ pharmacies, onRefresh }: PharmaciesTabProps) => {
       setAccountForm({ email: "", password: "", full_name: "", role: "preparateur" });
       setCreatingAccount(null);
       onRefresh();
+      reloadAccountCounts();
     } catch (err: any) {
       toast.error(err.message || "Erreur lors de la création");
     } finally {
@@ -150,6 +151,7 @@ const PharmaciesTab = ({ pharmacies, onRefresh }: PharmaciesTabProps) => {
       toast.success("Configuration LGO enregistrée");
       setEditingLGO(null);
       onRefresh();
+      reloadAccountCounts();
     } catch (err: any) {
       toast.error(err.message || "Erreur");
     }
@@ -172,6 +174,7 @@ const PharmaciesTab = ({ pharmacies, onRefresh }: PharmaciesTabProps) => {
       };
       toast.success(labels[newStatus] || "Statut mis à jour");
       onRefresh();
+      reloadAccountCounts();
     } catch (err: any) {
       toast.error(err.message || "Erreur");
     } finally {
@@ -222,6 +225,7 @@ const PharmaciesTab = ({ pharmacies, onRefresh }: PharmaciesTabProps) => {
       setNewPharmacy({ name: "", city: "", postal_code: "", email: "", password: "", full_name: "", role: "manager" });
       setShowCreatePharmacy(false);
       onRefresh();
+      reloadAccountCounts();
     } catch (err: any) {
       toast.error(err.message || "Erreur lors de la création");
     } finally {
