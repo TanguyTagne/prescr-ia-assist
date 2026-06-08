@@ -172,6 +172,38 @@ function createWindow() {
       mainWindow.loadURL(getDesktopUrl());
     }, 3000);
   });
+  // Handle HTTP 5xx / 4xx returned by the edge (Cloudflare/Lovable hiccup).
+  // `did-fail-load` does NOT fire for HTTP error status codes — the request
+  // technically succeeded — so the window would otherwise stay stuck on the
+  // raw "Internal Server Error" page. Retry up to 3 times with backoff, then
+  // render a branded offline fallback instead of the default Chromium page.
+  let httpRetryCount = 0;
+  const MAX_HTTP_RETRIES = 3;
+  mainWindow.webContents.on(
+    "did-navigate",
+    (_event, _url, httpResponseCode /*, httpStatusText */) => {
+      if (httpResponseCode && httpResponseCode >= 400) {
+        devWarn(`HTTP ${httpResponseCode} received — retry ${httpRetryCount + 1}/${MAX_HTTP_RETRIES}`);
+        if (httpRetryCount < MAX_HTTP_RETRIES) {
+          httpRetryCount++;
+          setTimeout(() => mainWindow?.loadURL(getDesktopUrl()), 1500 * httpRetryCount);
+        } else {
+          httpRetryCount = 0;
+          mainWindow?.loadURL(
+            "data:text/html;charset=utf-8," +
+              encodeURIComponent(`<!doctype html><html><head><meta charset="utf-8"><title>Asclion</title>
+<style>html,body{margin:0;height:100%;font-family:-apple-system,Segoe UI,Roboto,sans-serif;background:#fafafa;color:#111;display:flex;align-items:center;justify-content:center;text-align:center}
+.box{max-width:320px;padding:32px}h1{font-size:18px;font-weight:600;margin:0 0 8px}p{font-size:13px;color:#555;margin:0 0 20px;line-height:1.5}
+button{background:#111;color:#fff;border:0;padding:10px 18px;border-radius:8px;font-size:13px;cursor:pointer}button:hover{background:#000}</style></head>
+<body><div class="box"><h1>Asclion indisponible</h1><p>Le service est temporairement injoignable. Vérifie ta connexion ou réessaie dans un instant.</p>
+<button onclick="location.href='${getDesktopUrl()}'">Réessayer</button></div></body></html>`)
+          );
+        }
+      } else if (httpResponseCode && httpResponseCode < 400) {
+        httpRetryCount = 0;
+      }
+    }
+  );
   // Show window when ready to avoid white flash
   mainWindow.once("ready-to-show", () => {
     mainWindow.show();
