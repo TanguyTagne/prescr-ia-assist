@@ -61,7 +61,13 @@ serve(async (req) => {
       });
     }
 
-    // Create user with admin API (auto-confirms email)
+    // Create user with admin API (auto-confirms email).
+    // If a user with that email already exists, reuse it and just rebind to the
+    // new pharmacy instead of failing — this lets admins re-link an existing
+    // pharmacist account to a freshly created pharmacy row.
+    let userId: string | null = null;
+    let reused = false;
+
     const { data: newUser, error: createErr } = await supabase.auth.admin.createUser({
       email,
       password,
@@ -69,19 +75,55 @@ serve(async (req) => {
       user_metadata: { full_name },
     });
 
-    if (createErr) throw createErr;
+    if (createErr) {
+      const code = (createErr as any)?.code;
+      const status = (createErr as any)?.status;
+      const alreadyExists =
+        code === "email_exists" ||
+        status === 422 ||
+        /already been registered|already exists/i.test(createErr.message || "");
 
-    // Update profile with pharmacy_id
+      if (!alreadyExists) throw createErr;
+
+      // Look up existing user by email via the admin listUsers endpoint
+      const { data: list, error: listErr } = await supabase.auth.admin.listUsers({
+        page: 1,
+        perPage: 200,
+      });
+      if (listErr) throw listErr;
+      const existing = list?.users?.find(
+        (u) => (u.email || "").toLowerCase() === email.toLowerCase()
+      );
+      if (!existing) throw createErr;
+
+      userId = existing.id;
+      reused = true;
+
+      // Reset password to the one provided by the admin so they can hand it
+      // over to the pharmacist.
+      await supabase.auth.admin.updateUserById(existing.id, {
+        password,
+        user_metadata: { ...(existing.user_metadata || {}), full_name },
+      });
+    } else {
+      userId = newUser.user.id;
+    }
+
+    // Update profile with pharmacy_id (works for new and reused users)
     await supabase
       .from("profiles")
       .update({ pharmacy_id, full_name })
-      .eq("id", newUser.user.id);
+      .eq("id", userId);
 
-    // Assign preparateur role
-    await supabase.from("user_roles").insert({
-      user_id: newUser.user.id,
-      role: "preparateur",
-    });
+    // Assign preparateur role (idempotent via unique constraint)
+    await supabase
+      .from("user_roles")
+      .insert({ user_id: userId, role: "preparateur" })
+      .select()
+      .then(({ error }) => {
+        // ignore duplicate-key violations on (user_id, role)
+        if (error && !/duplicate|unique/i.test(error.message)) throw error;
+      });
 
     // Create LGO config placeholder if lgo_type provided
     if (lgo_type) {
