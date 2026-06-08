@@ -111,7 +111,20 @@ serve(async (req) => {
       } catch {
         text = new TextDecoder("windows-1252").decode(buf);
       }
+      // Garde anti-mojibake : si le CSV contient déjà le replacement char U+FFFD,
+      // les accents ont été perdus AVANT l'upload (export source en mauvais
+      // encoding). Aucun décodeur ne peut récupérer l'info — on refuse l'import.
+      const fffdCount = (text.match(/\uFFFD/g) || []).length;
+      if (fffdCount > 0) {
+        return new Response(JSON.stringify({
+          ok: false,
+          error: "MOJIBAKE_DETECTED",
+          message: `Le CSV contient ${fffdCount} caractère(s) "�" (accents perdus à l'export). Ré-exporte depuis la source en UTF-8 (Google Sheets : Fichier → Télécharger → CSV ; Excel : "CSV UTF-8 (séparateur point-virgule)") puis relance l'import.`,
+          fffd_count: fffdCount,
+        }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
+      }
       const rows = parseCsv(text);
+
       const total = rows.length;
       const slice = rows.slice(offset, offset + limit);
 
