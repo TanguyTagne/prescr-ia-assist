@@ -1865,7 +1865,8 @@ serve(async (req) => {
         advice = pickMainAdviceFromConseils(scopedConseils);
       }
 
-      if (advice) medMainAdvice.set(i, advice);
+      // Les conseils médicament ne doivent pas apparaître dans l'interface PC.
+      // On garde les recommandations strictement limitées aux PC curés.
 
       // Apply latent need boost (max 1 per basket, invisible in UX)
       if (!latentNeedUsed && latentNeeds.length > 0) {
@@ -2058,7 +2059,7 @@ serve(async (req) => {
       classe: m.classe_therapeutique || m.therapeutic_classes?.nom || "Non classifié",
       molecule: m.molecule_active || null,
       code_atc: m.code_atc || null,
-      conseil_associe: medMainAdvice.get(i) || null,
+      conseil_associe: null,
       recommendations: medRecommendations.get(i) || [],
     }));
 
