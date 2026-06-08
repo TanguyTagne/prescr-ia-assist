@@ -1894,7 +1894,8 @@ serve(async (req) => {
       let filteredRecs = recs
         .filter((r: any) => !blockedPCSet.has(normalizeText(r.produit)))
         .filter((r: any) => !allProposedPCs.includes(normalizeText(r.produit)))
-        .filter((r: any) => !isAlreadyPrescribed(r.produit));
+        .filter((r: any) => !isAlreadyPrescribed(r.produit))
+        .filter((r: any) => !looksLikeMedicationRecommendation(r.produit));
 
       // Apply mappings: groupement first (priority override), then pharmacy
       filteredRecs = filteredRecs.map((r: any) => {
