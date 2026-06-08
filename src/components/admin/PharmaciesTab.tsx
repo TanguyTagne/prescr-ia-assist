@@ -221,7 +221,7 @@ const PharmaciesTab = ({ pharmacies, onRefresh }: PharmaciesTabProps) => {
         });
       }
 
-      toast.success(`Pharmacie ${newPharmacy.name} créée avec compte ${newPharmacy.email}`);
+      toast.success(data?.reused ? `Pharmacie ${newPharmacy.name} créée — compte existant ${newPharmacy.email} ré-assigné` : `Pharmacie ${newPharmacy.name} créée avec compte ${newPharmacy.email}`);
       setNewPharmacy({ name: "", city: "", postal_code: "", email: "", password: "", full_name: "", role: "manager" });
       setShowCreatePharmacy(false);
       onRefresh();
