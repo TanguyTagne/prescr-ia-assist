@@ -470,71 +470,40 @@ async function clinicalLookup(
     });
   };
 
+  // STRICT CURATED-ONLY MODE — only `medicament_curated_pcs` (pc_1/pc_2 from
+  // the "Asclion medicaments finals" CSV) feeds the recommendations. No
+  // pathology, ATC, class, mpv or directMedPcs PC fallback.
   let curatedPcsOut: any[] = [];
-  if (pathologieIds.length > 0) {
-    const [conseilsRes, produitsRes, protocolesRes, directMedPcsRes, curatedMpvRes, curatedTopRes] = await Promise.all([
-      supabase
-        .from("conseils_associes")
-        .select("*, pathologies(nom_pathologie)")
-        .in("pathologie_id", pathologieIds)
-        .order("priorite", { ascending: false }),
-      supabase
-        .from("produits_complementaires")
-        .select("*, pathologies(nom_pathologie)")
-        .in("pathologie_id", pathologieIds)
-        .order("priorite", { ascending: false }),
-      supabase
-        .from("protocole_pathologie")
-        .select(`
-          *, pathologies(nom_pathologie),
-          conseil_1:conseils_associes!protocole_pathologie_conseil_1_id_fkey(conseil, description),
-          conseil_2:conseils_associes!protocole_pathologie_conseil_2_id_fkey(conseil, description),
-          produit_1:produits_complementaires!protocole_pathologie_produit_complementaire_1_id_fkey(produit, categorie, description, priorite, phrase_conseil),
-          produit_2:produits_complementaires!protocole_pathologie_produit_complementaire_2_id_fkey(produit, categorie, description, priorite, phrase_conseil),
-          produit_3:produits_complementaires!protocole_pathologie_produit_complementaire_3_id_fkey(produit, categorie, description, priorite, phrase_conseil)
-        `)
-        .in("pathologie_id", pathologieIds)
-        .eq("actif", true),
-      directMedPcsPromise,
-      curatedMpvPromise,
-      curatedTopPromise,
-    ]);
-    conseils = conseilsRes.data || [];
-    const curatedTop = await buildCuratedTop((curatedTopRes as any).data || null);
-    const curatedMpv = mapCuratedMpv((curatedMpvRes.data || []) as any[]);
-    // curatedTop wins over everything; keep mpv as secondary fallback
-    curatedPcsOut = [...curatedTop, ...curatedMpv];
-    const directPcs = (directMedPcsRes.data || []).map((p: any) => ({ ...p, priorite: Math.max(p.priorite || 0, 85) }));
-    const pathologyPcs = produitsRes.data || [];
-    const seen = new Set<string>();
-    produits = [...curatedPcsOut, ...directPcs, ...pathologyPcs].filter((p: any) => {
-      const key = (p.produit || "").toLowerCase().trim();
-      if (!key || seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-    produits = filterPediatricSafe(produits, medicament);
-    protocoles = protocolesRes.data || [];
-  } else {
-    // No pathology — still serve top curated + mpv + direct medication-bound PCs
-    const [directMedPcsRes, curatedMpvRes, curatedTopRes] = await Promise.all([
-      directMedPcsPromise,
-      curatedMpvPromise,
-      curatedTopPromise,
-    ]);
-    const curatedTop = await buildCuratedTop((curatedTopRes as any).data || null);
-    const curatedMpv = mapCuratedMpv((curatedMpvRes.data || []) as any[]);
-    curatedPcsOut = [...curatedTop, ...curatedMpv];
-    const directPcs = (directMedPcsRes.data || []).map((p: any) => ({ ...p, priorite: Math.max(p.priorite || 0, 85) }));
-    const seen = new Set<string>();
-    produits = [...curatedPcsOut, ...directPcs].filter((p: any) => {
-      const key = (p.produit || "").toLowerCase().trim();
-      if (!key || seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-    produits = filterPediatricSafe(produits, medicament);
-  }
+  const [conseilsRes, protocolesRes, curatedTopRes] = await Promise.all([
+    pathologieIds.length > 0
+      ? supabase
+          .from("conseils_associes")
+          .select("*, pathologies(nom_pathologie)")
+          .in("pathologie_id", pathologieIds)
+          .order("priorite", { ascending: false })
+      : Promise.resolve({ data: [] as any[] }),
+    pathologieIds.length > 0
+      ? supabase
+          .from("protocole_pathologie")
+          .select(`
+            *, pathologies(nom_pathologie),
+            conseil_1:conseils_associes!protocole_pathologie_conseil_1_id_fkey(conseil, description),
+            conseil_2:conseils_associes!protocole_pathologie_conseil_2_id_fkey(conseil, description),
+            produit_1:produits_complementaires!protocole_pathologie_produit_complementaire_1_id_fkey(produit, categorie, description, priorite, phrase_conseil),
+            produit_2:produits_complementaires!protocole_pathologie_produit_complementaire_2_id_fkey(produit, categorie, description, priorite, phrase_conseil),
+            produit_3:produits_complementaires!protocole_pathologie_produit_complementaire_3_id_fkey(produit, categorie, description, priorite, phrase_conseil)
+          `)
+          .in("pathologie_id", pathologieIds)
+          .eq("actif", true)
+      : Promise.resolve({ data: [] as any[] }),
+    curatedTopPromise,
+  ]);
+  conseils = conseilsRes.data || [];
+  const curatedTop = await buildCuratedTop((curatedTopRes as any).data || null);
+  curatedPcsOut = curatedTop;
+  produits = filterPediatricSafe(curatedTop, medicament);
+  protocoles = protocolesRes.data || [];
+
 
 
   return {
