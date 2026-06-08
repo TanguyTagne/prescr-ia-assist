@@ -16,7 +16,7 @@ jobs:
   build-windows:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v4
 
       # Supprime tous les artefacts existants du repo avant le nouveau build
       - name: Delete all existing artifacts
@@ -36,7 +36,7 @@ jobs:
           }
 
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
 
