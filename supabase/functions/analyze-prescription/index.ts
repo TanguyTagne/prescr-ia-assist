@@ -726,6 +726,12 @@ function phraseIsForWrongMed(phrase: string, med: any): boolean {
   return true; // named drug(s) don't match current med → regenerate
 }
 
+const MEDICAMENT_AS_PC_RE = /\b(doliprane|dafalgan|efferalgan|parac[eé]tamol|ibuprof[eè]ne|nurofen|advil|spedifen|aspirine|kardegic|amoxicilline|augmentin|clamoxyl|cod[eé]ine|tramadol|morphine|spasfon|smecta|gaviscon|om[eé]prazole|esomeprazole|pantoprazole|aerius|cetirizine|levocetirizine)\b/i;
+
+function looksLikeMedicationRecommendation(produit: string | undefined | null): boolean {
+  return MEDICAMENT_AS_PC_RE.test(produit || "");
+}
+
 // Medical phrase generator: [pathologie/conséquence] + [mécanisme produit] + [bénéfice précis]
 // Rules: 15-25 words, no "confort"/"bien-être"/"au quotidien", must contain medical mechanism
 function generatePhraseConseil(rec: any, med: any): string {
