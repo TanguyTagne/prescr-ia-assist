@@ -103,7 +103,14 @@ serve(async (req) => {
 
       const { data: blob, error: stErr } = await supabase.storage.from(BUCKET).download(FILE);
       if (stErr || !blob) throw new Error(`Fichier introuvable: ${stErr?.message ?? "blob null"}`);
-      const text = await blob.text();
+      const buf = new Uint8Array(await blob.arrayBuffer());
+      // Détection encodage : si UTF-8 invalide, fallback windows-1252 (export Numbers/Excel par défaut)
+      let text: string;
+      try {
+        text = new TextDecoder("utf-8", { fatal: true }).decode(buf);
+      } catch {
+        text = new TextDecoder("windows-1252").decode(buf);
+      }
       const rows = parseCsv(text);
       const total = rows.length;
       const slice = rows.slice(offset, offset + limit);
