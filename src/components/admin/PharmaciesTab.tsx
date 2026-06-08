@@ -113,7 +113,7 @@ const PharmaciesTab = ({ pharmacies, onRefresh }: PharmaciesTabProps) => {
         });
       }
 
-      toast.success(`Compte créé pour ${accountForm.email}`);
+      toast.success(data?.reused ? `Compte existant ré-assigné à cette pharmacie (${accountForm.email})` : `Compte créé pour ${accountForm.email}`);
       setAccountForm({ email: "", password: "", full_name: "", role: "preparateur" });
       setCreatingAccount(null);
       onRefresh();
@@ -221,7 +221,7 @@ const PharmaciesTab = ({ pharmacies, onRefresh }: PharmaciesTabProps) => {
         });
       }
 
-      toast.success(`Pharmacie ${newPharmacy.name} créée avec compte ${newPharmacy.email}`);
+      toast.success(data?.reused ? `Pharmacie ${newPharmacy.name} créée — compte existant ${newPharmacy.email} ré-assigné` : `Pharmacie ${newPharmacy.name} créée avec compte ${newPharmacy.email}`);
       setNewPharmacy({ name: "", city: "", postal_code: "", email: "", password: "", full_name: "", role: "manager" });
       setShowCreatePharmacy(false);
       onRefresh();
