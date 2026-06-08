@@ -1827,7 +1827,6 @@ serve(async (req) => {
     for (let i = 0; i < enrichedMeds.length; i++) {
       const med = enrichedMeds[i];
       const recs: any[] = [];
-      let advice: string | null = null;
 
       // ====== AMBIGUITY GUARD ======
       // See ambiguousFlags computation above.
@@ -1853,20 +1852,6 @@ serve(async (req) => {
         recs.push(...pickDistinctProducts(mappedCurated, MAX_RECOMMENDATIONS_PER_MED));
         hasStructuredData = true;
       }
-
-
-
-
-      if (!advice) {
-        const pathIds = med.pathologies?.map((p: any) => p.id) || [];
-        const scopedConseils = allDbConseils
-          .filter((c: any) => !pathIds.length || pathIds.includes(c.pathologie_id))
-          .sort((a: any, b: any) => (b.priorite || 0) - (a.priorite || 0));
-        advice = pickMainAdviceFromConseils(scopedConseils);
-      }
-
-      // Les conseils médicament ne doivent pas apparaître dans l'interface PC.
-      // On garde les recommandations strictement limitées aux PC curés.
 
       // Apply latent need boost (max 1 per basket, invisible in UX)
       if (!latentNeedUsed && latentNeeds.length > 0) {
