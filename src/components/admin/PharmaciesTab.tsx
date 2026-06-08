@@ -322,6 +322,12 @@ const PharmaciesTab = ({ pharmacies, onRefresh }: PharmaciesTabProps) => {
                   {pharm.city && <p className="text-xs text-muted-foreground">{pharm.city}</p>}
                 </button>
                 {getStatusBadge(status)}
+                {(accountCounts[pharm.id] || 0) === 0 && (
+                  <Badge variant="destructive" className="text-[10px] gap-1" title="Aucun utilisateur n'est rattaché à cette pharmacie — créez un compte pour activer l'accès">
+                    <AlertTriangle className="h-2.5 w-2.5" />
+                    Aucun compte
+                  </Badge>
+                )}
                 <Badge
                   variant="outline"
                   className={`text-[10px] gap-1 ${isOnline ? "border-emerald-300 text-emerald-700 bg-emerald-50" : "border-muted-foreground/30 text-muted-foreground"}`}
