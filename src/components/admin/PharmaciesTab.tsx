@@ -113,7 +113,7 @@ const PharmaciesTab = ({ pharmacies, onRefresh }: PharmaciesTabProps) => {
         });
       }
 
-      toast.success(`Compte créé pour ${accountForm.email}`);
+      toast.success(data?.reused ? `Compte existant ré-assigné à cette pharmacie (${accountForm.email})` : `Compte créé pour ${accountForm.email}`);
       setAccountForm({ email: "", password: "", full_name: "", role: "preparateur" });
       setCreatingAccount(null);
       onRefresh();
