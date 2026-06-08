@@ -441,6 +441,8 @@ ipcMain.handle("attention:bring-to-front", () => {
     mainWindow.setAlwaysOnTop(true, "floating");
     mainWindow.moveTop();
     mainWindow.focus();
+    // Hold the foreground pin for 3 seconds, then release so that clicking
+    // another window (e.g. the LGO) sends Asclion back to the background.
     setTimeout(() => {
       try {
         if (!mainWindow) return;
@@ -452,7 +454,7 @@ ipcMain.handle("attention:bring-to-front", () => {
       } catch {
         /* noop */
       }
-    }, 250);
+    }, 3000);
   } catch (e) {
     devWarn("bring-to-front failed:", e);
   }
