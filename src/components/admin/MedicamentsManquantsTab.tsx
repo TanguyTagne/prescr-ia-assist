@@ -189,14 +189,26 @@ const MedicamentsManquantsTab = () => {
     load();
   }, [load]);
 
+  const [onlyPharma, setOnlyPharma] = useState(true);
+
+  const isPharma = (ean: string) => ean?.startsWith("34009");
+
+  const filteredRows = useMemo(
+    () => (onlyPharma ? rows.filter((r) => isPharma(r.ean)) : rows),
+    [rows, onlyPharma],
+  );
+
+  const pharmaCount = useMemo(() => rows.filter((r) => isPharma(r.ean)).length, [rows]);
+  const nonPharmaCount = rows.length - pharmaCount;
+
   const totalScans = useMemo(
-    () => rows.reduce((s, r) => s + r.count, 0),
-    [rows],
+    () => filteredRows.reduce((s, r) => s + r.count, 0),
+    [filteredRows],
   );
 
   const exportCsv = () => {
     const header = "EAN;Nb scans;Premier scan;Dernier scan;Pharmacies\n";
-    const body = rows
+    const body = filteredRows
       .map(
         (r) =>
           `${r.ean};${r.count};${r.firstSeen};${r.lastSeen};"${r.pharmacies.join(", ")}"`,
@@ -206,7 +218,8 @@ const MedicamentsManquantsTab = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `medicaments-manquants-${new Date().toISOString().slice(0, 10)}.csv`;
+    const suffix = onlyPharma ? "-34009" : "-tous";
+    a.download = `medicaments-manquants${suffix}-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
     toast.success("Export CSV téléchargé");
