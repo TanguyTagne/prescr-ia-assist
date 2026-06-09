@@ -423,7 +423,7 @@ const MedicamentsManquantsTab = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {rows.map((r) => (
+                    {filteredRows.map((r) => (
                       <tr
                         key={r.ean}
                         className="border-t border-border/50 hover:bg-secondary/30 transition-colors"
