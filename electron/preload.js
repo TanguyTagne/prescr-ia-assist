@@ -66,6 +66,18 @@ contextBridge.exposeInMainWorld("electronAPI", {
     relaunchAsAdmin: () => ipcRenderer.invoke("system:relaunch-as-admin"),
   },
 
+  // Robot interception subsystem (sniffer + HTTP listener)
+  robot: {
+    getConfig: () => ipcRenderer.invoke("robot:get-config"),
+    setConfig: (patch) => ipcRenderer.invoke("robot:set-config", patch),
+    status: () => ipcRenderer.invoke("robot:status"),
+  },
+
+  // Manual update trigger — surfaced in Paramètres
+  updater: {
+    check: () => ipcRenderer.invoke("updater:check"),
+  },
+
   // Direct HID scanner control (node-hid based, antivirus-friendly)
   scanner: {
     list: () => ipcRenderer.invoke("scanner:list"),
