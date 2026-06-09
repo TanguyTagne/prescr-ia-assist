@@ -2540,6 +2540,116 @@ ipcMain.handle("robot:status", () => {
   };
 });
 
+// ────────────────────────────────────────────────────────────
+// robot:discover-port
+//
+// Lists currently established TCP connections from this PC so the pharmacist
+// can identify the LGO → robot link from the Paramètres UI without having to
+// know the exact port. Returns one row per connection, sorted with the most
+// likely robot connection on top:
+//   1. process name matches a known LGO (winpharma, lgpi, pharmagest…)
+//   2. remote port matches a known robot default (9876, 6100, 5000, …)
+//
+// Powered by `Get-NetTCPConnection`, available on Windows 8 / Server 2012+.
+// Returns { ok: false, error } on Linux/macOS or when PowerShell rejects.
+// ────────────────────────────────────────────────────────────
+const LGO_PROCESS_HINTS = /winpharma|wpgest|wp\b|lgpi|pharmagest|leo\b|smartrx|smart_rx|leopharm/i;
+const KNOWN_ROBOT_PORTS = new Set([
+  9876,  // Rowa / BD Rowa
+  6100, 6200, // Pharmathek
+  5000, 12000, // Knapp
+  8080, 9100, // Swisslog
+  4444,  // Tosho
+]);
+
+ipcMain.handle("robot:discover-port", async () => {
+  if (process.platform !== "win32") {
+    return { ok: false, error: "Windows uniquement", candidates: [] };
+  }
+  // Single-quoted here-string keeps the script literal — no PowerShell-side
+  // variable interpolation of $_ would otherwise happen before we even spawn.
+  const psScript =
+    "$ErrorActionPreference='SilentlyContinue';" +
+    "$rows = Get-NetTCPConnection -State Established | " +
+    "Where-Object { $_.RemoteAddress -notmatch '^(127\\.|0\\.0\\.0\\.0|::|fe80)' } | " +
+    "ForEach-Object { " +
+      "$proc = Get-Process -Id $_.OwningProcess -ErrorAction SilentlyContinue; " +
+      "[PSCustomObject]@{ " +
+        "LocalPort=[int]$_.LocalPort; " +
+        "RemoteAddress=[string]$_.RemoteAddress; " +
+        "RemotePort=[int]$_.RemotePort; " +
+        "Process=if($proc){$proc.Name}else{'unknown'}; " +
+        "ProcId=[int]$_.OwningProcess " +
+      "} " +
+    "}; " +
+    "ConvertTo-Json -InputObject @($rows) -Compress -Depth 4";
+
+  return await new Promise((resolve) => {
+    let stdout = "";
+    let stderr = "";
+    let child;
+    try {
+      child = spawn(
+        "powershell.exe",
+        ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", psScript],
+        { windowsHide: true },
+      );
+    } catch (e) {
+      resolve({ ok: false, error: `spawn: ${e && e.message}`, candidates: [] });
+      return;
+    }
+    const timer = setTimeout(() => {
+      try { child.kill(); } catch { /* noop */ }
+    }, 10_000);
+    child.stdout.on("data", (d) => { stdout += d.toString("utf-8"); });
+    child.stderr.on("data", (d) => { stderr += d.toString("utf-8"); });
+    child.on("error", (err) => {
+      clearTimeout(timer);
+      resolve({ ok: false, error: `powershell: ${err && err.message}`, candidates: [] });
+    });
+    child.on("close", () => {
+      clearTimeout(timer);
+      try {
+        const raw = (stdout || "").trim();
+        if (!raw) {
+          resolve({ ok: true, candidates: [], note: "Aucune connexion TCP établie depuis ce PC." });
+          return;
+        }
+        const parsed = JSON.parse(raw);
+        const rows = Array.isArray(parsed) ? parsed : [parsed];
+        const candidates = rows
+          .map((c) => {
+            const proc = (c.Process || "").toString();
+            const remotePort = Number(c.RemotePort) || 0;
+            const isLgo = LGO_PROCESS_HINTS.test(proc);
+            const isKnownRobotPort = KNOWN_ROBOT_PORTS.has(remotePort);
+            return {
+              process: proc,
+              pid: Number(c.ProcId) || 0,
+              remoteAddress: c.RemoteAddress || "",
+              remotePort,
+              localPort: Number(c.LocalPort) || 0,
+              isLgo,
+              isKnownRobotPort,
+              score: (isLgo ? 2 : 0) + (isKnownRobotPort ? 1 : 0),
+            };
+          })
+          // Drop obvious noise: browser tabs, system services on high ports.
+          .filter((c) => c.remotePort > 0 && c.remotePort < 65535)
+          .sort((a, b) => b.score - a.score);
+        resolve({ ok: true, candidates });
+      } catch (e) {
+        resolve({
+          ok: false,
+          error: stderr.trim() || (e && e.message) || "parse error",
+          candidates: [],
+        });
+      }
+    });
+    child.stdin && child.stdin.end();
+  });
+});
+
 // Manual update check — surfaced in Paramètres so the pharmacist can verify
 // a release went out without restarting the app.
 ipcMain.handle("updater:check", async () => {
