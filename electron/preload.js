@@ -71,6 +71,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
     getConfig: () => ipcRenderer.invoke("robot:get-config"),
     setConfig: (patch) => ipcRenderer.invoke("robot:set-config", patch),
     status: () => ipcRenderer.invoke("robot:status"),
+    // Lists current TCP connections so the UI can offer a "Rechercher le port"
+    // shortcut. Returns { ok, candidates: [{ process, remoteAddress, remotePort,
+    // isLgo, isKnownRobotPort, score }], note? }.
+    discoverPort: () => ipcRenderer.invoke("robot:discover-port"),
   },
 
   // Manual update trigger — surfaced in Paramètres
