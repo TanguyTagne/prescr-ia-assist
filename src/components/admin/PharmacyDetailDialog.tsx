@@ -50,44 +50,18 @@ interface AnalysisRow {
   has_major_interaction: boolean;
 }
 
-const SOURCE_META: Record<string, { label: string; icon: any; cls: string }> = {
-  barcode:  { label: "Pistolet scanner", icon: ScanLine, cls: "bg-emerald-100 text-emerald-700" },
-  scanner:  { label: "Pistolet scanner", icon: ScanLine, cls: "bg-emerald-100 text-emerald-700" },
-  hid:      { label: "Pistolet scanner (HID)", icon: ScanLine, cls: "bg-emerald-100 text-emerald-700" },
-  manual:   { label: "Manuel", icon: Keyboard, cls: "bg-blue-100 text-blue-700" },
-  keyboard: { label: "Manuel", icon: Keyboard, cls: "bg-blue-100 text-blue-700" },
-  photo:    { label: "Photo", icon: Camera, cls: "bg-purple-100 text-purple-700" },
-  image:    { label: "Photo", icon: Camera, cls: "bg-purple-100 text-purple-700" },
-  upload:   { label: "Photo / upload", icon: Camera, cls: "bg-purple-100 text-purple-700" },
-  pdf:      { label: "PDF", icon: Camera, cls: "bg-purple-100 text-purple-700" },
-  api:      { label: "API", icon: Globe, cls: "bg-slate-100 text-slate-700" },
+const statusBadge = (status: string) => {
+  const map: Record<string, { label: string; cls: string }> = {
+    success:     { label: "OK",           cls: "bg-emerald-100 text-emerald-700" },
+    no_match:    { label: "Non référencé", cls: "bg-amber-100 text-amber-700"   },
+    no_pharmacy: { label: "Sans pharma",   cls: "bg-slate-100 text-slate-700"   },
+    error:       { label: "Erreur",        cls: "bg-red-100 text-red-700"       },
+    anti_loop:   { label: "Anti-loop",     cls: "bg-blue-100 text-blue-700"     },
+  };
+  const m = map[status] || { label: status, cls: "bg-slate-100 text-slate-700" };
+  return <Badge variant="outline" className={`text-[10px] ${m.cls} border-transparent`}>{m.label}</Badge>;
 };
 
-const sourceBadge = (src: string) => {
-  const meta = SOURCE_META[src?.toLowerCase()] || { label: src || "—", icon: Globe, cls: "bg-slate-100 text-slate-700" };
-  const Icon = meta.icon;
-  return (
-    <Badge variant="outline" className={`text-[10px] gap-1 ${meta.cls} border-transparent`}>
-      <Icon className="h-3 w-3" />
-      {meta.label}
-    </Badge>
-  );
-};
-
-const extractMedName = (row: ScanRow): string => {
-  if (row.scan_type === "prescription") {
-    const meds = row.result?.medicaments || row.input_data?.medicaments;
-    if (Array.isArray(meds) && meds.length) {
-      return meds.slice(0, 3).map((m: any) => m.nom || m.nom_commercial || "?").join(", ") + (meds.length > 3 ? "…" : "");
-    }
-    return "Ordonnance";
-  }
-  const name = row.result?.product_name || row.result?.nom_commercial;
-  if (name) return name;
-  const cips = row.input_data?.cip_codes;
-  if (Array.isArray(cips) && cips.length) return `CIP ${cips.join(", ")}`;
-  return "—";
-};
 
 const PharmacyDetailDialog = ({ pharmacyId, pharmacyName, open, onOpenChange }: Props) => {
   const [loading, setLoading] = useState(false);
