@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   PackageSearch, RefreshCw, Download, Loader2,
-  ExternalLink, AlertTriangle, Wand2, DatabaseZap,
+  ExternalLink, AlertTriangle, Wand2, DatabaseZap, Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
