@@ -522,7 +522,7 @@ const WidgetApp = () => {
           ]);
         }
         prependMedicament({ nom: mock.nom, classe: "", recommendations, cip_scanned: code });
-        notifyAnalysisDone({ count: 1 });
+        if (recommendations.length > 0) notifyAnalysisDone({ count: 1 });
         void logHidScan(code, { nom: mock.nom, recommendations });
         lastAnalysisAtRef.current = Date.now(); // marque session active
         return;
