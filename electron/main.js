@@ -78,9 +78,19 @@ try {
 }
 // ────────────────────────────────────────────────────────────
 // Picture-in-Picture state (always-on-top + compact mode)
+//
+// Position is intentionally NOT persisted: every launch puts the window in
+// the top-right corner of the primary display so the pharmacist always
+// finds it in the same place (just like a system tray popup). If they drag
+// it elsewhere during the day, the next morning it's back top-right.
 // ────────────────────────────────────────────────────────────
-const SIZE_NORMAL = { width: 380, height: 580 };
-const SIZE_COMPACT = { width: 300, height: 440 };
+// Window size — reduced height (was 580) so the widget takes less vertical
+// space next to the LGO. Width unchanged so the EAN + reco lines stay
+// readable.
+const SIZE_NORMAL = { width: 380, height: 520 };
+const SIZE_COMPACT = { width: 300, height: 400 };
+// Distance from the top + right edges of the primary display.
+const TOP_RIGHT_MARGIN = 16;
 let pipState = { alwaysOnTop: true, compact: false };
 function getStateFile() {
   return path.join(app.getPath("userData"), "pip-state.json");
@@ -100,6 +110,21 @@ function savePipState() {
     fs.writeFileSync(getStateFile(), JSON.stringify(pipState));
   } catch (e) {
     devWarn("PiP state save failed:", e);
+  }
+}
+// Compute the top-right anchor on the primary display, respecting the
+// taskbar via workArea. Falls back to (0,0) if the screen module isn't
+// ready (shouldn't happen — createWindow runs after app.whenReady).
+function topRightPosition(windowWidth) {
+  try {
+    const { screen } = require("electron");
+    const wa = screen.getPrimaryDisplay().workArea;
+    return {
+      x: wa.x + wa.width - windowWidth - TOP_RIGHT_MARGIN,
+      y: wa.y + TOP_RIGHT_MARGIN,
+    };
+  } catch {
+    return { x: 0, y: 0 };
   }
 }
 function applyPipState() {
@@ -138,7 +163,13 @@ const LOCAL_PATH = path.join(__dirname, "web", "index.html");
 function createWindow() {
   loadPipState();
   const initSize = pipState.compact ? SIZE_COMPACT : SIZE_NORMAL;
+  // Always anchor the window in the top-right corner of the primary display.
+  // No persistence — the pharmacist always knows where to look for it, even
+  // if they moved it around the day before.
+  const anchor = topRightPosition(initSize.width);
   mainWindow = new BrowserWindow({
+    x: anchor.x,
+    y: anchor.y,
     width: initSize.width,
     height: initSize.height,
     minWidth: 280,
