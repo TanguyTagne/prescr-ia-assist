@@ -24,12 +24,11 @@ interface KPI {
 interface ScanRow {
   id: string;
   created_at: string;
-  scan_type: string;
-  source: string;
+  ean_code: string;
   status: string;
-  device_id: string | null;
-  input_data: any;
-  result: any;
+  product_name: string | null;
+  suggestions_count: number | null;
+  register_id: string | null;
 }
 
 interface AcceptedRow {
