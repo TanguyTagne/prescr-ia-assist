@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   PackageSearch, RefreshCw, Download, Loader2,
-  ExternalLink, AlertTriangle, Wand2, DatabaseZap,
+  ExternalLink, AlertTriangle, Wand2, DatabaseZap, Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -89,6 +89,7 @@ const MedicamentsManquantsTab = () => {
   const [recoverResult, setRecoverResult] = useState<{ sans_cip_total?: number; mappes?: number; mis_a_jour?: number } | null>(null);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<{ inserted?: number; valid?: number; purged?: number } | null>(null);
+  const [cleansing, setCleansing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleImportBdpm = useCallback(async (file: File) => {
@@ -141,6 +142,24 @@ const MedicamentsManquantsTab = () => {
       toast.error("Erreur : " + (e?.message ?? String(e)));
     } finally {
       setRecovering(false);
+    }
+  }, []);
+
+  const cleanseMissing = useCallback(async () => {
+    if (!confirm("⚠️ Supprimer TOUS les scans 'non reconnus' (médicaments manquants) ? Cette action est irréversible.")) return;
+    setCleansing(true);
+    try {
+      const { error, count } = await (supabase as any)
+        .from("scan_events")
+        .delete({ count: "exact" })
+        .eq("status", "no_match");
+      if (error) throw error;
+      toast.success(`Base vidée : ${count ?? 0} scans supprimés`);
+      setRows([]);
+    } catch (e: any) {
+      toast.error("Erreur : " + (e?.message ?? String(e)));
+    } finally {
+      setCleansing(false);
     }
   }, []);
 
@@ -269,6 +288,17 @@ const MedicamentsManquantsTab = () => {
               <Wand2 className="h-3.5 w-3.5" />
             )}
             Récupérer CIPs manquants
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={cleanseMissing}
+            disabled={cleansing || rows.length === 0}
+            className="gap-2"
+            title="Supprime tous les scans 'non reconnus' enregistrés"
+          >
+            {cleansing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+            Vider la base
           </Button>
         </div>
       </div>
