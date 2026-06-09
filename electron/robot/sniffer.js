@@ -60,13 +60,17 @@ let runtimeRefs = {
   onLocalTrigger: (_code) => {},
   // Folder that holds robot_capture.log (DiagnosticAdapter)
   userDataDir: null,
+  // Shared secret sent with every POST /trigger toward peer Asclion PCs.
+  // Must match the token configured on the receiving PC.
+  httpToken: "",
 };
 
-function init({ log, warn, onLocalTrigger, userDataDir }) {
+function init({ log, warn, onLocalTrigger, userDataDir, httpToken }) {
   runtimeRefs.log = log || runtimeRefs.log;
   runtimeRefs.warn = warn || runtimeRefs.warn;
   runtimeRefs.onLocalTrigger = onLocalTrigger || runtimeRefs.onLocalTrigger;
   runtimeRefs.userDataDir = userDataDir || runtimeRefs.userDataDir;
+  if (typeof httpToken === "string") runtimeRefs.httpToken = httpToken;
 }
 
 function buildAdapter(brand, opts) {
@@ -212,7 +216,26 @@ function startNpcap() {
 // ───── TCP listen fallback ───────────────────────────────────────────
 function startTcpListen(robot) {
   try {
+    const allowed = Array.isArray(robot.allowedClientIps)
+      ? robot.allowedClientIps.filter((s) => typeof s === "string" && s.length > 0)
+      : [];
+    // Trailing safety net: if the operator listed a targetIp (forward mode),
+    // implicitly trust that IP too — it's the only peer that should ever talk
+    // to this socket under normal operation.
+    if (robot.targetIp && !allowed.includes(robot.targetIp)) allowed.push(robot.targetIp);
+
     const server = net.createServer((socket) => {
+      const peerIp = normalizeIp(socket.remoteAddress);
+      // Whitelist enforcement: if `allowedClientIps` is non-empty, drop any
+      // socket from an IP that doesn't appear in the list. This is what
+      // prevents a hostile LAN peer (or guest Wi-Fi user) from injecting
+      // fake dispense orders straight into the local robot pipeline.
+      if (allowed.length > 0 && !allowed.includes(peerIp)) {
+        runtimeRefs.warn(`[ROBOT] rejected TCP connection from ${peerIp} (not in allow-list)`);
+        try { socket.destroy(); } catch { /* noop */ }
+        return;
+      }
+
       // If a targetIp is configured, we forward bytes to the real robot so
       // the LGO never notices the man-in-the-middle. Without targetIp we
       // simply absorb the data (useful for the diagnostic adapter).
@@ -230,7 +253,7 @@ function startTcpListen(robot) {
       }
       socket.on("data", (chunk) => {
         state.packetsSeen++;
-        handlePayload(chunk, socket.remoteAddress);
+        handlePayload(chunk, peerIp);
       });
       socket.on("error", (err) => {
         state.lastError = `tcp socket: ${err && err.message}`;
@@ -241,7 +264,10 @@ function startTcpListen(robot) {
       runtimeRefs.warn(`[ROBOT] TCP listen error: ${err && err.message}`);
     });
     server.listen(state.port, "0.0.0.0", () => {
-      runtimeRefs.log(`[ROBOT] TCP listen on 0.0.0.0:${state.port}`);
+      runtimeRefs.log(
+        `[ROBOT] TCP listen on 0.0.0.0:${state.port}` +
+        (allowed.length > 0 ? ` (allowed peers: ${allowed.join(", ")})` : " (no peer allow-list — accept all LAN)")
+      );
     });
     state.tcpServer = server;
     return true;
@@ -249,6 +275,11 @@ function startTcpListen(robot) {
     state.lastError = `tcp listen start: ${e && e.message}`;
     return false;
   }
+}
+
+function normalizeIp(raw) {
+  if (!raw) return "";
+  return raw.startsWith("::ffff:") ? raw.slice(7) : raw;
 }
 
 // ───── Common payload handler ────────────────────────────────────────
@@ -284,17 +315,23 @@ function fanoutTrigger(ean, sourceIp) {
 
 function postTrigger(ip, ean) {
   const body = JSON.stringify({ ean });
+  const headers = {
+    "Content-Type": "application/json",
+    "Content-Length": Buffer.byteLength(body),
+    "X-Asclion-Source": "robot",
+  };
+  // Shared secret — peer listener REJECTS the trigger with 401 if missing or
+  // mismatched. Acts as a soft authentication boundary on top of the LAN
+  // perimeter (which is the only network the listener should ever see).
+  if (runtimeRefs.httpToken) headers["X-Asclion-Token"] = runtimeRefs.httpToken;
+
   const req = http.request(
     {
       host: ip,
       port: 5150, // fixed listener port (other PCs may use a different one, but 5150 is the default)
       path: "/trigger",
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Content-Length": Buffer.byteLength(body),
-        "X-Asclion-Source": "robot",
-      },
+      headers,
       timeout: 1500,
     },
     (res) => {

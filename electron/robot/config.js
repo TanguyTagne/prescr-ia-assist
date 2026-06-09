@@ -17,9 +17,19 @@
 
 const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
 
 const DEFAULT_CONFIG = Object.freeze({
   httpPort: 5150,
+  // Shared secret used by the HTTP listener to authenticate POST /trigger.
+  // Auto-generated on first launch in ensureSecret(). Other Asclion PCs in
+  // the same officine must send `X-Asclion-Token: <secret>` to get a 200.
+  // Stays inside `userData` (per-user, only this Windows account can read).
+  httpToken: "",
+  // bindHost is computed at runtime: 127.0.0.1 unless the user explicitly
+  // enables `serveLan` (mode "ce PC est le serveur robot" + LAN listener).
+  // Keeping the flag opt-in makes the default install non-listening on the LAN.
+  serveLan: false,
   robot: {
     enabled: false,
     brand: "none",
@@ -27,6 +37,10 @@ const DEFAULT_CONFIG = Object.freeze({
     regex: "EAN>(\\d{8,14})<",
     useNpcap: true,
     targetIp: null,
+    // IPs allowed to drive the TCP-listen fallback. Empty = accept any LAN
+    // peer (legacy behaviour). Setting at least one IP locks the listener
+    // down to the LGO's machine — recommended in production.
+    allowedClientIps: [],
   },
 });
 
@@ -93,10 +107,22 @@ function get() {
   return load();
 }
 
+// Lazy-generate the shared secret on first call. Stored on disk so all PCs
+// can be configured with the SAME token (the pharmacist copies it across
+// machines via Paramètres → Robot › "Jeton partagé").
+function ensureSecret() {
+  const cfg = load();
+  if (cfg.httpToken && cfg.httpToken.length >= 24) return cfg.httpToken;
+  const token = crypto.randomBytes(32).toString("base64url");
+  save({ httpToken: token });
+  return token;
+}
+
 module.exports = {
   DEFAULT_CONFIG,
   setConfigPath,
   load,
   save,
   get,
+  ensureSecret,
 };

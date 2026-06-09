@@ -132,7 +132,9 @@ class DiagnosticAdapter extends RobotAdapter {
       this._rotateIfNeeded();
       const ts = new Date().toISOString();
       const hex = Buffer.isBuffer(raw) ? raw.toString("hex") : "";
-      const printable = bufferToText(raw).replace(/[\r\n\t]/g, " ").slice(0, 500);
+      const printable = redactPotentialPii(bufferToText(raw))
+        .replace(/[\r\n\t]/g, " ")
+        .slice(0, 500);
       const line = `[${ts}] len=${raw.length} hex=${hex.slice(0, 200)}... text="${printable}"\n`;
       fs.appendFileSync(this.logPath, line, "utf-8");
       this._writeError = null;
@@ -166,6 +168,37 @@ class DiagnosticAdapter extends RobotAdapter {
       if (e && e.code !== "ENOENT") this._writeError = e.message;
     }
   }
+}
+
+// Best-effort PII redaction for the diagnostic log. We don't need to be
+// perfect — the log is meant to be sent to support to reverse-engineer the
+// protocol, not to leak patient data. We scrub the obvious GDPR landmines
+// (French NIR, IBAN, emails, phone numbers) and the common XML/JSON tags
+// known to carry patient identifiers in robot protocols. EAN/CIP codes
+// (8–14 digits) stay readable on purpose — they're the whole point of the
+// capture.
+const PII_PATTERNS = [
+  // French NIR (sécu sociale) — 13 or 15 consecutive digits, not a CIP/EAN
+  [/\b\d{15}\b/g, "[REDACTED_NIR]"],
+  [/\b[12]\s?\d{2}\s?\d{2}\s?\d{2}\s?\d{3}\s?\d{3}\s?\d{2}\b/g, "[REDACTED_NIR]"],
+  // IBAN
+  [/\b[A-Z]{2}\d{2}[A-Z0-9]{10,30}\b/g, "[REDACTED_IBAN]"],
+  // Email
+  [/[\w.+-]+@[\w-]+\.[\w.-]+/g, "[REDACTED_EMAIL]"],
+  // French phone (+33 or 0X with 9 digits)
+  [/\b(?:\+33|0)[1-9](?:[\s.-]?\d{2}){4}\b/g, "[REDACTED_PHONE]"],
+  // Common patient/name tags found in robot XML
+  [/<(patient|patientName|nom|firstName|lastName|prenom|surname|adresse|address)\b[^>]*>[^<]+<\//gi, "<$1>[REDACTED]</"],
+  [/(patient|patient_name|nom|prenom|first_name|last_name|address|adresse)\s*[:=]\s*"[^"]*"/gi, "$1=\"[REDACTED]\""],
+];
+
+function redactPotentialPii(text) {
+  if (!text) return "";
+  let out = text;
+  for (const [re, repl] of PII_PATTERNS) {
+    out = out.replace(re, repl);
+  }
+  return out;
 }
 
 // Best-effort decode: most robot protocols are XML-over-TCP (UTF-8) or
