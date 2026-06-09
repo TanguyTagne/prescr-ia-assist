@@ -5,7 +5,7 @@ import { useBarcodeScanner } from "@/hooks/useBarcodeScanner";
 import { SCANNER } from "@/constants/scanner";
 import {
   X, Wifi, WifiOff, ShoppingCart, FileText, Package,
-  Settings, Check, Key,
+  Settings, Check, Key, Copy, RefreshCw, Clipboard, Shield,
   FolderSearch, Loader2, Bot, Search,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -84,6 +84,8 @@ interface RobotConfigForm {
   regex: string;
   useNpcap: boolean;
   httpPort: number;
+  serveLan: boolean;
+  allowedClientIps: string; // textarea — one IP per line; parsed before save
 }
 interface PortCandidate {
   process: string;
@@ -149,13 +151,19 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
     regex: "EAN>(\\d{8,14})<",
     useNpcap: true,
     httpPort: 5150,
+    serveLan: false,
+    allowedClientIps: "",
   });
   const [robotSaving, setRobotSaving] = useState(false);
   const [robotLoaded, setRobotLoaded] = useState(false);
-  const [robotStatus, setRobotStatus] = useState<{ listening?: boolean; mode?: string; lastEan?: string | null } | null>(null);
+  const [robotStatus, setRobotStatus] = useState<{ listening?: boolean; mode?: string; lastEan?: string | null; host?: string } | null>(null);
   const [discovering, setDiscovering] = useState(false);
   const [discoveryResults, setDiscoveryResults] = useState<PortCandidate[] | null>(null);
   const [discoveryNote, setDiscoveryNote] = useState<string | null>(null);
+  const [robotToken, setRobotToken] = useState<string>("");
+  const [tokenCopied, setTokenCopied] = useState(false);
+  const [tokenBusy, setTokenBusy] = useState(false);
+  const [tokenRevealed, setTokenRevealed] = useState(false);
 
   const isFolderApiSupported = typeof window !== "undefined" && "showDirectoryPicker" in window;
   const isDesktopRuntime = typeof window !== "undefined" && !!(window as any).electronAPI?.isDesktop;
@@ -258,6 +266,10 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
           regex: cfg.robot.regex || "EAN>(\\d{8,14})<",
           useNpcap: cfg.robot.useNpcap !== false,
           httpPort: Number(cfg.httpPort) || 5150,
+          serveLan: !!cfg.serveLan,
+          allowedClientIps: Array.isArray(cfg.robot.allowedClientIps)
+            ? cfg.robot.allowedClientIps.join("\n")
+            : "",
         });
       }
       const st = await robotApi.status();
@@ -265,7 +277,12 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
         listening: st?.listener?.listening,
         mode: st?.sniffer?.mode,
         lastEan: st?.sniffer?.lastEan ?? null,
+        host: st?.listener?.host,
       });
+      if (robotApi.getToken) {
+        const tk = await robotApi.getToken();
+        if (typeof tk === "string") setRobotToken(tk);
+      }
     } catch {
       /* ignore — UI degrades silently */
     } finally {
@@ -337,14 +354,31 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
     }
     setRobotSaving(true);
     try {
+      // Parse IP allow-list: one per line, blank lines ignored, validated
+      // loosely (IPv4 dotted quad). Anything invalid is dropped silently and
+      // surfaced via toast so the pharmacist knows.
+      const lines = robotForm.allowedClientIps
+        .split(/\r?\n/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+      const ipRe = /^(?:\d{1,3}\.){3}\d{1,3}$/;
+      const validIps = lines.filter((s) => ipRe.test(s));
+      const dropped = lines.length - validIps.length;
+      if (dropped > 0) {
+        toast.warning(`${dropped} adresse IP ignorée${dropped > 1 ? "s" : ""}`, {
+          description: "Une IP valide par ligne (ex: 192.168.1.10).",
+        });
+      }
       const res = await robotApi.setConfig({
         httpPort: robotForm.httpPort,
+        serveLan: robotForm.serveLan,
         robot: {
           enabled: robotForm.enabled,
           brand: robotForm.brand,
           port: robotForm.port,
           regex: robotForm.regex,
           useNpcap: robotForm.useNpcap,
+          allowedClientIps: validIps,
         },
       });
       if (!res?.ok) {
@@ -357,11 +391,70 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
         listening: st?.listener?.listening,
         mode: st?.sniffer?.mode,
         lastEan: st?.sniffer?.lastEan ?? null,
+        host: st?.listener?.host,
       });
     } catch (err: any) {
       toast.error("Erreur", { description: String(err?.message || err).slice(0, 180) });
     } finally {
       setRobotSaving(false);
+    }
+  };
+
+  const handleCopyToken = async () => {
+    if (!robotToken) return;
+    try {
+      await navigator.clipboard.writeText(robotToken);
+      setTokenCopied(true);
+      toast.success("Jeton copié dans le presse-papier");
+      setTimeout(() => setTokenCopied(false), 2000);
+    } catch {
+      toast.error("Impossible de copier — copiez manuellement depuis le champ.");
+    }
+  };
+
+  const handlePasteToken = async () => {
+    if (!robotApi?.setToken) return;
+    setTokenBusy(true);
+    try {
+      const text = (await navigator.clipboard.readText()).trim();
+      if (!text) {
+        toast.warning("Presse-papier vide");
+        return;
+      }
+      const res = await robotApi.setToken(text);
+      if (!res?.ok) {
+        toast.error("Jeton refusé", { description: res?.error || "Format invalide" });
+        return;
+      }
+      setRobotToken(text);
+      toast.success("Jeton appliqué — l'app peut maintenant recevoir les notifications du PC serveur.");
+    } catch (err: any) {
+      toast.error("Erreur", { description: String(err?.message || err).slice(0, 180) });
+    } finally {
+      setTokenBusy(false);
+    }
+  };
+
+  const handleRegenerateToken = async () => {
+    if (!robotApi?.regenerateToken) return;
+    if (!window.confirm(
+      "Régénérer le jeton ?\n\nLes autres PCs de la pharmacie ne pourront plus recevoir les notifications " +
+      "tant que vous n'aurez pas copié le nouveau jeton sur chacun d'eux."
+    )) return;
+    setTokenBusy(true);
+    try {
+      const res = await robotApi.regenerateToken();
+      if (!res?.ok) {
+        toast.error("Régénération impossible", { description: res?.error || "Erreur inconnue" });
+        return;
+      }
+      if (res.token) setRobotToken(res.token);
+      setTokenRevealed(true);
+      toast.success("Nouveau jeton généré — copiez-le sur les autres PCs maintenant.");
+    } catch (err: any) {
+      toast.error("Erreur", { description: String(err?.message || err).slice(0, 180) });
+    } finally {
+      setTokenBusy(false);
     }
   };
 
@@ -513,14 +606,22 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
                 </p>
               ) : (
                 <div className="space-y-2 rounded-md border border-border p-3 bg-muted/30">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-[11px]">Ce PC est le serveur robot</Label>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <Label className="text-[11px] block">Mode serveur robot</Label>
+                      <p className="text-[10px] text-muted-foreground leading-tight">
+                        Activer sur le PC connecté au robot. Les autres PCs reçoivent les notifications via le réseau local.
+                      </p>
+                    </div>
                     <input
                       type="checkbox"
-                      checked={robotForm.enabled}
-                      onChange={(e) => setRobotForm((f) => ({ ...f, enabled: e.target.checked }))}
+                      checked={robotForm.enabled && robotForm.serveLan}
+                      onChange={(e) => {
+                        const on = e.target.checked;
+                        setRobotForm((f) => ({ ...f, enabled: on, serveLan: on }));
+                      }}
                       aria-label="Activer le mode serveur robot sur ce poste"
-                      className="h-4 w-4 accent-primary"
+                      className="h-4 w-4 accent-primary shrink-0"
                     />
                   </div>
 
@@ -667,9 +768,92 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
                     </div>
                   </div>
 
+                  {/* Jeton partagé — auth des notifications entre PCs */}
+                  <div className="space-y-1 pt-1 border-t border-border/50">
+                    <Label className="text-[10px] text-muted-foreground flex items-center gap-1">
+                      <Shield className="h-3 w-3" />
+                      Jeton partagé (sécurité)
+                    </Label>
+                    <p className="text-[10px] text-muted-foreground leading-tight">
+                      Authentifie les notifications entre PCs. <strong>Doit être identique sur tous les PCs de la pharmacie.</strong>
+                    </p>
+                    <div className="flex gap-1">
+                      <Input
+                        type={tokenRevealed ? "text" : "password"}
+                        readOnly
+                        value={robotToken || "(non défini)"}
+                        className="h-7 text-[10px] font-mono"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2 shrink-0 text-[10px]"
+                        onClick={() => setTokenRevealed((v) => !v)}
+                        aria-label={tokenRevealed ? "Masquer le jeton" : "Afficher le jeton"}
+                      >
+                        {tokenRevealed ? "Masquer" : "Afficher"}
+                      </Button>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2 text-[10px] gap-1"
+                        onClick={handleCopyToken}
+                        disabled={!robotToken}
+                      >
+                        {tokenCopied ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
+                        Copier
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2 text-[10px] gap-1"
+                        onClick={handlePasteToken}
+                        disabled={tokenBusy}
+                      >
+                        {tokenBusy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Clipboard className="h-3 w-3" />}
+                        Coller depuis presse-papier
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2 text-[10px] gap-1 text-destructive hover:text-destructive border-destructive/30"
+                        onClick={handleRegenerateToken}
+                        disabled={tokenBusy}
+                      >
+                        <RefreshCw className="h-3 w-3" />
+                        Régénérer
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* IPs autorisées — visible uniquement en mode serveur */}
+                  {robotForm.serveLan && (
+                    <div className="space-y-1 pt-1 border-t border-border/50">
+                      <Label className="text-[10px] text-muted-foreground">
+                        IPs des PCs caisse autorisés (une par ligne)
+                      </Label>
+                      <p className="text-[10px] text-muted-foreground leading-tight">
+                        Restreint la connexion au sniffer TCP à ces IPs uniquement. Vide = accepter tout le LAN.
+                      </p>
+                      <textarea
+                        value={robotForm.allowedClientIps}
+                        onChange={(e) => setRobotForm((f) => ({ ...f, allowedClientIps: e.target.value }))}
+                        placeholder="192.168.1.10&#10;192.168.1.11"
+                        rows={3}
+                        className="w-full text-[11px] font-mono rounded-md border border-input bg-background px-2 py-1"
+                      />
+                    </div>
+                  )}
+
                   {robotStatus && (
-                    <p className="text-[10px] text-muted-foreground">
-                      Listener : {robotStatus.listening ? "actif" : "inactif"} ·
+                    <p className="text-[10px] text-muted-foreground pt-1 border-t border-border/50">
+                      Listener {robotStatus.host || "127.0.0.1"} : {robotStatus.listening ? "actif" : "inactif"} ·
                       Sniffer : {robotStatus.mode || "idle"}
                       {robotStatus.lastEan ? ` · dernier EAN : ${robotStatus.lastEan}` : ""}
                     </p>
