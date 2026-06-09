@@ -337,11 +337,36 @@ const MedicamentsManquantsTab = () => {
         </div>
       )}
 
+      {/* ── Filtre 34009 ──────────────────────────────────────────────── */}
+      <div className="flex items-center gap-2 text-xs">
+        <Button
+          variant={onlyPharma ? "default" : "outline"}
+          size="sm"
+          onClick={() => setOnlyPharma(true)}
+          className="h-7"
+        >
+          Médicaments 34009 ({pharmaCount})
+        </Button>
+        <Button
+          variant={!onlyPharma ? "default" : "outline"}
+          size="sm"
+          onClick={() => setOnlyPharma(false)}
+          className="h-7"
+        >
+          Tous ({rows.length})
+        </Button>
+        <span className="text-muted-foreground ml-2">
+          Non-pharma exclus : <strong className="tabular-nums">{nonPharmaCount}</strong>
+        </span>
+      </div>
+
       {/* ── Stats ───────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-3">
         <div className="rounded-lg bg-orange-500/10 border border-orange-500/20 p-4">
-          <div className="text-xs text-muted-foreground">EAN uniques non reconnus</div>
-          <div className="text-3xl font-bold tabular-nums text-orange-700">{rows.length}</div>
+          <div className="text-xs text-muted-foreground">
+            EAN uniques {onlyPharma ? "34009 " : ""}non reconnus
+          </div>
+          <div className="text-3xl font-bold tabular-nums text-orange-700">{filteredRows.length}</div>
           <div className="text-xs text-muted-foreground mt-1">produits absents de la DB</div>
         </div>
         <div className="rounded-lg bg-secondary p-4">
