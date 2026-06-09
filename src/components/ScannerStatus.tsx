@@ -5,8 +5,8 @@ import { useBarcodeScanner } from "@/hooks/useBarcodeScanner";
 import { SCANNER } from "@/constants/scanner";
 import {
   X, Wifi, WifiOff, ShoppingCart, FileText, Package,
-  Settings, Copy, Check, Plus, Trash2, Monitor, ScanBarcode, Key,
-  FolderSearch, Loader2, ShieldAlert, ShieldCheck, FolderOpen,
+  Settings, Check, Key,
+  FolderSearch, Loader2, Bot,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -76,13 +76,23 @@ const ScanNotification = ({ scan, onDismiss, onViewResult }: ScanNotificationPro
   );
 };
 
-interface ScannerKey {
-  id: string;
-  api_key: string;
-  label: string | null;
-  active: boolean;
-  created_at: string;
+type RobotBrand = "none" | "rowa" | "pharmathek" | "generic" | "diagnostic";
+interface RobotConfigForm {
+  enabled: boolean;
+  brand: RobotBrand;
+  port: number;
+  regex: string;
+  useNpcap: boolean;
+  httpPort: number;
 }
+
+const ROBOT_BRAND_LABELS: Record<RobotBrand, string> = {
+  none: "Aucun",
+  rowa: "Rowa / BD Rowa",
+  pharmathek: "Pharmathek",
+  generic: "Générique (regex)",
+  diagnostic: "Diagnostic (capture)",
+};
 
 interface ScannerStatusProps {
   onViewResult: (scan: ScanEvent) => void;
@@ -94,11 +104,6 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
   const { latestScan, isListening, pharmacyId, dismissScan } = useScanQueue();
   const { signOut } = useAuth();
   const [showSetup, setShowSetup] = useState(false);
-  const [scannerKeys, setScannerKeys] = useState<ScannerKey[]>([]);
-  const [loadingKeys, setLoadingKeys] = useState(false);
-  const [newLabel, setNewLabel] = useState("");
-  const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [creatingKey, setCreatingKey] = useState(false);
   const [lgoForm, setLgoForm] = useState({ lgo_type: "winpharma", api_base_url: "", api_key: "" });
   const [lgoSaving, setLgoSaving] = useState(false);
   const [lgoLoaded, setLgoLoaded] = useState(false);
@@ -106,6 +111,17 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
   const [adminMode, setAdminMode] = useState<"unknown" | "admin" | "user" | "web">("unknown");
   const [adminActivating, setAdminActivating] = useState(false);
   const [activationScriptPath, setActivationScriptPath] = useState<string | null>(null);
+  const [robotForm, setRobotForm] = useState<RobotConfigForm>({
+    enabled: false,
+    brand: "none",
+    port: 9876,
+    regex: "EAN>(\\d{8,14})<",
+    useNpcap: true,
+    httpPort: 5150,
+  });
+  const [robotSaving, setRobotSaving] = useState(false);
+  const [robotLoaded, setRobotLoaded] = useState(false);
+  const [robotStatus, setRobotStatus] = useState<{ listening?: boolean; mode?: string; lastEan?: string | null } | null>(null);
 
   const isFolderApiSupported = typeof window !== "undefined" && "showDirectoryPicker" in window;
   const isDesktopRuntime = typeof window !== "undefined" && !!(window as any).electronAPI?.isDesktop;
@@ -190,62 +206,72 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
     enabled: true,
   });
 
-  const webhookUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/scanner-webhook`;
+  const robotApi = (typeof window !== "undefined" ? (window as any).electronAPI?.robot : null);
 
-  const loadKeys = async () => {
-    if (!pharmacyId) return;
-    setLoadingKeys(true);
+  const loadRobotConfig = async () => {
+    if (!robotApi) {
+      // Web build — robot config only exists in the Electron desktop runtime.
+      setRobotLoaded(true);
+      return;
+    }
     try {
-      const { data, error } = await supabase
-        .from("pharmacy_scanner_keys")
-        .select("*")
-        .eq("pharmacy_id", pharmacyId)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      setScannerKeys((data as ScannerKey[]) || []);
+      const cfg = await robotApi.getConfig();
+      if (cfg && cfg.robot) {
+        setRobotForm({
+          enabled: !!cfg.robot.enabled,
+          brand: (cfg.robot.brand || "none") as RobotBrand,
+          port: Number(cfg.robot.port) || 9876,
+          regex: cfg.robot.regex || "EAN>(\\d{8,14})<",
+          useNpcap: cfg.robot.useNpcap !== false,
+          httpPort: Number(cfg.httpPort) || 5150,
+        });
+      }
+      const st = await robotApi.status();
+      setRobotStatus({
+        listening: st?.listener?.listening,
+        mode: st?.sniffer?.mode,
+        lastEan: st?.sniffer?.lastEan ?? null,
+      });
     } catch {
-      toast.error("Impossible de charger les clés scanner");
+      /* ignore — UI degrades silently */
     } finally {
-      setLoadingKeys(false);
+      setRobotLoaded(true);
     }
   };
 
-  const handleCreateKey = async () => {
-    if (!pharmacyId) return;
-    setCreatingKey(true);
+  const handleSaveRobot = async () => {
+    if (!robotApi) {
+      toast.error("La configuration robot n'est disponible que dans l'application desktop Asclion.");
+      return;
+    }
+    setRobotSaving(true);
     try {
-      const { data, error } = await supabase
-        .from("pharmacy_scanner_keys")
-        .insert({ pharmacy_id: pharmacyId, label: newLabel || "Scanner principal" })
-        .select()
-        .single();
-      if (error) throw error;
-      setScannerKeys((prev) => [data as ScannerKey, ...prev]);
-      setNewLabel("");
-      toast.success("Clé API créée !");
-    } catch {
-      toast.error("Erreur lors de la création de la clé");
+      const res = await robotApi.setConfig({
+        httpPort: robotForm.httpPort,
+        robot: {
+          enabled: robotForm.enabled,
+          brand: robotForm.brand,
+          port: robotForm.port,
+          regex: robotForm.regex,
+          useNpcap: robotForm.useNpcap,
+        },
+      });
+      if (!res?.ok) {
+        toast.error("Échec de la sauvegarde", { description: res?.error || "Erreur inconnue" });
+        return;
+      }
+      toast.success("Configuration robot enregistrée");
+      const st = await robotApi.status();
+      setRobotStatus({
+        listening: st?.listener?.listening,
+        mode: st?.sniffer?.mode,
+        lastEan: st?.sniffer?.lastEan ?? null,
+      });
+    } catch (err: any) {
+      toast.error("Erreur", { description: String(err?.message || err).slice(0, 180) });
     } finally {
-      setCreatingKey(false);
+      setRobotSaving(false);
     }
-  };
-
-  const handleDeleteKey = async (id: string) => {
-    try {
-      const { error } = await supabase.from("pharmacy_scanner_keys").delete().eq("id", id);
-      if (error) throw error;
-      setScannerKeys((prev) => prev.filter((k) => k.id !== id));
-      toast.success("Clé supprimée");
-    } catch {
-      toast.error("Erreur lors de la suppression");
-    }
-  };
-
-  const handleCopy = (text: string, id: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedId(id);
-    toast.success("Copié !");
-    setTimeout(() => setCopiedId(null), 2000);
   };
 
   const loadLgoConfig = async () => {
@@ -348,13 +374,13 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
               Connecter scanner
             </Button>
           )}
-          {/* Advanced config */}
+          {/* Paramètres */}
           <Button
             variant="ghost"
             size="sm"
             className="h-6 text-[10px] gap-1 text-muted-foreground hover:text-foreground px-1.5"
-            onClick={() => { setShowSetup(true); loadKeys(); loadLgoConfig(); }}
-            aria-label="Configuration avancée du scanner et du LGO"
+            onClick={() => { setShowSetup(true); loadRobotConfig(); loadLgoConfig(); }}
+            aria-label="Paramètres Asclion"
           >
             <Settings className="h-3 w-3" />
           </Button>
@@ -367,87 +393,133 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
         <ScanNotification scan={latestScan} onDismiss={dismissScan} onViewResult={onViewResult} />
       )}
 
-      {/* Advanced setup dialog (webhook/API keys for POS systems) */}
+      {/* Paramètres */}
       <Dialog open={showSetup} onOpenChange={setShowSetup}>
         <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base">
-              <ScanBarcode className="h-5 w-5 text-primary" />
-              Configuration avancée — Caisse
+              <Settings className="h-5 w-5 text-primary" />
+              Paramètres
             </DialogTitle>
             <DialogDescription className="text-xs">
-              Pour connecter un logiciel de caisse (Winpharma, LGPI…) via API webhook.
+              Configuration du robot automate, du LGO et du poste.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 mt-2">
-            {/* Webhook URL */}
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold flex items-center gap-1.5">
-                <Monitor className="h-3.5 w-3.5" />
-                URL du Webhook
-              </Label>
-              <div className="flex gap-1.5">
-                <Input readOnly value={webhookUrl} className="text-[11px] font-mono h-8 bg-muted" />
-                <Button variant="outline" size="sm" className="h-8 px-2 shrink-0" onClick={() => handleCopy(webhookUrl, "url")}>
-                  {copiedId === "url" ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
-                </Button>
-              </div>
-            </div>
-
-            {/* API Keys */}
+            {/* Bloc 1 — Robot automate */}
             <div className="space-y-2">
-              <Label className="text-xs font-semibold">Clés API (x-scanner-key)</Label>
-              {!pharmacyId ? (
-                <p className="text-[11px] text-destructive">Aucune pharmacie associée à votre compte.</p>
+              <Label className="text-xs font-semibold flex items-center gap-1.5">
+                <Bot className="h-3.5 w-3.5" />
+                Robot automate
+              </Label>
+              <p className="text-[11px] text-muted-foreground">
+                Si la pharmacie est équipée d'un robot (Rowa, Pharmathek…), Asclion intercepte les délivrances pour suggérer les compléments. Sélectionnez "Aucun" sinon.
+              </p>
+              {!robotApi ? (
+                <p className="text-[11px] text-destructive">
+                  Disponible uniquement dans l'application desktop Asclion (pas dans le navigateur).
+                </p>
               ) : (
-                <>
-                  <div className="flex gap-1.5">
-                    <Input
-                      placeholder="Nom (ex: Caisse 1)"
-                      value={newLabel}
-                      onChange={(e) => setNewLabel(e.target.value)}
-                      className="text-xs h-8"
+                <div className="space-y-2 rounded-md border border-border p-3 bg-muted/30">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-[11px]">Ce PC est le serveur robot</Label>
+                    <input
+                      type="checkbox"
+                      checked={robotForm.enabled}
+                      onChange={(e) => setRobotForm((f) => ({ ...f, enabled: e.target.checked }))}
+                      aria-label="Activer le mode serveur robot sur ce poste"
+                      className="h-4 w-4 accent-primary"
                     />
-                    <Button size="sm" className="h-8 gap-1 shrink-0 text-xs" onClick={handleCreateKey} disabled={creatingKey}>
-                      <Plus className="h-3.5 w-3.5" />
-                      Créer
-                    </Button>
                   </div>
-                  {loadingKeys ? (
-                    <p className="text-[11px] text-muted-foreground">Chargement…</p>
-                  ) : scannerKeys.length === 0 ? (
-                    <p className="text-[11px] text-muted-foreground">Aucune clé API.</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {scannerKeys.map((key) => (
-                        <div key={key.id} className="border rounded-md p-2 space-y-1.5 bg-muted/30">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-medium">{key.label || "Sans nom"}</span>
-                            <div className="flex items-center gap-1">
-                              <Badge variant={key.active ? "default" : "secondary"} className="text-[10px] h-4">
-                                {key.active ? "Actif" : "Inactif"}
-                              </Badge>
-                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-destructive" onClick={() => handleDeleteKey(key.id)} aria-label={`Supprimer la clé ${key.label || "sans nom"}`}>
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          </div>
-                          <div className="flex gap-1">
-                            <Input readOnly value={key.api_key} className="text-[11px] font-mono h-7 bg-muted" />
-                            <Button variant="outline" size="sm" className="h-7 px-2 shrink-0" onClick={() => handleCopy(key.api_key, key.id)} aria-label="Copier la clé API">
-                              {copiedId === key.id ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-[10px] text-muted-foreground">Marque</Label>
+                      <select
+                        value={robotForm.brand}
+                        onChange={(e) => setRobotForm((f) => ({ ...f, brand: e.target.value as RobotBrand }))}
+                        className="w-full h-8 text-xs rounded-md border border-input bg-background px-2"
+                        aria-label="Marque du robot automate"
+                      >
+                        {(Object.keys(ROBOT_BRAND_LABELS) as RobotBrand[]).map((b) => (
+                          <option key={b} value={b}>{ROBOT_BRAND_LABELS[b]}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[10px] text-muted-foreground">Port TCP du robot</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={65535}
+                        value={robotForm.port}
+                        onChange={(e) => setRobotForm((f) => ({ ...f, port: Number(e.target.value) || 0 }))}
+                        className="h-8 text-xs"
+                      />
+                    </div>
+                  </div>
+
+                  {robotForm.brand === "generic" && (
+                    <div className="space-y-1">
+                      <Label className="text-[10px] text-muted-foreground">
+                        Pattern regex (1<sup>er</sup> groupe = EAN)
+                      </Label>
+                      <Input
+                        value={robotForm.regex}
+                        onChange={(e) => setRobotForm((f) => ({ ...f, regex: e.target.value }))}
+                        placeholder="EAN>(\d{8,14})<"
+                        className="h-8 text-xs font-mono"
+                      />
                     </div>
                   )}
-                </>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-[10px] text-muted-foreground">Port HTTP (listener local)</Label>
+                      <Input
+                        type="number"
+                        min={1024}
+                        max={65535}
+                        value={robotForm.httpPort}
+                        onChange={(e) => setRobotForm((f) => ({ ...f, httpPort: Number(e.target.value) || 0 }))}
+                        className="h-8 text-xs"
+                      />
+                    </div>
+                    <div className="flex items-end justify-between gap-1">
+                      <Label className="text-[10px] text-muted-foreground">Sniffer Npcap (passif)</Label>
+                      <input
+                        type="checkbox"
+                        checked={robotForm.useNpcap}
+                        onChange={(e) => setRobotForm((f) => ({ ...f, useNpcap: e.target.checked }))}
+                        aria-label="Utiliser Npcap en mode sniffer passif si disponible"
+                        className="h-4 w-4 accent-primary mb-1.5"
+                      />
+                    </div>
+                  </div>
+
+                  {robotStatus && (
+                    <p className="text-[10px] text-muted-foreground">
+                      Listener : {robotStatus.listening ? "actif" : "inactif"} ·
+                      Sniffer : {robotStatus.mode || "idle"}
+                      {robotStatus.lastEan ? ` · dernier EAN : ${robotStatus.lastEan}` : ""}
+                    </p>
+                  )}
+
+                  <Button
+                    size="sm"
+                    className="w-full h-8 text-xs gap-1.5"
+                    onClick={handleSaveRobot}
+                    disabled={robotSaving || !robotLoaded}
+                  >
+                    {robotSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                    Enregistrer
+                  </Button>
+                </div>
               )}
             </div>
 
-            {/* LGO Integration */}
+            {/* Bloc 2 — Connexion LGO / Stocks (conservé tel quel) */}
             <div className="space-y-2 border-t border-border pt-4">
               <Label className="text-xs font-semibold flex items-center gap-1.5">
                 <Key className="h-3.5 w-3.5" />
