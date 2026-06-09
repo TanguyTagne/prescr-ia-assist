@@ -1,9 +1,24 @@
-// build: electron v2026.06.07.6 — revert auto-elevation (annoying), fix second-instance window recreation
+// build: electron v2026.06.09.1 — robot interception (sniffer + HTTP listener), settings refactor
 const { app, BrowserWindow, shell, ipcMain, Notification } = require("electron");
 const { autoUpdater } = require("electron-updater");
 const path = require("path");
 const fs = require("fs");
 const { exec, spawn } = require("child_process");
+
+// Robot interception subsystem (lazy: failing to load any of these must NOT
+// take down the rest of the app — pharmacies without a robot keep working).
+let robotConfig = null;
+let robotSniffer = null;
+let robotListener = null;
+let robotSubsystemError = null;
+try {
+  robotConfig = require("./robot/config");
+  robotSniffer = require("./robot/sniffer");
+  robotListener = require("./robot/listener");
+} catch (e) {
+  robotSubsystemError = e && e.message;
+  console.error("[ROBOT] subsystem load failed:", robotSubsystemError);
+}
 // Load uiohook-napi lazily — if the native binary fails to load (rare),
 // the app keeps working without the global scanner.
 let uIOhook = null;
@@ -360,7 +375,12 @@ if (isAutolaunchRepairMode) {
     detectLgoAndNotify();
     // Boot scanner stack: direct HID read (preferred, AV-friendly) + uiohook fallback
     bootScannerStack();
-    // Check for updates silently
+    // Boot robot interception (HTTP listener + sniffer). Safe to call even when
+    // the robot subsystem failed to load — bootRobotSubsystem() bails silently.
+    bootRobotSubsystem();
+    // Check for updates silently — el-updater downloads in background, swaps
+    // the binary on quit, so the pharmacy gets the new version at next launch
+    // (typically the next morning) without any manual download.
     autoUpdater.checkForUpdatesAndNotify();
   });
 }
@@ -2454,6 +2474,88 @@ ipcMain.handle("scanner:inject", (_e, { code } = {}) => {
   return { ok: false, error: app.isPackaged ? "disabled in production" : "invalid code" };
 });
 
+// ────────────────────────────────────────────────────────────
+// Robot interception subsystem
+//
+// Boot order: HTTP listener first (every PC needs it so the robot-server PC
+// can reach them), then the sniffer (only useful on the PC physically wired
+// to the robot, but harmless to start everywhere — it stays in "disabled"
+// mode unless the user enables it from Paramètres).
+// ────────────────────────────────────────────────────────────
+function bootRobotSubsystem() {
+  if (robotSubsystemError || !robotConfig || !robotListener || !robotSniffer) {
+    devWarn("[ROBOT] subsystem disabled:", robotSubsystemError || "modules missing");
+    return;
+  }
+  robotConfig.setConfigPath(path.join(app.getPath("userData"), "asclion-robot-config.json"));
+  const cfg = robotConfig.get();
+
+  robotListener.init({
+    version: app.getVersion(),
+    log: devLog,
+    warn: devWarn,
+    // POST /trigger reuses the SAME pipeline as a HID scan — emitGlobalScan
+    // handles dedup, window pop, IPC to renderer, etc.
+    onTrigger: (ean) => emitGlobalScan(ean),
+  });
+  robotListener.start(cfg.httpPort).then((r) => {
+    if (!r.ok) devWarn(`[HTTP] listener failed to start: ${r.error}`);
+  });
+
+  robotSniffer.init({
+    log: devLog,
+    warn: devWarn,
+    onLocalTrigger: (ean) => emitGlobalScan(ean),
+    userDataDir: app.getPath("userData"),
+  });
+  robotSniffer.start(cfg);
+}
+
+ipcMain.handle("robot:get-config", () => {
+  if (!robotConfig) return { error: robotSubsystemError || "subsystem missing" };
+  return robotConfig.get();
+});
+
+ipcMain.handle("robot:set-config", (_e, patch) => {
+  if (!robotConfig) return { ok: false, error: robotSubsystemError || "subsystem missing" };
+  try {
+    const next = robotConfig.save(patch || {});
+    // Apply live: restart listener if the port changed, restart sniffer always.
+    if (robotListener && patch && patch.httpPort && patch.httpPort !== robotListener.getStatus().port) {
+      robotListener.start(next.httpPort);
+    }
+    if (robotSniffer) robotSniffer.start(next);
+    return { ok: true, config: next };
+  } catch (e) {
+    return { ok: false, error: String(e && e.message ? e.message : e) };
+  }
+});
+
+ipcMain.handle("robot:status", () => {
+  return {
+    subsystemError: robotSubsystemError,
+    listener: robotListener ? robotListener.getStatus() : null,
+    sniffer: robotSniffer ? robotSniffer.getStatus() : null,
+    config: robotConfig ? robotConfig.get() : null,
+  };
+});
+
+// Manual update check — surfaced in Paramètres so the pharmacist can verify
+// a release went out without restarting the app.
+ipcMain.handle("updater:check", async () => {
+  try {
+    const r = await autoUpdater.checkForUpdates();
+    return {
+      ok: true,
+      updateAvailable: !!r && !!r.updateInfo && r.updateInfo.version !== app.getVersion(),
+      currentVersion: app.getVersion(),
+      latestVersion: r && r.updateInfo ? r.updateInfo.version : null,
+    };
+  } catch (e) {
+    return { ok: false, error: String(e && e.message ? e.message : e), currentVersion: app.getVersion() };
+  }
+});
+
 app.on("will-quit", () => {
   isQuitting = true;
   stopNativeRawInput();
@@ -2463,4 +2565,6 @@ app.on("will-quit", () => {
   try { closeHidDevice(); } catch { /* noop */ }
   if (hidState.pollTimer) { clearInterval(hidState.pollTimer); hidState.pollTimer = null; }
   stopClipboardScanner();
+  try { if (robotListener) robotListener.stop(); } catch { /* noop */ }
+  try { if (robotSniffer) robotSniffer.stop(); } catch { /* noop */ }
 });
