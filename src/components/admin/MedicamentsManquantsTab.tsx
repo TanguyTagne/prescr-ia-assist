@@ -189,14 +189,26 @@ const MedicamentsManquantsTab = () => {
     load();
   }, [load]);
 
+  const [onlyPharma, setOnlyPharma] = useState(true);
+
+  const isPharma = (ean: string) => ean?.startsWith("34009");
+
+  const filteredRows = useMemo(
+    () => (onlyPharma ? rows.filter((r) => isPharma(r.ean)) : rows),
+    [rows, onlyPharma],
+  );
+
+  const pharmaCount = useMemo(() => rows.filter((r) => isPharma(r.ean)).length, [rows]);
+  const nonPharmaCount = rows.length - pharmaCount;
+
   const totalScans = useMemo(
-    () => rows.reduce((s, r) => s + r.count, 0),
-    [rows],
+    () => filteredRows.reduce((s, r) => s + r.count, 0),
+    [filteredRows],
   );
 
   const exportCsv = () => {
     const header = "EAN;Nb scans;Premier scan;Dernier scan;Pharmacies\n";
-    const body = rows
+    const body = filteredRows
       .map(
         (r) =>
           `${r.ean};${r.count};${r.firstSeen};${r.lastSeen};"${r.pharmacies.join(", ")}"`,
@@ -206,7 +218,8 @@ const MedicamentsManquantsTab = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `medicaments-manquants-${new Date().toISOString().slice(0, 10)}.csv`;
+    const suffix = onlyPharma ? "-34009" : "-tous";
+    a.download = `medicaments-manquants${suffix}-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
     toast.success("Export CSV téléchargé");
@@ -237,7 +250,7 @@ const MedicamentsManquantsTab = () => {
             variant="outline"
             size="sm"
             onClick={exportCsv}
-            disabled={rows.length === 0}
+            disabled={filteredRows.length === 0}
             className="gap-2"
           >
             <Download className="h-3.5 w-3.5" />
@@ -324,11 +337,36 @@ const MedicamentsManquantsTab = () => {
         </div>
       )}
 
+      {/* ── Filtre 34009 ──────────────────────────────────────────────── */}
+      <div className="flex items-center gap-2 text-xs">
+        <Button
+          variant={onlyPharma ? "default" : "outline"}
+          size="sm"
+          onClick={() => setOnlyPharma(true)}
+          className="h-7"
+        >
+          Médicaments 34009 ({pharmaCount})
+        </Button>
+        <Button
+          variant={!onlyPharma ? "default" : "outline"}
+          size="sm"
+          onClick={() => setOnlyPharma(false)}
+          className="h-7"
+        >
+          Tous ({rows.length})
+        </Button>
+        <span className="text-muted-foreground ml-2">
+          Non-pharma exclus : <strong className="tabular-nums">{nonPharmaCount}</strong>
+        </span>
+      </div>
+
       {/* ── Stats ───────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-3">
         <div className="rounded-lg bg-orange-500/10 border border-orange-500/20 p-4">
-          <div className="text-xs text-muted-foreground">EAN uniques non reconnus</div>
-          <div className="text-3xl font-bold tabular-nums text-orange-700">{rows.length}</div>
+          <div className="text-xs text-muted-foreground">
+            EAN uniques {onlyPharma ? "34009 " : ""}non reconnus
+          </div>
+          <div className="text-3xl font-bold tabular-nums text-orange-700">{filteredRows.length}</div>
           <div className="text-xs text-muted-foreground mt-1">produits absents de la DB</div>
         </div>
         <div className="rounded-lg bg-secondary p-4">
@@ -356,12 +394,14 @@ const MedicamentsManquantsTab = () => {
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-6 w-6 animate-spin text-primary" />
             </div>
-          ) : rows.length === 0 ? (
+          ) : filteredRows.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <PackageSearch className="h-10 w-10 mx-auto mb-3 opacity-30" />
               <p className="font-medium">Aucun médicament manquant</p>
               <p className="text-xs mt-1">
-                Tous les EAN scannés sont référencés, ou aucun scan n'a encore eu lieu.
+                {onlyPharma
+                  ? "Aucun EAN 34009 non reconnu — bascule sur « Tous » pour voir les autres codes."
+                  : "Tous les EAN scannés sont référencés, ou aucun scan n'a encore eu lieu."}
               </p>
             </div>
           ) : (
@@ -383,7 +423,7 @@ const MedicamentsManquantsTab = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {rows.map((r) => (
+                    {filteredRows.map((r) => (
                       <tr
                         key={r.ean}
                         className="border-t border-border/50 hover:bg-secondary/30 transition-colors"
