@@ -48,11 +48,14 @@ async function lookupMedicamentsByCip(
     .or(nomSet.map((n: string) => `nom_commercial.ilike.${n}%`).join(","));
 
   // Pour chaque nom court (ex: "Doliprane"), trouver le meilleur médicament correspondant
-  // Préférence : match exact, sinon le nom le plus court (forme générique)
+  // Préférence : match exact, sinon le nom le plus court (forme générique).
+  // On filtre côté JS les vieux orphelins préfixés "__" : en SQL LIKE, "_"
+  // est un wildcard, donc un filtre "not like '__%'" exclurait tous les noms.
   const nomToMed = new Map<string, any>();
   for (const nom of nomSet) {
     const matches = (resolvedMeds || []).filter((m: any) =>
-      m.nom_commercial.toLowerCase().startsWith(nom.toLowerCase()),
+      m.nom_commercial.toLowerCase().startsWith(nom.toLowerCase()) &&
+      !String(m.nom_commercial || "").startsWith("__"),
     );
     if (!matches.length) continue;
     const exact = matches.find((m: any) => m.nom_commercial.toLowerCase() === nom.toLowerCase());
