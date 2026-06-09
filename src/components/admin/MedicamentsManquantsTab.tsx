@@ -145,6 +145,24 @@ const MedicamentsManquantsTab = () => {
     }
   }, []);
 
+  const cleanseMissing = useCallback(async () => {
+    if (!confirm("⚠️ Supprimer TOUS les scans 'non reconnus' (médicaments manquants) ? Cette action est irréversible.")) return;
+    setCleansing(true);
+    try {
+      const { error, count } = await (supabase as any)
+        .from("scan_events")
+        .delete({ count: "exact" })
+        .eq("status", "no_match");
+      if (error) throw error;
+      toast.success(`Base vidée : ${count ?? 0} scans supprimés`);
+      setRows([]);
+    } catch (e: any) {
+      toast.error("Erreur : " + (e?.message ?? String(e)));
+    } finally {
+      setCleansing(false);
+    }
+  }, []);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
