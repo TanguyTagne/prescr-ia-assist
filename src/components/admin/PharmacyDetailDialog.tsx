@@ -79,7 +79,7 @@ const PharmacyDetailDialog = ({ pharmacyId, pharmacyName, open, onOpenChange }: 
         const [histRes, recentHistRes, scanRes, accRes] = await Promise.all([
           supabase.from("analysis_history" as any).select("patient_hash, has_major_interaction, suggestions_count").eq("pharmacy_id", pharmacyId),
           supabase.from("analysis_history" as any).select("id, created_at, medicaments, suggestions_count, interactions_count, has_major_interaction").eq("pharmacy_id", pharmacyId).order("created_at", { ascending: false }).limit(20),
-          supabase.from("scan_queue" as any).select("id, created_at, scan_type, source, status, device_id, input_data, result").eq("pharmacy_id", pharmacyId).order("created_at", { ascending: false }).limit(100),
+          supabase.from("scan_events" as any).select("id, created_at, ean_code, status, product_name, suggestions_count, register_id").eq("pharmacy_id", pharmacyId).order("created_at", { ascending: false }).limit(100),
           supabase.from("accepted_combinations" as any).select("id, created_at, pc_accepte, pc_categorie, medicament_source, medicaments_analyses, pcs_proposes").eq("pharmacy_id", pharmacyId).order("created_at", { ascending: false }).limit(100),
         ]);
         if (cancelled) return;
