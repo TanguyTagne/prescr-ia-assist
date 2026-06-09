@@ -394,12 +394,14 @@ const MedicamentsManquantsTab = () => {
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-6 w-6 animate-spin text-primary" />
             </div>
-          ) : rows.length === 0 ? (
+          ) : filteredRows.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <PackageSearch className="h-10 w-10 mx-auto mb-3 opacity-30" />
               <p className="font-medium">Aucun médicament manquant</p>
               <p className="text-xs mt-1">
-                Tous les EAN scannés sont référencés, ou aucun scan n'a encore eu lieu.
+                {onlyPharma
+                  ? "Aucun EAN 34009 non reconnu — bascule sur « Tous » pour voir les autres codes."
+                  : "Tous les EAN scannés sont référencés, ou aucun scan n'a encore eu lieu."}
               </p>
             </div>
           ) : (
