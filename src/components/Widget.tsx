@@ -393,28 +393,77 @@ const WidgetApp = () => {
 
       if (cipRow?.medicament_nom) {
         // BDPM nous donne le nom officiel. On résout dans `medicaments`
-        // pour récupérer les métadonnées (atc, molécule). On essaie d'abord
-        // par CIP, puis par nom.
+        // pour récupérer les métadonnées (atc, molécule) ET le bon id pour
+        // pouvoir interroger medicament_curated_pcs ensuite.
+        //
+        // 3 passes, par ordre de précision :
+        //   1) cip_code exact   → row le plus précis (forme+dosage du CIP)
+        //   2) prefix sur nom   → match "DAFALGAN 1G%" sur "DAFALGAN 1G CPR"
+        //   3) fuzzy 1er mot    → match "DAFALGAN%" — récupère le row canonique
+        //                         quand la table `medicaments` est moins
+        //                         granulaire que BDPM (Dafalgan tout court)
+        //
+        // À chaque passe on collecte les candidats, puis on choisit en priorité
+        // celui qui A des PC curated. Sinon, le 1er candidat propre.
         let byMeta: any = null;
+        const candidates: any[] = [];
+
         const { data: byCip } = await supabase
           .from("medicaments")
           .select("id, nom_commercial, cip_code, molecule_id, atc_code")
           .eq("cip_code", code)
           .maybeSingle();
-        if (byCip) byMeta = byCip;
+        if (byCip) candidates.push(byCip);
 
-        if (!byMeta) {
-          const { data: byName } = await supabase
+        const { data: byName } = await supabase
+          .from("medicaments")
+          .select("id, nom_commercial, cip_code, molecule_id, atc_code")
+          .ilike("nom_commercial", `${cipRow.medicament_nom}%`)
+          .order("nom_commercial", { ascending: true })
+          .limit(10);
+        // Ne pas utiliser SQL LIKE "__%" ici : en SQL, "_" est un wildcard,
+        // donc cela exclut tous les noms de 2+ caractères et empêche de
+        // résoudre Doliprane/Nefopam/etc. depuis la douchette.
+        for (const r of byName || []) {
+          if (!String(r.nom_commercial || "").startsWith("__")) candidates.push(r);
+        }
+
+        // Fuzzy fallback : 1er mot significatif du nom BDPM. Couvre le cas où
+        // la table `medicaments` est moins granulaire (juste "Dafalgan") que
+        // l'entrée BDPM ("DAFALGAN 1G COMPRIME EFFERVESCENT").
+        const firstWord = cipRow.medicament_nom.trim().split(/\s+/)[0] || "";
+        if (firstWord.length >= 3) {
+          const { data: byPartial } = await supabase
             .from("medicaments")
             .select("id, nom_commercial, cip_code, molecule_id, atc_code")
-            .ilike("nom_commercial", `${cipRow.medicament_nom}%`)
+            .ilike("nom_commercial", `%${firstWord}%`)
             .order("nom_commercial", { ascending: true })
             .limit(10);
-          // Ne pas utiliser SQL LIKE "__%" ici : en SQL, "_" est un wildcard,
-          // donc cela exclut tous les noms de 2+ caractères et empêche de
-          // résoudre Doliprane/Nefopam/etc. depuis la douchette.
-          const cleanByName = (byName || []).find((m: any) => !String(m.nom_commercial || "").startsWith("__"));
-          if (cleanByName) byMeta = cleanByName;
+          for (const r of byPartial || []) {
+            if (
+              !String(r.nom_commercial || "").startsWith("__") &&
+              !candidates.some((c) => c.id === r.id)
+            ) {
+              candidates.push(r);
+            }
+          }
+        }
+
+        // Parmi les candidats, on préfère celui qui a déjà des PC curated.
+        // Évite de tomber sur "Dafalgan suppositoire" (alphabétiquement 1er)
+        // quand le row qui porte les pc_1/pc_2 est "Dafalgan 1g".
+        if (candidates.length > 0) {
+          const ids = candidates.map((c) => c.id).filter(Boolean);
+          if (ids.length > 0) {
+            const { data: curatedRows } = await supabase
+              .from("medicament_curated_pcs")
+              .select("medicament_id")
+              .in("medicament_id", ids);
+            const curatedIds = new Set((curatedRows || []).map((r: any) => r.medicament_id));
+            byMeta = candidates.find((c) => curatedIds.has(c.id)) || candidates[0];
+          } else {
+            byMeta = candidates[0];
+          }
         }
 
         if (byMeta) {
@@ -422,7 +471,7 @@ const WidgetApp = () => {
           // vérité), même si la table `medicaments` a un nom différent ou
           // corrompu ("Timoptol 0.5%" partout par exemple).
           med = { ...byMeta, nom_commercial: cipRow.medicament_nom } as any;
-          logger.log(`[SCAN] ${ts} ean=${code} match=bdpm name=${cipRow.medicament_nom} (meta from medicaments.id=${byMeta.id.slice(0,8)})`);
+          logger.log(`[SCAN] ${ts} ean=${code} match=bdpm name=${cipRow.medicament_nom} (meta from medicaments.id=${byMeta.id.slice(0,8)} chosen among ${candidates.length})`);
         } else {
           // BDPM connaît le médicament, mais on n'a pas de métadonnées internes.
           // On construit quand même un objet minimal pour l'affichage.
