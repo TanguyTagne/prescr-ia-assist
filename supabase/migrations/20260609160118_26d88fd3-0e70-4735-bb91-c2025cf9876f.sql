@@ -1,0 +1,1 @@
+CREATE POLICY "Admins can delete scan events" ON public.scan_events FOR DELETE USING (has_role(auth.uid(), 'admin'::app_role));
