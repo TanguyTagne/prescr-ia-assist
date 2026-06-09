@@ -126,6 +126,13 @@ const isDev = process.env.NODE_ENV !== "production";
 const devLog = (...args) => isDev && console.log(...args);
 const devWarn = (...args) => isDev && console.warn(...args);
 let mainWindow;
+// Set to true by ensureWindowAlive() when the window is being recreated as a
+// side-effect of an incoming scan. createWindow's ready-to-show handler reads
+// this flag to decide whether to .show() the freshly-built window. The flag is
+// cleared by attention:bring-to-front, which the renderer invokes ONLY when a
+// scan yielded curated PCs — so a closed window stays hidden for scans that
+// don't deserve the pharmacist's attention.
+let suppressShowOnReady = false;
 const APP_URL = "https://prescr-ia-assist.lovable.app";
 const LOCAL_PATH = path.join(__dirname, "web", "index.html");
 function createWindow() {
@@ -219,8 +226,13 @@ button{background:#111;color:#fff;border:0;padding:10px 18px;border-radius:8px;f
       }
     }
   );
-  // Show window when ready to avoid white flash
+  // Show window when ready to avoid white flash — unless the window was
+  // recreated to silently process a scan (see suppressShowOnReady).
   mainWindow.once("ready-to-show", () => {
+    if (suppressShowOnReady) {
+      devLog("[WINDOW] ready-to-show suppressed — waiting for renderer to confirm PCs before surfacing");
+      return;
+    }
     mainWindow.show();
   });
   // Open external links in the default browser
@@ -306,6 +318,9 @@ if (isAutolaunchRepairMode) {
       mainWindow.show();
       mainWindow.focus();
     } else {
+      // User explicitly re-launched the app — clear any scan-driven show-gate
+      // so the freshly-built window actually appears.
+      suppressShowOnReady = false;
       createWindow();
     }
   });
@@ -393,6 +408,8 @@ app.on("window-all-closed", () => {
 });
 app.on("activate", () => {
   if (BrowserWindow.getAllWindows().length === 0) {
+    // User clicked the dock icon — make sure the window actually shows.
+    suppressShowOnReady = false;
     createWindow();
   }
 });
@@ -454,6 +471,9 @@ ipcMain.handle("attention:flash", () => {
 ipcMain.handle("attention:bring-to-front", () => {
   if (!mainWindow) return false;
   try {
+    // Renderer confirmed the scan deserves attention — clear the show-gate
+    // (set by ensureWindowAlive when the window was recreated mid-scan).
+    suppressShowOnReady = false;
     if (mainWindow.isMinimized()) mainWindow.restore();
     mainWindow.show();
     // Force-foreground hack: temporarily pin always-on-top, then restore PiP state
@@ -1094,10 +1114,15 @@ function parseBarcodeToCip(raw) {
 }
 function ensureWindowAlive() {
   // If the user closed the widget, re-create it so scans are not lost.
+  // Mark the recreation as scan-driven so ready-to-show keeps it hidden until
+  // the renderer confirms via attention:bring-to-front that we actually have
+  // PCs worth surfacing.
   if (!mainWindow || mainWindow.isDestroyed()) {
     try {
+      suppressShowOnReady = true;
       createWindow();
     } catch (e) {
+      suppressShowOnReady = false;
       console.error("[ASCLION-SCAN] could not recreate window:", e);
     }
   }
@@ -1125,25 +1150,11 @@ function emitGlobalScan(code) {
   } else {
     send();
   }
-  // Pop the window in front of LGO WITHOUT stealing focus.
-  try {
-    if (mainWindow.isMinimized()) mainWindow.restore();
-    mainWindow.showInactive();
-    mainWindow.moveTop();
-    mainWindow.setAlwaysOnTop(true, "floating");
-    mainWindow.flashFrame(true);
-    setTimeout(() => {
-      try {
-        if (!mainWindow) return;
-        mainWindow.flashFrame(false);
-        mainWindow.setAlwaysOnTop(pipState.alwaysOnTop, "floating");
-      } catch {
-        /* noop */
-      }
-    }, 1500);
-  } catch (e) {
-    devWarn("[SCAN] pop-to-front failed:", e);
-  }
+  // NOTE: pas de pop-to-front ici. C'est le renderer qui décide via
+  // notifyAnalysisDone() → attention:bring-to-front, et uniquement quand
+  // un PC curated a été trouvé pour le médicament scanné. Sans cette
+  // condition, chaque CIP inconnu ou chaque produit sans PC volerait
+  // l'attention du pharmacien pour rien.
 }
 function startGlobalBarcodeListener() {
   if (!uIOhook) {
