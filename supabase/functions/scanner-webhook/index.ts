@@ -207,60 +207,28 @@ serve(async (req) => {
       let suggestions: unknown[] = [];
 
       if (medIds.length > 0) {
-        const { data: medPathos } = await supabaseAdmin
-          .from("medicament_pathologie")
-          .select("pathologie_id, pathologies(id, nom_pathologie)")
+        // ── Source UNIQUE des PCs (mode strict curated-only) ─────────────
+        // Les PCs proviennent EXCLUSIVEMENT de medicament_curated_pcs
+        // (CSV "asclion medicaments finals"). Interdit de déduire depuis
+        // la pathologie / ATC / protocole / produits_complementaires.
+        const { data: curated } = await supabaseAdmin
+          .from("medicament_curated_pcs")
+          .select("medicament_id, pc_1, pc_2")
           .in("medicament_id", medIds);
 
-        const pathoIds = [...new Set((medPathos || []).map((mp: any) => mp.pathologie_id))];
-
-        if (pathoIds.length > 0) {
-          const { data: protos } = await supabaseAdmin
-            .from("protocole_pathologie")
-            .select(`
-              pathologie_id,
-              pathologies(nom_pathologie),
-              produit_complementaire_1_id, produit_complementaire_2_id, produit_complementaire_3_id,
-              justification_1, justification_2, justification_3,
-              conseil_1_id, conseil_2_id,
-              conseils_1:conseils_associes!protocole_pathologie_conseil_1_id_fkey(conseil),
-              conseils_2:conseils_associes!protocole_pathologie_conseil_2_id_fkey(conseil)
-            `)
-            .in("pathologie_id", pathoIds)
-            .eq("actif", true);
-
-          const prodIds = (protos || []).flatMap((p: any) =>
-            [p.produit_complementaire_1_id, p.produit_complementaire_2_id, p.produit_complementaire_3_id]
-              .filter(Boolean),
-          );
-
-          let products: Record<string, any> = {};
-          if (prodIds.length > 0) {
-            const { data: prods } = await supabaseAdmin
-              .from("produits_complementaires")
-              .select("id, produit, categorie, description, type_produit")
-              .in("id", prodIds);
-            (prods || []).forEach((p: any) => { products[p.id] = p; });
-          }
-
-          suggestions = (protos || []).map((proto: any) => ({
-            pathologie: (proto.pathologies as any)?.nom_pathologie,
-            conseil_1:  (proto.conseils_1  as any)?.conseil,
-            conseil_2:  (proto.conseils_2  as any)?.conseil,
-            produits: [
-              proto.produit_complementaire_1_id
-                ? { ...products[proto.produit_complementaire_1_id], justification: proto.justification_1 }
-                : null,
-              proto.produit_complementaire_2_id
-                ? { ...products[proto.produit_complementaire_2_id], justification: proto.justification_2 }
-                : null,
-              proto.produit_complementaire_3_id
-                ? { ...products[proto.produit_complementaire_3_id], justification: proto.justification_3 }
-                : null,
-            ].filter(Boolean),
-          }));
-        }
+        suggestions = (curated || []).map((c: any) => {
+          const med = (meds || []).find((m: any) => m.id === c.medicament_id);
+          const produits = [c.pc_1, c.pc_2]
+            .filter((p: any) => p && String(p).trim().length > 0)
+            .map((p: string) => ({ produit: p, categorie: "", type_produit: "curated" }));
+          return {
+            medicament: med?.nom_commercial,
+            medicament_id: c.medicament_id,
+            produits,
+          };
+        }).filter((s: any) => s.produits.length > 0);
       }
+
 
       const { data: scan } = await supabaseAdmin
         .from("scan_queue")
