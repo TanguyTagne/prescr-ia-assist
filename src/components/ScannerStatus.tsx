@@ -6,7 +6,7 @@ import { SCANNER } from "@/constants/scanner";
 import {
   X, Wifi, WifiOff, ShoppingCart, FileText, Package,
   Settings, Check, Key,
-  FolderSearch, Loader2, Bot,
+  FolderSearch, Loader2, Bot, Search,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -85,6 +85,16 @@ interface RobotConfigForm {
   useNpcap: boolean;
   httpPort: number;
 }
+interface PortCandidate {
+  process: string;
+  pid: number;
+  remoteAddress: string;
+  remotePort: number;
+  localPort: number;
+  isLgo: boolean;
+  isKnownRobotPort: boolean;
+  score: number;
+}
 
 const ROBOT_BRAND_LABELS: Record<RobotBrand, string> = {
   none: "Aucun",
@@ -92,6 +102,27 @@ const ROBOT_BRAND_LABELS: Record<RobotBrand, string> = {
   pharmathek: "Pharmathek",
   generic: "Générique (regex)",
   diagnostic: "Diagnostic (capture)",
+};
+
+// Default TCP port suggested for each brand. We only auto-fill the port field
+// when the user picks a brand if the current value still matches the previous
+// brand's default (so manual edits are preserved).
+const ROBOT_BRAND_DEFAULT_PORT: Record<RobotBrand, number> = {
+  none: 0,
+  rowa: 9876,
+  pharmathek: 6100,
+  generic: 9876,
+  diagnostic: 9876,
+};
+
+// Hint shown below the port input. Covers brands users may discover via the
+// "Rechercher" button even though Asclion only ships native adapters for two.
+const TYPICAL_PORT_HINTS: Record<RobotBrand, string> = {
+  none: "",
+  rowa: "9876 (BD Rowa standard)",
+  pharmathek: "6100 ou 6200 selon installation",
+  generic: "Rowa 9876 · Pharmathek 6100 · Knapp 5000/12000 · Swisslog 8080/9100 · Tosho 4444",
+  diagnostic: "Tester 9876 puis 6100 / 5000 / 8080 / 4444 si rien ne s'écrit dans robot_capture.log",
 };
 
 interface ScannerStatusProps {
@@ -122,6 +153,9 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
   const [robotSaving, setRobotSaving] = useState(false);
   const [robotLoaded, setRobotLoaded] = useState(false);
   const [robotStatus, setRobotStatus] = useState<{ listening?: boolean; mode?: string; lastEan?: string | null } | null>(null);
+  const [discovering, setDiscovering] = useState(false);
+  const [discoveryResults, setDiscoveryResults] = useState<PortCandidate[] | null>(null);
+  const [discoveryNote, setDiscoveryNote] = useState<string | null>(null);
 
   const isFolderApiSupported = typeof window !== "undefined" && "showDirectoryPicker" in window;
   const isDesktopRuntime = typeof window !== "undefined" && !!(window as any).electronAPI?.isDesktop;
@@ -237,6 +271,63 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
     } finally {
       setRobotLoaded(true);
     }
+  };
+
+  const handleBrandChange = (brand: RobotBrand) => {
+    setRobotForm((f) => {
+      // Auto-fill the port field only when it still holds the previous brand's
+      // default — preserve any value the pharmacist typed manually.
+      const previousDefault = ROBOT_BRAND_DEFAULT_PORT[f.brand];
+      const shouldAdoptDefault = !f.port || f.port === previousDefault;
+      const nextDefault = ROBOT_BRAND_DEFAULT_PORT[brand];
+      return {
+        ...f,
+        brand,
+        port: shouldAdoptDefault && nextDefault > 0 ? nextDefault : f.port,
+      };
+    });
+  };
+
+  const handleDiscoverPort = async () => {
+    if (!robotApi?.discoverPort) {
+      toast.error("Recherche disponible uniquement dans l'application desktop Asclion.");
+      return;
+    }
+    setDiscovering(true);
+    setDiscoveryResults(null);
+    setDiscoveryNote(null);
+    try {
+      const res = await robotApi.discoverPort();
+      if (!res?.ok) {
+        toast.error("Recherche impossible", { description: res?.error || "Erreur inconnue" });
+        return;
+      }
+      setDiscoveryResults((res.candidates as PortCandidate[]) || []);
+      if (res.note) setDiscoveryNote(res.note);
+      if (!res.candidates || res.candidates.length === 0) {
+        toast.info("Aucune connexion détectée", {
+          description: "Lance une délivrance de test au LGO puis relance la recherche.",
+        });
+      } else {
+        const top = res.candidates[0] as PortCandidate;
+        if (top.isLgo) {
+          toast.success("LGO détecté", {
+            description: `${top.process} → ${top.remoteAddress}:${top.remotePort}`,
+          });
+        }
+      }
+    } catch (err: any) {
+      toast.error("Erreur", { description: String(err?.message || err).slice(0, 180) });
+    } finally {
+      setDiscovering(false);
+    }
+  };
+
+  const handlePickCandidate = (c: PortCandidate) => {
+    setRobotForm((f) => ({ ...f, port: c.remotePort }));
+    toast.success(`Port ${c.remotePort} sélectionné`, {
+      description: `${c.process} → ${c.remoteAddress}`,
+    });
   };
 
   const handleSaveRobot = async () => {
@@ -438,7 +529,7 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
                       <Label className="text-[10px] text-muted-foreground">Marque</Label>
                       <select
                         value={robotForm.brand}
-                        onChange={(e) => setRobotForm((f) => ({ ...f, brand: e.target.value as RobotBrand }))}
+                        onChange={(e) => handleBrandChange(e.target.value as RobotBrand)}
                         className="w-full h-8 text-xs rounded-md border border-input bg-background px-2"
                         aria-label="Marque du robot automate"
                       >
@@ -449,16 +540,94 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
                     </div>
                     <div className="space-y-1">
                       <Label className="text-[10px] text-muted-foreground">Port TCP du robot</Label>
-                      <Input
-                        type="number"
-                        min={1}
-                        max={65535}
-                        value={robotForm.port}
-                        onChange={(e) => setRobotForm((f) => ({ ...f, port: Number(e.target.value) || 0 }))}
-                        className="h-8 text-xs"
-                      />
+                      <div className="flex gap-1">
+                        <Input
+                          type="number"
+                          min={1}
+                          max={65535}
+                          value={robotForm.port}
+                          onChange={(e) => setRobotForm((f) => ({ ...f, port: Number(e.target.value) || 0 }))}
+                          className="h-8 text-xs"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-8 px-2 shrink-0 gap-1 text-[11px]"
+                          onClick={handleDiscoverPort}
+                          disabled={discovering || !robotApi}
+                          aria-label="Rechercher automatiquement le port du robot via les connexions TCP actives"
+                        >
+                          {discovering ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Search className="h-3.5 w-3.5" />}
+                          Rechercher
+                        </Button>
+                      </div>
                     </div>
                   </div>
+
+                  {TYPICAL_PORT_HINTS[robotForm.brand] && (
+                    <p className="text-[10px] text-muted-foreground -mt-1">
+                      Port typique : {TYPICAL_PORT_HINTS[robotForm.brand]}
+                    </p>
+                  )}
+
+                  {discoveryResults && (
+                    <div className="space-y-1 rounded-md border border-border bg-background/60 p-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-semibold">
+                          {discoveryResults.length === 0
+                            ? "Aucune connexion détectée"
+                            : `${discoveryResults.length} connexion${discoveryResults.length > 1 ? "s" : ""} TCP active${discoveryResults.length > 1 ? "s" : ""}`}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => { setDiscoveryResults(null); setDiscoveryNote(null); }}
+                          className="text-[10px] text-muted-foreground hover:text-foreground"
+                          aria-label="Masquer les résultats de recherche"
+                        >
+                          masquer
+                        </button>
+                      </div>
+                      {discoveryNote && (
+                        <p className="text-[10px] text-muted-foreground italic">{discoveryNote}</p>
+                      )}
+                      {discoveryResults.length > 0 && (
+                        <p className="text-[10px] text-muted-foreground">
+                          Clique sur la ligne qui correspond au LGO de la pharmacie.
+                        </p>
+                      )}
+                      <div className="space-y-1 max-h-40 overflow-y-auto">
+                        {discoveryResults.map((c, i) => (
+                          <button
+                            key={`${c.pid}-${c.localPort}-${i}`}
+                            type="button"
+                            onClick={() => handlePickCandidate(c)}
+                            className={`w-full text-left rounded border px-2 py-1.5 text-[11px] transition-colors ${
+                              c.isLgo
+                                ? "border-primary/40 bg-primary/10 hover:bg-primary/20"
+                                : "border-border hover:bg-muted"
+                            }`}
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="font-mono font-medium truncate">
+                                {c.process}
+                              </span>
+                              <span className="font-mono text-muted-foreground shrink-0">
+                                :{c.remotePort}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                              <span className="font-mono truncate">→ {c.remoteAddress}</span>
+                              <span className="shrink-0 flex gap-1">
+                                {c.isLgo && <span className="text-primary">LGO</span>}
+                                {c.isKnownRobotPort && <span>port-robot</span>}
+                              </span>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {robotForm.brand === "generic" && (
                     <div className="space-y-1">
