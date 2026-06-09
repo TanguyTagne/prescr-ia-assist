@@ -408,11 +408,13 @@ const WidgetApp = () => {
             .from("medicaments")
             .select("id, nom_commercial, cip_code, molecule_id, atc_code")
             .ilike("nom_commercial", `${cipRow.medicament_nom}%`)
-            .not("nom_commercial", "like", "__%") // exclut les orphelins flaggés
             .order("nom_commercial", { ascending: true })
-            .limit(1)
-            .maybeSingle();
-          if (byName) byMeta = byName;
+            .limit(10);
+          // Ne pas utiliser SQL LIKE "__%" ici : en SQL, "_" est un wildcard,
+          // donc cela exclut tous les noms de 2+ caractères et empêche de
+          // résoudre Doliprane/Nefopam/etc. depuis la douchette.
+          const cleanByName = (byName || []).find((m: any) => !String(m.nom_commercial || "").startsWith("__"));
+          if (cleanByName) byMeta = cleanByName;
         }
 
         if (byMeta) {
