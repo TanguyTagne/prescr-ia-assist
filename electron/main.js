@@ -235,13 +235,21 @@ button{background:#111;color:#fff;border:0;padding:10px 18px;border-radius:8px;f
     }
     mainWindow.show();
   });
-  // Open external links in the default browser
+  // Open external links in the default browser — but only http/https/mailto.
+  // Without a scheme whitelist, a compromised origin could call window.open
+  // with "javascript:", "file://", "ms-msdt:" or custom protocol handlers
+  // and pivot to RCE via shell.openExternal. Hard-deny everything else.
+  const SAFE_SCHEMES = new Set(["http:", "https:", "mailto:"]);
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    if (!url.startsWith(APP_URL)) {
-      shell.openExternal(url);
+    if (url.startsWith(APP_URL)) return { action: "allow" };
+    let scheme = "";
+    try { scheme = new URL(url).protocol; } catch { /* malformed URL */ }
+    if (!SAFE_SCHEMES.has(scheme)) {
+      devWarn(`[OPEN-EXTERNAL] blocked unsafe scheme: ${scheme || "(unknown)"} url=${url.slice(0, 120)}`);
       return { action: "deny" };
     }
-    return { action: "allow" };
+    shell.openExternal(url);
+    return { action: "deny" };
   });
   mainWindow.on("closed", () => {
     mainWindow = null;
@@ -2499,6 +2507,10 @@ function bootRobotSubsystem() {
     return;
   }
   robotConfig.setConfigPath(path.join(app.getPath("userData"), "asclion-robot-config.json"));
+  // Generate the shared secret on first launch (idempotent: returns existing
+  // token on subsequent calls). The pharmacist can read it from Paramètres to
+  // copy it across PCs in the officine.
+  const sharedToken = robotConfig.ensureSecret();
   const cfg = robotConfig.get();
 
   robotListener.init({
@@ -2509,34 +2521,117 @@ function bootRobotSubsystem() {
     // handles dedup, window pop, IPC to renderer, etc.
     onTrigger: (ean) => emitGlobalScan(ean),
   });
-  robotListener.start(cfg.httpPort).then((r) => {
-    if (!r.ok) devWarn(`[HTTP] listener failed to start: ${r.error}`);
-  });
+  robotListener
+    .start({
+      port: cfg.httpPort,
+      // bindHost defaults to 127.0.0.1; serveLan = true rebinds to 0.0.0.0
+      // and enforces the shared token on every POST /trigger.
+      serveLan: !!cfg.serveLan,
+      token: sharedToken,
+    })
+    .then((r) => {
+      if (!r.ok) devWarn(`[HTTP] listener failed to start: ${r.error}`);
+    });
 
   robotSniffer.init({
     log: devLog,
     warn: devWarn,
     onLocalTrigger: (ean) => emitGlobalScan(ean),
     userDataDir: app.getPath("userData"),
+    // Token sent in the X-Asclion-Token header of every cross-PC trigger.
+    httpToken: sharedToken,
   });
   robotSniffer.start(cfg);
 }
 
 ipcMain.handle("robot:get-config", () => {
   if (!robotConfig) return { error: robotSubsystemError || "subsystem missing" };
-  return robotConfig.get();
+  return redactConfigForRenderer(robotConfig.get());
 });
 
 ipcMain.handle("robot:set-config", (_e, patch) => {
   if (!robotConfig) return { ok: false, error: robotSubsystemError || "subsystem missing" };
+  // Block client-side attempts to rewrite the shared secret. The token is
+  // generated server-side and surfaced via robot:get-token only — exposing
+  // a setter would let a compromised renderer downgrade the token to "" and
+  // open the LAN listener to anyone.
+  if (patch && Object.prototype.hasOwnProperty.call(patch, "httpToken")) delete patch.httpToken;
   try {
     const next = robotConfig.save(patch || {});
-    // Apply live: restart listener if the port changed, restart sniffer always.
-    if (robotListener && patch && patch.httpPort && patch.httpPort !== robotListener.getStatus().port) {
-      robotListener.start(next.httpPort);
+    const token = robotConfig.ensureSecret();
+    const listenerStatus = robotListener ? robotListener.getStatus() : null;
+    // Restart the listener if: port changed, LAN-vs-localhost bind toggled,
+    // or the listener wasn't running yet.
+    const portChanged = patch && patch.httpPort && patch.httpPort !== (listenerStatus && listenerStatus.port);
+    const bindChanged = patch && typeof patch.serveLan === "boolean" && !!patch.serveLan !== !!(listenerStatus && listenerStatus.serveLan);
+    if (robotListener && (portChanged || bindChanged || !(listenerStatus && listenerStatus.listening))) {
+      robotListener.start({ port: next.httpPort, serveLan: !!next.serveLan, token });
     }
     if (robotSniffer) robotSniffer.start(next);
-    return { ok: true, config: next };
+    return { ok: true, config: redactConfigForRenderer(next) };
+  } catch (e) {
+    return { ok: false, error: String(e && e.message ? e.message : e) };
+  }
+});
+
+// Hide the shared secret from the renderer. The token never crosses the
+// preload boundary except via the explicit `robot:get-token` handler so an
+// XSS on the lovable origin can't simply read it from a generic getConfig.
+function redactConfigForRenderer(cfg) {
+  if (!cfg) return cfg;
+  const { httpToken: _ignored, ...rest } = cfg;
+  return { ...rest, httpToken: null, httpTokenSet: !!(cfg.httpToken && cfg.httpToken.length >= 24) };
+}
+
+ipcMain.handle("robot:get-token", () => {
+  // Explicit endpoint: the renderer surfaces the token in Paramètres so the
+  // pharmacist can copy it to other PCs. Distinct from get-config to make
+  // any leak via that path obvious in audits.
+  return robotConfig ? robotConfig.ensureSecret() : null;
+});
+
+// Replace the shared secret with one supplied by the pharmacist (paste from
+// the robot-server PC's clipboard). Strict validation — anything shorter
+// than 24 chars or carrying weird bytes is rejected to keep brute-force out
+// of reach and to detect copy/paste mishaps early.
+ipcMain.handle("robot:set-token", (_e, token) => {
+  if (!robotConfig) return { ok: false, error: robotSubsystemError || "subsystem missing" };
+  const t = String(token || "").trim();
+  if (t.length < 24 || t.length > 128 || !/^[A-Za-z0-9_-]+$/.test(t)) {
+    return { ok: false, error: "Jeton invalide (24–128 caractères alphanumériques, _ ou -)." };
+  }
+  try {
+    const next = robotConfig.save({ httpToken: t });
+    // Restart the listener so the new token is enforced immediately.
+    if (robotListener) {
+      robotListener.start({ port: next.httpPort, serveLan: !!next.serveLan, token: t });
+    }
+    if (robotSniffer) {
+      robotSniffer.init({ httpToken: t });
+      robotSniffer.start(next);
+    }
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: String(e && e.message ? e.message : e) };
+  }
+});
+
+// Generate a fresh token. The pharmacist then has to re-distribute it to the
+// other PCs in the officine — no automatic propagation, by design (it would
+// require a discovery mechanism we don't want to maintain).
+ipcMain.handle("robot:regenerate-token", () => {
+  if (!robotConfig) return { ok: false, error: robotSubsystemError || "subsystem missing" };
+  try {
+    // Force regeneration by clearing then ensuring.
+    const cleared = robotConfig.save({ httpToken: "" });
+    const fresh = robotConfig.ensureSecret();
+    const next = robotConfig.get();
+    if (robotListener) robotListener.start({ port: next.httpPort, serveLan: !!next.serveLan, token: fresh });
+    if (robotSniffer) {
+      robotSniffer.init({ httpToken: fresh });
+      robotSniffer.start(next);
+    }
+    return { ok: true, token: fresh };
   } catch (e) {
     return { ok: false, error: String(e && e.message ? e.message : e) };
   }
