@@ -497,7 +497,9 @@ const WidgetApp = () => {
         }
 
         prependMedicament({ nom: med.nom_commercial, classe: "", recommendations, cip_scanned: code });
-        notifyAnalysisDone({ count: 1 });
+        // Pop Asclion devant l'LGO UNIQUEMENT si on a des PCs à proposer.
+        // Sinon : analyse silencieuse (pas de toast/bip/flash/foreground).
+        if (recommendations.length > 0) notifyAnalysisDone({ count: 1 });
         void logHidScan(code, { nom: med.nom_commercial, recommendations });
         lastAnalysisAtRef.current = Date.now(); // marque session active
         return;
