@@ -289,6 +289,17 @@ const MedicamentsManquantsTab = () => {
             )}
             Récupérer CIPs manquants
           </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={cleanseMissing}
+            disabled={cleansing || rows.length === 0}
+            className="gap-2"
+            title="Supprime tous les scans 'non reconnus' enregistrés"
+          >
+            {cleansing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+            Vider la base
+          </Button>
         </div>
       </div>
 
