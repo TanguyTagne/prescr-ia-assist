@@ -89,6 +89,7 @@ const MedicamentsManquantsTab = () => {
   const [recoverResult, setRecoverResult] = useState<{ sans_cip_total?: number; mappes?: number; mis_a_jour?: number } | null>(null);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<{ inserted?: number; valid?: number; purged?: number } | null>(null);
+  const [cleansing, setCleansing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleImportBdpm = useCallback(async (file: File) => {
