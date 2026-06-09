@@ -67,8 +67,12 @@ n'est à éditer à la main.
 --------------------------------
 
   - Rowa / BD Rowa      port défaut 9876  -- XML <EAN>...</EAN>
-  - Pharmathek          port à définir    -- XML <ean>...</ean>
+  - Pharmathek          port défaut 6100  -- XML <ean>...</ean>
   - Générique           port à définir    -- regex utilisateur
+
+  Quand on change de marque dans Paramètres, le port par défaut se
+  pré-remplit automatiquement. Toute valeur saisie manuellement avant le
+  changement de marque est conservée.
 
   Pour les autres robots (Knapp, Swisslog, Tosho…), utiliser le mode
   "Générique" et configurer le pattern regex correspondant. Le premier
@@ -77,6 +81,40 @@ n'est à éditer à la main.
       EAN>(\d{8,14})<
       barcode="(\d{8,14})"
       "code":"(\d{8,14})"
+
+  Ports typiques par marque :
+
+      Rowa / BD Rowa    9876
+      Pharmathek        6100, 6200
+      Knapp             5000, 12000
+      Swisslog          8080, 9100
+      Tosho             4444
+
+
+4bis. RECHERCHE AUTOMATIQUE DU PORT
+------------------------------------
+
+  Si le port n'est pas connu, cliquer sur le bouton "Rechercher" à côté
+  du champ Port TCP. Asclion exécute Get-NetTCPConnection en arrière-plan
+  et liste toutes les connexions TCP établies depuis le PC.
+
+  Les lignes sont triées par pertinence :
+
+    1. Process reconnu comme LGO (winpharma, lgpi, pharmagest, leo,
+       smartrx, leopharm)  -- surligné en couleur primaire avec le tag "LGO"
+    2. Port distant qui match un port robot connu (9876, 6100, 5000, …)
+       -- tag "port-robot"
+    3. Tout le reste
+
+  Cliquer sur la ligne qui correspond à la connexion LGO → robot
+  remplit automatiquement le champ Port TCP. Pour avoir un résultat
+  utile :
+
+    a. La connexion doit être établie : lancer une délivrance de test
+       au LGO juste avant de cliquer "Rechercher".
+    b. Si la liste est vide, c'est que le LGO n'avait pas de connexion
+       active à ce moment-là. Refaire un scan + cliquer "Rechercher"
+       dans les secondes qui suivent.
 
 
 5. PROCÉDURE DIAGNOSTIQUE — MARQUE INCONNUE
