@@ -195,11 +195,11 @@ const PharmacyDetailDialog = ({ pharmacyId, pharmacyName, open, onOpenChange }: 
                     <thead className="bg-secondary">
                       <tr>
                         <th className="text-left px-2 py-1.5">Date</th>
-                        <th className="text-left px-2 py-1.5">Type</th>
-                        <th className="text-left px-2 py-1.5">Méthode</th>
-                        <th className="text-left px-2 py-1.5">Produit / Médicaments</th>
+                        <th className="text-left px-2 py-1.5">EAN</th>
+                        <th className="text-left px-2 py-1.5">Produit</th>
+                        <th className="text-right px-2 py-1.5">Sugg.</th>
                         <th className="text-left px-2 py-1.5">Statut</th>
-                        <th className="text-left px-2 py-1.5">Device</th>
+                        <th className="text-left px-2 py-1.5">Poste</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -208,18 +208,15 @@ const PharmacyDetailDialog = ({ pharmacyId, pharmacyName, open, onOpenChange }: 
                           <td className="px-2 py-1.5 text-muted-foreground whitespace-nowrap">
                             {new Date(s.created_at).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
                           </td>
-                          <td className="px-2 py-1.5">
-                            <Badge variant="outline" className="text-[10px]">{s.scan_type}</Badge>
-                          </td>
-                          <td className="px-2 py-1.5">{sourceBadge(s.source)}</td>
-                          <td className="px-2 py-1.5 font-medium max-w-[260px] truncate" title={extractMedName(s)}>{extractMedName(s)}</td>
-                          <td className="px-2 py-1.5">
-                            <Badge variant={s.status === "completed" ? "secondary" : s.status === "error" ? "destructive" : "outline"} className="text-[10px]">{s.status}</Badge>
-                          </td>
-                          <td className="px-2 py-1.5 text-muted-foreground font-mono text-[10px]">{s.device_id || "—"}</td>
+                          <td className="px-2 py-1.5 font-mono text-[10px]">{s.ean_code}</td>
+                          <td className="px-2 py-1.5 font-medium max-w-[260px] truncate" title={s.product_name || ""}>{s.product_name || "—"}</td>
+                          <td className="px-2 py-1.5 text-right">{s.suggestions_count ?? 0}</td>
+                          <td className="px-2 py-1.5">{statusBadge(s.status)}</td>
+                          <td className="px-2 py-1.5 text-muted-foreground font-mono text-[10px]">{s.register_id || "—"}</td>
                         </tr>
                       ))}
                     </tbody>
+
                   </table>
                 </div>
               )}
