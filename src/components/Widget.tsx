@@ -466,89 +466,43 @@ const WidgetApp = () => {
       }
 
       if (med) {
-        const { data: pathLinks } = await supabase
-          .from("medicament_pathologie")
-          .select("pathologie_id, score_pertinence, pathologies(nom_pathologie)")
-          .eq("medicament_id", med.id)
-          .order("score_pertinence", { ascending: false });
-
-        // ── Règle stricte de spécificité ──────────────────────────────────
-        // Principe : on ne SUPPOSE JAMAIS une pathologie pour le client.
-        //
-        //   • 1 seule pathologie liée au médicament  → cette pathologie EST
-        //     l'indication exclusive → on peut être PRÉCIS dans les PCs.
-        //
-        //   • 2+ pathologies liées (ex: Ibuprofène = douleur ET fièvre ET
-        //     inflammation ET dysménorrhée ET…) → IMPOSSIBLE de deviner
-        //     pour quel motif le patient achète le médicament → on ne touche
-        //     PAS aux PCs par pathologie. On bascule sur les PCs liés
-        //     directement au médicament (génériques mais pertinents).
-        //
-        // Ça évite que l'Ibuprofène propose des PCs allergies juste parce
-        // que l'allergie est dans ses pathologies théoriques.
-        const nbPathos = (pathLinks || []).length;
-        const specificity: "single_indication" | "multi_indication" =
-          nbPathos === 1 ? "single_indication"  // pathologie unique → précis
-                         : "multi_indication";   // 0 ou 2+ → PCs liés au médicament
-
         let recommendations: AnalysisResult["medicaments"][number]["recommendations"] = [];
-        let produits: any[] | null = null;
 
-        if (specificity === "multi_indication") {
-          // Médicament à indications multiples (ou aucune connue) → on cherche
-          // EXCLUSIVEMENT des PCs liés directement au médicament (medicament_id).
-          // Ces PCs sont par construction valables quelle que soit la motivation
-          // d'achat du patient (protection gastrique pour AINS, magnésium pour
-          // antalgique, brosse souple pour anticoagulant, etc.).
-          const { data: directPcs } = await supabase
-            .from("produits_complementaires")
-            .select("produit, categorie, description, phrase_conseil, medicaments(cip_code)")
-            .eq("medicament_id", med.id)
-            .order("priorite", { ascending: false })
-            .limit(2);
-          produits = directPcs || [];
-          if (produits.length === 0) {
-            logger.log(`[SCAN] ${ts} med=${med.nom_commercial} (${nbPathos} pathologies) sans PC direct — aucune suggestion plutôt qu'une supposition risquée`);
-          }
-        } else {
-          // single_indication : une pathologie unique, c'est l'usage exclusif
-          // → on peut chercher des PCs spécifiques à cette pathologie.
-          const pathId = (pathLinks || [])[0].pathologie_id;
-          const { data } = await supabase
-            .from("produits_complementaires")
-            .select("produit, categorie, description, phrase_conseil, medicaments(cip_code)")
-            .eq("pathologie_id", pathId)
-            .order("priorite", { ascending: false })
-            .limit(2);
-          produits = data;
-        }
-        if (produits && produits.length > 0) {
-          recommendations = (produits as any[]).map((p) => ({
-            produit: p.produit,
-            categorie: p.categorie || "",
-            description: p.description || undefined,
-            // Filtre filet de sécurité : si la phrase parle d'un autre médicament,
-            // on la vide → l'UI affichera le PC sans phrase trompeuse.
-            phrase_conseil: phraseIsForWrongMed(p.phrase_conseil, med) ? undefined : (p.phrase_conseil || undefined),
+        // ── Source UNIQUE des PCs (mode strict curated-only) ──────────────
+        // Les PCs proviennent EXCLUSIVEMENT de medicament_curated_pcs
+        // (CSV "asclion medicaments finals"). Interdit de déduire depuis
+        // la pathologie / ATC / produits_complementaires.
+        const { data: curated } = await supabase
+          .from("medicament_curated_pcs")
+          .select("pc_1, pc_2")
+          .eq("medicament_id", med.id)
+          .maybeSingle();
+
+        const curatedPcs: string[] = [];
+        if (curated?.pc_1) curatedPcs.push(curated.pc_1);
+        if (curated?.pc_2) curatedPcs.push(curated.pc_2);
+
+        if (curatedPcs.length > 0) {
+          recommendations = curatedPcs.map((produit) => ({
+            produit,
+            categorie: "",
             priorite: 90,
           }));
-          // Register CIP codes of suggested products so they are skipped if scanned
-          const newNames: string[] = [];
-          for (const p of produits as any[]) {
-            const cip = p.medicaments?.cip_code;
-            if (cip) blockedCipsRef.current.add(cip);
-            newNames.push(p.produit);
-          }
+          const newNames = curatedPcs.slice();
           if (newNames.length > 0) {
             setBlockedProducts((prev) => [...new Set([...prev, ...newNames])]);
           }
+        } else {
+          logger.log(`[SCAN] ${ts} med=${med.nom_commercial} aucun PC curated — pas de suggestion`);
         }
+
         prependMedicament({ nom: med.nom_commercial, classe: "", recommendations, cip_scanned: code });
         notifyAnalysisDone({ count: 1 });
         void logHidScan(code, { nom: med.nom_commercial, recommendations });
         lastAnalysisAtRef.current = Date.now(); // marque session active
         return;
       }
+
 
       const mock = lookupEanMock(code);
       if (mock) {
