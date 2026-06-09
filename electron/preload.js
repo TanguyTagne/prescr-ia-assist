@@ -75,6 +75,17 @@ contextBridge.exposeInMainWorld("electronAPI", {
     // shortcut. Returns { ok, candidates: [{ process, remoteAddress, remotePort,
     // isLgo, isKnownRobotPort, score }], note? }.
     discoverPort: () => ipcRenderer.invoke("robot:discover-port"),
+    // Shared secret used to authenticate cross-PC /trigger calls. Surfaced in
+    // Paramètres so the pharmacist can copy it to other Asclion installs in
+    // the same officine. Distinct from getConfig so this exposure is
+    // explicit and easy to audit.
+    getToken: () => ipcRenderer.invoke("robot:get-token"),
+    // Paste a token received from the robot-server PC. Validates length +
+    // charset before persisting and restarting the listener.
+    setToken: (token) => ipcRenderer.invoke("robot:set-token", token),
+    // Generate a fresh token. The pharmacist then re-copies it to all other
+    // PCs in the officine.
+    regenerateToken: () => ipcRenderer.invoke("robot:regenerate-token"),
   },
 
   // Manual update trigger — surfaced in Paramètres
