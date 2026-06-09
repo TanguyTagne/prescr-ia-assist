@@ -250,7 +250,7 @@ const MedicamentsManquantsTab = () => {
             variant="outline"
             size="sm"
             onClick={exportCsv}
-            disabled={rows.length === 0}
+            disabled={filteredRows.length === 0}
             className="gap-2"
           >
             <Download className="h-3.5 w-3.5" />
