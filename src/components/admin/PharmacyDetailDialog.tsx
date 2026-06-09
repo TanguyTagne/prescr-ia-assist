@@ -24,12 +24,11 @@ interface KPI {
 interface ScanRow {
   id: string;
   created_at: string;
-  scan_type: string;
-  source: string;
+  ean_code: string;
   status: string;
-  device_id: string | null;
-  input_data: any;
-  result: any;
+  product_name: string | null;
+  suggestions_count: number | null;
+  register_id: string | null;
 }
 
 interface AcceptedRow {
@@ -51,44 +50,18 @@ interface AnalysisRow {
   has_major_interaction: boolean;
 }
 
-const SOURCE_META: Record<string, { label: string; icon: any; cls: string }> = {
-  barcode:  { label: "Pistolet scanner", icon: ScanLine, cls: "bg-emerald-100 text-emerald-700" },
-  scanner:  { label: "Pistolet scanner", icon: ScanLine, cls: "bg-emerald-100 text-emerald-700" },
-  hid:      { label: "Pistolet scanner (HID)", icon: ScanLine, cls: "bg-emerald-100 text-emerald-700" },
-  manual:   { label: "Manuel", icon: Keyboard, cls: "bg-blue-100 text-blue-700" },
-  keyboard: { label: "Manuel", icon: Keyboard, cls: "bg-blue-100 text-blue-700" },
-  photo:    { label: "Photo", icon: Camera, cls: "bg-purple-100 text-purple-700" },
-  image:    { label: "Photo", icon: Camera, cls: "bg-purple-100 text-purple-700" },
-  upload:   { label: "Photo / upload", icon: Camera, cls: "bg-purple-100 text-purple-700" },
-  pdf:      { label: "PDF", icon: Camera, cls: "bg-purple-100 text-purple-700" },
-  api:      { label: "API", icon: Globe, cls: "bg-slate-100 text-slate-700" },
+const statusBadge = (status: string) => {
+  const map: Record<string, { label: string; cls: string }> = {
+    success:     { label: "OK",           cls: "bg-emerald-100 text-emerald-700" },
+    no_match:    { label: "Non référencé", cls: "bg-amber-100 text-amber-700"   },
+    no_pharmacy: { label: "Sans pharma",   cls: "bg-slate-100 text-slate-700"   },
+    error:       { label: "Erreur",        cls: "bg-red-100 text-red-700"       },
+    anti_loop:   { label: "Anti-loop",     cls: "bg-blue-100 text-blue-700"     },
+  };
+  const m = map[status] || { label: status, cls: "bg-slate-100 text-slate-700" };
+  return <Badge variant="outline" className={`text-[10px] ${m.cls} border-transparent`}>{m.label}</Badge>;
 };
 
-const sourceBadge = (src: string) => {
-  const meta = SOURCE_META[src?.toLowerCase()] || { label: src || "—", icon: Globe, cls: "bg-slate-100 text-slate-700" };
-  const Icon = meta.icon;
-  return (
-    <Badge variant="outline" className={`text-[10px] gap-1 ${meta.cls} border-transparent`}>
-      <Icon className="h-3 w-3" />
-      {meta.label}
-    </Badge>
-  );
-};
-
-const extractMedName = (row: ScanRow): string => {
-  if (row.scan_type === "prescription") {
-    const meds = row.result?.medicaments || row.input_data?.medicaments;
-    if (Array.isArray(meds) && meds.length) {
-      return meds.slice(0, 3).map((m: any) => m.nom || m.nom_commercial || "?").join(", ") + (meds.length > 3 ? "…" : "");
-    }
-    return "Ordonnance";
-  }
-  const name = row.result?.product_name || row.result?.nom_commercial;
-  if (name) return name;
-  const cips = row.input_data?.cip_codes;
-  if (Array.isArray(cips) && cips.length) return `CIP ${cips.join(", ")}`;
-  return "—";
-};
 
 const PharmacyDetailDialog = ({ pharmacyId, pharmacyName, open, onOpenChange }: Props) => {
   const [loading, setLoading] = useState(false);
@@ -106,7 +79,7 @@ const PharmacyDetailDialog = ({ pharmacyId, pharmacyName, open, onOpenChange }: 
         const [histRes, recentHistRes, scanRes, accRes] = await Promise.all([
           supabase.from("analysis_history" as any).select("patient_hash, has_major_interaction, suggestions_count").eq("pharmacy_id", pharmacyId),
           supabase.from("analysis_history" as any).select("id, created_at, medicaments, suggestions_count, interactions_count, has_major_interaction").eq("pharmacy_id", pharmacyId).order("created_at", { ascending: false }).limit(20),
-          supabase.from("scan_queue" as any).select("id, created_at, scan_type, source, status, device_id, input_data, result").eq("pharmacy_id", pharmacyId).order("created_at", { ascending: false }).limit(100),
+          supabase.from("scan_events" as any).select("id, created_at, ean_code, status, product_name, suggestions_count, register_id").eq("pharmacy_id", pharmacyId).order("created_at", { ascending: false }).limit(100),
           supabase.from("accepted_combinations" as any).select("id, created_at, pc_accepte, pc_categorie, medicament_source, medicaments_analyses, pcs_proposes").eq("pharmacy_id", pharmacyId).order("created_at", { ascending: false }).limit(100),
         ]);
         if (cancelled) return;
@@ -222,11 +195,11 @@ const PharmacyDetailDialog = ({ pharmacyId, pharmacyName, open, onOpenChange }: 
                     <thead className="bg-secondary">
                       <tr>
                         <th className="text-left px-2 py-1.5">Date</th>
-                        <th className="text-left px-2 py-1.5">Type</th>
-                        <th className="text-left px-2 py-1.5">Méthode</th>
-                        <th className="text-left px-2 py-1.5">Produit / Médicaments</th>
+                        <th className="text-left px-2 py-1.5">EAN</th>
+                        <th className="text-left px-2 py-1.5">Produit</th>
+                        <th className="text-right px-2 py-1.5">Sugg.</th>
                         <th className="text-left px-2 py-1.5">Statut</th>
-                        <th className="text-left px-2 py-1.5">Device</th>
+                        <th className="text-left px-2 py-1.5">Poste</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -235,18 +208,15 @@ const PharmacyDetailDialog = ({ pharmacyId, pharmacyName, open, onOpenChange }: 
                           <td className="px-2 py-1.5 text-muted-foreground whitespace-nowrap">
                             {new Date(s.created_at).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
                           </td>
-                          <td className="px-2 py-1.5">
-                            <Badge variant="outline" className="text-[10px]">{s.scan_type}</Badge>
-                          </td>
-                          <td className="px-2 py-1.5">{sourceBadge(s.source)}</td>
-                          <td className="px-2 py-1.5 font-medium max-w-[260px] truncate" title={extractMedName(s)}>{extractMedName(s)}</td>
-                          <td className="px-2 py-1.5">
-                            <Badge variant={s.status === "completed" ? "secondary" : s.status === "error" ? "destructive" : "outline"} className="text-[10px]">{s.status}</Badge>
-                          </td>
-                          <td className="px-2 py-1.5 text-muted-foreground font-mono text-[10px]">{s.device_id || "—"}</td>
+                          <td className="px-2 py-1.5 font-mono text-[10px]">{s.ean_code}</td>
+                          <td className="px-2 py-1.5 font-medium max-w-[260px] truncate" title={s.product_name || ""}>{s.product_name || "—"}</td>
+                          <td className="px-2 py-1.5 text-right">{s.suggestions_count ?? 0}</td>
+                          <td className="px-2 py-1.5">{statusBadge(s.status)}</td>
+                          <td className="px-2 py-1.5 text-muted-foreground font-mono text-[10px]">{s.register_id || "—"}</td>
                         </tr>
                       ))}
                     </tbody>
+
                   </table>
                 </div>
               )}
