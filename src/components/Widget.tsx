@@ -540,10 +540,20 @@ const WidgetApp = () => {
 
   const handleBarcodeScan = useCallback((code: string) => {
     const now = Date.now();
+    const delta = now - lastBarcodeScanRef.current.at;
 
-    // Guard 1 — dedup: keyboard path + IPC global path fire simultaneously when window is focused
-    if (lastBarcodeScanRef.current.code === code && now - lastBarcodeScanRef.current.at < SCANNER.DEDUP_WINDOW_MS) {
+    // Guard 1a — dedup technique: keyboard + IPC fire simultaneously when window is focused
+    if (lastBarcodeScanRef.current.code === code && delta < SCANNER.DEDUP_WINDOW_MS) {
       logger.log(`[SCAN] dedup ${code} — double déclenchement clavier/IPC`);
+      return;
+    }
+    // Guard 1b — anti-spam: même produit scanné < 30s (plusieurs boîtes du même médoc)
+    // → on ne ré-analyse pas et on ne re-propose pas de PC.
+    const SAME_PRODUCT_WINDOW_MS = 30_000;
+    if (lastBarcodeScanRef.current.code === code && delta < SAME_PRODUCT_WINDOW_MS) {
+      logger.log(`[SCAN] same-product skip ${code} (${Math.round(delta / 1000)}s)`);
+      toast.info("Boîte supplémentaire — déjà analysé", { duration: 1500 });
+      lastBarcodeScanRef.current = { code, at: now };
       return;
     }
     lastBarcodeScanRef.current = { code, at: now };
