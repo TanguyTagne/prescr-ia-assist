@@ -2385,7 +2385,6 @@ export type Database = {
           managed_groupement_id: string | null
           onboarding_completed: boolean
           pharmacy_id: string | null
-          role: string
         }
         Insert: {
           created_at?: string
@@ -2395,7 +2394,6 @@ export type Database = {
           managed_groupement_id?: string | null
           onboarding_completed?: boolean
           pharmacy_id?: string | null
-          role?: string
         }
         Update: {
           created_at?: string
@@ -2405,7 +2403,6 @@ export type Database = {
           managed_groupement_id?: string | null
           onboarding_completed?: boolean
           pharmacy_id?: string | null
-          role?: string
         }
         Relationships: [
           {
