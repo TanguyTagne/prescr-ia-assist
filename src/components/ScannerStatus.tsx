@@ -8,6 +8,7 @@ import {
   Settings, Check, Key, Copy, RefreshCw, Clipboard, Shield,
   FolderSearch, Loader2, Bot, Search,
 } from "lucide-react";
+import { isAsclionDesktopRuntime } from "@/lib/runtime";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
