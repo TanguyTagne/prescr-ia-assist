@@ -140,16 +140,30 @@ const DeferredWidget = ({ forceOpen, mountImmediately, demo = false }: { forceOp
   );
 };
 
-class WidgetErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
-  state = { hasError: false };
-  static getDerivedStateFromError() {
-    return { hasError: true };
+class WidgetErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; message?: string }> {
+  state: { hasError: boolean; message?: string } = { hasError: false };
+  static getDerivedStateFromError(error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    return { hasError: true, message };
   }
   componentDidCatch(error: unknown) {
     console.error("Widget failed to load:", error);
   }
   render() {
-    if (this.state.hasError) return null;
+    if (this.state.hasError) {
+      return (
+        <div className="h-screen w-screen flex flex-col items-center justify-center bg-background text-foreground p-6 text-center gap-3">
+          <div className="text-sm font-semibold">Asclion n'a pas pu démarrer</div>
+          <div className="text-xs text-muted-foreground max-w-[260px] break-words">{this.state.message || "Erreur inconnue"}</div>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-2 px-4 py-2 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:opacity-90"
+          >
+            Recharger
+          </button>
+        </div>
+      );
+    }
     return this.props.children;
   }
 }
