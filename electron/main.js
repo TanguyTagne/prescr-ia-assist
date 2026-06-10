@@ -87,8 +87,8 @@ try {
 // Window size — reduced height (was 580) so the widget takes less vertical
 // space next to the LGO. Width unchanged so the EAN + reco lines stay
 // readable.
-const SIZE_NORMAL = { width: 380, height: 520 };
-const SIZE_COMPACT = { width: 300, height: 400 };
+const SIZE_NORMAL = { width: 340, height: 420 };
+const SIZE_COMPACT = { width: 300, height: 360 };
 // Distance from the top + right edges of the primary display.
 const TOP_RIGHT_MARGIN = 16;
 let pipState = { alwaysOnTop: true, compact: false };
