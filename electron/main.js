@@ -284,6 +284,10 @@ button{background:#111;color:#fff;border:0;padding:10px 18px;border-radius:8px;f
   // Show window when ready to avoid white flash — unless the window was
   // recreated to silently process a scan (see suppressShowOnReady).
   mainWindow.once("ready-to-show", () => {
+    // Re-anchor in case the display layout settled after the BrowserWindow
+    // constructor ran (typical on cold boot via auto-launch).
+    reanchorTopRight();
+    setTimeout(reanchorTopRight, 600);
     if (suppressShowOnReady) {
       devLog("[WINDOW] ready-to-show suppressed — waiting for renderer to confirm PCs before surfacing");
       return;
