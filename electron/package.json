@@ -64,6 +64,7 @@
       "createStartMenuShortcut": true,
       "shortcutName": "Asclion",
       "runAfterFinish": true,
+      "differentialPackage": true,
       "include": "installer.nsh"
     },
     "mac": {
