@@ -46,6 +46,50 @@ jobs:
         with:
           python-version: '3.11'
 
+      # ── Auto-version bump ───────────────────────────────────────────────
+      # CRITICAL: electron-updater compares the version inside latest.yml
+      # against the version installed on the pharmacist's PC. If the version
+      # never changes, no auto-update is detected, and we have to redistribute
+      # the installer by hand.
+      #
+      # Strategy:
+      #   - On a `v*` tag push  → use the tag (without "v") as the version.
+      #                            Lets us cut explicit releases like v1.4.0.
+      #   - On any other push   → keep the major.minor from package.json and
+      #                            use the run number as patch. So v1.3.42,
+      #                            v1.3.43, ... each push = new auto-update.
+      # ────────────────────────────────────────────────────────────────────
+      - name: Determine release version
+        id: version
+        shell: pwsh
+        run: |
+          if ("${{ github.ref }}" -like "refs/tags/v*") {
+            $version = "${{ github.ref_name }}" -replace "^v",""
+          } else {
+            $pkgJson = Get-Content electron/package.json -Raw | ConvertFrom-Json
+            $base = ($pkgJson.version -split "-")[0]   # strip pre-release suffix if any
+            $parts = $base -split "\."
+            $version = "$($parts[0]).$($parts[1]).${{ github.run_number }}"
+          }
+          # SemVer validation — anything that doesn't match major.minor.patch
+          # will fail electron-updater client-side, so we fail the build early.
+          if ($version -notmatch "^\d+\.\d+\.\d+$") {
+            Write-Host "::error::Version `"$version`" is not valid semver"
+            exit 1
+          }
+          Write-Host "Release version: $version"
+          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+      - name: Sync electron/package.json version
+        shell: pwsh
+        run: |
+          $path = "electron/package.json"
+          $pkg = Get-Content $path -Raw | ConvertFrom-Json
+          $pkg.version = "${{ steps.version.outputs.version }}"
+          # Keep JSON formatting clean: 2-space indent, no escaped forward slashes.
+          ($pkg | ConvertTo-Json -Depth 100) -replace "\\/","/" | Set-Content $path -Encoding utf8
+          Write-Host "electron/package.json version is now: $($pkg.version)"
+
       # Build the web app
       - name: Install web dependencies
         run: npm install --legacy-peer-deps
@@ -89,8 +133,8 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          tag_name: v${{ github.run_number }}
-          name: Asclion v${{ github.run_number }}
+          tag_name: v${{ steps.version.outputs.version }}
+          name: Asclion v${{ steps.version.outputs.version }}
           # IMPORTANT : inclure latest.yml ET les .blockmap, pas seulement le .exe.
           # Sans latest.yml dans la release, electron-updater ne peut PAS détecter
           # les nouvelles versions → les installs existants restent figés sur
@@ -107,7 +151,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          $current = "v${{ github.run_number }}"
+          $current = "v${{ steps.version.outputs.version }}"
           $releases = gh release list --repo $env:GITHUB_REPOSITORY --limit 100 --json tagName | ConvertFrom-Json
           foreach ($r in $releases) {
             if ($r.tagName -ne $current) {
