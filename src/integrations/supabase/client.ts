@@ -2,15 +2,20 @@
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "./types";
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+// Public anon keys — safe to ship in the client bundle. Used as a fallback
+// when Vite env injection fails at build time (otherwise the whole app fails
+// to boot on a single missing env var, leaving a blank desktop window).
+const FALLBACK_URL = "https://oknjfjplseopgymijnca.supabase.co";
+const FALLBACK_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9rbmpmanBsc2VvcGd5bWlqbmNhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4ODAzNDQsImV4cCI6MjA4ODQ1NjM0NH0.Z4NJbpm4w69dp8hIDwPVuyhSAx7dA0JABaC03dylpzQ";
 
-if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
-  // Fail loudly during dev/build instead of letting Supabase crash with an opaque error.
-  // In production we still throw so the app boot fails fast (Sentry/console will surface it).
-  throw new Error(
-    "Supabase env vars missing: VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY must be defined in .env",
-  );
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || FALLBACK_URL;
+const SUPABASE_PUBLISHABLE_KEY =
+  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || FALLBACK_KEY;
+
+if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY) {
+  // eslint-disable-next-line no-console
+  console.warn("[supabase] VITE_SUPABASE_* env vars missing — using public fallback values.");
 }
 
 // Import the supabase client like this:
