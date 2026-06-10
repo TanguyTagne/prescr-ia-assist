@@ -8,6 +8,7 @@ import {
   Settings, Check, Key, Copy, RefreshCw, Clipboard, Shield,
   FolderSearch, Loader2, Bot, Search,
 } from "lucide-react";
+import { isAsclionDesktopRuntime } from "@/lib/runtime";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -598,12 +599,18 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
                 Robot automate
               </Label>
               <p className="text-[11px] text-muted-foreground">
-                Si la pharmacie est équipée d'un robot (Rowa, Pharmathek…), Asclion intercepte les délivrances pour suggérer les compléments. Sélectionnez "Aucun" sinon.
+                Asclion se connecte à votre robot (Rowa, Pharmathek…) et analyse les délivrances en temps réel pour suggérer les compléments adaptés. Sélectionnez « Aucun » si la pharmacie n'est pas équipée.
               </p>
               {!robotApi ? (
-                <p className="text-[11px] text-destructive">
-                  Disponible uniquement dans l'application desktop Asclion (pas dans le navigateur).
-                </p>
+                isAsclionDesktopRuntime() ? (
+                  <p className="text-[11px] text-amber-600 dark:text-amber-500">
+                    Mettez à jour Asclion Desktop pour activer la configuration du robot automate.
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-muted-foreground italic">
+                    Configuration disponible uniquement depuis l'application desktop Asclion.
+                  </p>
+                )
               ) : (
                 <div className="space-y-2 rounded-md border border-border p-3 bg-muted/30">
                   <div className="flex items-center justify-between gap-2">
