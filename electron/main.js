@@ -118,13 +118,37 @@ function savePipState() {
 function topRightPosition(windowWidth) {
   try {
     const { screen } = require("electron");
-    const wa = screen.getPrimaryDisplay().workArea;
+    // Prefer the display under the mouse cursor — on multi-monitor setups the
+    // OS "primary" display isn't always where the pharmacist is working.
+    // Falls back to the primary display if anything looks off.
+    const point = screen.getCursorScreenPoint();
+    const display = screen.getDisplayNearestPoint(point) || screen.getPrimaryDisplay();
+    let wa = display.workArea;
+    // Guard against bogus workArea values reported very early at boot
+    // (Windows can briefly return 0x0 before all displays are enumerated).
+    if (!wa || wa.width < 200 || wa.height < 200) {
+      wa = screen.getPrimaryDisplay().workArea;
+    }
     return {
-      x: wa.x + wa.width - windowWidth - TOP_RIGHT_MARGIN,
+      x: Math.max(0, wa.x + wa.width - windowWidth - TOP_RIGHT_MARGIN),
       y: wa.y + TOP_RIGHT_MARGIN,
     };
   } catch {
     return { x: 0, y: 0 };
+  }
+}
+// Re-anchor the existing window to the top-right. Called on ready-to-show and
+// shortly after, because on cold boot (auto-launch at Windows startup) the
+// display module can momentarily report stale/incomplete workArea values,
+// which would leave the window where Electron defaulted it (screen center).
+function reanchorTopRight() {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  try {
+    const [w] = mainWindow.getSize();
+    const { x, y } = topRightPosition(w);
+    mainWindow.setPosition(x, y, false);
+  } catch (e) {
+    devWarn("[WINDOW] reanchorTopRight failed:", e);
   }
 }
 function applyPipState() {
@@ -260,6 +284,10 @@ button{background:#111;color:#fff;border:0;padding:10px 18px;border-radius:8px;f
   // Show window when ready to avoid white flash — unless the window was
   // recreated to silently process a scan (see suppressShowOnReady).
   mainWindow.once("ready-to-show", () => {
+    // Re-anchor in case the display layout settled after the BrowserWindow
+    // constructor ran (typical on cold boot via auto-launch).
+    reanchorTopRight();
+    setTimeout(reanchorTopRight, 600);
     if (suppressShowOnReady) {
       devLog("[WINDOW] ready-to-show suppressed — waiting for renderer to confirm PCs before surfacing");
       return;
