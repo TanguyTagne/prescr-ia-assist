@@ -63,7 +63,7 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "Asclion",
-      "runAfterFinish": true,
+      "runAfterFinish": false,
       "differentialPackage": true,
       "include": "installer.nsh"
     },
