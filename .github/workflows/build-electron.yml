@@ -109,6 +109,28 @@ jobs:
         working-directory: electron
         run: npm install
 
+      # ── Garde-fou Npcap ────────────────────────────────────────────────
+      # `cap` est une optionalDependency : si sa compilation native échoue,
+      # npm l'ignore SILENCIEUSEMENT et l'EXE part sans support Npcap
+      # (npcapAvailable=false sur tous les postes, même Npcap installé).
+      # On force la présence du module + rebuild ABI Electron, sinon échec.
+      - name: Verify & rebuild cap (Npcap) for Electron
+        working-directory: electron
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "node_modules/cap/package.json")) {
+            Write-Host "cap absent — installation explicite…"
+            npm install cap@0.2.1 --no-save
+          }
+          Write-Host "Rebuild cap contre l'ABI Electron…"
+          npx @electron/rebuild -f -w cap
+          $node = Get-ChildItem -Recurse "node_modules/cap" -Filter "cap.node" -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $node) {
+            Write-Host "::error::cap.node introuvable — le support Npcap ne serait pas embarqué dans l'EXE."
+            exit 1
+          }
+          Write-Host "OK: $($node.FullName) ($($node.Length) octets)"
+
       # Garde-fou : le postinstall (build-native.js) DOIT avoir produit l'addon
       # N-API Raw Input. C'est le chemin de capture PRINCIPAL, indépendant du
       # focus — sans lui l'EXE ne peut pas lire les scans douchette pendant que

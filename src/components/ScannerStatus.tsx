@@ -134,6 +134,23 @@ interface ScannerStatusProps {
   onBarcodeScan: (code: string) => void;
 }
 
+// Flattens the raw robot status ({ listener, sniffer }) returned by the main
+// process into the shape the diagnostic block renders. Without this mapping,
+// npcapAvailable / packetsSeen / listening read as undefined → the UI shows
+// "✗ inactif / ✗ indispo / 0 paquets" even when everything works.
+const flattenRobotStatus = (st: any) => ({
+  listening: st?.listener?.listening,
+  host: st?.listener?.host,
+  mode: st?.sniffer?.mode,
+  lastEan: st?.sniffer?.lastEan ?? null,
+  packetsSeen: st?.sniffer?.packetsSeen,
+  npcapAvailable: st?.sniffer?.npcapAvailable,
+  npcapLoadError: st?.sniffer?.npcapLoadError ?? null,
+  triggersSent: st?.sniffer?.triggersSent,
+  forwardErrors: st?.sniffer?.forwardErrors,
+  lastError: st?.sniffer?.lastError ?? st?.listener?.lastError ?? null,
+});
+
 export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: ScannerStatusProps) => {
   const { latestScan, isListening, pharmacyId, dismissScan } = useScanQueue();
   const { signOut } = useAuth();
@@ -274,12 +291,7 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
         });
       }
       const st = await robotApi.status();
-      setRobotStatus({
-        listening: st?.listener?.listening,
-        mode: st?.sniffer?.mode,
-        lastEan: st?.sniffer?.lastEan ?? null,
-        host: st?.listener?.host,
-      });
+      setRobotStatus(flattenRobotStatus(st));
       if (robotApi.getToken) {
         const tk = await robotApi.getToken();
         if (typeof tk === "string") setRobotToken(tk);
@@ -388,12 +400,7 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
       }
       toast.success("Configuration robot enregistrée");
       const st = await robotApi.status();
-      setRobotStatus({
-        listening: st?.listener?.listening,
-        mode: st?.sniffer?.mode,
-        lastEan: st?.sniffer?.lastEan ?? null,
-        host: st?.listener?.host,
-      });
+      setRobotStatus(flattenRobotStatus(st));
     } catch (err: any) {
       toast.error("Erreur", { description: String(err?.message || err).slice(0, 180) });
     } finally {
@@ -903,7 +910,7 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
                         size="sm"
                         variant="outline"
                         className="h-6 text-[10px] mt-1"
-                        onClick={async () => { const st = await robotApi?.status(); if (st) setRobotStatus(st); }}
+                        onClick={async () => { const st = await robotApi?.status(); if (st) setRobotStatus(flattenRobotStatus(st)); }}
                       >
                         Rafraîchir
                       </Button>
