@@ -2633,6 +2633,12 @@ function bootRobotSubsystem() {
     warn: devWarn,
     onLocalTrigger: (ean) => emitGlobalScan(ean),
     userDataDir: app.getPath("userData"),
+    // Folder holding WinDivert.dll / WinDivert64.sys / windivert-capture.ps1.
+    // In a packaged build these live under app.asar.unpacked (asar can't host a
+    // loadable DLL or a script we spawn), so swap the path segment accordingly.
+    windivertDir: path
+      .join(__dirname, "native", "windivert")
+      .replace(`app.asar${path.sep}`, `app.asar.unpacked${path.sep}`),
     // Token sent in the X-Asclion-Token header of every cross-PC trigger.
     httpToken: sharedToken,
   });
