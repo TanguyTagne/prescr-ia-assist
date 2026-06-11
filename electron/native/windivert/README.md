@@ -10,19 +10,18 @@ central server PC, no HTTP fan-out, no Npcap installer.
 | File | Source | Committed? |
 |------|--------|-----------|
 | `windivert-capture.ps1` | this repo | yes |
-| `WinDivert.dll`   | official WinDivert release (x64) | no — fetched |
-| `WinDivert64.sys` | official WinDivert release (x64), **Microsoft-signed** | no — fetched |
+| `WinDivert.dll`   | official WinDivert 2.2.2 release (x64) | **yes — vendored** |
+| `WinDivert64.sys` | official WinDivert 2.2.2 release (x64), **Microsoft-signed** | **yes — vendored** |
 
 ## Setup
 
-```sh
-cd electron
-npm run fetch:windivert
-```
+Nothing to do — the signed x64 binaries are committed to the repo (~141 KB
+total) and bundled by electron-builder via the `asarUnpack` rule in
+`electron/package.json`. No download step, so CI and every PC have them.
 
-Downloads the signed x64 binaries from the official release and drops them here.
-If it 404s, grab them manually from <https://reqrypt.org/windivert.html> and
-place `WinDivert.dll` + `WinDivert64.sys` in this folder.
+To upgrade WinDivert later, download a newer release from
+<https://reqrypt.org/windivert.html>, drop the x64 `WinDivert.dll` +
+`WinDivert64.sys` into this folder, and commit them.
 
 ## How it works
 
