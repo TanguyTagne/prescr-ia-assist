@@ -134,6 +134,23 @@ interface ScannerStatusProps {
   onBarcodeScan: (code: string) => void;
 }
 
+// Flattens the raw robot status ({ listener, sniffer }) returned by the main
+// process into the shape the diagnostic block renders. Without this mapping,
+// npcapAvailable / packetsSeen / listening read as undefined → the UI shows
+// "✗ inactif / ✗ indispo / 0 paquets" even when everything works.
+const flattenRobotStatus = (st: any) => ({
+  listening: st?.listener?.listening,
+  host: st?.listener?.host,
+  mode: st?.sniffer?.mode,
+  lastEan: st?.sniffer?.lastEan ?? null,
+  packetsSeen: st?.sniffer?.packetsSeen,
+  npcapAvailable: st?.sniffer?.npcapAvailable,
+  npcapLoadError: st?.sniffer?.npcapLoadError ?? null,
+  triggersSent: st?.sniffer?.triggersSent,
+  forwardErrors: st?.sniffer?.forwardErrors,
+  lastError: st?.sniffer?.lastError ?? st?.listener?.lastError ?? null,
+});
+
 export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: ScannerStatusProps) => {
   const { latestScan, isListening, pharmacyId, dismissScan } = useScanQueue();
   const { signOut } = useAuth();
