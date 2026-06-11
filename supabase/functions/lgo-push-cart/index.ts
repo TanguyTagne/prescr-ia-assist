@@ -97,19 +97,27 @@ serve(async (req) => {
       let parsedUrl: URL | null = null;
       try { parsedUrl = new URL(lgoConfig.api_base_url); } catch { parsedUrl = null; }
       const host = parsedUrl?.hostname?.toLowerCase() ?? "";
+      // Strip brackets from IPv6 literals for matching
+      const bareHost = host.replace(/^\[|\]$/g, "");
+      // Detect IPv4-mapped IPv6 (e.g. ::ffff:169.254.169.254) and extract the v4 part
+      const v4MappedMatch = bareHost.match(/^::ffff:(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/i);
+      const effectiveHost = v4MappedMatch ? v4MappedMatch[1] : bareHost;
+      // Detect decimal/hex IPv4 representations (e.g. 2130706433, 0x7f000001)
+      const isNumericIp = /^(0x[0-9a-f]+|\d{8,10})$/i.test(effectiveHost);
       const isPrivate =
         !parsedUrl ||
         parsedUrl.protocol !== "https:" ||
-        host === "localhost" ||
-        host === "0.0.0.0" ||
-        /^127\./.test(host) ||
-        /^10\./.test(host) ||
-        /^192\.168\./.test(host) ||
-        /^169\.254\./.test(host) ||
-        /^172\.(1[6-9]|2\d|3[01])\./.test(host) ||
-        host.endsWith(".local") ||
-        host.endsWith(".internal") ||
-        /^\[?(::1|fc00|fd|fe80)/i.test(host);
+        effectiveHost === "localhost" ||
+        effectiveHost === "0.0.0.0" ||
+        isNumericIp ||
+        /^127\./.test(effectiveHost) ||
+        /^10\./.test(effectiveHost) ||
+        /^192\.168\./.test(effectiveHost) ||
+        /^169\.254\./.test(effectiveHost) ||
+        /^172\.(1[6-9]|2\d|3[01])\./.test(effectiveHost) ||
+        effectiveHost.endsWith(".local") ||
+        effectiveHost.endsWith(".internal") ||
+        /^(::1|::ffff:|fc00|fd|fe80|2001:db8)/i.test(bareHost);
       if (isPrivate) {
         return new Response(
           JSON.stringify({ error: "URL LGO invalide: HTTPS public requis" }),
