@@ -293,7 +293,7 @@ function startWinDivert(robot) {
   if (!fs.existsSync(dll)) {
     // Most common first-run case: binaries not downloaded yet. Quiet warn —
     // start() will fall through to npcap / tcp-listen.
-    state.lastError = `windivert: WinDivert.dll not found in ${dir} (run "npm run fetch:windivert")`;
+    state.lastError = `windivert: WinDivert.dll not found in ${dir} (vendored binary missing — see native/windivert/README.md)`;
     return false;
   }
   if (!fs.existsSync(script)) {
