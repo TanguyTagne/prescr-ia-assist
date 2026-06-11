@@ -23,6 +23,8 @@
 const http = require("http");
 const net = require("net");
 const path = require("path");
+const fs = require("fs");
+const { spawn } = require("child_process");
 
 const adapters = require("./adapters");
 
@@ -42,6 +44,7 @@ const state = {
   adapter: null,
   tcpServer: null,
   npcapSession: null,
+  windivertProc: null,   // child powershell.exe running the WinDivert capture
   diagnosticLogPath: null,
   lastError: null,
   lastEanAt: 0,
@@ -60,16 +63,21 @@ let runtimeRefs = {
   onLocalTrigger: (_code) => {},
   // Folder that holds robot_capture.log (DiagnosticAdapter)
   userDataDir: null,
+  // Folder holding the WinDivert assets (WinDivert.dll, WinDivert64.sys) and
+  // the windivert-capture.ps1 helper script. Resolved by main.js (handles the
+  // app.asar → app.asar.unpacked swap in packaged builds).
+  windivertDir: null,
   // Shared secret sent with every POST /trigger toward peer Asclion PCs.
   // Must match the token configured on the receiving PC.
   httpToken: "",
 };
 
-function init({ log, warn, onLocalTrigger, userDataDir, httpToken }) {
+function init({ log, warn, onLocalTrigger, userDataDir, windivertDir, httpToken }) {
   runtimeRefs.log = log || runtimeRefs.log;
   runtimeRefs.warn = warn || runtimeRefs.warn;
   runtimeRefs.onLocalTrigger = onLocalTrigger || runtimeRefs.onLocalTrigger;
   runtimeRefs.userDataDir = userDataDir || runtimeRefs.userDataDir;
+  if (windivertDir) runtimeRefs.windivertDir = windivertDir;
   if (typeof httpToken === "string") runtimeRefs.httpToken = httpToken;
 }
 
@@ -109,11 +117,37 @@ function start(config) {
     return state;
   }
 
-  // Diagnostic mode always uses TCP-listen — passive Npcap sniff would also
-  // work but TCP forces the LGO config to be explicit, which makes the
-  // capture trace much cleaner for reverse-engineering.
-  const tryNpcap = robot.useNpcap !== false && state.brand !== "diagnostic";
-  if (tryNpcap && cap) {
+  // Capture backend selection. "auto" walks the list in order of preference
+  // and falls through on failure, so an install with no WinDivert assets and
+  // no Npcap still lands on the TCP-listen fallback exactly like before.
+  //
+  //   windivert  — bundled signed driver, per-till passive capture (preferred)
+  //   npcap      — passive sniff, needs the separate Npcap installer
+  //   tcp-listen — MITM proxy, needs the LGO repointed at this PC
+  const backend = (robot.captureBackend || "auto").toLowerCase();
+  const wantWinDivert = backend === "windivert" || backend === "auto";
+  // Npcap historically skipped diagnostic mode (TCP-listen made the capture
+  // trace cleaner). WinDivert passive capture is strictly better for
+  // reverse-engineering an unknown robot (no LGO reconfig), so it is allowed
+  // for diagnostic too — only the legacy Npcap path keeps the old exclusion.
+  const wantNpcap = (backend === "npcap" || backend === "auto") &&
+    robot.useNpcap !== false && state.brand !== "diagnostic";
+
+  // 1. WinDivert — reads THIS PC's outbound dispense packets without an
+  //    installer, without reconfiguring the LGO, and without sitting in the
+  //    data path (passive SNIFF mode: the robot keeps receiving everything).
+  if (wantWinDivert) {
+    if (startWinDivert(robot)) {
+      state.mode = "windivert";
+      state.started = true;
+      runtimeRefs.log(`[ROBOT] sniffer started (windivert, port ${state.port}, brand ${state.brand})`);
+      return state;
+    }
+    // Fall through — lastError carries why (assets missing, open failed, …).
+  }
+
+  // 2. Npcap passive sniff.
+  if (wantNpcap && cap) {
     const ok = startNpcap();
     if (ok) {
       state.mode = "npcap";
@@ -122,10 +156,11 @@ function start(config) {
       return state;
     }
     // Fall through to TCP listen on failure.
-  } else if (tryNpcap && !cap) {
+  } else if (wantNpcap && !cap) {
     runtimeRefs.warn(`[ROBOT] npcap requested but cap module unavailable: ${capLoadError || "not installed"}`);
   }
 
+  // 3. TCP-listen MITM fallback (always available).
   const ok = startTcpListen(robot);
   if (ok) {
     state.mode = "tcp-listen";
@@ -146,6 +181,13 @@ function stop() {
     try { state.npcapSession.close(); } catch { /* ignore */ }
     state.npcapSession = null;
   }
+  if (state.windivertProc) {
+    // SIGKILL the helper: WinDivert releases its driver handle on process exit,
+    // so a hard kill is clean. (The blocking WinDivertRecv() in the script
+    // can't be interrupted politely from here anyway.)
+    try { state.windivertProc.kill(); } catch { /* ignore */ }
+    state.windivertProc = null;
+  }
   state.started = false;
   state.mode = "idle";
 }
@@ -164,8 +206,23 @@ function getStatus() {
     packetsSeen: state.packetsSeen,
     npcapAvailable: !!cap,
     npcapLoadError: capLoadError,
+    windivertAvailable: windivertAssetsPresent(),
+    windivertRunning: !!state.windivertProc,
     diagnosticLogPath: state.diagnosticLogPath,
   };
+}
+
+// Are the bundled WinDivert binaries present? Used by getStatus() so the
+// Paramètres UI can tell "driver missing" apart from "driver failed to open".
+function windivertAssetsPresent() {
+  const dir = runtimeRefs.windivertDir;
+  if (!dir) return false;
+  try {
+    return fs.existsSync(path.join(dir, "WinDivert.dll")) &&
+      fs.existsSync(path.join(dir, "windivert-capture.ps1"));
+  } catch {
+    return false;
+  }
 }
 
 // ───── Npcap passive sniff ───────────────────────────────────────────
@@ -211,6 +268,120 @@ function startNpcap() {
     state.lastError = `npcap start: ${e && e.message}`;
     return false;
   }
+}
+
+// ───── WinDivert passive capture (bundled signed driver) ─────────────
+// Spawns a PowerShell helper that P/Invokes WinDivert.dll and streams each
+// captured packet back as one JSON line on stdout: {"b64":"<base64>","len":N}.
+// We pick PowerShell + P/Invoke (not a node-gyp native addon) so there is NO
+// compiler / SDK / Electron-ABI dependency — only the two bundled WinDivert
+// binaries. The helper is a child process, so a driver fault can never take
+// down Electron. Returns true if the helper was spawned, false otherwise
+// (assets missing, wrong platform, spawn error) so start() can fall through.
+function startWinDivert(robot) {
+  if (process.platform !== "win32") {
+    state.lastError = "windivert: Windows only";
+    return false;
+  }
+  const dir = runtimeRefs.windivertDir;
+  if (!dir) {
+    state.lastError = "windivert: asset directory not configured";
+    return false;
+  }
+  const dll = path.join(dir, "WinDivert.dll");
+  const script = path.join(dir, "windivert-capture.ps1");
+  if (!fs.existsSync(dll)) {
+    // Most common first-run case: binaries not downloaded yet. Quiet warn —
+    // start() will fall through to npcap / tcp-listen.
+    state.lastError = `windivert: WinDivert.dll not found in ${dir} (run "npm run fetch:windivert")`;
+    return false;
+  }
+  if (!fs.existsSync(script)) {
+    state.lastError = `windivert: capture script not found in ${dir}`;
+    return false;
+  }
+
+  try {
+    const args = [
+      "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
+      "-File", script,
+      "-DllPath", dll,
+      "-Port", String(state.port),
+      // Per-till model: capture the dispense order this PC SENDS to the robot
+      // server. "outbound" is also how WinDivert reports loopback traffic, so
+      // the local desk-test harness works too. Overridable for the rare site
+      // where the link runs the other way.
+      "-Direction", robot.captureDirection || "outbound",
+    ];
+    // Optional: pin the filter to the robot server's IP so we never capture
+    // unrelated traffic that happens to share the port.
+    if (robot.robotServerIp) args.push("-DstIp", String(robot.robotServerIp));
+
+    const child = spawn("powershell.exe", args, { windowsHide: true });
+    state.windivertProc = child;
+
+    let buf = "";
+    child.stdout.on("data", (d) => {
+      buf += d.toString("utf-8");
+      let nl;
+      while ((nl = buf.indexOf("\n")) >= 0) {
+        const line = buf.slice(0, nl).trim();
+        buf = buf.slice(nl + 1);
+        if (line) handleWinDivertLine(line);
+      }
+    });
+    child.stderr.on("data", (d) => {
+      const msg = d.toString("utf-8").trim();
+      if (!msg) return;
+      state.lastError = `windivert: ${msg.slice(0, 200)}`;
+      runtimeRefs.warn(`[ROBOT] windivert stderr: ${msg}`);
+    });
+    child.on("error", (err) => {
+      state.lastError = `windivert spawn: ${err && err.message}`;
+      runtimeRefs.warn(`[ROBOT] windivert spawn error: ${err && err.message}`);
+    });
+    child.on("exit", (code, signal) => {
+      if (state.windivertProc === child) state.windivertProc = null;
+      // code 0 / SIGTERM (our own stop()) is expected; anything else is a fault.
+      if (code && code !== 0) {
+        state.lastError = `windivert helper exited with code ${code}`;
+        runtimeRefs.warn(`[ROBOT] windivert helper exited code=${code} signal=${signal || "-"}`);
+      }
+    });
+
+    return true;
+  } catch (e) {
+    state.lastError = `windivert start: ${e && e.message}`;
+    return false;
+  }
+}
+
+function handleWinDivertLine(line) {
+  let obj;
+  try {
+    obj = JSON.parse(line);
+  } catch {
+    // The helper only ever emits JSON on stdout; ignore stray text.
+    return;
+  }
+  if (obj.status) {
+    runtimeRefs.log(`[ROBOT] windivert: ${obj.status}`);
+    return;
+  }
+  if (typeof obj.b64 !== "string") return;
+  let payload;
+  try {
+    payload = Buffer.from(obj.b64, "base64");
+  } catch {
+    return;
+  }
+  if (!payload.length) return;
+  // The helper hands us the WHOLE captured packet (IP + TCP headers + payload).
+  // The adapters regex for XML/JSON barcode tags, which never match the binary
+  // header bytes, so scanning the full packet is safe. sourceIp is set to
+  // loopback so fanoutTrigger() fires the LOCAL pipeline only — this till is
+  // the one that sent the order, so it is the one that should pop the widget.
+  handlePayload(payload, "127.0.0.1");
 }
 
 // ───── TCP listen fallback ───────────────────────────────────────────
