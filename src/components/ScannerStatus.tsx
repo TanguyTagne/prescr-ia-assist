@@ -157,7 +157,7 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
   });
   const [robotSaving, setRobotSaving] = useState(false);
   const [robotLoaded, setRobotLoaded] = useState(false);
-  const [robotStatus, setRobotStatus] = useState<{ listening?: boolean; mode?: string; lastEan?: string | null; host?: string } | null>(null);
+  const [robotStatus, setRobotStatus] = useState<{ listening?: boolean; mode?: string; lastEan?: string | null; host?: string; packetsSeen?: number; npcapAvailable?: boolean; npcapLoadError?: string | null; triggersSent?: number; forwardErrors?: number; lastError?: string | null } | null>(null);
   const [discovering, setDiscovering] = useState(false);
   const [discoveryResults, setDiscoveryResults] = useState<PortCandidate[] | null>(null);
   const [discoveryNote, setDiscoveryNote] = useState<string | null>(null);
@@ -859,11 +859,22 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
                   )}
 
                   {robotStatus && (
-                    <p className="text-[10px] text-muted-foreground pt-1 border-t border-border/50">
-                      Listener {robotStatus.host || "127.0.0.1"} : {robotStatus.listening ? "actif" : "inactif"} ·
-                      Sniffer : {robotStatus.mode || "idle"}
-                      {robotStatus.lastEan ? ` · dernier EAN : ${robotStatus.lastEan}` : ""}
-                    </p>
+                    <div className="text-[10px] text-muted-foreground pt-1 border-t border-border/50 space-y-0.5 font-mono">
+                      <div>Listener {robotStatus.host || "127.0.0.1"} : {robotStatus.listening ? "✓ actif" : "✗ inactif"}</div>
+                      <div>Sniffer : <strong>{robotStatus.mode || "idle"}</strong> · Npcap : {robotStatus.npcapAvailable ? "✓ dispo" : "✗ indispo"}</div>
+                      <div>Paquets vus : <strong>{robotStatus.packetsSeen ?? 0}</strong> · Triggers envoyés : {robotStatus.triggersSent ?? 0} · Erreurs : {robotStatus.forwardErrors ?? 0}</div>
+                      <div>Dernier EAN : <strong>{robotStatus.lastEan || "—"}</strong></div>
+                      {robotStatus.lastError && <div className="text-destructive">⚠ {robotStatus.lastError}</div>}
+                      {robotStatus.npcapLoadError && <div className="text-destructive">Npcap : {robotStatus.npcapLoadError}</div>}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-6 text-[10px] mt-1"
+                        onClick={async () => { const st = await robotApi?.status(); if (st) setRobotStatus(st); }}
+                      >
+                        Rafraîchir
+                      </Button>
+                    </div>
                   )}
 
                   <Button
