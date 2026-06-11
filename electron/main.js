@@ -761,21 +761,38 @@ async function registerAutoLaunch() {
   //    La HKCU Run key est créée APRÈS, uniquement comme fallback si les
   //    tâches échouent.
   const results = [];
+  // Detect elevation once: if we're not admin, skip the HighestAvailable
+  // attempt entirely (it will fail with "Accès refusé" on every EDR-locked
+  // pharmacy) and create the task with LeastPrivilege so it at least exists
+  // and auto-fires at logon — the UAC repair prompt will re-create it with
+  // HighestAvailable once the user accepts.
+  const isElevated = await detectElevation();
   for (const task of AUTOLAUNCH_TASKS) {
     const xmlPath = path.join(tmpDir, `${task.name}.xml`);
     let registered = false;
+    let mode = "user";
     let lastError = "";
+    const attempts = isElevated
+      ? [{ runLevel: "HighestAvailable", mode: "admin" }]
+      : [
+          { runLevel: "HighestAvailable", mode: "admin" },
+          { runLevel: "LeastPrivilege",   mode: "user-fallback" },
+        ];
     try {
       if (!userSid) throw new Error("Windows user SID unavailable");
-      const xml = buildTaskXml({ kind: task.kind, time: task.time, exePath, userSid });
-      fs.writeFileSync(xmlPath, "﻿" + xml, { encoding: "utf16le" });
-      // No /RU SYSTEM — Principal in XML defines GroupId=Users (interactive session).
-      // /F = force overwrite if task already exists.
-      const r = await execAsync(`schtasks /Create /TN "${task.name}" /XML "${xmlPath}" /F`);
-      if (r.code === 0) {
-        registered = true;
-      } else {
+      for (const attempt of attempts) {
+        const xml = buildTaskXml({ kind: task.kind, time: task.time, exePath, userSid, runLevel: attempt.runLevel });
+        fs.writeFileSync(xmlPath, "\uFEFF" + xml, { encoding: "utf16le" });
+        const r = await execAsync(`schtasks /Create /TN "${task.name}" /XML "${xmlPath}" /F`);
+        if (r.code === 0) {
+          registered = true;
+          mode = attempt.mode;
+          lastError = "";
+          break;
+        }
         lastError = (r.stderr || r.stdout).trim();
+        // Only retry with LeastPrivilege on access-denied errors
+        if (!/refus|denied|access/i.test(lastError)) break;
       }
     } catch (e) {
       lastError = String(e && e.message ? e.message : e);
@@ -787,11 +804,11 @@ async function registerAutoLaunch() {
       kind: task.kind,
       time: task.time || null,
       registered,
-      mode: "user", // never SYSTEM anymore
+      mode,
       error: registered ? null : lastError.slice(0, 500),
     });
     if (registered) {
-      devLog(`[AUTOLAUNCH] task "${task.name}" registered (HighestAvailable).`);
+      devLog(`[AUTOLAUNCH] task "${task.name}" registered (${mode}).`);
     } else {
       console.error(`[AUTOLAUNCH] task "${task.name}" failed:`, lastError);
     }
