@@ -84,13 +84,16 @@ function load() {
 
 function save(patch) {
   const current = load();
-  const next = deepMergeDefaults(
-    {
-      httpPort: patch.httpPort ?? current.httpPort,
-      robot: { ...current.robot, ...(patch.robot || {}) },
-    },
-    DEFAULT_CONFIG,
-  );
+  // Merge ALL top-level keys from current state, then overlay the patch.
+  // Without this, any field not explicitly listed (serveLan, httpToken, …)
+  // was reset to its default on every save — e.g. the "mode serveur robot"
+  // toggle never persisted across restarts.
+  const merged = {
+    ...current,
+    ...patch,
+    robot: { ...current.robot, ...(patch && patch.robot ? patch.robot : {}) },
+  };
+  const next = deepMergeDefaults(merged, DEFAULT_CONFIG);
   const p = resolveConfigPath();
   try {
     fs.mkdirSync(path.dirname(p), { recursive: true });
