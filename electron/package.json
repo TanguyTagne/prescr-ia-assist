@@ -11,7 +11,9 @@
     "build:mac": "electron-builder --mac",
     "build:linux": "electron-builder --linux",
     "postinstall": "node ./scripts/build-native.js",
-    "rebuild:native": "node ./scripts/build-native.js"
+    "rebuild:native": "node ./scripts/build-native.js",
+    "dev:fake-robot": "node ./scripts/dev-fake-robot.js",
+    "dev:fake-lgo": "node ./scripts/dev-fake-lgo.js"
   },
   "dependencies": {
     "electron-updater": "^6.3.9",
@@ -46,6 +48,7 @@
       "node_modules/cap/**/*",
       "native/rawinput/build/Release/*.node",
       "native/rawinput/index.js",
+      "native/windivert/**/*",
       "robot/**/*"
     ],
     "win": {
