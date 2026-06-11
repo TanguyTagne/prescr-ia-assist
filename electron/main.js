@@ -874,25 +874,43 @@ function escapePowerShellSingleQuoted(value) {
 }
 function launchElevatedAutolaunchRepair(reason, targetUserSid) {
   if (process.platform !== "win32") return { ok: false, error: "not Windows" };
+  // VBS + Shell.Application "runas" — same approach as spawnVbsRelaunchAsAdmin.
+  // PowerShell `Start-Process -Verb RunAs` is routinely blocked by the EDRs
+  // installed on French pharmacy PCs (SentinelOne, Sophos, CrowdStrike) as
+  // a known LOLBin abuse pattern → UAC dialog never appears, the repair
+  // silently fails, and the user sees "tâches non créées · Accès refusé".
+  const vbsPath = path.join(app.getPath("temp"), `asclion-autolaunch-repair-${process.pid}-${Date.now()}.vbs`);
   try {
-    const exe = escapePowerShellSingleQuoted(process.execPath);
+    const exePath = process.execPath;
+    const exeEscaped = exePath.replace(/"/g, '""');
     const targetArg = targetUserSid ? ` --target-user-sid=${targetUserSid}` : "";
     const restartArg = reason === "startup" || reason === "manual" ? ` --replace-pid=${process.pid}` : "";
-    const arg = escapePowerShellSingleQuoted(`${REPAIR_AUTOLAUNCH_ARG} --reason=${reason || "startup"}${targetArg}${restartArg}`);
-    // NOTE: pas de -WindowStyle Hidden — sur certaines versions de Windows
-    // cette option supprime le dialogue UAC au lieu de juste masquer la fenêtre
-    // post-consent. Le process élevé n'a pas de window visible de toute façon
-    // (registerAutoLaunch tourne en headless puis app.quit()).
-    const command = `Start-Process -FilePath '${exe}' -ArgumentList '${arg}' -Verb RunAs`;
-    devLog("[AUTOLAUNCH] launching elevated helper:", command);
+    const args = `${REPAIR_AUTOLAUNCH_ARG} --reason=${reason || "startup"}${targetArg}${restartArg}`;
+    const argsEscaped = args.replace(/"/g, '""');
+
+    const vbsContent = [
+      `Option Explicit`,
+      `Dim objShell`,
+      `On Error Resume Next`,
+      `Set objShell = CreateObject("Shell.Application")`,
+      `objShell.ShellExecute "${exeEscaped}", "${argsEscaped}", "", "runas", 0`,
+      `WScript.Quit 0`,
+    ].join("\r\n");
+
+    fs.writeFileSync(vbsPath, vbsContent, { encoding: "utf8" });
+    devLog("[AUTOLAUNCH] launching elevated helper via VBS:", vbsPath);
+
     const child = spawn(
-      "powershell.exe",
-      ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", command],
+      "wscript.exe",
+      [vbsPath],
       { windowsHide: false, detached: true, stdio: "ignore" },
     );
     child.unref();
-    return { ok: true, error: null };
+
+    setTimeout(() => { try { fs.unlinkSync(vbsPath); } catch { /* ignore */ } }, 30_000);
+    return { ok: true, error: null, method: "vbs" };
   } catch (e) {
+    try { fs.unlinkSync(vbsPath); } catch { /* ignore */ }
     return { ok: false, error: String(e && e.message ? e.message : e) };
   }
 }
