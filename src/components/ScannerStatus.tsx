@@ -787,9 +787,13 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
                     <div className="flex gap-1">
                       <Input
                         type={tokenRevealed ? "text" : "password"}
-                        readOnly
-                        value={robotToken || "(non défini)"}
+                        value={robotToken}
+                        onChange={(e) => setRobotToken(e.target.value)}
+                        placeholder="Collez ou tapez le jeton (24–128 car., A-Z a-z 0-9 _ -)"
                         className="h-7 text-[10px] font-mono"
+                        spellCheck={false}
+                        autoCapitalize="off"
+                        autoCorrect="off"
                       />
                       <Button
                         type="button"
@@ -803,6 +807,35 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
                       </Button>
                     </div>
                     <div className="flex flex-wrap gap-1">
+                      <Button
+                        type="button"
+                        variant="default"
+                        size="sm"
+                        className="h-7 px-2 text-[10px] gap-1"
+                        onClick={async () => {
+                          if (!robotApi?.setToken) return;
+                          const t = (robotToken || "").trim();
+                          if (t.length < 24 || t.length > 128 || !/^[A-Za-z0-9_-]+$/.test(t)) {
+                            toast.error("Jeton invalide", { description: "24–128 caractères : lettres, chiffres, _ ou -." });
+                            return;
+                          }
+                          setTokenBusy(true);
+                          try {
+                            const res = await robotApi.setToken(t);
+                            if (!res?.ok) {
+                              toast.error("Jeton refusé", { description: res?.error || "Format invalide" });
+                              return;
+                            }
+                            toast.success("Jeton appliqué — identique requis sur les autres PCs.");
+                          } finally {
+                            setTokenBusy(false);
+                          }
+                        }}
+                        disabled={tokenBusy || !robotToken}
+                      >
+                        {tokenBusy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                        Appliquer
+                      </Button>
                       <Button
                         type="button"
                         variant="outline"
@@ -823,7 +856,7 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
                         disabled={tokenBusy}
                       >
                         {tokenBusy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Clipboard className="h-3 w-3" />}
-                        Coller depuis presse-papier
+                        Coller
                       </Button>
                       <Button
                         type="button"
