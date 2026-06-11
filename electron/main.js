@@ -603,7 +603,7 @@ const AUTOLAUNCH_TASKS = [
 // Deleted on every registerAutoLaunch() call so existing installs heal.
 const OLD_TASK_NAMES = ["AsclionAtBoot"];
 
-function buildTaskXml({ kind, time, exePath, userSid }) {
+function buildTaskXml({ kind, time, exePath, userSid, runLevel = "HighestAvailable" }) {
   const exeEscaped = exePath.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   const sidEscaped = String(userSid || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   // Pas de délai sur le LogonTrigger : on veut que la tâche (qui démarre
