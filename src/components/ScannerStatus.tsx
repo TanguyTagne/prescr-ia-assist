@@ -157,7 +157,7 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
   });
   const [robotSaving, setRobotSaving] = useState(false);
   const [robotLoaded, setRobotLoaded] = useState(false);
-  const [robotStatus, setRobotStatus] = useState<{ listening?: boolean; mode?: string; lastEan?: string | null; host?: string } | null>(null);
+  const [robotStatus, setRobotStatus] = useState<{ listening?: boolean; mode?: string; lastEan?: string | null; host?: string; packetsSeen?: number; npcapAvailable?: boolean; npcapLoadError?: string | null; triggersSent?: number; forwardErrors?: number; lastError?: string | null } | null>(null);
   const [discovering, setDiscovering] = useState(false);
   const [discoveryResults, setDiscoveryResults] = useState<PortCandidate[] | null>(null);
   const [discoveryNote, setDiscoveryNote] = useState<string | null>(null);
