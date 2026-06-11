@@ -938,6 +938,7 @@ async function maybePromptElevatedAutolaunchRepair({ elevated, autolaunchState, 
     repairPrompt: {
       attempted: repair.ok,
       reason: reason || "startup",
+      method: repair.method || "vbs",
       error: repair.error || null,
       at: new Date().toISOString(),
     },
