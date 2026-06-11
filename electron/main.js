@@ -603,7 +603,7 @@ const AUTOLAUNCH_TASKS = [
 // Deleted on every registerAutoLaunch() call so existing installs heal.
 const OLD_TASK_NAMES = ["AsclionAtBoot"];
 
-function buildTaskXml({ kind, time, exePath, userSid }) {
+function buildTaskXml({ kind, time, exePath, userSid, runLevel = "HighestAvailable" }) {
   const exeEscaped = exePath.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   const sidEscaped = String(userSid || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   // Pas de délai sur le LogonTrigger : on veut que la tâche (qui démarre
@@ -644,7 +644,7 @@ function buildTaskXml({ kind, time, exePath, userSid }) {
     <Principal id="Author">
       <UserId>${sidEscaped}</UserId>
       <LogonType>InteractiveToken</LogonType>
-      <RunLevel>HighestAvailable</RunLevel>
+      <RunLevel>${runLevel}</RunLevel>
     </Principal>
   </Principals>
   <Settings>
@@ -761,21 +761,38 @@ async function registerAutoLaunch() {
   //    La HKCU Run key est créée APRÈS, uniquement comme fallback si les
   //    tâches échouent.
   const results = [];
+  // Detect elevation once: if we're not admin, skip the HighestAvailable
+  // attempt entirely (it will fail with "Accès refusé" on every EDR-locked
+  // pharmacy) and create the task with LeastPrivilege so it at least exists
+  // and auto-fires at logon — the UAC repair prompt will re-create it with
+  // HighestAvailable once the user accepts.
+  const isElevated = await detectElevation();
   for (const task of AUTOLAUNCH_TASKS) {
     const xmlPath = path.join(tmpDir, `${task.name}.xml`);
     let registered = false;
+    let mode = "user";
     let lastError = "";
+    const attempts = isElevated
+      ? [{ runLevel: "HighestAvailable", mode: "admin" }]
+      : [
+          { runLevel: "HighestAvailable", mode: "admin" },
+          { runLevel: "LeastPrivilege",   mode: "user-fallback" },
+        ];
     try {
       if (!userSid) throw new Error("Windows user SID unavailable");
-      const xml = buildTaskXml({ kind: task.kind, time: task.time, exePath, userSid });
-      fs.writeFileSync(xmlPath, "﻿" + xml, { encoding: "utf16le" });
-      // No /RU SYSTEM — Principal in XML defines GroupId=Users (interactive session).
-      // /F = force overwrite if task already exists.
-      const r = await execAsync(`schtasks /Create /TN "${task.name}" /XML "${xmlPath}" /F`);
-      if (r.code === 0) {
-        registered = true;
-      } else {
+      for (const attempt of attempts) {
+        const xml = buildTaskXml({ kind: task.kind, time: task.time, exePath, userSid, runLevel: attempt.runLevel });
+        fs.writeFileSync(xmlPath, "\uFEFF" + xml, { encoding: "utf16le" });
+        const r = await execAsync(`schtasks /Create /TN "${task.name}" /XML "${xmlPath}" /F`);
+        if (r.code === 0) {
+          registered = true;
+          mode = attempt.mode;
+          lastError = "";
+          break;
+        }
         lastError = (r.stderr || r.stdout).trim();
+        // Only retry with LeastPrivilege on access-denied errors
+        if (!/refus|denied|access/i.test(lastError)) break;
       }
     } catch (e) {
       lastError = String(e && e.message ? e.message : e);
@@ -787,11 +804,11 @@ async function registerAutoLaunch() {
       kind: task.kind,
       time: task.time || null,
       registered,
-      mode: "user", // never SYSTEM anymore
+      mode,
       error: registered ? null : lastError.slice(0, 500),
     });
     if (registered) {
-      devLog(`[AUTOLAUNCH] task "${task.name}" registered (HighestAvailable).`);
+      devLog(`[AUTOLAUNCH] task "${task.name}" registered (${mode}).`);
     } else {
       console.error(`[AUTOLAUNCH] task "${task.name}" failed:`, lastError);
     }
@@ -857,25 +874,43 @@ function escapePowerShellSingleQuoted(value) {
 }
 function launchElevatedAutolaunchRepair(reason, targetUserSid) {
   if (process.platform !== "win32") return { ok: false, error: "not Windows" };
+  // VBS + Shell.Application "runas" — same approach as spawnVbsRelaunchAsAdmin.
+  // PowerShell `Start-Process -Verb RunAs` is routinely blocked by the EDRs
+  // installed on French pharmacy PCs (SentinelOne, Sophos, CrowdStrike) as
+  // a known LOLBin abuse pattern → UAC dialog never appears, the repair
+  // silently fails, and the user sees "tâches non créées · Accès refusé".
+  const vbsPath = path.join(app.getPath("temp"), `asclion-autolaunch-repair-${process.pid}-${Date.now()}.vbs`);
   try {
-    const exe = escapePowerShellSingleQuoted(process.execPath);
+    const exePath = process.execPath;
+    const exeEscaped = exePath.replace(/"/g, '""');
     const targetArg = targetUserSid ? ` --target-user-sid=${targetUserSid}` : "";
     const restartArg = reason === "startup" || reason === "manual" ? ` --replace-pid=${process.pid}` : "";
-    const arg = escapePowerShellSingleQuoted(`${REPAIR_AUTOLAUNCH_ARG} --reason=${reason || "startup"}${targetArg}${restartArg}`);
-    // NOTE: pas de -WindowStyle Hidden — sur certaines versions de Windows
-    // cette option supprime le dialogue UAC au lieu de juste masquer la fenêtre
-    // post-consent. Le process élevé n'a pas de window visible de toute façon
-    // (registerAutoLaunch tourne en headless puis app.quit()).
-    const command = `Start-Process -FilePath '${exe}' -ArgumentList '${arg}' -Verb RunAs`;
-    devLog("[AUTOLAUNCH] launching elevated helper:", command);
+    const args = `${REPAIR_AUTOLAUNCH_ARG} --reason=${reason || "startup"}${targetArg}${restartArg}`;
+    const argsEscaped = args.replace(/"/g, '""');
+
+    const vbsContent = [
+      `Option Explicit`,
+      `Dim objShell`,
+      `On Error Resume Next`,
+      `Set objShell = CreateObject("Shell.Application")`,
+      `objShell.ShellExecute "${exeEscaped}", "${argsEscaped}", "", "runas", 0`,
+      `WScript.Quit 0`,
+    ].join("\r\n");
+
+    fs.writeFileSync(vbsPath, vbsContent, { encoding: "utf8" });
+    devLog("[AUTOLAUNCH] launching elevated helper via VBS:", vbsPath);
+
     const child = spawn(
-      "powershell.exe",
-      ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", command],
+      "wscript.exe",
+      [vbsPath],
       { windowsHide: false, detached: true, stdio: "ignore" },
     );
     child.unref();
-    return { ok: true, error: null };
+
+    setTimeout(() => { try { fs.unlinkSync(vbsPath); } catch { /* ignore */ } }, 30_000);
+    return { ok: true, error: null, method: "vbs" };
   } catch (e) {
+    try { fs.unlinkSync(vbsPath); } catch { /* ignore */ }
     return { ok: false, error: String(e && e.message ? e.message : e) };
   }
 }
@@ -903,6 +938,7 @@ async function maybePromptElevatedAutolaunchRepair({ elevated, autolaunchState, 
     repairPrompt: {
       attempted: repair.ok,
       reason: reason || "startup",
+      method: repair.method || "vbs",
       error: repair.error || null,
       at: new Date().toISOString(),
     },
