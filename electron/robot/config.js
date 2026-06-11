@@ -6,12 +6,15 @@
 //   {
 //     "httpPort":      5150,             // POST /trigger + GET /health
 //     "robot": {
-//       "enabled":     false,            // is this PC the robot-server PC?
-//       "brand":       "none",           // none|rowa|pharmathek|generic|diagnostic
-//       "port":        9876,             // TCP port the LGO talks to
-//       "regex":       "EAN>(\\d{8,14})<", // GenericAdapter pattern (1st group = EAN)
-//       "useNpcap":    true,             // try Npcap (passive sniff) before TCP listen
-//       "targetIp":    null              // optional override: where to POST /trigger (default = packet source IP)
+//       "enabled":       false,          // is robot capture on for this PC?
+//       "brand":         "none",         // none|rowa|pharmathek|generic|diagnostic
+//       "port":          9876,           // TCP port the LGO talks to
+//       "regex":         "EAN>(\\d{8,14})<", // GenericAdapter pattern (1st group = EAN)
+//       "captureBackend":"auto",         // auto|windivert|npcap|tcp-listen
+//       "robotServerIp": null,           // optional: pin WinDivert filter to this dst IP
+//       "captureDirection":"outbound",   // WinDivert capture direction (per-till = outbound)
+//       "useNpcap":      true,           // try Npcap (passive sniff) before TCP listen
+//       "targetIp":      null            // optional override: where to POST /trigger (default = packet source IP)
 //     }
 //   }
 
@@ -35,6 +38,17 @@ const DEFAULT_CONFIG = Object.freeze({
     brand: "none",
     port: 9876,
     regex: "EAN>(\\d{8,14})<",
+    // Capture backend. "auto" prefers WinDivert (bundled signed driver, no
+    // installer), then Npcap, then the TCP-listen proxy — see sniffer.start().
+    captureBackend: "auto",
+    // Optional: restrict the WinDivert filter to the robot server's IP so we
+    // never capture unrelated traffic that happens to use the same port. Empty
+    // = capture every connection to robot.port. Prefillable from the "remote
+    // address" returned by robot:discover-port.
+    robotServerIp: null,
+    // WinDivert capture direction. Per-till self-capture watches THIS PC's
+    // outbound dispense orders; "outbound" also covers loopback for desk tests.
+    captureDirection: "outbound",
     useNpcap: true,
     targetIp: null,
     // IPs allowed to drive the TCP-listen fallback. Empty = accept any LAN
