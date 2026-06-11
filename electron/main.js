@@ -460,10 +460,17 @@ if (isAutolaunchRepairMode) {
     // Boot robot interception (HTTP listener + sniffer). Safe to call even when
     // the robot subsystem failed to load — bootRobotSubsystem() bails silently.
     bootRobotSubsystem();
-    // Check for updates silently — el-updater downloads in background, swaps
-    // the binary on quit, so the pharmacy gets the new version at next launch
-    // (typically the next morning) without any manual download.
-    autoUpdater.checkForUpdatesAndNotify();
+    // Controlled updates (config + handlers above): check silently at launch.
+    // el-updater downloads any new version in the background and re-detects a
+    // previously cached one. The actual install (which restarts the app) only
+    // fires Monday morning at launch — never mid-day — so a download can't
+    // reboot the till during a client exchange or the rush.
+    autoUpdater.checkForUpdates().catch((e) => devWarn("[UPDATER] launch check failed:", e && e.message));
+    // Re-check every 6h so a release published mid-week is downloaded and
+    // cached before Monday, even if the till runs for days without a restart.
+    setInterval(() => {
+      autoUpdater.checkForUpdates().catch(() => {});
+    }, 6 * 60 * 60 * 1000);
   });
 }
 app.on("window-all-closed", () => {
@@ -1091,16 +1098,60 @@ function detectLgoAndNotify() {
     }
   });
 }
+// ── Controlled auto-update ───────────────────────────────────────────
+// Updates download silently on ANY day, but the INSTALL (which restarts the
+// app) only happens on Monday morning, AT LAUNCH — never mid-day. This stops a
+// download that finishes during a client exchange or the rush from rebooting
+// the till. An update fetched mid-week sits cached and applies the next Monday.
+autoUpdater.autoDownload = true;
+// We drive the install ourselves; never let el-updater swap the binary on a
+// normal quit (that would apply mid-week updates the next morning, any day).
+autoUpdater.autoInstallOnAppQuit = false;
+
+// When a pending update is allowed to install. 0=Sun … 1=Mon … 6=Sat.
+const UPDATE_INSTALL_DAY = 1;        // Monday
+const UPDATE_INSTALL_HOUR_START = 4; // not before 04:00 (avoid odd night launches)
+const UPDATE_INSTALL_HOUR_END = 12;  // must be before noon
+// Only install an update that was already cached AT LAUNCH (downloaded in a
+// previous session): if "update-downloaded" fires within this window of
+// startup, the binary was ready on disk and we can swap it right at opening.
+// A fresh download that completes later in the morning is deferred to next
+// Monday, so the restart can never land in the middle of the day.
+const UPDATE_READY_AT_LAUNCH_MS = 120_000;
+const appLaunchAt = Date.now();
+
+function isUpdateInstallWindow() {
+  const d = new Date();
+  return (
+    d.getDay() === UPDATE_INSTALL_DAY &&
+    d.getHours() >= UPDATE_INSTALL_HOUR_START &&
+    d.getHours() < UPDATE_INSTALL_HOUR_END
+  );
+}
+
 // Auto-updater events
-autoUpdater.on("update-available", () => {
-  devLog("Update available, downloading...");
+autoUpdater.on("update-available", (info) => {
+  devLog(`[UPDATER] update ${info && info.version} available — downloading in background`);
 });
-autoUpdater.on("update-downloaded", () => {
-  devLog("Update downloaded. Will install on restart.");
-  autoUpdater.quitAndInstall();
+autoUpdater.on("update-downloaded", (info) => {
+  const readyAtLaunch = Date.now() - appLaunchAt < UPDATE_READY_AT_LAUNCH_MS;
+  if (isUpdateInstallWindow() && readyAtLaunch) {
+    devLog(`[UPDATER] Monday morning + update ready at launch → installing ${info && info.version}`);
+    // quitAndInstall(isSilent, isForceRunAfter): silent install, relaunch after.
+    setImmediate(() => {
+      try {
+        isQuitting = true;
+        autoUpdater.quitAndInstall(true, true);
+      } catch (e) {
+        console.error("[UPDATER] quitAndInstall failed:", e);
+      }
+    });
+  } else {
+    devLog(`[UPDATER] update ${info && info.version} downloaded — deferred to Monday morning (no mid-day restart)`);
+  }
 });
 autoUpdater.on("error", (err) => {
-  console.error("Auto-updater error:", err);
+  console.error("[UPDATER] error:", err);
 });
 // ────────────────────────────────────────────────────────────
 // Global HID barcode scanner listener (uiohook-napi)
