@@ -274,12 +274,7 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
         });
       }
       const st = await robotApi.status();
-      setRobotStatus({
-        listening: st?.listener?.listening,
-        mode: st?.sniffer?.mode,
-        lastEan: st?.sniffer?.lastEan ?? null,
-        host: st?.listener?.host,
-      });
+      setRobotStatus(flattenRobotStatus(st));
       if (robotApi.getToken) {
         const tk = await robotApi.getToken();
         if (typeof tk === "string") setRobotToken(tk);
@@ -388,12 +383,7 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
       }
       toast.success("Configuration robot enregistrée");
       const st = await robotApi.status();
-      setRobotStatus({
-        listening: st?.listener?.listening,
-        mode: st?.sniffer?.mode,
-        lastEan: st?.sniffer?.lastEan ?? null,
-        host: st?.listener?.host,
-      });
+      setRobotStatus(flattenRobotStatus(st));
     } catch (err: any) {
       toast.error("Erreur", { description: String(err?.message || err).slice(0, 180) });
     } finally {
@@ -903,7 +893,7 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
                         size="sm"
                         variant="outline"
                         className="h-6 text-[10px] mt-1"
-                        onClick={async () => { const st = await robotApi?.status(); if (st) setRobotStatus(st); }}
+                        onClick={async () => { const st = await robotApi?.status(); if (st) setRobotStatus(flattenRobotStatus(st)); }}
                       >
                         Rafraîchir
                       </Button>
