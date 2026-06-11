@@ -644,7 +644,7 @@ function buildTaskXml({ kind, time, exePath, userSid, runLevel = "HighestAvailab
     <Principal id="Author">
       <UserId>${sidEscaped}</UserId>
       <LogonType>InteractiveToken</LogonType>
-      <RunLevel>HighestAvailable</RunLevel>
+      <RunLevel>${runLevel}</RunLevel>
     </Principal>
   </Principals>
   <Settings>
