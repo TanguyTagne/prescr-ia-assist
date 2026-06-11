@@ -12,7 +12,12 @@ import Seo from "@/components/Seo";
 import { useI18n } from "@/i18n/I18nProvider";
 import LanguageToggle from "@/i18n/LanguageToggle";
 
-const DOWNLOAD_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/download-app`;
+// Hardcoded fallback to the public Supabase project URL — VITE_SUPABASE_URL
+// may be missing in the published bundle, which produced `undefined/functions/...`
+// → 404 on the download link.
+const SUPABASE_BASE_URL =
+  import.meta.env.VITE_SUPABASE_URL || "https://oknjfjplseopgymijnca.supabase.co";
+const DOWNLOAD_URL = `${SUPABASE_BASE_URL}/functions/v1/download-app`;
 
 const AccessRequestForm = () => {
   const { t, lp } = useI18n();
