@@ -207,13 +207,9 @@ serve(async (req) => {
       const { meds, unrecognized } = await lookupMedicamentsByCip(supabaseAdmin, cipCodes);
 
       const medIds    = (meds || []).map((m: any) => m.id);
-      let suggestions: unknown[] = [];
+      let suggestions: any[] = [];
 
       if (medIds.length > 0) {
-        // ── Source UNIQUE des PCs (mode strict curated-only) ─────────────
-        // Les PCs proviennent EXCLUSIVEMENT de medicament_curated_pcs
-        // (CSV "asclion medicaments finals"). Interdit de déduire depuis
-        // la pathologie / ATC / protocole / produits_complementaires.
         const { data: curated } = await supabaseAdmin
           .from("medicament_curated_pcs")
           .select("medicament_id, pc_1, pc_2")
@@ -232,6 +228,126 @@ serve(async (req) => {
         }).filter((s: any) => s.produits.length > 0);
       }
 
+      // ── Tracking temporel cross-sell : fenêtre 10 minutes ────────────────
+      const normalize = (s: string) =>
+        (s || "")
+          .toLowerCase()
+          .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+          .replace(/[^a-z0-9 ]+/g, " ")
+          .replace(/\s+/g, " ")
+          .trim();
+
+      // 1) MATCH : le scan courant correspond-il à un PC proposé dans les 10 dernières min ?
+      let matchedCount = 0;
+      try {
+        const { data: pendings } = await supabaseAdmin
+          .from("pending_cross_sell")
+          .select("*")
+          .eq("pharmacy_id", pharmacyId)
+          .is("matched_at", null)
+          .gt("expires_at", new Date().toISOString());
+
+        if (pendings?.length) {
+          const scannedNames = (meds || []).map((m: any) => ({
+            nom: m.nom_commercial as string,
+            cip: m.cip_code as string | null,
+            norm: normalize(m.nom_commercial),
+          }));
+          const scannedCipsSet = new Set(cipCodes);
+          // Si aucun med reconnu, on tente quand même un match nom via le code brut (rare)
+          if (!scannedNames.length) {
+            for (const c of cipCodes) scannedNames.push({ nom: c, cip: c, norm: normalize(c) });
+          }
+
+          const toMarkIds: string[] = [];
+          const crossSellInserts: any[] = [];
+
+          for (const p of pendings) {
+            let matched = false;
+            if (p.pc_cip && scannedCipsSet.has(p.pc_cip)) matched = true;
+            if (!matched) {
+              matched = scannedNames.some((s) => {
+                if (!s.norm || !p.pc_normalized) return false;
+                if (s.norm === p.pc_normalized) return true;
+                if (s.norm.includes(p.pc_normalized) || p.pc_normalized.includes(s.norm)) return true;
+                const pcWords = (p.pc_normalized as string).split(" ").filter((w) => w.length >= 4);
+                return pcWords.some((w) => s.norm.includes(w));
+              });
+            }
+            if (matched) {
+              toMarkIds.push(p.id);
+              crossSellInserts.push({
+                pharmacy_id: pharmacyId,
+                sale_id: null,
+                medicament_id: p.medicament_id,
+                medicament_nom: p.medicament_nom,
+                pathologie_id: p.pathologie_id,
+                pathologie_nom: p.pathologie_nom,
+                produit_complementaire_nom: p.pc_name,
+                was_sold: true,
+                match_source: "scan_window_10min",
+                matched_at: new Date().toISOString(),
+              });
+            }
+          }
+
+          if (toMarkIds.length) {
+            await supabaseAdmin
+              .from("pending_cross_sell")
+              .update({
+                matched_at: new Date().toISOString(),
+                matched_cip: cipCodes[0] || null,
+                matched_nom: (meds?.[0] as any)?.nom_commercial ?? null,
+              })
+              .in("id", toMarkIds);
+          }
+          if (crossSellInserts.length) {
+            await supabaseAdmin.from("cross_sell_tracking").insert(crossSellInserts);
+            matchedCount = crossSellInserts.length;
+            // Incrément times_sold sur recommendation_metrics (best-effort, ignore les manquants)
+            for (const m of crossSellInserts) {
+              const { data: row } = await supabaseAdmin
+                .from("recommendation_metrics")
+                .select("id, times_sold")
+                .eq("pharmacy_id", pharmacyId)
+                .eq("medicament_source", m.medicament_nom)
+                .eq("pc_proposed", m.produit_complementaire_nom)
+                .maybeSingle();
+              if (row?.id) {
+                await supabaseAdmin
+                  .from("recommendation_metrics")
+                  .update({ times_sold: (row.times_sold ?? 0) + 1, updated_at: new Date().toISOString() })
+                  .eq("id", row.id);
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.error("pending cross-sell match error:", e);
+      }
+
+      // 2) PROPOSITION : enregistre tous les PCs proposés pour CE scan (10 min de fenêtre)
+      try {
+        const pendingRows: any[] = [];
+        for (const s of suggestions) {
+          for (const p of (s.produits || [])) {
+            pendingRows.push({
+              pharmacy_id: pharmacyId,
+              device_id: deviceId,
+              medicament_id: s.medicament_id || null,
+              medicament_nom: s.medicament || "Inconnu",
+              pc_name: p.produit,
+              pc_normalized: normalize(p.produit),
+              pc_cip: p.cip_code || null,
+            });
+          }
+        }
+        if (pendingRows.length) {
+          await supabaseAdmin.from("pending_cross_sell").insert(pendingRows);
+        }
+      } catch (e) {
+        console.error("pending cross-sell insert error:", e);
+      }
 
       const { data: scan } = await supabaseAdmin
         .from("scan_queue")
@@ -244,6 +360,7 @@ serve(async (req) => {
             medicaments: meds || [],
             suggestions,
             unrecognized,
+            cross_sell_matched: matchedCount,
           },
           source,
           device_id:    deviceId,
@@ -258,6 +375,7 @@ serve(async (req) => {
           medicaments: meds || [],
           suggestions,
           unrecognized,
+          cross_sell_matched: matchedCount,
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
