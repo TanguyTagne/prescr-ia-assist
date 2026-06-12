@@ -395,6 +395,8 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          match_source: string
+          matched_at: string | null
           medicament_id: string | null
           medicament_nom: string
           pathologie_id: string | null
@@ -402,12 +404,14 @@ export type Database = {
           pharmacy_id: string
           produit_complementaire_id: string | null
           produit_complementaire_nom: string
-          sale_id: string
+          sale_id: string | null
           was_sold: boolean
         }
         Insert: {
           created_at?: string
           id?: string
+          match_source?: string
+          matched_at?: string | null
           medicament_id?: string | null
           medicament_nom: string
           pathologie_id?: string | null
@@ -415,12 +419,14 @@ export type Database = {
           pharmacy_id: string
           produit_complementaire_id?: string | null
           produit_complementaire_nom: string
-          sale_id: string
+          sale_id?: string | null
           was_sold?: boolean
         }
         Update: {
           created_at?: string
           id?: string
+          match_source?: string
+          matched_at?: string | null
           medicament_id?: string | null
           medicament_nom?: string
           pathologie_id?: string | null
@@ -428,7 +434,7 @@ export type Database = {
           pharmacy_id?: string
           produit_complementaire_id?: string | null
           produit_complementaire_nom?: string
-          sale_id?: string
+          sale_id?: string | null
           was_sold?: boolean
         }
         Relationships: [
@@ -1791,6 +1797,68 @@ export type Database = {
           volume_pondere?: number | null
         }
         Relationships: []
+      }
+      pending_cross_sell: {
+        Row: {
+          device_id: string | null
+          expires_at: string
+          id: string
+          matched_at: string | null
+          matched_cip: string | null
+          matched_nom: string | null
+          medicament_id: string | null
+          medicament_nom: string
+          pathologie_id: string | null
+          pathologie_nom: string | null
+          pc_cip: string | null
+          pc_name: string
+          pc_normalized: string
+          pharmacy_id: string
+          proposed_at: string
+        }
+        Insert: {
+          device_id?: string | null
+          expires_at?: string
+          id?: string
+          matched_at?: string | null
+          matched_cip?: string | null
+          matched_nom?: string | null
+          medicament_id?: string | null
+          medicament_nom: string
+          pathologie_id?: string | null
+          pathologie_nom?: string | null
+          pc_cip?: string | null
+          pc_name: string
+          pc_normalized: string
+          pharmacy_id: string
+          proposed_at?: string
+        }
+        Update: {
+          device_id?: string | null
+          expires_at?: string
+          id?: string
+          matched_at?: string | null
+          matched_cip?: string | null
+          matched_nom?: string | null
+          medicament_id?: string | null
+          medicament_nom?: string
+          pathologie_id?: string | null
+          pathologie_nom?: string | null
+          pc_cip?: string | null
+          pc_name?: string
+          pc_normalized?: string
+          pharmacy_id?: string
+          proposed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pending_cross_sell_pharmacy_id_fkey"
+            columns: ["pharmacy_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       pharma_questions: {
         Row: {
