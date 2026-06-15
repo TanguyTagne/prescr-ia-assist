@@ -106,8 +106,8 @@ const ResetPassword = () => {
             <Pill className="h-5 w-5 text-primary-foreground" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-primary-foreground tracking-tight">Asclion</h1>
-            <p className="text-xs text-primary-foreground/70">Réinitialisation du mot de passe</p>
+            <h1 className="text-xl font-bold text-primary-foreground tracking-tight">Asclion — Réinitialisation du mot de passe</h1>
+            <p className="text-xs text-primary-foreground/70">Choisissez un nouveau mot de passe sécurisé</p>
           </div>
         </div>
       </header>
