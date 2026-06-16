@@ -6,7 +6,7 @@ import { SCANNER } from "@/constants/scanner";
 import {
   X, Wifi, WifiOff, ShoppingCart, FileText, Package,
   Settings, Check, Key, Copy, RefreshCw, Clipboard, Shield,
-  FolderSearch, Loader2, Bot, Search,
+  FolderSearch, Loader2, Bot, Search, Activity,
 } from "lucide-react";
 import { isAsclionDesktopRuntime } from "@/lib/runtime";
 import { Button } from "@/components/ui/button";
@@ -188,6 +188,7 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
   const [robotStatus, setRobotStatus] = useState<{ listening?: boolean; mode?: string; lastEan?: string | null; host?: string; packetsSeen?: number; npcapAvailable?: boolean; npcapLoadError?: string | null; triggersSent?: number; forwardErrors?: number; lastError?: string | null } | null>(null);
   const [discovering, setDiscovering] = useState(false);
   const [discoveryResults, setDiscoveryResults] = useState<PortCandidate[] | null>(null);
+  const [runningDiag, setRunningDiag] = useState(false);
   const [discoveryNote, setDiscoveryNote] = useState<string | null>(null);
   const [robotToken, setRobotToken] = useState<string>("");
   const [tokenCopied, setTokenCopied] = useState(false);
@@ -382,6 +383,32 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
     toast.success(`Port ${c.remotePort} sélectionné`, {
       description: `${c.process} → ${c.remoteAddress}`,
     });
+  };
+
+  // Ouvre, SUR CE PC, une fenêtre de diagnostic réseau (PowerShell élevé) qui
+  // liste le port / l'IP / le sens de la liaison LGO↔robot et écrit un journal
+  // sur le Bureau. À lancer sur le PC serveur du robot.
+  const handleServerDiagnostic = async () => {
+    if (!robotApi?.runServerDiagnostic) {
+      toast.error("Diagnostic disponible uniquement dans l'application desktop Asclion.");
+      return;
+    }
+    setRunningDiag(true);
+    try {
+      const res = await robotApi.runServerDiagnostic(45);
+      if (res?.ok) {
+        toast.success("Diagnostic lancé", {
+          description:
+            "Accepte l'invite Windows (UAC). Dans la fenêtre qui s'ouvre, déclenche une vraie délivrance. Le journal est enregistré sur le Bureau.",
+        });
+      } else {
+        toast.error("Lancement impossible", { description: res?.error || "Erreur inconnue" });
+      }
+    } catch (err: any) {
+      toast.error("Erreur", { description: String(err?.message || err).slice(0, 180) });
+    } finally {
+      setRunningDiag(false);
+    }
   };
 
   const handleSaveRobot = async () => {
@@ -716,6 +743,22 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
                       Capture : {robotForm.captureDirection} · IP robot : {robotForm.robotServerIp}
                     </p>
                   )}
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="w-full h-8 gap-1.5 text-[11px]"
+                    onClick={handleServerDiagnostic}
+                    disabled={runningDiag || !robotApi}
+                    aria-label="Lancer le diagnostic réseau sur le PC serveur du robot"
+                  >
+                    {runningDiag ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Activity className="h-3.5 w-3.5" />}
+                    Diagnostic robot (PC serveur)
+                  </Button>
+                  <p className="text-[10px] text-muted-foreground -mt-1">
+                    À lancer sur le PC du robot : ouvre une fenêtre qui trouve le port, l'IP et le sens du trafic, puis écrit un journal sur le Bureau.
+                  </p>
 
                   {discoveryResults && (
                     <div className="space-y-1 rounded-md border border-border bg-background/60 p-2">
