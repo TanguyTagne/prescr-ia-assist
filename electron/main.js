@@ -2980,6 +2980,7 @@ ipcMain.handle("robot:auto-detect-port", async (_e, { durationMs } = {}) => {
   }
 
   const scanMs = Math.min(Math.max(Number(durationMs) || ROBOT_PORT_SCAN_DURATION_MS, 5000), 30000);
+  const localIps = localIpv4Set();
   const rows = new Map();
   let stderr = "";
   return await new Promise((resolve) => {
@@ -3013,22 +3014,28 @@ ipcMain.handle("robot:auto-detect-port", async (_e, { durationMs } = {}) => {
           const text = meta.payload.length ? meta.payload.toString("utf8") : "";
           const payloadHit = /rowa|dispense|article|barcode|ean|gtin|pzn|order|xml/i.test(text);
           if (isRobotPortCandidate(meta.dstPort)) {
+            const inboundToThisPc = localIps.has(meta.dstAddress);
             addRobotPortCandidate(rows, `dst:${meta.dstAddress}:${meta.dstPort}`, {
-              remoteAddress: meta.dstAddress,
+              remoteAddress: inboundToThisPc ? meta.srcAddress : meta.dstAddress,
+              robotServerIp: meta.dstAddress,
               remotePort: meta.dstPort,
               localPort: meta.srcPort,
               payloadBytes: meta.payload.length,
               payloadHit,
+              captureDirection: inboundToThisPc ? "inbound" : "outbound",
               direction: "dst",
             });
           }
           if (isRobotPortCandidate(meta.srcPort)) {
+            const responseToThisPc = localIps.has(meta.dstAddress);
             addRobotPortCandidate(rows, `src:${meta.srcAddress}:${meta.srcPort}`, {
               remoteAddress: meta.srcAddress,
+              robotServerIp: meta.srcAddress,
               remotePort: meta.srcPort,
               localPort: meta.dstPort,
               payloadBytes: meta.payload.length,
               payloadHit,
+              captureDirection: responseToThisPc ? "inbound" : "outbound",
               direction: "src",
             });
           }
