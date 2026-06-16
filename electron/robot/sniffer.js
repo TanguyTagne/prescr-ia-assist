@@ -206,6 +206,7 @@ function getStatus() {
     triggersSent: state.triggersSent,
     forwardErrors: state.forwardErrors,
     packetsSeen: state.packetsSeen,
+    captureDirection: state.captureDirection,
     npcapAvailable: !!cap,
     npcapLoadError: capLoadError,
     windivertAvailable: windivertAssetsPresent(),
