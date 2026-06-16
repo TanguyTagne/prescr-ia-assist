@@ -90,6 +90,15 @@
 
   body {
     @apply bg-background text-foreground antialiased;
+    /* Respect device safe areas (iOS notch, Android gesture bar) when packaged
+       as a native app via Capacitor. No-op on regular browser viewports. */
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    overscroll-behavior: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
   }
 }
 

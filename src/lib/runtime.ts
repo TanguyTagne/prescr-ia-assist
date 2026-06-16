@@ -8,7 +8,11 @@ const isElectronUserAgent = () => /Electron|AsclionDesktop/i.test(navigator.user
 
 const hasDesktopBridge = () => {
   const w = window as any;
-  return w.__ASCLION_DESKTOP__ === true || w.electronAPI?.isDesktop === true;
+  if (w.__ASCLION_DESKTOP__ === true || w.electronAPI?.isDesktop === true) return true;
+  // Capacitor native shell (iOS/Android) — render the same widget UI as desktop.
+  const cap = w.Capacitor;
+  if (cap && typeof cap.isNativePlatform === "function" && cap.isNativePlatform()) return true;
+  return false;
 };
 
 const hasDesktopQuery = () => {
