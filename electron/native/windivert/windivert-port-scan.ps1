@@ -37,7 +37,7 @@ public static class WDPortScan {
     exit 3
   }
 
-  $filter = "tcp and ip"
+  $filter = "tcp and ip and ((tcp.DstPort >= 1024 and tcp.DstPort <= 20000) or (tcp.SrcPort >= 1024 and tcp.SrcPort <= 20000))"
   $LAYER_NETWORK = 0
   $flags = [uint64](0x1 -bor 0x4) # SNIFF + RECV_ONLY
   $INVALID = [IntPtr](-1)
