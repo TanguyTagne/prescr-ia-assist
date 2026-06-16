@@ -2819,6 +2819,50 @@ const KNOWN_ROBOT_PORTS = new Set([
   8080, 9100, // Swisslog
   4444,  // Tosho
 ]);
+const ROBOT_PORT_SCAN_DURATION_MS = 20_000;
+const COMMON_NOISE_PORTS = new Set([53, 80, 123, 135, 137, 138, 139, 389, 443, 445, 3389, 5353, 5355]);
+
+function parseIpv4TcpPacket(packet) {
+  if (!Buffer.isBuffer(packet) || packet.length < 40) return null;
+  const version = packet[0] >> 4;
+  if (version !== 4) return null;
+  const ihl = (packet[0] & 0x0f) * 4;
+  if (packet.length < ihl + 20 || packet[9] !== 6) return null;
+  const srcPort = packet.readUInt16BE(ihl);
+  const dstPort = packet.readUInt16BE(ihl + 2);
+  const tcpHeaderLen = ((packet[ihl + 12] >> 4) & 0x0f) * 4;
+  const payloadOffset = ihl + tcpHeaderLen;
+  const payload = payloadOffset < packet.length ? packet.slice(payloadOffset) : Buffer.alloc(0);
+  const ip = (off) => `${packet[off]}.${packet[off + 1]}.${packet[off + 2]}.${packet[off + 3]}`;
+  return { srcAddress: ip(12), dstAddress: ip(16), srcPort, dstPort, payload };
+}
+
+function isRobotPortCandidate(port) {
+  return port > 1024 && port < 20000 && !COMMON_NOISE_PORTS.has(port);
+}
+
+function addRobotPortCandidate(map, key, patch) {
+  const current = map.get(key) || {
+    process: "capture-live",
+    pid: 0,
+    remoteAddress: patch.remoteAddress || "",
+    remotePort: patch.remotePort,
+    localPort: patch.localPort || 0,
+    isLgo: false,
+    isKnownRobotPort: KNOWN_ROBOT_PORTS.has(patch.remotePort),
+    score: 0,
+    packets: 0,
+    payloadBytes: 0,
+    payloadHits: 0,
+    direction: patch.direction,
+  };
+  current.packets += 1;
+  current.payloadBytes += patch.payloadBytes || 0;
+  current.payloadHits += patch.payloadHit ? 1 : 0;
+  current.score += (current.isKnownRobotPort ? 8 : 0) + (patch.payloadBytes > 0 ? 2 : 0) + (patch.payloadHit ? 10 : 0) + (patch.direction === "dst" ? 2 : 0);
+  if (!current.remoteAddress && patch.remoteAddress) current.remoteAddress = patch.remoteAddress;
+  map.set(key, current);
+}
 
 ipcMain.handle("robot:discover-port", async () => {
   if (process.platform !== "win32") {
