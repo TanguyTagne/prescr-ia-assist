@@ -75,6 +75,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
     // shortcut. Returns { ok, candidates: [{ process, remoteAddress, remotePort,
     // isLgo, isKnownRobotPort, score }], note? }.
     discoverPort: () => ipcRenderer.invoke("robot:discover-port"),
+    // Passive live capture for 20s: asks the pharmacist to trigger a real sale,
+    // then returns likely robot ports/IPs even when no TCP connection stays open.
+    autoDetectPort: (durationMs) => ipcRenderer.invoke("robot:auto-detect-port", { durationMs }),
     // Shared secret used to authenticate cross-PC /trigger calls. Surfaced in
     // Paramètres so the pharmacist can copy it to other Asclion installs in
     // the same officine. Distinct from getConfig so this exposure is

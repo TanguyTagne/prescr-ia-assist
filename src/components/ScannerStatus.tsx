@@ -84,6 +84,8 @@ interface RobotConfigForm {
   enabled: boolean;
   brand: RobotBrand;
   port: number;
+  robotServerIp: string;
+  captureDirection: "outbound" | "inbound" | "both";
   regex: string;
   useNpcap: boolean;
   httpPort: number;
@@ -95,10 +97,15 @@ interface PortCandidate {
   pid: number;
   remoteAddress: string;
   remotePort: number;
+  robotServerIp?: string;
+  captureDirection?: "outbound" | "inbound" | "both";
   localPort: number;
   isLgo: boolean;
   isKnownRobotPort: boolean;
   score: number;
+  packets?: number;
+  payloadBytes?: number;
+  payloadHits?: number;
 }
 
 const ROBOT_BRAND_LABELS: Record<RobotBrand, string> = {
@@ -168,6 +175,8 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
     enabled: false,
     brand: "none",
     port: 9876,
+    robotServerIp: "",
+    captureDirection: "outbound",
     regex: "EAN>(\\d{8,14})<",
     useNpcap: true,
     httpPort: 5150,
@@ -283,6 +292,8 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
           enabled: !!cfg.robot.enabled,
           brand: (cfg.robot.brand || "none") as RobotBrand,
           port: Number(cfg.robot.port) || 9876,
+          robotServerIp: cfg.robot.robotServerIp || "",
+          captureDirection: (cfg.robot.captureDirection || "outbound") as "outbound" | "inbound" | "both",
           regex: cfg.robot.regex || "EAN>(\\d{8,14})<",
           useNpcap: cfg.robot.useNpcap !== false,
           httpPort: Number(cfg.httpPort) || 5150,
@@ -321,7 +332,7 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
   };
 
   const handleDiscoverPort = async () => {
-    if (!robotApi?.discoverPort) {
+    if (!robotApi?.discoverPort && !robotApi?.autoDetectPort) {
       toast.error("Recherche disponible uniquement dans l'application desktop Asclion.");
       return;
     }
@@ -329,7 +340,13 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
     setDiscoveryResults(null);
     setDiscoveryNote(null);
     try {
-      const res = await robotApi.discoverPort();
+      toast.info("Recherche live lancée", { description: "Lance une vraie délivrance Rowa sur la caisse pendant 20 secondes." });
+      let res = robotApi.autoDetectPort
+        ? await robotApi.autoDetectPort(20000)
+        : await robotApi.discoverPort();
+      if (res?.ok && (!res.candidates || res.candidates.length === 0) && robotApi.discoverPort) {
+        res = await robotApi.discoverPort();
+      }
       if (!res?.ok) {
         toast.error("Recherche impossible", { description: res?.error || "Erreur inconnue" });
         return;
@@ -338,15 +355,14 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
       if (res.note) setDiscoveryNote(res.note);
       if (!res.candidates || res.candidates.length === 0) {
         toast.info("Aucune connexion détectée", {
-          description: "Lance une délivrance de test au LGO puis relance la recherche.",
+          description: "Relance la recherche puis déclenche une délivrance réelle côté caisse pendant les 20 secondes.",
         });
       } else {
         const top = res.candidates[0] as PortCandidate;
-        if (top.isLgo) {
-          toast.success("LGO détecté", {
-            description: `${top.process} → ${top.remoteAddress}:${top.remotePort}`,
-          });
-        }
+        handlePickCandidate(top);
+        toast.success("Port robot détecté", {
+          description: `${top.remoteAddress}:${top.remotePort} — clique Enregistrer pour appliquer.`,
+        });
       }
     } catch (err: any) {
       toast.error("Erreur", { description: String(err?.message || err).slice(0, 180) });
@@ -356,7 +372,13 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
   };
 
   const handlePickCandidate = (c: PortCandidate) => {
-    setRobotForm((f) => ({ ...f, port: c.remotePort }));
+    setRobotForm((f) => ({
+      ...f,
+      port: c.remotePort,
+      robotServerIp: c.robotServerIp || c.remoteAddress || f.robotServerIp,
+      captureDirection: c.captureDirection || f.captureDirection,
+      brand: f.brand === "none" ? "rowa" : f.brand,
+    }));
     toast.success(`Port ${c.remotePort} sélectionné`, {
       description: `${c.process} → ${c.remoteAddress}`,
     });
@@ -391,6 +413,8 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
           enabled: robotForm.enabled,
           brand: robotForm.brand,
           port: robotForm.port,
+          robotServerIp: robotForm.robotServerIp.trim() || null,
+          captureDirection: robotForm.captureDirection,
           regex: robotForm.regex,
           useNpcap: robotForm.useNpcap,
           allowedClientIps: validIps,
@@ -687,6 +711,11 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
                       Port typique : {TYPICAL_PORT_HINTS[robotForm.brand]}
                     </p>
                   )}
+                  {robotForm.robotServerIp && (
+                    <p className="text-[10px] text-muted-foreground -mt-1 font-mono">
+                      Capture : {robotForm.captureDirection} · IP robot : {robotForm.robotServerIp}
+                    </p>
+                  )}
 
                   {discoveryResults && (
                     <div className="space-y-1 rounded-md border border-border bg-background/60 p-2">
@@ -738,6 +767,7 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
                               <span className="shrink-0 flex gap-1">
                                 {c.isLgo && <span className="text-primary">LGO</span>}
                                 {c.isKnownRobotPort && <span>port-robot</span>}
+                                {typeof c.packets === "number" && <span>{c.packets} paq.</span>}
                               </span>
                             </div>
                           </button>

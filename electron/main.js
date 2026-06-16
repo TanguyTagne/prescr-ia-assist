@@ -3,6 +3,7 @@ const { app, BrowserWindow, shell, ipcMain, Notification } = require("electron")
 const { autoUpdater } = require("electron-updater");
 const path = require("path");
 const fs = require("fs");
+const os = require("os");
 const { exec, spawn } = require("child_process");
 
 // Robot interception subsystem (lazy: failing to load any of these must NOT
@@ -2819,6 +2820,65 @@ const KNOWN_ROBOT_PORTS = new Set([
   8080, 9100, // Swisslog
   4444,  // Tosho
 ]);
+const ROBOT_PORT_SCAN_DURATION_MS = 20_000;
+const COMMON_NOISE_PORTS = new Set([53, 80, 123, 135, 137, 138, 139, 389, 443, 445, 3389, 5353, 5355]);
+
+function parseIpv4TcpPacket(packet) {
+  if (!Buffer.isBuffer(packet) || packet.length < 40) return null;
+  const version = packet[0] >> 4;
+  if (version !== 4) return null;
+  const ihl = (packet[0] & 0x0f) * 4;
+  if (packet.length < ihl + 20 || packet[9] !== 6) return null;
+  const srcPort = packet.readUInt16BE(ihl);
+  const dstPort = packet.readUInt16BE(ihl + 2);
+  const tcpHeaderLen = ((packet[ihl + 12] >> 4) & 0x0f) * 4;
+  const payloadOffset = ihl + tcpHeaderLen;
+  const payload = payloadOffset < packet.length ? packet.slice(payloadOffset) : Buffer.alloc(0);
+  const ip = (off) => `${packet[off]}.${packet[off + 1]}.${packet[off + 2]}.${packet[off + 3]}`;
+  return { srcAddress: ip(12), dstAddress: ip(16), srcPort, dstPort, payload };
+}
+
+function isRobotPortCandidate(port) {
+  return port > 1024 && port < 20000 && !COMMON_NOISE_PORTS.has(port);
+}
+
+function addRobotPortCandidate(map, key, patch) {
+  const current = map.get(key) || {
+    process: "capture-live",
+    pid: 0,
+    remoteAddress: patch.remoteAddress || "",
+    robotServerIp: patch.robotServerIp || patch.remoteAddress || "",
+    remotePort: patch.remotePort,
+    localPort: patch.localPort || 0,
+    isLgo: false,
+    isKnownRobotPort: KNOWN_ROBOT_PORTS.has(patch.remotePort),
+    score: 0,
+    packets: 0,
+    payloadBytes: 0,
+    payloadHits: 0,
+    captureDirection: patch.captureDirection || "outbound",
+    direction: patch.direction,
+  };
+  current.packets += 1;
+  current.payloadBytes += patch.payloadBytes || 0;
+  current.payloadHits += patch.payloadHit ? 1 : 0;
+  current.score += (current.isKnownRobotPort ? 8 : 0) + (patch.payloadBytes > 0 ? 2 : 0) + (patch.payloadHit ? 10 : 0) + (patch.direction === "dst" ? 2 : 0);
+  if (!current.remoteAddress && patch.remoteAddress) current.remoteAddress = patch.remoteAddress;
+  if (!current.robotServerIp && patch.robotServerIp) current.robotServerIp = patch.robotServerIp;
+  map.set(key, current);
+}
+
+function localIpv4Set() {
+  const out = new Set(["127.0.0.1"]);
+  try {
+    for (const entries of Object.values(os.networkInterfaces() || {})) {
+      for (const item of entries || []) {
+        if (item && item.family === "IPv4" && !item.internal && item.address) out.add(item.address);
+      }
+    }
+  } catch { /* ignore */ }
+  return out;
+}
 
 ipcMain.handle("robot:discover-port", async () => {
   if (process.platform !== "win32") {
@@ -2902,6 +2962,103 @@ ipcMain.handle("robot:discover-port", async () => {
           error: stderr.trim() || (e && e.message) || "parse error",
           candidates: [],
         });
+      }
+    });
+    child.stdin && child.stdin.end();
+  });
+});
+
+ipcMain.handle("robot:auto-detect-port", async (_e, { durationMs } = {}) => {
+  if (process.platform !== "win32") return { ok: false, error: "Windows uniquement", candidates: [] };
+  const windivertDir = path
+    .join(__dirname, "native", "windivert")
+    .replace(`app.asar${path.sep}`, `app.asar.unpacked${path.sep}`);
+  const dll = path.join(windivertDir, "WinDivert.dll");
+  const script = path.join(windivertDir, "windivert-port-scan.ps1");
+  if (!fs.existsSync(dll) || !fs.existsSync(script)) {
+    return { ok: false, error: "WinDivert manquant dans l'installation Asclion", candidates: [] };
+  }
+
+  const scanMs = Math.min(Math.max(Number(durationMs) || ROBOT_PORT_SCAN_DURATION_MS, 5000), 30000);
+  const localIps = localIpv4Set();
+  const rows = new Map();
+  let stderr = "";
+  return await new Promise((resolve) => {
+    let child;
+    try {
+      child = spawn("powershell.exe", [
+        "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
+        "-File", script,
+        "-DllPath", dll,
+        "-DurationSec", String(Math.ceil(scanMs / 1000)),
+      ], { windowsHide: true });
+    } catch (e) {
+      resolve({ ok: false, error: `spawn: ${e && e.message}`, candidates: [] });
+      return;
+    }
+
+    let stdoutBuf = "";
+    const timer = setTimeout(() => { try { child.kill(); } catch { /* noop */ } }, scanMs + 5000);
+    child.stdout.on("data", (d) => {
+      stdoutBuf += d.toString("utf-8");
+      let nl;
+      while ((nl = stdoutBuf.indexOf("\n")) >= 0) {
+        const line = stdoutBuf.slice(0, nl).trim();
+        stdoutBuf = stdoutBuf.slice(nl + 1);
+        if (!line) continue;
+        try {
+          const obj = JSON.parse(line);
+          if (!obj.b64) continue;
+          const meta = parseIpv4TcpPacket(Buffer.from(obj.b64, "base64"));
+          if (!meta) continue;
+          const text = meta.payload.length ? meta.payload.toString("utf8") : "";
+          const payloadHit = /rowa|dispense|article|barcode|ean|gtin|pzn|order|xml/i.test(text);
+          if (isRobotPortCandidate(meta.dstPort)) {
+            const inboundToThisPc = localIps.has(meta.dstAddress);
+            addRobotPortCandidate(rows, `dst:${meta.dstAddress}:${meta.dstPort}`, {
+              remoteAddress: inboundToThisPc ? meta.srcAddress : meta.dstAddress,
+              robotServerIp: meta.dstAddress,
+              remotePort: meta.dstPort,
+              localPort: meta.srcPort,
+              payloadBytes: meta.payload.length,
+              payloadHit,
+              captureDirection: inboundToThisPc ? "inbound" : "outbound",
+              direction: "dst",
+            });
+          }
+          if (isRobotPortCandidate(meta.srcPort)) {
+            const responseToThisPc = localIps.has(meta.dstAddress);
+            addRobotPortCandidate(rows, `src:${meta.srcAddress}:${meta.srcPort}`, {
+              remoteAddress: meta.srcAddress,
+              robotServerIp: meta.srcAddress,
+              remotePort: meta.srcPort,
+              localPort: meta.dstPort,
+              payloadBytes: meta.payload.length,
+              payloadHit,
+              captureDirection: responseToThisPc ? "inbound" : "outbound",
+              direction: "src",
+            });
+          }
+        } catch {
+          /* ignore malformed helper output */
+        }
+      }
+    });
+    child.stderr.on("data", (d) => { stderr += d.toString("utf-8"); });
+    child.on("error", (err) => {
+      clearTimeout(timer);
+      resolve({ ok: false, error: `powershell: ${err && err.message}`, candidates: [] });
+    });
+    child.on("close", () => {
+      clearTimeout(timer);
+      const candidates = Array.from(rows.values())
+        .filter((c) => c.packets >= 2 || c.payloadBytes > 0 || c.isKnownRobotPort)
+        .sort((a, b) => (b.score - a.score) || (b.payloadBytes - a.payloadBytes) || (b.packets - a.packets))
+        .slice(0, 12);
+      if (candidates.length === 0 && stderr.trim()) {
+        resolve({ ok: false, error: stderr.trim().slice(0, 220), candidates: [] });
+      } else {
+        resolve({ ok: true, candidates, durationMs: scanMs, note: candidates.length ? null : "Aucun trafic TCP robot détecté pendant la fenêtre de test." });
       }
     });
     child.stdin && child.stdin.end();
