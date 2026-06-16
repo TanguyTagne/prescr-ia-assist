@@ -3,6 +3,7 @@ const { app, BrowserWindow, shell, ipcMain, Notification } = require("electron")
 const { autoUpdater } = require("electron-updater");
 const path = require("path");
 const fs = require("fs");
+const os = require("os");
 const { exec, spawn } = require("child_process");
 
 // Robot interception subsystem (lazy: failing to load any of these must NOT
@@ -2846,6 +2847,7 @@ function addRobotPortCandidate(map, key, patch) {
     process: "capture-live",
     pid: 0,
     remoteAddress: patch.remoteAddress || "",
+    robotServerIp: patch.robotServerIp || patch.remoteAddress || "",
     remotePort: patch.remotePort,
     localPort: patch.localPort || 0,
     isLgo: false,
@@ -2854,6 +2856,7 @@ function addRobotPortCandidate(map, key, patch) {
     packets: 0,
     payloadBytes: 0,
     payloadHits: 0,
+    captureDirection: patch.captureDirection || "outbound",
     direction: patch.direction,
   };
   current.packets += 1;
@@ -2861,7 +2864,20 @@ function addRobotPortCandidate(map, key, patch) {
   current.payloadHits += patch.payloadHit ? 1 : 0;
   current.score += (current.isKnownRobotPort ? 8 : 0) + (patch.payloadBytes > 0 ? 2 : 0) + (patch.payloadHit ? 10 : 0) + (patch.direction === "dst" ? 2 : 0);
   if (!current.remoteAddress && patch.remoteAddress) current.remoteAddress = patch.remoteAddress;
+  if (!current.robotServerIp && patch.robotServerIp) current.robotServerIp = patch.robotServerIp;
   map.set(key, current);
+}
+
+function localIpv4Set() {
+  const out = new Set(["127.0.0.1"]);
+  try {
+    for (const entries of Object.values(os.networkInterfaces() || {})) {
+      for (const item of entries || []) {
+        if (item && item.family === "IPv4" && !item.internal && item.address) out.add(item.address);
+      }
+    }
+  } catch { /* ignore */ }
+  return out;
 }
 
 ipcMain.handle("robot:discover-port", async () => {
