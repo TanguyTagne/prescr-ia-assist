@@ -5,6 +5,10 @@ import App from "./App.tsx";
 import "./index.css";
 import { isAsclionDesktopRuntime } from "@/lib/runtime";
 import { processIncomingTrackingLink } from "@/lib/trackingAttribution";
+import { initCapacitor } from "@/lib/capacitor";
+
+// Boot Capacitor native bridge (no-op in browser).
+initCapacitor();
 
 const SW_VERSION = "v8";
 const isDesktopRuntime = isAsclionDesktopRuntime();
