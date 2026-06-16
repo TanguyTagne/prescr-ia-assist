@@ -263,7 +263,6 @@ const Admin = () => {
         {tab === "accepted-pcs" && <AcceptedPcsTab />}
         {tab === "hardware" && <HardwareDiagnosticTab />}
         {tab === "remote-diag" && <RemoteScannerDiagnosticTab />}
-        {tab === "robot-diag" && <RobotSnifferDiagnosticTab />}
         {tab === "medicaments-manquants" && <MedicamentsManquantsTab />}
         {tab === "atc-audit" && <AtcAuditTab />}
         {tab === "asclion-base" && <AsclionBaseImportTab />}
