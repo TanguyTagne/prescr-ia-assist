@@ -341,9 +341,12 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
     setDiscoveryNote(null);
     try {
       toast.info("Recherche live lancée", { description: "Lance une vraie délivrance Rowa sur la caisse pendant 20 secondes." });
-      const res = robotApi.autoDetectPort
+      let res = robotApi.autoDetectPort
         ? await robotApi.autoDetectPort(20000)
         : await robotApi.discoverPort();
+      if (res?.ok && (!res.candidates || res.candidates.length === 0) && robotApi.discoverPort) {
+        res = await robotApi.discoverPort();
+      }
       if (!res?.ok) {
         toast.error("Recherche impossible", { description: res?.error || "Erreur inconnue" });
         return;
@@ -358,7 +361,7 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
         const top = res.candidates[0] as PortCandidate;
         handlePickCandidate(top);
         toast.success("Port robot détecté", {
-          description: `${top.remoteAddress}:${top.remotePort}`,
+          description: `${top.remoteAddress}:${top.remotePort} — clique Enregistrer pour appliquer.`,
         });
       }
     } catch (err: any) {
@@ -708,6 +711,11 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
                       Port typique : {TYPICAL_PORT_HINTS[robotForm.brand]}
                     </p>
                   )}
+                  {robotForm.robotServerIp && (
+                    <p className="text-[10px] text-muted-foreground -mt-1 font-mono">
+                      Capture : {robotForm.captureDirection} · IP robot : {robotForm.robotServerIp}
+                    </p>
+                  )}
 
                   {discoveryResults && (
                     <div className="space-y-1 rounded-md border border-border bg-background/60 p-2">
@@ -759,6 +767,7 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
                               <span className="shrink-0 flex gap-1">
                                 {c.isLgo && <span className="text-primary">LGO</span>}
                                 {c.isKnownRobotPort && <span>port-robot</span>}
+                                {typeof c.packets === "number" && <span>{c.packets} paq.</span>}
                               </span>
                             </div>
                           </button>
