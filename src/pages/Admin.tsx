@@ -214,10 +214,6 @@ const Admin = () => {
             <ScanLine className="h-3.5 w-3.5" />
             Diag distants (par pharmacie)
           </Button>
-          <Button variant={tab === "robot-diag" ? "default" : "outline"} size="sm" onClick={() => setTab("robot-diag")} className="gap-1.5">
-            <ScanLine className="h-3.5 w-3.5" />
-            Diag Robot (WinDivert)
-          </Button>
           <Button variant={tab === "medicaments-manquants" ? "default" : "outline"} size="sm" onClick={() => setTab("medicaments-manquants")} className="gap-1.5">
             <PackageSearch className="h-3.5 w-3.5" />
             Médicaments manquants
