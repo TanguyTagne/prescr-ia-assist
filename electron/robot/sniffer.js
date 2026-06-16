@@ -52,6 +52,7 @@ const state = {
   triggersSent: 0,
   forwardErrors: 0,
   packetsSeen: 0,
+  captureDirection: "outbound",
 };
 
 let runtimeRefs = {
@@ -98,6 +99,7 @@ function start(config) {
   const robot = (config && config.robot) || {};
   state.brand = robot.brand || "none";
   state.port = Number(robot.port) || 0;
+  state.captureDirection = (robot.captureDirection || "outbound").toLowerCase();
   state.lastError = null;
 
   if (!robot.enabled || state.brand === "none") {
@@ -377,11 +379,25 @@ function handleWinDivertLine(line) {
   }
   if (!payload.length) return;
   // The helper hands us the WHOLE captured packet (IP + TCP headers + payload).
-  // The adapters regex for XML/JSON barcode tags, which never match the binary
-  // header bytes, so scanning the full packet is safe. sourceIp is set to
-  // loopback so fanoutTrigger() fires the LOCAL pipeline only — this till is
-  // the one that sent the order, so it is the one that should pop the widget.
-  handlePayload(payload, "127.0.0.1");
+  // For inbound capture on the robot-server PC, preserve the source till IP so
+  // fanoutTrigger() can notify that checkout PC. For per-till outbound capture,
+  // keep loopback to avoid POSTing a duplicate trigger back to ourselves.
+  const meta = parseIpv4TcpPacket(payload);
+  const sourceIp = state.captureDirection === "inbound" && meta?.dstPort === state.port
+    ? meta.srcAddress
+    : "127.0.0.1";
+  handlePayload(payload, sourceIp);
+}
+
+function parseIpv4TcpPacket(packet) {
+  if (!Buffer.isBuffer(packet) || packet.length < 40) return null;
+  if ((packet[0] >> 4) !== 4 || packet[9] !== 6) return null;
+  const ihl = (packet[0] & 0x0f) * 4;
+  if (packet.length < ihl + 20) return null;
+  const srcPort = packet.readUInt16BE(ihl);
+  const dstPort = packet.readUInt16BE(ihl + 2);
+  const ip = (off) => `${packet[off]}.${packet[off + 1]}.${packet[off + 2]}.${packet[off + 3]}`;
+  return { srcAddress: ip(12), dstAddress: ip(16), srcPort, dstPort };
 }
 
 // ───── TCP listen fallback ───────────────────────────────────────────
