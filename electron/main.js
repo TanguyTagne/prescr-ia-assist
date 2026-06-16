@@ -2952,6 +2952,96 @@ ipcMain.handle("robot:discover-port", async () => {
   });
 });
 
+ipcMain.handle("robot:auto-detect-port", async (_e, { durationMs } = {}) => {
+  if (process.platform !== "win32") return { ok: false, error: "Windows uniquement", candidates: [] };
+  const windivertDir = path
+    .join(__dirname, "native", "windivert")
+    .replace(`app.asar${path.sep}`, `app.asar.unpacked${path.sep}`);
+  const dll = path.join(windivertDir, "WinDivert.dll");
+  const script = path.join(windivertDir, "windivert-port-scan.ps1");
+  if (!fs.existsSync(dll) || !fs.existsSync(script)) {
+    return { ok: false, error: "WinDivert manquant dans l'installation Asclion", candidates: [] };
+  }
+
+  const scanMs = Math.min(Math.max(Number(durationMs) || ROBOT_PORT_SCAN_DURATION_MS, 5000), 30000);
+  const rows = new Map();
+  let stderr = "";
+  return await new Promise((resolve) => {
+    let child;
+    try {
+      child = spawn("powershell.exe", [
+        "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
+        "-File", script,
+        "-DllPath", dll,
+        "-DurationSec", String(Math.ceil(scanMs / 1000)),
+      ], { windowsHide: true });
+    } catch (e) {
+      resolve({ ok: false, error: `spawn: ${e && e.message}`, candidates: [] });
+      return;
+    }
+
+    let stdoutBuf = "";
+    const timer = setTimeout(() => { try { child.kill(); } catch { /* noop */ } }, scanMs + 5000);
+    child.stdout.on("data", (d) => {
+      stdoutBuf += d.toString("utf-8");
+      let nl;
+      while ((nl = stdoutBuf.indexOf("\n")) >= 0) {
+        const line = stdoutBuf.slice(0, nl).trim();
+        stdoutBuf = stdoutBuf.slice(nl + 1);
+        if (!line) continue;
+        try {
+          const obj = JSON.parse(line);
+          if (!obj.b64) continue;
+          const meta = parseIpv4TcpPacket(Buffer.from(obj.b64, "base64"));
+          if (!meta) continue;
+          const text = meta.payload.length ? meta.payload.toString("utf8") : "";
+          const payloadHit = /rowa|dispense|article|barcode|ean|gtin|pzn|order|xml/i.test(text);
+          if (isRobotPortCandidate(meta.dstPort)) {
+            addRobotPortCandidate(rows, `dst:${meta.dstAddress}:${meta.dstPort}`, {
+              remoteAddress: meta.dstAddress,
+              remotePort: meta.dstPort,
+              localPort: meta.srcPort,
+              payloadBytes: meta.payload.length,
+              payloadHit,
+              direction: "dst",
+            });
+          }
+          if (isRobotPortCandidate(meta.srcPort)) {
+            addRobotPortCandidate(rows, `src:${meta.srcAddress}:${meta.srcPort}`, {
+              remoteAddress: meta.srcAddress,
+              remotePort: meta.srcPort,
+              localPort: meta.dstPort,
+              payloadBytes: meta.payload.length,
+              payloadHit,
+              direction: "src",
+            });
+          }
+        } catch {
+          /* ignore malformed helper output */
+        }
+      }
+    });
+    child.stderr.on("data", (d) => { stderr += d.toString("utf-8"); });
+    child.on("error", (err) => {
+      clearTimeout(timer);
+      resolve({ ok: false, error: `powershell: ${err && err.message}`, candidates: [] });
+    });
+    child.on("close", () => {
+      clearTimeout(timer);
+      const candidates = Array.from(rows.values())
+        .filter((c) => c.packets >= 2 || c.payloadBytes > 0 || c.isKnownRobotPort)
+        .sort((a, b) => (b.score - a.score) || (b.payloadBytes - a.payloadBytes) || (b.packets - a.packets))
+        .slice(0, 12);
+      if (candidates.length === 0 && stderr.trim()) {
+        resolve({ ok: false, error: stderr.trim().slice(0, 220), candidates: [] });
+      } else {
+        resolve({ ok: true, candidates, durationMs: scanMs, note: candidates.length ? null : "Aucun trafic TCP robot détecté pendant la fenêtre de test." });
+      }
+    });
+    child.stdin && child.stdin.end();
+  });
+});
+
 // Manual update check — surfaced in Paramètres so the pharmacist can verify
 // a release went out without restarting the app.
 ipcMain.handle("updater:check", async () => {
