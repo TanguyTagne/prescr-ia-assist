@@ -84,6 +84,8 @@ interface RobotConfigForm {
   enabled: boolean;
   brand: RobotBrand;
   port: number;
+  robotServerIp: string;
+  captureDirection: "outbound" | "inbound" | "both";
   regex: string;
   useNpcap: boolean;
   httpPort: number;
@@ -95,10 +97,15 @@ interface PortCandidate {
   pid: number;
   remoteAddress: string;
   remotePort: number;
+  robotServerIp?: string;
+  captureDirection?: "outbound" | "inbound" | "both";
   localPort: number;
   isLgo: boolean;
   isKnownRobotPort: boolean;
   score: number;
+  packets?: number;
+  payloadBytes?: number;
+  payloadHits?: number;
 }
 
 const ROBOT_BRAND_LABELS: Record<RobotBrand, string> = {
@@ -168,6 +175,8 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
     enabled: false,
     brand: "none",
     port: 9876,
+    robotServerIp: "",
+    captureDirection: "outbound",
     regex: "EAN>(\\d{8,14})<",
     useNpcap: true,
     httpPort: 5150,
