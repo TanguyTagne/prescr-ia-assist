@@ -3065,6 +3065,59 @@ ipcMain.handle("robot:auto-detect-port", async (_e, { durationMs } = {}) => {
   });
 });
 
+// robot:run-server-diagnostic
+// Lance, SUR CE PC, le script de diagnostic réseau (asclion-server-diagnostic.ps1)
+// dans une fenêtre PowerShell visible + élevée (UAC). Sert, sur le PC serveur du
+// robot, à trouver le port / l'IP / le sens réels de la liaison LGO↔Rowa (WWKS2)
+// sans dépendre de la capture WinDivert/Npcap, et à écrire un journal sur le
+// Bureau. Le bootstrap PowerShell est caché ; seule la fenêtre élevée (-NoExit)
+// reste visible pour que le pharmacien lise le résumé.
+ipcMain.handle("robot:run-server-diagnostic", async (_e, { seconds } = {}) => {
+  if (process.platform !== "win32") return { ok: false, error: "Windows uniquement" };
+  const diagDir = path
+    .join(__dirname, "native", "diag")
+    .replace(`app.asar${path.sep}`, `app.asar.unpacked${path.sep}`);
+  const script = path.join(diagDir, "asclion-server-diagnostic.ps1");
+  if (!fs.existsSync(script)) {
+    return { ok: false, error: `Script de diagnostic introuvable (${script})` };
+  }
+  const dur = Math.min(Math.max(Number(seconds) || 45, 10), 180);
+  // Échappement pour une chaîne PowerShell entre guillemets simples (' -> '').
+  const scriptEsc = script.replace(/'/g, "''");
+  const argList =
+    "@('-NoExit','-NoProfile','-ExecutionPolicy','Bypass'," +
+    "'-File','" + scriptEsc + "','-Seconds','" + dur + "')";
+  const launch = `Start-Process -FilePath 'powershell.exe' -Verb RunAs -ArgumentList ${argList}`;
+  return await new Promise((resolve) => {
+    let child;
+    try {
+      child = spawn(
+        "powershell.exe",
+        ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", launch],
+        { windowsHide: true },
+      );
+    } catch (e) {
+      resolve({ ok: false, error: `spawn: ${e && e.message}` });
+      return;
+    }
+    let stderr = "";
+    const timer = setTimeout(() => { try { child.kill(); } catch { /* noop */ } }, 15_000);
+    child.stderr.on("data", (d) => { stderr += d.toString("utf-8"); });
+    child.on("error", (err) => {
+      clearTimeout(timer);
+      resolve({ ok: false, error: `powershell: ${err && err.message}` });
+    });
+    // Start-Process rend la main immédiatement (pas de -Wait) : la fenêtre élevée
+    // vit sa vie. Lancement réussi si le bootstrap se termine sans erreur ; un
+    // refus UAC fait échouer Start-Process (code de sortie != 0).
+    child.on("close", (code) => {
+      clearTimeout(timer);
+      if (code === 0) resolve({ ok: true });
+      else resolve({ ok: false, error: (stderr.trim() || `PowerShell code ${code}`) + " — invite Windows (UAC) refusée ?" });
+    });
+  });
+});
+
 // Manual update check — surfaced in Paramètres so the pharmacist can verify
 // a release went out without restarting the app.
 ipcMain.handle("updater:check", async () => {

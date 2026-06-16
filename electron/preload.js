@@ -78,6 +78,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
     // Passive live capture for 20s: asks the pharmacist to trigger a real sale,
     // then returns likely robot ports/IPs even when no TCP connection stays open.
     autoDetectPort: (durationMs) => ipcRenderer.invoke("robot:auto-detect-port", { durationMs }),
+    // Lance, SUR CE PC, le diagnostic réseau dans une fenêtre PowerShell élevée :
+    // trouve le port / l'IP / le sens de la liaison LGO↔robot et écrit un journal
+    // sur le Bureau. À utiliser sur le PC serveur du robot.
+    runServerDiagnostic: (seconds) => ipcRenderer.invoke("robot:run-server-diagnostic", { seconds }),
     // Shared secret used to authenticate cross-PC /trigger calls. Surfaced in
     // Paramètres so the pharmacist can copy it to other Asclion installs in
     // the same officine. Distinct from getConfig so this exposure is
