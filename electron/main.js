@@ -2880,6 +2880,19 @@ function localIpv4Set() {
   return out;
 }
 
+// Le robot est TOUJOURS joignable via le LAN (ou le loopback si le LGO et le
+// robot tournent sur le même PC). Une IP publique n'est jamais le robot : c'est
+// du trafic Internet de fond (notifications push, télémétrie…). On la rejette
+// pour que la découverte ne propose plus jamais une adresse type Cloudflare.
+function isLanOrLoopback(ip) {
+  if (typeof ip !== "string" || !ip) return false;
+  if (ip === "::1" || ip.startsWith("127.")) return true;             // loopback
+  if (ip.startsWith("10.") || ip.startsWith("192.168.")) return true; // RFC1918
+  const m = ip.match(/^172\.(\d+)\./);                                // 172.16–31
+  if (m) { const o = Number(m[1]); return o >= 16 && o <= 31; }
+  return false;
+}
+
 ipcMain.handle("robot:discover-port", async () => {
   if (process.platform !== "win32") {
     return { ok: false, error: "Windows uniquement", candidates: [] };
@@ -2889,7 +2902,9 @@ ipcMain.handle("robot:discover-port", async () => {
   const psScript =
     "$ErrorActionPreference='SilentlyContinue';" +
     "$rows = Get-NetTCPConnection -State Established | " +
-    "Where-Object { $_.RemoteAddress -notmatch '^(127\\.|0\\.0\\.0\\.0|::|fe80)' } | " +
+    // On ne garde QUE les IP locales : RFC1918 (10/172.16-31/192.168) + 127.x.
+    // Toute IP publique est écartée (ce n'est jamais le robot).
+    "Where-Object { $_.RemoteAddress -match '^(10\\.|192\\.168\\.|172\\.(1[6-9]|2[0-9]|3[0-1])\\.|127\\.)' } | " +
     "ForEach-Object { " +
       "$proc = Get-Process -Id $_.OwningProcess -ErrorAction SilentlyContinue; " +
       "[PSCustomObject]@{ " +
@@ -2953,7 +2968,7 @@ ipcMain.handle("robot:discover-port", async () => {
             };
           })
           // Drop obvious noise: browser tabs, system services on high ports.
-          .filter((c) => c.remotePort > 0 && c.remotePort < 65535)
+          .filter((c) => c.remotePort > 0 && c.remotePort < 65535 && isLanOrLoopback(c.remoteAddress))
           .sort((a, b) => b.score - a.score);
         resolve({ ok: true, candidates });
       } catch (e) {
@@ -3013,7 +3028,7 @@ ipcMain.handle("robot:auto-detect-port", async (_e, { durationMs } = {}) => {
           if (!meta) continue;
           const text = meta.payload.length ? meta.payload.toString("utf8") : "";
           const payloadHit = /rowa|dispense|article|barcode|ean|gtin|pzn|order|xml/i.test(text);
-          if (isRobotPortCandidate(meta.dstPort)) {
+          if (isRobotPortCandidate(meta.dstPort) && isLanOrLoopback(meta.dstAddress)) {
             const inboundToThisPc = localIps.has(meta.dstAddress);
             addRobotPortCandidate(rows, `dst:${meta.dstAddress}:${meta.dstPort}`, {
               remoteAddress: inboundToThisPc ? meta.srcAddress : meta.dstAddress,
@@ -3026,7 +3041,7 @@ ipcMain.handle("robot:auto-detect-port", async (_e, { durationMs } = {}) => {
               direction: "dst",
             });
           }
-          if (isRobotPortCandidate(meta.srcPort)) {
+          if (isRobotPortCandidate(meta.srcPort) && isLanOrLoopback(meta.srcAddress)) {
             const responseToThisPc = localIps.has(meta.dstAddress);
             addRobotPortCandidate(rows, `src:${meta.srcAddress}:${meta.srcPort}`, {
               remoteAddress: meta.srcAddress,
