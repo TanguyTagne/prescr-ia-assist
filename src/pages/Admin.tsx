@@ -30,7 +30,6 @@ import AsclionBaseImportTab from "@/components/admin/AsclionBaseImportTab";
 import AcceptedPcsTab from "@/components/admin/AcceptedPcsTab";
 import HardwareDiagnosticTab from "@/components/admin/HardwareDiagnosticTab";
 import RemoteScannerDiagnosticTab from "@/components/admin/RemoteScannerDiagnosticTab";
-import RobotSnifferDiagnosticTab from "@/components/admin/RobotSnifferDiagnosticTab";
 import MedicamentsManquantsTab from "@/components/admin/MedicamentsManquantsTab";
 import RoiManqueAGagnerTab from "@/components/admin/RoiManqueAGagnerTab";
 import SecurityTab from "@/components/admin/SecurityTab";
