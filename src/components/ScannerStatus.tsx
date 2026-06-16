@@ -1000,6 +1000,11 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
               )}
             </div>
 
+            {/* Bloc 3 — Diagnostic capture robot */}
+            <div className="space-y-2 border-t border-border pt-4">
+              <RobotSnifferDiagnosticTab />
+            </div>
+
             <div className="border-t border-border pt-4">
               <Button
                 variant="outline"
