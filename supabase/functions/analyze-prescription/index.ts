@@ -408,7 +408,7 @@ async function clinicalLookup(
   const curatedTopPromise = medicament?.id
     ? supabase
         .from("medicament_curated_pcs")
-        .select("pc_1, pc_2")
+        .select("pc_1, pc_2, pertinence_pc1, pertinence_pc2")
         .eq("medicament_id", medicament.id)
         .maybeSingle()
     : Promise.resolve({ data: null });
