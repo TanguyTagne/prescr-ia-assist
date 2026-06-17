@@ -30,6 +30,25 @@ interface AnalysisResultsProps {
 // 10 min reste valide tant que le pharmacien ne sert pas un nouveau client.
 const HID_ATTRIBUTION_WINDOW_MS = 10 * 60 * 1000;
 
+// Code couleur des raisons de suggestion (pertinence) — affichées inline après le nom du PC.
+// Logique : rouge=alerte/sécurité, ambre=effet secondaire, bleu=surveillance,
+// vert=synergie/efficacité, teal=prévention, violet=accompagnement, rose=confort.
+function pertinenceClass(p?: string): string {
+  if (!p) return "text-muted-foreground";
+  const k = p
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  if (k.startsWith("securit") || k.includes("alerte")) return "text-red-600 dark:text-red-400";
+  if (k.startsWith("effet")) return "text-amber-600 dark:text-amber-400";
+  if (k.startsWith("surveil")) return "text-sky-600 dark:text-sky-400";
+  if (k.startsWith("synerg")) return "text-emerald-600 dark:text-emerald-400";
+  if (k.startsWith("prevent")) return "text-teal-600 dark:text-teal-400";
+  if (k.startsWith("accompagn")) return "text-violet-600 dark:text-violet-400";
+  if (k.startsWith("confort")) return "text-pink-600 dark:text-pink-400";
+  return "text-muted-foreground";
+}
+
 // Normalisation pour matching de noms : lowercase, sans accents, sans dosage
 // ni unité ni forme galénique. Permet de matcher "Magnésium bisglycinate 300mg"
 // avec "MAGNESIUM BISGLYCINATE 300MG NUTERGIA" malgré les variations.
@@ -464,7 +483,15 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1 flex-wrap">
                           <span className={`font-semibold text-xs ${ordered ? "text-muted-foreground line-through" : "text-foreground"}`}>{rec.produit}</span>
-                          {shortHint && (
+                          {rec.pertinence && (
+                            <span
+                              className={`text-[11px] font-medium ${ordered ? "text-muted-foreground" : pertinenceClass(rec.pertinence)}`}
+                              title="Raison de la suggestion"
+                            >
+                              · {rec.pertinence}
+                            </span>
+                          )}
+                          {shortHint && !rec.pertinence && (
                             <>
                               <span className="text-[10px] text-muted-foreground">·</span>
                               <span className="text-[11px] text-muted-foreground font-normal truncate">{shortHint}</span>
