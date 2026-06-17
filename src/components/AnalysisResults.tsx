@@ -483,7 +483,15 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1 flex-wrap">
                           <span className={`font-semibold text-xs ${ordered ? "text-muted-foreground line-through" : "text-foreground"}`}>{rec.produit}</span>
-                          {shortHint && (
+                          {rec.pertinence && (
+                            <span
+                              className={`text-[11px] font-medium ${ordered ? "text-muted-foreground" : pertinenceClass(rec.pertinence)}`}
+                              title="Raison de la suggestion"
+                            >
+                              · {rec.pertinence}
+                            </span>
+                          )}
+                          {shortHint && !rec.pertinence && (
                             <>
                               <span className="text-[10px] text-muted-foreground">·</span>
                               <span className="text-[11px] text-muted-foreground font-normal truncate">{shortHint}</span>
