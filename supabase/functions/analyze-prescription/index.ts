@@ -1859,6 +1859,7 @@ serve(async (req) => {
             priorite: Math.max(p.priorite || 0, 95),
             pathologie: "",
             phrase_conseil: p.phrase_conseil || undefined,
+            pertinence: p.pertinence || undefined,
           }));
         recs.push(...pickDistinctProducts(mappedCurated, MAX_RECOMMENDATIONS_PER_MED));
         hasStructuredData = true;
