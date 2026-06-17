@@ -175,11 +175,15 @@ serve(async (req) => {
         });
         const pc1 = (r["pc_1"] || "").trim();
         const pc2 = (r["pc_2"] || "").trim();
+        const pert1 = (r["pertinence_pc1"] || "").trim();
+        const pert2 = (r["pertinence_pc2"] || "").trim();
         if (pc1 || pc2) {
           pcs.push({
             medicament_id: id,
             pc_1: pc1 || null,
             pc_2: pc2 || null,
+            pertinence_pc1: pert1 || null,
+            pertinence_pc2: pert2 || null,
             source: "asclion_2026_06",
           });
         }
