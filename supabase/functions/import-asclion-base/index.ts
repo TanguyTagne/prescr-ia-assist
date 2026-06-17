@@ -15,7 +15,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { buildCorsHeaders } from "../_shared/cors.ts";
 
 const BUCKET = "imports";
-const FILE = "asclion-medicaments-final.csv";
+const FILE = "asclion-medicaments-pertinence.csv";
 const BATCH = 200;
 
 function parseCsvLine(line: string, delim: string): string[] {
