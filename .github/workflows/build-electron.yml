@@ -14,7 +14,12 @@ permissions:
 
 jobs:
   build-windows:
-    runs-on: windows-latest
+    # PIN to windows-2022 (VS 2022 / v17 + Python 3.11). "windows-latest" moved to
+    # Windows Server 2025 + Visual Studio 18, which the bundled node-gyp 10.3.1
+    # cannot detect ("find VS unknown version undefined") → the native rawinput
+    # build fails and no release is produced. windows-2022 ships a VS that node-gyp
+    # understands, so the node-gyp/@electron-rebuild steps compile cleanly.
+    runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
 
