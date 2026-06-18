@@ -140,6 +140,7 @@ serve(async (req) => {
           method: "POST",
           headers,
           body: JSON.stringify(lgoPayload),
+          redirect: "error",
         });
 
         lgoResponse = await resp.json().catch(() => null);
