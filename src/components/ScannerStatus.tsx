@@ -6,7 +6,7 @@ import { SCANNER } from "@/constants/scanner";
 import {
   X, Wifi, WifiOff, ShoppingCart, FileText, Package,
   Settings, Check, Key, Copy, RefreshCw, Clipboard, Shield,
-  FolderSearch, Loader2, Bot, Search, Activity,
+  FolderSearch, Loader2, Bot, Search, Activity, Wand2,
 } from "lucide-react";
 import { isAsclionDesktopRuntime } from "@/lib/runtime";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import RobotSnifferDiagnosticTab from "@/components/admin/RobotSnifferDiagnosticTab";
+import RobotConnectionWizard from "@/components/admin/RobotConnectionWizard";
 
 
 interface ScanNotificationProps {
@@ -187,6 +188,7 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
   const [robotLoaded, setRobotLoaded] = useState(false);
   const [robotStatus, setRobotStatus] = useState<{ listening?: boolean; mode?: string; lastEan?: string | null; host?: string; packetsSeen?: number; npcapAvailable?: boolean; npcapLoadError?: string | null; triggersSent?: number; forwardErrors?: number; lastError?: string | null } | null>(null);
   const [discovering, setDiscovering] = useState(false);
+  const [showWizard, setShowWizard] = useState(false);
   const [discoveryResults, setDiscoveryResults] = useState<PortCandidate[] | null>(null);
   const [runningDiag, setRunningDiag] = useState(false);
   const [discoveryNote, setDiscoveryNote] = useState<string | null>(null);
@@ -708,28 +710,14 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
                     </div>
                     <div className="space-y-1">
                       <Label className="text-[10px] text-muted-foreground">Port TCP du robot</Label>
-                      <div className="flex gap-1">
-                        <Input
-                          type="number"
-                          min={1}
-                          max={65535}
-                          value={robotForm.port}
-                          onChange={(e) => setRobotForm((f) => ({ ...f, port: Number(e.target.value) || 0 }))}
-                          className="h-8 text-xs"
-                        />
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="h-8 px-2 shrink-0 gap-1 text-[11px]"
-                          onClick={handleDiscoverPort}
-                          disabled={discovering || !robotApi}
-                          aria-label="Rechercher automatiquement le port du robot via les connexions TCP actives"
-                        >
-                          {discovering ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Search className="h-3.5 w-3.5" />}
-                          Rechercher
-                        </Button>
-                      </div>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={65535}
+                        value={robotForm.port}
+                        onChange={(e) => setRobotForm((f) => ({ ...f, port: Number(e.target.value) || 0 }))}
+                        className="h-8 text-xs"
+                      />
                     </div>
                   </div>
 
@@ -744,21 +732,54 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
                     </p>
                   )}
 
+                  {/* Action principale : assistant guidé (fusionne « Rechercher » + « Diagnostic ») */}
                   <Button
                     type="button"
-                    variant="outline"
                     size="sm"
-                    className="w-full h-8 gap-1.5 text-[11px]"
-                    onClick={handleServerDiagnostic}
-                    disabled={runningDiag || !robotApi}
-                    aria-label="Lancer le diagnostic réseau sur le PC serveur du robot"
+                    className="w-full h-9 gap-1.5 text-xs"
+                    onClick={() => setShowWizard(true)}
+                    disabled={!robotApi}
                   >
-                    {runningDiag ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Activity className="h-3.5 w-3.5" />}
-                    Diagnostic robot (PC serveur)
+                    <Wand2 className="h-4 w-4" />
+                    Assistant de connexion au robot
                   </Button>
                   <p className="text-[10px] text-muted-foreground -mt-1">
-                    À lancer sur le PC du robot : ouvre une fenêtre qui trouve le port, l'IP et le sens du trafic, puis écrit un journal sur le Bureau.
+                    Recommandé : détecte le lien LGO ↔ robot, te fait valider par une vraie délivrance, et enregistre tout en capture <strong>passive</strong> (aucun risque pour la chaîne LGO ↔ robot).
                   </p>
+
+                  {/* Outils manuels d'origine — repliés par défaut */}
+                  <details className="rounded-md border border-border/60 bg-background/40">
+                    <summary className="cursor-pointer select-none px-2 py-1.5 text-[11px] font-medium text-muted-foreground hover:text-foreground">
+                      Avancé — outils manuels
+                    </summary>
+                    <div className="space-y-2 p-2 pt-1">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="w-full h-8 gap-1.5 text-[11px]"
+                        onClick={handleDiscoverPort}
+                        disabled={discovering || !robotApi}
+                        aria-label="Rechercher automatiquement le port du robot via les connexions TCP actives"
+                      >
+                        {discovering ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Search className="h-3.5 w-3.5" />}
+                        Rechercher le port (capture live 20 s)
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="w-full h-8 gap-1.5 text-[11px]"
+                        onClick={handleServerDiagnostic}
+                        disabled={runningDiag || !robotApi}
+                        aria-label="Lancer le diagnostic réseau sur le PC serveur du robot"
+                      >
+                        {runningDiag ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Activity className="h-3.5 w-3.5" />}
+                        Diagnostic robot (PC serveur)
+                      </Button>
+                      <p className="text-[10px] text-muted-foreground">
+                        Le diagnostic ouvre une fenêtre élevée qui trouve le port, l'IP et le sens du trafic, puis écrit un journal sur le Bureau.
+                      </p>
 
                   {discoveryResults && (
                     <div className="space-y-1 rounded-md border border-border bg-background/60 p-2">
@@ -818,6 +839,8 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
                       </div>
                     </div>
                   )}
+                    </div>
+                  </details>
 
                   {robotForm.brand === "generic" && (
                     <div className="space-y-1">
@@ -1095,6 +1118,13 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Assistant de connexion guidé — fusionne « Rechercher » + « Diagnostic » */}
+      <RobotConnectionWizard
+        open={showWizard}
+        onOpenChange={setShowWizard}
+        onConfigSaved={loadRobotConfig}
+      />
     </div>
   );
 };
