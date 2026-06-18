@@ -78,6 +78,16 @@ contextBridge.exposeInMainWorld("electronAPI", {
     // Passive live capture for 20s: asks the pharmacist to trigger a real sale,
     // then returns likely robot ports/IPs even when no TCP connection stays open.
     autoDetectPort: (durationMs) => ipcRenderer.invoke("robot:auto-detect-port", { durationMs }),
+    // Lists local Named Pipes whose name evokes a pharmacy robot (omnicell, rowa,
+    // wwks…). Informational extra path for the connection wizard — the LGO↔robot
+    // link itself is virtually always TCP. Returns { ok, candidates:[{kind:"pipe",
+    // pipeName, score}], note? }.
+    discoverPipes: () => ipcRenderer.invoke("robot:discover-pipes"),
+    // Passive "test mode" of the connection wizard: WinDivert SNIFF capture for
+    // ~60s filtered to one candidate {port, robotServerIp}, returns as soon as a
+    // real dispense is seen ({ ok, eanFound, frame }) or on timeout
+    // ({ ok, eanFound:null, packets, payloadBytes, note }). Never touches the flow.
+    probeCandidate: (args) => ipcRenderer.invoke("robot:probe-candidate", args || {}),
     // Lance, SUR CE PC, le diagnostic réseau dans une fenêtre PowerShell élevée :
     // trouve le port / l'IP / le sens de la liaison LGO↔robot et écrit un journal
     // sur le Bureau. À utiliser sur le PC serveur du robot.

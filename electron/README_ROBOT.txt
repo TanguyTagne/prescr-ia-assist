@@ -8,6 +8,26 @@ le widget de recommandations sur tous les postes de la pharmacie.
 Tout se configure depuis Paramètres › "Robot automate". Aucun fichier
 n'est à éditer à la main.
 
+★ NOUVEAU — ASSISTANT DE CONNEXION (recommandé)
+   Paramètres › Robot automate › bouton "Assistant de connexion au robot".
+   Il remplace, en façade, les deux anciens boutons ("Rechercher" le port et
+   "Diagnostic robot (PC serveur)"), désormais regroupés sous "Avancé — outils
+   manuels".
+
+   En un parcours guidé, l'assistant :
+     1. lance la découverte réseau et propose 2-3 chemins possibles
+        (IP + port TCP, ou Named Pipe) classés par score de confiance ;
+     2. te laisse en sélectionner un et l'enregistrer ;
+     3. te demande de faire une VRAIE délivrance sur le LGO (fenêtre 60 s)
+        pour confirmer le bon chemin LGO ↔ robot — et affiche le code capturé
+        (WWKS2 / Omnicell inclus) ;
+     4. passe automatiquement au candidat suivant si rien n'est capté.
+
+   100 % PASSIF : la capture (WinDivert, sinon Npcap) observe le trafic sans
+   jamais s'insérer entre le LGO et le robot. Le relais tcp-listen (MITM) est
+   désactivé par défaut (robot.passiveOnly = true) — si Asclion s'arrête, le
+   robot continue de recevoir ses ordres normalement.
+
 
 SOMMAIRE
 ========

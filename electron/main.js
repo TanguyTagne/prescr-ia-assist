@@ -11,11 +11,13 @@ const { exec, spawn } = require("child_process");
 let robotConfig = null;
 let robotSniffer = null;
 let robotListener = null;
+let robotAdapters = null;
 let robotSubsystemError = null;
 try {
   robotConfig = require("./robot/config");
   robotSniffer = require("./robot/sniffer");
   robotListener = require("./robot/listener");
+  robotAdapters = require("./robot/adapters");
 } catch (e) {
   robotSubsystemError = e && e.message;
   console.error("[ROBOT] subsystem load failed:", robotSubsystemError);
@@ -3130,6 +3132,191 @@ ipcMain.handle("robot:run-server-diagnostic", async (_e, { seconds } = {}) => {
       if (code === 0) resolve({ ok: true });
       else resolve({ ok: false, error: (stderr.trim() || `PowerShell code ${code}`) + " — invite Windows (UAC) refusée ?" });
     });
+  });
+});
+
+// ────────────────────────────────────────────────────────────
+// robot:discover-pipes
+// Énumère les Named Pipes Windows et ne garde que ceux dont le nom évoque un
+// robot/automate de pharmacie (omnicell, rowa, wwks, willach, celia, mach4…).
+// Purement informatif : la liaison LGO↔robot passe quasi toujours par TCP, mais
+// certaines installations exposent aussi un pipe local côté serveur robot —
+// l'assistant le propose comme piste supplémentaire (jamais comme capture).
+// ────────────────────────────────────────────────────────────
+const ROBOT_PIPE_HINTS = /omnicell|rowa|wwks|willach|celia|mach4|mach-4|pharmathek|knapp|swisslog|tosho|becton|robot|automat|dispens/i;
+
+ipcMain.handle("robot:discover-pipes", async () => {
+  if (process.platform !== "win32") return { ok: false, error: "Windows uniquement", candidates: [] };
+  // Enumerate \\.\pipe\ and keep only the leaf names. GetFiles on the pipe
+  // filesystem is the documented way to list named pipes from .NET/PowerShell.
+  const psScript =
+    "$ErrorActionPreference='SilentlyContinue';" +
+    "$names = [System.IO.Directory]::GetFiles('\\\\.\\pipe\\') | ForEach-Object { Split-Path $_ -Leaf };" +
+    "ConvertTo-Json -InputObject @($names) -Compress";
+  return await new Promise((resolve) => {
+    let stdout = "";
+    let stderr = "";
+    let child;
+    try {
+      child = spawn(
+        "powershell.exe",
+        ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", psScript],
+        { windowsHide: true },
+      );
+    } catch (e) {
+      resolve({ ok: false, error: `spawn: ${e && e.message}`, candidates: [] });
+      return;
+    }
+    const timer = setTimeout(() => { try { child.kill(); } catch { /* noop */ } }, 10_000);
+    child.stdout.on("data", (d) => { stdout += d.toString("utf-8"); });
+    child.stderr.on("data", (d) => { stderr += d.toString("utf-8"); });
+    child.on("error", (err) => {
+      clearTimeout(timer);
+      resolve({ ok: false, error: `powershell: ${err && err.message}`, candidates: [] });
+    });
+    child.on("close", () => {
+      clearTimeout(timer);
+      try {
+        const raw = (stdout || "").trim();
+        const parsed = raw ? JSON.parse(raw) : [];
+        const names = Array.isArray(parsed) ? parsed : [parsed];
+        const seen = new Set();
+        const candidates = names
+          .map((n) => String(n || ""))
+          .filter((n) => n && ROBOT_PIPE_HINTS.test(n))
+          .filter((n) => { const k = n.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; })
+          .map((n) => ({ kind: "pipe", pipeName: n, score: 1 }))
+          .slice(0, 12);
+        resolve({
+          ok: true,
+          candidates,
+          note: candidates.length ? null : "Aucun pipe nommé évoquant un robot (liaison probablement en TCP).",
+        });
+      } catch (e) {
+        resolve({ ok: false, error: stderr.trim() || (e && e.message) || "parse error", candidates: [] });
+      }
+    });
+    child.stdin && child.stdin.end();
+  });
+});
+
+// ────────────────────────────────────────────────────────────
+// robot:probe-candidate
+// "Mode test" passif de l'assistant de connexion. Capture WinDivert en SNIFF
+// pendant N secondes, filtrée sur le candidat {port, ip}, et tente d'extraire
+// un EAN/CIP via tous les adaptateurs connus (WWKS2 inclus). Retourne dès qu'une
+// VRAIE délivrance est captée (eanFound) ou au bout du timeout (eanFound:null →
+// l'assistant passe au candidat suivant). 100% passif : ne s'insère jamais dans
+// le flux LGO↔robot. Nécessite les droits admin (driver WinDivert).
+// ────────────────────────────────────────────────────────────
+ipcMain.handle("robot:probe-candidate", async (_e, { port, robotServerIp, durationMs } = {}) => {
+  if (process.platform !== "win32") return { ok: false, error: "Windows uniquement" };
+  const targetPort = Number(port) || 0;
+  if (!targetPort || targetPort < 1 || targetPort > 65535) return { ok: false, error: "Port invalide" };
+  const windivertDir = path
+    .join(__dirname, "native", "windivert")
+    .replace(`app.asar${path.sep}`, `app.asar.unpacked${path.sep}`);
+  const dll = path.join(windivertDir, "WinDivert.dll");
+  const script = path.join(windivertDir, "windivert-port-scan.ps1");
+  if (!fs.existsSync(dll) || !fs.existsSync(script)) {
+    return { ok: false, error: "WinDivert manquant dans l'installation Asclion" };
+  }
+  if (!robotAdapters || typeof robotAdapters.extractAnyEan !== "function") {
+    return { ok: false, error: "Adaptateurs robot indisponibles" };
+  }
+
+  const probeMs = Math.min(Math.max(Number(durationMs) || 60_000, 10_000), 75_000);
+  const wantIp = (typeof robotServerIp === "string" && robotServerIp.trim()) ? robotServerIp.trim() : null;
+  let packets = 0;
+  let payloadBytes = 0;
+  let resolved = false;
+
+  return await new Promise((resolve) => {
+    let child;
+    try {
+      child = spawn("powershell.exe", [
+        "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
+        "-File", script,
+        "-DllPath", dll,
+        "-DurationSec", String(Math.ceil(probeMs / 1000)),
+      ], { windowsHide: true });
+    } catch (e) {
+      resolve({ ok: false, error: `spawn: ${e && e.message}` });
+      return;
+    }
+
+    let stderr = "";
+    const finish = (extra) => {
+      if (resolved) return;
+      resolved = true;
+      clearTimeout(timer);
+      try { child.kill(); } catch { /* noop */ }
+      resolve(Object.assign({ ok: true, eanFound: null, packets, payloadBytes }, extra));
+    };
+    const timer = setTimeout(
+      () => finish({ note: "Aucune délivrance captée sur ce candidat pendant la fenêtre de test." }),
+      probeMs + 5000,
+    );
+
+    let stdoutBuf = "";
+    child.stdout.on("data", (d) => {
+      stdoutBuf += d.toString("utf-8");
+      let nl;
+      while ((nl = stdoutBuf.indexOf("\n")) >= 0) {
+        const line = stdoutBuf.slice(0, nl).trim();
+        stdoutBuf = stdoutBuf.slice(nl + 1);
+        if (!line) continue;
+        let obj;
+        try { obj = JSON.parse(line); } catch { continue; }
+        if (!obj.b64) continue;
+        const meta = parseIpv4TcpPacket(Buffer.from(obj.b64, "base64"));
+        if (!meta) continue;
+        if (meta.dstPort !== targetPort && meta.srcPort !== targetPort) continue;
+        if (wantIp && meta.srcAddress !== wantIp && meta.dstAddress !== wantIp) continue;
+        packets += 1;
+        const payload = meta.payload;
+        if (payload && payload.length) {
+          payloadBytes += payload.length;
+          const text = payload.toString("utf8");
+          let ean = null;
+          try { ean = robotAdapters.extractAnyEan(text); } catch { ean = null; }
+          if (ean) {
+            // `frame` is a non-PII classification of the payload shape, safe to
+            // surface in the UI ("WWKS2 détecté"). We never return the raw text.
+            const frame = /<WWKS|OutputMessage|OutputRequest/i.test(text) ? "wwks2"
+              : /<\?xml|<[A-Za-z]/.test(text) ? "xml" : "raw";
+            finish({ eanFound: ean, frame });
+            return;
+          }
+        }
+      }
+    });
+    child.stderr.on("data", (d) => { stderr += d.toString("utf-8"); });
+    child.on("error", (err) => {
+      if (resolved) return;
+      resolved = true;
+      clearTimeout(timer);
+      resolve({ ok: false, error: `powershell: ${err && err.message}` });
+    });
+    child.on("close", () => {
+      if (resolved) return;
+      resolved = true;
+      clearTimeout(timer);
+      if (packets === 0 && stderr.trim()) {
+        resolve({ ok: false, error: stderr.trim().slice(0, 220), packets, payloadBytes });
+      } else {
+        resolve({
+          ok: true,
+          eanFound: null,
+          packets,
+          payloadBytes,
+          note: packets
+            ? "Trafic vu sur ce port mais aucun code extrait — vérifie la marque ou essaie un autre candidat."
+            : "Aucune délivrance captée sur ce candidat.",
+        });
+      }
+    });
+    child.stdin && child.stdin.end();
   });
 });
 
