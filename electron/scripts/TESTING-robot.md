@@ -93,12 +93,14 @@ Teste chaque format pour couvrir les variantes de l'adaptateur Rowa :
 | `article-code` | ✅ | `<Article Code="…">` |
 | `gtin`         | ✅ | `<GTIN>…</GTIN>` |
 | `pzn`          | ✅ | `<PZN>…</PZN>` (Allemagne) |
-| `wwks2`        | ❌ **non** | code dans les **attributs** `Article Id` / `Pack ScanCode` → l'adaptateur actuel ne les matche pas |
+| `wwks2`        | ✅ | code dans les **attributs** `Article Id` / `Pack ScanCode` — désormais matché par l'adaptateur Rowa/Omnicell (WWKS2) |
 | `raw`          | ❌ non | chiffres bruts, test négatif |
 
-> Le cas `wwks2` qui échoue est **voulu** : c'est le format le plus proche du réel.
-> Il montre qu'il faudra élargir le regex Rowa (`Article Id="…"`, `Pack ScanCode="…"`)
-> une fois qu'on aura capturé une vraie trame (voir Niveau 3 / `-Capture`).
+> Le cas `wwks2` **matche désormais** : l'adaptateur Rowa a été élargi aux trames
+> WWKS2 réelles (`<Article Id="…">`, `<Pack ScanCode="…">`, `<Criteria ArticleId="…">`).
+> C'est exactement le format de l'Omnicell visé par le plan d'intégration, et c'est
+> aussi ce que valide l'« Assistant de connexion au robot » (Paramètres › Robot).
+> Couvert par les tests `src/test/robotAdapters.test.ts`.
 
 Astuce sans matériel ni réseau : `electronAPI.scanner.injectScan("3400936081349")`
 injecte un code directement dans le pipeline (teste juste le widget).
@@ -152,7 +154,7 @@ node electron/scripts/dev-fake-lgo.js   --port 6050 --persist --repeat 20 --inte
 
 # Niveau 2 (extraction + widget) — Asclion en tcp-listen sur 6050
 node electron/scripts/dev-fake-lgo.js   --port 6050 --format ean        # doit popper
-node electron/scripts/dev-fake-lgo.js   --port 6050 --format wwks2      # ne doit PAS (gap regex attendu)
+node electron/scripts/dev-fake-lgo.js   --port 6050 --format wwks2      # doit popper aussi (WWKS2 désormais supporté)
 
 # Niveau 3 (capture réelle) — depuis une VM / 2e PC vers l'IP du serveur
 node electron/scripts/dev-fake-lgo.js   --host <IP_SERVEUR> --port 6050 --persist --repeat 5 --interval 3000
