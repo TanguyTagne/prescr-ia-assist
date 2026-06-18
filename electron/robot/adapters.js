@@ -23,31 +23,49 @@ class RobotAdapter {
   }
 }
 
-// ───── Rowa / BD Rowa ────────────────────────────────────────────────
-// Rowa speaks an XML-over-TCP protocol. Different firmware versions tag the
-// barcode under different element names — we match a few common variants and
-// pick the first one that looks like an EAN/CIP code (7–14 digits).
+// ───── Rowa / BD Rowa / Omnicell (WWKS2) ─────────────────────────────
+// Rowa speaks an XML-over-TCP protocol. The whole pharmacy-robot industry
+// (Rowa, BD, Omnicell, Willach…) converged on WWKS2 (Willach Webservice Kit
+// Specification 2): XML framed in <WWKS>…</WWKS>, where the dispensed article
+// is carried in ATTRIBUTES — <Article Id="3400…"> and <Pack ScanCode="3400…">
+// inside an <OutputMessage>/<OutputRequest>. Older/element-style firmwares tag
+// the barcode under <EAN>, <Barcode>, <GTIN>… We try every known variant and
+// return the first 7–14 digit code (PZN is 6–8).
+//
+// The WWKS2 attribute patterns were added on purpose to close the gap noted in
+// electron/scripts/TESTING-robot.md (the `--format wwks2` case used to return
+// null) — that is the real Omnicell frame the integration plan targets.
+const ROWA_EAN_PATTERNS = [
+  // WWKS2 attribute forms (Omnicell / modern Rowa / BD).
+  /<Article\b[^>]*\bId="(\d{7,14})"/i,        // <Article Id="3400936543217" …>
+  /\bScanCode="(\d{7,14})"/i,                 // <Pack … ScanCode="3400936543217"/>
+  /\bArticleId="(\d{7,14})"/i,                // <Criteria ArticleId="3400…"/> (plan form)
+  /\bArticleCode="(\d{7,14})"/i,
+  // Element forms (legacy / generic XML-over-TCP).
+  /<EAN\b[^>]*>(\d{7,14})<\/EAN>/i,
+  /<Barcode\b[^>]*>(\d{7,14})<\/Barcode>/i,
+  /<Article\b[^>]*\bCode="(\d{7,14})"/i,
+  /<Article\b[^>]*>(\d{7,14})<\/Article>/i,
+  /<GTIN\b[^>]*>(\d{7,14})<\/GTIN>/i,
+  /<PZN\b[^>]*>(\d{6,8})<\/PZN>/i,
+];
+
+function matchFirst(text, patterns) {
+  if (!text) return null;
+  for (const re of patterns) {
+    const m = text.match(re);
+    if (m && m[1]) return m[1];
+  }
+  return null;
+}
+
 class RowaAdapter extends RobotAdapter {
   constructor() {
     super({ name: "rowa", defaultPort: 9876 });
   }
 
   extractEan(raw) {
-    const text = bufferToText(raw);
-    if (!text) return null;
-    const patterns = [
-      /<EAN[^>]*>(\d{7,14})<\/EAN>/i,
-      /<Barcode[^>]*>(\d{7,14})<\/Barcode>/i,
-      /<Article[^>]*Code="(\d{7,14})"/i,
-      /<Article[^>]*>(\d{7,14})<\/Article>/i,
-      /<GTIN[^>]*>(\d{7,14})<\/GTIN>/i,
-      /<PZN[^>]*>(\d{6,8})<\/PZN>/i,
-    ];
-    for (const re of patterns) {
-      const m = text.match(re);
-      if (m && m[1]) return m[1];
-    }
-    return null;
+    return matchFirst(bufferToText(raw), ROWA_EAN_PATTERNS);
   }
 }
 
@@ -55,25 +73,20 @@ class RowaAdapter extends RobotAdapter {
 // Pharmathek uses a similar XML structure but ships under several aliases.
 // Default port left to the configured value because Pharmathek deployments
 // vary widely — the customer must set the right port from the UI.
+const PHARMATHEK_EAN_PATTERNS = [
+  /<ean\b[^>]*>(\d{7,14})<\/ean>/i,
+  /<code\b[^>]*>(\d{7,14})<\/code>/i,
+  /<product\b[^>]*\bean="(\d{7,14})"/i,
+  /<dispense\b[^>]*\bbarcode="(\d{7,14})"/i,
+];
+
 class PharmathekAdapter extends RobotAdapter {
   constructor() {
     super({ name: "pharmathek", defaultPort: 0 });
   }
 
   extractEan(raw) {
-    const text = bufferToText(raw);
-    if (!text) return null;
-    const patterns = [
-      /<ean[^>]*>(\d{7,14})<\/ean>/i,
-      /<code[^>]*>(\d{7,14})<\/code>/i,
-      /<product[^>]*ean="(\d{7,14})"/i,
-      /<dispense[^>]*barcode="(\d{7,14})"/i,
-    ];
-    for (const re of patterns) {
-      const m = text.match(re);
-      if (m && m[1]) return m[1];
-    }
-    return null;
+    return matchFirst(bufferToText(raw), PHARMATHEK_EAN_PATTERNS);
   }
 }
 
@@ -216,6 +229,27 @@ function bufferToText(raw) {
   }
 }
 
+// Brand-agnostic best-effort EAN/CIP extractor used by the connection wizard's
+// probe (robot:probe-candidate). During discovery the brand is usually still
+// unknown, so we throw every known pattern at the captured payload — WWKS2
+// attributes first (the dominant real-world frame), then legacy element forms,
+// then a loose XML/JSON barcode-ish fallback. Returns the code or null.
+// `raw` may be a Buffer or a string.
+const GENERIC_EAN_PATTERNS = [
+  /\b(?:scancode|articleid|articlecode|barcode|ean|gtin|cip|pzn|code)\b["'=:\s>]+["']?(\d{7,14})\b/i,
+  /[>"'](\d{13})[<"']/, // a bare CIP13/EAN13 wedged between delimiters
+];
+
+function extractAnyEan(raw) {
+  const text = typeof raw === "string" ? raw : bufferToText(raw);
+  if (!text) return null;
+  return (
+    matchFirst(text, ROWA_EAN_PATTERNS) ||
+    matchFirst(text, PHARMATHEK_EAN_PATTERNS) ||
+    matchFirst(text, GENERIC_EAN_PATTERNS)
+  );
+}
+
 const BUILTIN = {
   rowa: () => new RowaAdapter(),
   pharmathek: () => new PharmathekAdapter(),
@@ -236,4 +270,6 @@ module.exports = {
   GenericAdapter,
   DiagnosticAdapter,
   createAdapter,
+  extractAnyEan,
+  ROWA_EAN_PATTERNS,
 };

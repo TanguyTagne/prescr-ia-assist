@@ -11,6 +11,7 @@
 //       "port":          9876,           // TCP port the LGO talks to
 //       "regex":         "EAN>(\\d{8,14})<", // GenericAdapter pattern (1st group = EAN)
 //       "captureBackend":"auto",         // auto|windivert|npcap|tcp-listen
+//       "passiveOnly":   true,           // never fall back to the tcp-listen relay (no MITM, never disrupts LGO↔robot)
 //       "robotServerIp": null,           // optional: pin WinDivert filter to this dst IP
 //       "captureDirection":"outbound",   // WinDivert capture direction (per-till = outbound)
 //       "useNpcap":      true,           // try Npcap (passive sniff) before TCP listen
@@ -41,6 +42,13 @@ const DEFAULT_CONFIG = Object.freeze({
     // Capture backend. "auto" prefers WinDivert (bundled signed driver, no
     // installer), then Npcap, then the TCP-listen proxy — see sniffer.start().
     captureBackend: "auto",
+    // Passive-only safety switch. When true, the sniffer NEVER falls back to the
+    // tcp-listen relay (man-in-the-middle): WinDivert/Npcap observe the traffic
+    // without ever sitting in the data path, so a crash or a misconfig can never
+    // interrupt the LGO ↔ robot dispense chain. The connection wizard always
+    // saves with this on. An explicit captureBackend:"tcp-listen" (dev/QA) still
+    // overrides it — see sniffer.start().
+    passiveOnly: true,
     // Optional: restrict the WinDivert filter to the robot server's IP so we
     // never capture unrelated traffic that happens to use the same port. Empty
     // = capture every connection to robot.port. Prefillable from the "remote

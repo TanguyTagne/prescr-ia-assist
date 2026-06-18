@@ -53,6 +53,7 @@ const state = {
   forwardErrors: 0,
   packetsSeen: 0,
   captureDirection: "outbound",
+  passiveOnly: true,
 };
 
 let runtimeRefs = {
@@ -100,6 +101,10 @@ function start(config) {
   state.brand = robot.brand || "none";
   state.port = Number(robot.port) || 0;
   state.captureDirection = (robot.captureDirection || "outbound").toLowerCase();
+  // Passive-only is the default and the only mode the connection wizard ever
+  // saves: capture must never sit in the LGO↔robot data path. Missing on legacy
+  // configs → treated as true (deepMergeDefaults backfills it anyway).
+  state.passiveOnly = robot.passiveOnly !== false;
   state.lastError = null;
 
   if (!robot.enabled || state.brand === "none") {
@@ -162,7 +167,25 @@ function start(config) {
     runtimeRefs.warn(`[ROBOT] npcap requested but cap module unavailable: ${capLoadError || "not installed"}`);
   }
 
-  // 3. TCP-listen MITM fallback (always available).
+  // 3. TCP-listen MITM fallback. This is the ONE backend that sits in the data
+  //    path (the LGO must be repointed at this PC and we forward to the robot),
+  //    so it is gated behind passiveOnly: in the default passive-only mode we
+  //    refuse it and report a clear error instead of silently becoming a relay.
+  //    An explicit captureBackend:"tcp-listen" (dev/QA, see TESTING-robot.md)
+  //    still opts in deliberately.
+  const explicitTcp = backend === "tcp-listen";
+  if (state.passiveOnly && !explicitTcp) {
+    state.mode = "disabled";
+    state.started = false;
+    if (!state.lastError) {
+      state.lastError =
+        "capture passive indisponible (WinDivert/Npcap) — relais tcp-listen bloqué par le mode passif. " +
+        "Lance Asclion en administrateur (driver WinDivert) ou installe Npcap.";
+    }
+    runtimeRefs.warn(`[ROBOT] passive-only: tcp-listen relay refused (${state.lastError})`);
+    return state;
+  }
+
   const ok = startTcpListen(robot);
   if (ok) {
     state.mode = "tcp-listen";
@@ -207,6 +230,7 @@ function getStatus() {
     forwardErrors: state.forwardErrors,
     packetsSeen: state.packetsSeen,
     captureDirection: state.captureDirection,
+    passiveOnly: state.passiveOnly,
     npcapAvailable: !!cap,
     npcapLoadError: capLoadError,
     windivertAvailable: windivertAssetsPresent(),
