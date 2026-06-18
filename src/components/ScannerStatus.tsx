@@ -18,7 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import RobotSnifferDiagnosticTab from "@/components/admin/RobotSnifferDiagnosticTab";
-import RobotConnectionWizard from "@/components/admin/RobotConnectionWizard";
+import RobotConnectionWizard from "@/RobotConnectionWizard";
 
 
 interface ScanNotificationProps {
