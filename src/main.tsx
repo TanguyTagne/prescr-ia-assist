@@ -11,7 +11,7 @@ import { ensureFreshAppVersionBeforeRender } from "@/lib/versionCheck";
 // Boot Capacitor native bridge (no-op in browser).
 initCapacitor();
 
-const SW_VERSION = "v8";
+const SW_VERSION = "v9";
 const isDesktopRuntime = isAsclionDesktopRuntime();
 
 // Process ?r=<slug> trackable links on every page load (web only)
