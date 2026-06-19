@@ -12,12 +12,14 @@ let robotConfig = null;
 let robotSniffer = null;
 let robotListener = null;
 let robotAdapters = null;
+let robotCalibrator = null;
 let robotSubsystemError = null;
 try {
   robotConfig = require("./robot/config");
   robotSniffer = require("./robot/sniffer");
   robotListener = require("./robot/listener");
   robotAdapters = require("./robot/adapters");
+  robotCalibrator = require("./robot/calibrator");
 } catch (e) {
   robotSubsystemError = e && e.message;
   console.error("[ROBOT] subsystem load failed:", robotSubsystemError);
@@ -3134,6 +3136,19 @@ ipcMain.handle("robot:run-server-diagnostic", async (_e, { seconds } = {}) => {
     });
   });
 });
+
+// ────────────────────────────────────────────────────────────
+// robot:calibrate-* — Calibration du canal LGO↔robot (COM, fichier, pipe…)
+// Délègue entièrement à electron/robot/calibrator.js.
+// ────────────────────────────────────────────────────────────
+if (robotCalibrator) {
+  robotCalibrator.registerHandlers(ipcMain, () => mainWindow);
+} else {
+  // Subsystem absent (ex : build partiel) — renvoyer une erreur propre
+  for (const ch of ["robot:calibrate-snapshot", "robot:calibrate-start", "robot:calibrate-stop"]) {
+    ipcMain.handle(ch, () => ({ ok: false, error: "Module calibrator non chargé" }));
+  }
+}
 
 // ────────────────────────────────────────────────────────────
 // robot:discover-pipes

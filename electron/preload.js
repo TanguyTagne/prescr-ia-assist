@@ -103,6 +103,24 @@ contextBridge.exposeInMainWorld("electronAPI", {
     // Generate a fresh token. The pharmacist then re-copies it to all other
     // PCs in the officine.
     regenerateToken: () => ipcRenderer.invoke("robot:regenerate-token"),
+    // ── Calibration du canal LGO↔robot ──────────────────────────────────
+    // Étape 1 : snapshot immédiat (processus LGO, COM occupés, TCP, pipes,
+    //           fichiers récents). Retourne { ok, data: { lgoProcs, busyCom,
+    //           tcp, robotPipes, recentFiles, installDir } }.
+    calibrateSnapshot: () => ipcRenderer.invoke("robot:calibrate-snapshot"),
+    // Étape 2 : capture temps réel pendant N secondes. Le main process émet
+    //           des événements "robot:calibrate-event" sur la fenêtre :
+    //             { type:"ready" }            → watcher actif, demander l'appel robot
+    //             { type:"change", path, ext } → fichier modifié détecté
+    //             { type:"done", files:[…] }  → capture terminée, résumé complet
+    calibrateStart: (args) => ipcRenderer.invoke("robot:calibrate-start", args || {}),
+    calibrateStop: () => ipcRenderer.invoke("robot:calibrate-stop"),
+    // Abonnement aux événements de calibration (retourne un unsubscribe)
+    onCalibrateEvent: (callback) => {
+      const handler = (_e, payload) => callback(payload);
+      ipcRenderer.on("robot:calibrate-event", handler);
+      return () => ipcRenderer.removeListener("robot:calibrate-event", handler);
+    },
   },
 
   // Manual update trigger — surfaced in Paramètres
