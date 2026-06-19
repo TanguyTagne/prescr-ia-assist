@@ -38,12 +38,30 @@ interface PharmacyStats {
   pharmacy_id: string;
   pharmacy_name: string;
   analyses: number;
+  analyses_with_suggestions: number;
   meds_in_analyses: number;
   suggestions: number;
   accepted: number;
   rejected: number;
   analyses_with_accept: number;
   pcs: Map<string, { count: number; last: string; categorie: string | null; meds: Set<string> }>;
+}
+
+// Paginate around PostgREST 1000-row default cap
+async function fetchAll<T>(
+  build: () => any,
+  pageSize = 1000,
+  maxRows = 100000,
+): Promise<T[]> {
+  const out: T[] = [];
+  for (let from = 0; from < maxRows; from += pageSize) {
+    const { data, error } = await build().range(from, from + pageSize - 1);
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+    out.push(...(data as T[]));
+    if (data.length < pageSize) break;
+  }
+  return out;
 }
 
 // Hypothèses pricing (sources : panier moyen OTC France ~ 8-10€, ticket moyen officine ~ 42€)
@@ -69,18 +87,20 @@ const AcceptedPcsTab = () => {
 
   const load = async () => {
     setLoading(true);
-    const [pharmRes, feedbackRes, historyRes] = await Promise.all([
+    const [pharmRes, feedbackData, historyData] = await Promise.all([
       supabase.from("pharmacies").select("id, name"),
-      supabase
-        .from("pc_feedback")
-        .select("id, pharmacy_id, medicament_nom, pc_nom, pc_categorie, created_at, action, analysis_id")
-        .order("created_at", { ascending: false })
-        .limit(10000),
-      supabase
-        .from("analysis_history")
-        .select("id, pharmacy_id, suggestions_count, medicaments")
-        .order("created_at", { ascending: false })
-        .limit(10000),
+      fetchAll<FeedbackRow>(() =>
+        supabase
+          .from("pc_feedback")
+          .select("id, pharmacy_id, medicament_nom, pc_nom, pc_categorie, created_at, action, analysis_id")
+          .order("created_at", { ascending: false }),
+      ),
+      fetchAll<AnalysisRow>(() =>
+        supabase
+          .from("analysis_history")
+          .select("id, pharmacy_id, suggestions_count, medicaments")
+          .order("created_at", { ascending: false }),
+      ),
     ]);
 
     const pharmMap = new Map<string, string>(
@@ -94,6 +114,7 @@ const AcceptedPcsTab = () => {
           pharmacy_id: id,
           pharmacy_name: pharmMap.get(id) || id.slice(0, 8),
           analyses: 0,
+          analyses_with_suggestions: 0,
           meds_in_analyses: 0,
           suggestions: 0,
           accepted: 0,
@@ -108,14 +129,16 @@ const AcceptedPcsTab = () => {
 
     const acceptedAnalysesByPharm = new Map<string, Set<string>>();
 
-    for (const h of (historyRes.data || []) as AnalysisRow[]) {
+    for (const h of historyData) {
       const g = ensure(h.pharmacy_id);
       g.analyses++;
-      g.suggestions += h.suggestions_count || 0;
+      const sc = h.suggestions_count || 0;
+      g.suggestions += sc;
+      if (sc > 0) g.analyses_with_suggestions++;
       g.meds_in_analyses += Array.isArray(h.medicaments) ? h.medicaments.length : 0;
     }
 
-    for (const fb of (feedbackRes.data || []) as FeedbackRow[]) {
+    for (const fb of feedbackData) {
       const g = ensure(fb.pharmacy_id);
       if (fb.action === "accepted") {
         g.accepted++;
@@ -176,6 +199,7 @@ const AcceptedPcsTab = () => {
     const totals = groups.reduce(
       (acc, g) => {
         acc.analyses += g.analyses;
+        acc.analyses_with_suggestions += g.analyses_with_suggestions;
         acc.meds += g.meds_in_analyses;
         acc.suggestions += g.suggestions;
         acc.accepted += g.accepted;
@@ -183,17 +207,22 @@ const AcceptedPcsTab = () => {
         acc.analyses_with_accept += g.analyses_with_accept;
         return acc;
       },
-      { analyses: 0, meds: 0, suggestions: 0, accepted: 0, rejected: 0, analyses_with_accept: 0 },
+      { analyses: 0, analyses_with_suggestions: 0, meds: 0, suggestions: 0, accepted: 0, rejected: 0, analyses_with_accept: 0 },
     );
+    // Denominator for "per analyse" metrics = analyses où l'on a effectivement suggéré au moins 1 PC
+    const denom = totals.analyses_with_suggestions || totals.analyses;
     const avgMeds = totals.analyses > 0 ? totals.meds / totals.analyses : 0;
-    const avgAcceptedPerAnalysis = totals.analyses > 0 ? totals.accepted / totals.analyses : 0;
+    const avgAcceptedPerAnalysis = denom > 0 ? totals.accepted / denom : 0;
+    const avgAcceptedPerAnalysisAll = totals.analyses > 0 ? totals.accepted / totals.analyses : 0;
     const acceptanceRate = totals.suggestions > 0 ? (totals.accepted / totals.suggestions) * 100 : 0;
-    const conversionRate = totals.analyses > 0 ? (totals.analyses_with_accept / totals.analyses) * 100 : 0;
+    const conversionRate = denom > 0 ? (totals.analyses_with_accept / denom) * 100 : 0;
     const basketUpliftItems = avgMeds > 0 ? (avgAcceptedPerAnalysis / avgMeds) * 100 : 0;
     const upliftEurPerAnalysis = avgAcceptedPerAnalysis * AVG_PC_PRICE_EUR;
+    const upliftEurPerAnalysisAll = avgAcceptedPerAnalysisAll * AVG_PC_PRICE_EUR;
     const basketUpliftEur = (upliftEurPerAnalysis / AVG_BASKET_EUR) * 100;
+    const basketUpliftEurAll = (upliftEurPerAnalysisAll / AVG_BASKET_EUR) * 100;
     const totalCaGenerated = totals.accepted * AVG_PC_PRICE_EUR;
-    return { ...totals, avgMeds, avgAcceptedPerAnalysis, acceptanceRate, conversionRate, basketUpliftItems, upliftEurPerAnalysis, basketUpliftEur, totalCaGenerated };
+    return { ...totals, denom, avgMeds, avgAcceptedPerAnalysis, avgAcceptedPerAnalysisAll, acceptanceRate, conversionRate, basketUpliftItems, upliftEurPerAnalysis, upliftEurPerAnalysisAll, basketUpliftEur, basketUpliftEurAll, totalCaGenerated };
   }, [groups]);
 
   if (loading) {
@@ -221,7 +250,7 @@ const AcceptedPcsTab = () => {
           </div>
           <div className="text-xl font-semibold mt-1">{global.analyses}</div>
           <div className="text-[10px] text-muted-foreground">
-            ø {fmtNum(global.avgMeds)} médic./analyse
+            dont {global.analyses_with_suggestions} avec PC suggéré · ø {fmtNum(global.avgMeds)} médic./analyse
           </div>
         </Card>
 
@@ -231,7 +260,7 @@ const AcceptedPcsTab = () => {
           </div>
           <div className="text-xl font-semibold mt-1">{global.suggestions}</div>
           <div className="text-[10px] text-muted-foreground">
-            ø {fmtNum(global.analyses > 0 ? global.suggestions / global.analyses : 0)} / analyse
+            ø {fmtNum(global.denom > 0 ? global.suggestions / global.denom : 0)} / analyse suggérée
           </div>
         </Card>
 
@@ -243,7 +272,7 @@ const AcceptedPcsTab = () => {
             {global.accepted}
           </div>
           <div className="text-[10px] text-muted-foreground">
-            ø {fmtNum(global.avgAcceptedPerAnalysis)} / analyse
+            ø {fmtNum(global.avgAcceptedPerAnalysis)} / analyse suggérée
           </div>
         </Card>
 
@@ -253,7 +282,7 @@ const AcceptedPcsTab = () => {
           </div>
           <div className="text-xl font-semibold mt-1">{fmtPct(global.acceptanceRate)}</div>
           <div className="text-[10px] text-muted-foreground">
-            {fmtPct(global.conversionRate, 0)} d'analyses converties
+            {fmtPct(global.conversionRate, 0)} d'analyses suggérées converties
           </div>
         </Card>
       </div>
@@ -262,13 +291,25 @@ const AcceptedPcsTab = () => {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card className="p-3 bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200/50">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <TrendingUp className="h-3.5 w-3.5 text-emerald-600" /> Uplift panier
+            <TrendingUp className="h-3.5 w-3.5 text-emerald-600" /> Uplift panier moyen
+          </div>
+          <div className="text-2xl font-bold mt-1 text-emerald-700 dark:text-emerald-500">
+            +{fmtPct(global.basketUpliftEurAll, 1)}
+          </div>
+          <div className="text-[10px] text-muted-foreground">
+            sur {global.analyses} analyses · {fmtEur(global.upliftEurPerAnalysisAll)} / analyse
+          </div>
+        </Card>
+
+        <Card className="p-3 bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200/50">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <TrendingUp className="h-3.5 w-3.5 text-emerald-600" /> Uplift quand PC proposé
           </div>
           <div className="text-2xl font-bold mt-1 text-emerald-700 dark:text-emerald-500">
             +{fmtPct(global.basketUpliftEur, 1)}
           </div>
           <div className="text-[10px] text-muted-foreground">
-            vs panier moyen {AVG_BASKET_EUR} €
+            sur {global.analyses_with_suggestions} analyses suggérées · {fmtEur(global.upliftEurPerAnalysis)} / analyse
           </div>
         </Card>
 
@@ -277,22 +318,10 @@ const AcceptedPcsTab = () => {
             <ShoppingBasket className="h-3.5 w-3.5 text-emerald-600" /> Panier moyen estimé
           </div>
           <div className="text-2xl font-bold mt-1 text-emerald-700 dark:text-emerald-500">
-            {fmtEur(AVG_BASKET_EUR + global.upliftEurPerAnalysis)}
+            {fmtEur(AVG_BASKET_EUR + global.upliftEurPerAnalysisAll)}
           </div>
           <div className="text-[10px] text-muted-foreground">
-            {AVG_BASKET_EUR} € + {fmtEur(global.upliftEurPerAnalysis)} de PCs
-          </div>
-        </Card>
-
-        <Card className="p-3">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <TrendingUp className="h-3.5 w-3.5" /> CA additionnel / analyse
-          </div>
-          <div className="text-2xl font-bold mt-1">
-            {fmtEur(global.upliftEurPerAnalysis)}
-          </div>
-          <div className="text-[10px] text-muted-foreground">
-            ø PCs acceptés × {AVG_PC_PRICE_EUR} €
+            {AVG_BASKET_EUR} € + {fmtEur(global.upliftEurPerAnalysisAll)} de PCs
           </div>
         </Card>
 
@@ -343,13 +372,17 @@ const AcceptedPcsTab = () => {
             const pcList = Array.from(g.pcs.entries()).sort(
               (a, b) => b[1].count - a[1].count,
             );
+            const denom = g.analyses_with_suggestions || g.analyses;
             const avgMeds = g.analyses > 0 ? g.meds_in_analyses / g.analyses : 0;
-            const avgAcc = g.analyses > 0 ? g.accepted / g.analyses : 0;
+            const avgAcc = denom > 0 ? g.accepted / denom : 0;
+            const avgAccAll = g.analyses > 0 ? g.accepted / g.analyses : 0;
             const accRate = g.suggestions > 0 ? (g.accepted / g.suggestions) * 100 : 0;
-            const convRate = g.analyses > 0 ? (g.analyses_with_accept / g.analyses) * 100 : 0;
+            const convRate = denom > 0 ? (g.analyses_with_accept / denom) * 100 : 0;
             const upliftItems = avgMeds > 0 ? (avgAcc / avgMeds) * 100 : 0;
             const upliftEurAnalysis = avgAcc * AVG_PC_PRICE_EUR;
+            const upliftEurAnalysisAll = avgAccAll * AVG_PC_PRICE_EUR;
             const upliftEurPct = (upliftEurAnalysis / AVG_BASKET_EUR) * 100;
+            const upliftEurPctAll = (upliftEurAnalysisAll / AVG_BASKET_EUR) * 100;
             const caTotal = g.accepted * AVG_PC_PRICE_EUR;
             return (
               <Card key={g.pharmacy_id} className="p-4">
@@ -373,25 +406,28 @@ const AcceptedPcsTab = () => {
                     <span className="font-medium truncate">{g.pharmacy_name}</span>
                   </div>
                   <div className="flex gap-1.5 flex-wrap justify-end">
-                    <Badge variant="outline">{g.analyses} analyses</Badge>
+                    <Badge variant="outline">{g.analyses} analyses ({g.analyses_with_suggestions} suggérées)</Badge>
                     <Badge variant="secondary">{g.accepted} acceptés</Badge>
                     <Badge variant="outline">{fmtPct(accRate, 0)} acc.</Badge>
                     <Badge variant="outline">{fmtEur(caTotal, 0)}</Badge>
                     <Badge className="bg-emerald-600 hover:bg-emerald-600">
-                      +{fmtPct(upliftEurPct, 0)} panier
+                      +{fmtPct(upliftEurPctAll, 0)} panier moyen
+                    </Badge>
+                    <Badge variant="outline" className="border-emerald-300 text-emerald-700">
+                      +{fmtPct(upliftEurPct, 0)} quand sugg
                     </Badge>
                   </div>
                 </button>
 
                 {isOpen && (
                   <div className="mt-4 border-t pt-3 space-y-3">
-                    <div className="grid grid-cols-2 md:grid-cols-6 gap-2 text-xs">
+                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2 text-xs">
                       <div className="rounded border p-2">
                         <div className="text-muted-foreground">ø médic./analyse</div>
                         <div className="font-semibold">{fmtNum(avgMeds)}</div>
                       </div>
                       <div className="rounded border p-2">
-                        <div className="text-muted-foreground">ø PCs acceptés</div>
+                        <div className="text-muted-foreground">ø PCs acceptés / sugg</div>
                         <div className="font-semibold">{fmtNum(avgAcc)}</div>
                       </div>
                       <div className="rounded border p-2">
@@ -399,13 +435,19 @@ const AcceptedPcsTab = () => {
                         <div className="font-semibold">{fmtPct(convRate, 0)}</div>
                       </div>
                       <div className="rounded border p-2 bg-emerald-50/50 dark:bg-emerald-950/20">
-                        <div className="text-muted-foreground">+€ / analyse</div>
+                        <div className="text-muted-foreground">+€ / suggérée</div>
                         <div className="font-semibold text-emerald-700 dark:text-emerald-500">
                           {fmtEur(upliftEurAnalysis)}
                         </div>
                       </div>
                       <div className="rounded border p-2 bg-emerald-50/50 dark:bg-emerald-950/20">
-                        <div className="text-muted-foreground">Uplift panier</div>
+                        <div className="text-muted-foreground">Uplift panier moyen</div>
+                        <div className="font-semibold text-emerald-700 dark:text-emerald-500">
+                          +{fmtPct(upliftEurPctAll)}
+                        </div>
+                      </div>
+                      <div className="rounded border p-2 bg-emerald-50/50 dark:bg-emerald-950/20">
+                        <div className="text-muted-foreground">Uplift quand sugg</div>
                         <div className="font-semibold text-emerald-700 dark:text-emerald-500">
                           +{fmtPct(upliftEurPct)}
                         </div>
