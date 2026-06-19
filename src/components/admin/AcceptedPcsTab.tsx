@@ -375,11 +375,14 @@ const AcceptedPcsTab = () => {
             const denom = g.analyses_with_suggestions || g.analyses;
             const avgMeds = g.analyses > 0 ? g.meds_in_analyses / g.analyses : 0;
             const avgAcc = denom > 0 ? g.accepted / denom : 0;
+            const avgAccAll = g.analyses > 0 ? g.accepted / g.analyses : 0;
             const accRate = g.suggestions > 0 ? (g.accepted / g.suggestions) * 100 : 0;
             const convRate = denom > 0 ? (g.analyses_with_accept / denom) * 100 : 0;
             const upliftItems = avgMeds > 0 ? (avgAcc / avgMeds) * 100 : 0;
             const upliftEurAnalysis = avgAcc * AVG_PC_PRICE_EUR;
+            const upliftEurAnalysisAll = avgAccAll * AVG_PC_PRICE_EUR;
             const upliftEurPct = (upliftEurAnalysis / AVG_BASKET_EUR) * 100;
+            const upliftEurPctAll = (upliftEurAnalysisAll / AVG_BASKET_EUR) * 100;
             const caTotal = g.accepted * AVG_PC_PRICE_EUR;
             return (
               <Card key={g.pharmacy_id} className="p-4">
