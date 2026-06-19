@@ -27,7 +27,7 @@ export const translations = {
   },
   "landing.how.step2.title": { fr: "L'IA repère les ventes associées", en: "AI spots cross-sell opportunities" },
   "landing.how.step2.desc": {
-    fr: "Interactions, effets secondaires, besoins latents : Asclion détecte tout ce qu'une équipe surchargée pourrait manquer — et le traduit en produits à proposer.",
+    fr: "Interactions, effets secondaires, besoins latents : Asclion détecte tout ce qu'une équipe surchargée pourrait manquer et le traduit en produits à proposer.",
     en: "Interactions, side effects, latent needs: Asclion catches what a busy team could miss — and turns it into products to offer.",
   },
   "landing.how.step3.title": { fr: "Vendez plus, mieux, au comptoir", en: "Sell more, sell better, at the counter" },
