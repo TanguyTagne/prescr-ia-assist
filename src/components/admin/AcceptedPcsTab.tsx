@@ -375,11 +375,14 @@ const AcceptedPcsTab = () => {
             const denom = g.analyses_with_suggestions || g.analyses;
             const avgMeds = g.analyses > 0 ? g.meds_in_analyses / g.analyses : 0;
             const avgAcc = denom > 0 ? g.accepted / denom : 0;
+            const avgAccAll = g.analyses > 0 ? g.accepted / g.analyses : 0;
             const accRate = g.suggestions > 0 ? (g.accepted / g.suggestions) * 100 : 0;
             const convRate = denom > 0 ? (g.analyses_with_accept / denom) * 100 : 0;
             const upliftItems = avgMeds > 0 ? (avgAcc / avgMeds) * 100 : 0;
             const upliftEurAnalysis = avgAcc * AVG_PC_PRICE_EUR;
+            const upliftEurAnalysisAll = avgAccAll * AVG_PC_PRICE_EUR;
             const upliftEurPct = (upliftEurAnalysis / AVG_BASKET_EUR) * 100;
+            const upliftEurPctAll = (upliftEurAnalysisAll / AVG_BASKET_EUR) * 100;
             const caTotal = g.accepted * AVG_PC_PRICE_EUR;
             return (
               <Card key={g.pharmacy_id} className="p-4">
@@ -408,20 +411,23 @@ const AcceptedPcsTab = () => {
                     <Badge variant="outline">{fmtPct(accRate, 0)} acc.</Badge>
                     <Badge variant="outline">{fmtEur(caTotal, 0)}</Badge>
                     <Badge className="bg-emerald-600 hover:bg-emerald-600">
-                      +{fmtPct(upliftEurPct, 0)} panier
+                      +{fmtPct(upliftEurPctAll, 0)} panier moyen
+                    </Badge>
+                    <Badge variant="outline" className="border-emerald-300 text-emerald-700">
+                      +{fmtPct(upliftEurPct, 0)} quand sugg
                     </Badge>
                   </div>
                 </button>
 
                 {isOpen && (
                   <div className="mt-4 border-t pt-3 space-y-3">
-                    <div className="grid grid-cols-2 md:grid-cols-6 gap-2 text-xs">
+                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2 text-xs">
                       <div className="rounded border p-2">
                         <div className="text-muted-foreground">ø médic./analyse</div>
                         <div className="font-semibold">{fmtNum(avgMeds)}</div>
                       </div>
                       <div className="rounded border p-2">
-                        <div className="text-muted-foreground">ø PCs acceptés</div>
+                        <div className="text-muted-foreground">ø PCs acceptés / sugg</div>
                         <div className="font-semibold">{fmtNum(avgAcc)}</div>
                       </div>
                       <div className="rounded border p-2">
@@ -429,13 +435,19 @@ const AcceptedPcsTab = () => {
                         <div className="font-semibold">{fmtPct(convRate, 0)}</div>
                       </div>
                       <div className="rounded border p-2 bg-emerald-50/50 dark:bg-emerald-950/20">
-                        <div className="text-muted-foreground">+€ / analyse</div>
+                        <div className="text-muted-foreground">+€ / suggérée</div>
                         <div className="font-semibold text-emerald-700 dark:text-emerald-500">
                           {fmtEur(upliftEurAnalysis)}
                         </div>
                       </div>
                       <div className="rounded border p-2 bg-emerald-50/50 dark:bg-emerald-950/20">
-                        <div className="text-muted-foreground">Uplift panier</div>
+                        <div className="text-muted-foreground">Uplift panier moyen</div>
+                        <div className="font-semibold text-emerald-700 dark:text-emerald-500">
+                          +{fmtPct(upliftEurPctAll)}
+                        </div>
+                      </div>
+                      <div className="rounded border p-2 bg-emerald-50/50 dark:bg-emerald-950/20">
+                        <div className="text-muted-foreground">Uplift quand sugg</div>
                         <div className="font-semibold text-emerald-700 dark:text-emerald-500">
                           +{fmtPct(upliftEurPct)}
                         </div>
