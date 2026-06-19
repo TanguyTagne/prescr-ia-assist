@@ -163,6 +163,11 @@ export default function RobotManualTest({ onSaved }: Props) {
   };
 
   const saveConfig = async () => {
+    const err = validate();
+    if (err) {
+      setResult({ kind: "error", message: err });
+      return;
+    }
     try {
       const res = await robotApi.setConfig({
         robot: {
@@ -243,10 +248,9 @@ export default function RobotManualTest({ onSaved }: Props) {
             Code : <span className="font-mono font-semibold">{result.ean}</span>
             {result.frame === "wwks2" && <Badge variant="outline" className="ml-2 text-[10px]">WWKS2</Badge>}
           </p>
-          <Button size="sm" className="w-full h-7 gap-1.5 text-[11px]" onClick={saveConfig}>
-            <Save className="h-3.5 w-3.5" />
-            Enregistrer cette configuration
-          </Button>
+          <p className="text-[10px] text-green-700/80">
+            C'est le bon chemin — clique « Enregistrer cette IP / port » ci-dessous pour l'activer en production.
+          </p>
         </div>
       )}
 
@@ -275,6 +279,22 @@ export default function RobotManualTest({ onSaved }: Props) {
           )}
         </div>
       )}
+
+      {/* Enregistrer la config — toujours dispo (pas besoin que le test ait capté). */}
+      <div className="pt-1 border-t border-border/50 space-y-1">
+        <Button
+          size="sm"
+          className="w-full h-8 gap-1.5 text-xs"
+          onClick={saveConfig}
+          disabled={testing || !robotApi}
+        >
+          <Save className="h-3.5 w-3.5" />
+          Enregistrer cette IP / port
+        </Button>
+        <p className="text-[10px] text-muted-foreground leading-tight">
+          Active la capture passive en production sur cette IP / port — que le test ait capté ou non. Asclion analysera ensuite les délivrances automatiquement, et la config est conservée au redémarrage.
+        </p>
+      </div>
     </div>
   );
 }
