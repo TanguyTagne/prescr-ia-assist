@@ -1,4 +1,4 @@
-import { Component, lazy, Suspense, useEffect, useState, type ReactNode } from "react";
+import { Component, lazy, Suspense, useEffect, useState, type ComponentType, type ReactNode } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -18,12 +18,12 @@ import { purgeClientCaches } from "@/lib/versionCheck";
 
 // Retry dynamic import on failure (handles stale Vite chunks / transient network).
 // On second failure, force a hard reload to fetch the latest asset manifest.
-const lazyWithRetry = <T,>(factory: () => Promise<T>) =>
+const lazyWithRetry = <T extends ComponentType<never>>(factory: () => Promise<{ default: T }>) =>
   lazy(() =>
-    (factory() as Promise<any>).catch(async (err) => {
+    factory().catch(async (err: unknown) => {
       console.warn("Dynamic import failed, retrying...", err);
       await new Promise((r) => setTimeout(r, 500));
-      return (factory() as Promise<any>).catch(async (err2) => {
+      return factory().catch(async (err2: unknown) => {
         console.error("Dynamic import failed twice, purging caches and reloading...", err2);
         const key = "__chunk_reload_at";
         const last = Number(sessionStorage.getItem(key) || 0);
@@ -105,7 +105,11 @@ const DeferredWidget = ({ forceOpen, mountImmediately, demo = false }: { forceOp
     let mounted = true;
     const trigger = () => mounted && setShouldMount(true);
 
-    const ric = (window as any).requestIdleCallback as
+    const idleWindow = window as Window & {
+      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+      cancelIdleCallback?: (id: number) => void;
+    };
+    const ric = idleWindow.requestIdleCallback as
       | ((cb: () => void, opts?: { timeout: number }) => number)
       | undefined;
     const idleId = ric
@@ -117,8 +121,8 @@ const DeferredWidget = ({ forceOpen, mountImmediately, demo = false }: { forceOp
 
     return () => {
       mounted = false;
-      if (ric && (window as any).cancelIdleCallback) {
-        (window as any).cancelIdleCallback(idleId);
+      if (ric && idleWindow.cancelIdleCallback) {
+        idleWindow.cancelIdleCallback(idleId);
       } else {
         clearTimeout(idleId as number);
       }

@@ -12,7 +12,7 @@ import { isCriticalTaskInProgress } from "./criticalTask";
  */
 
 export const CURRENT_BUILD_ID: string =
-  (import.meta as any).env?.VITE_BUILD_ID || "local-dev";
+  import.meta.env.VITE_BUILD_ID || "local-dev";
 
 const RELOAD_COOLDOWN_MS = 5 * 60 * 1000;
 const JITTER_MAX_MS = 30_000;
