@@ -411,7 +411,10 @@ const AcceptedPcsTab = () => {
                     <Badge variant="outline">{fmtPct(accRate, 0)} acc.</Badge>
                     <Badge variant="outline">{fmtEur(caTotal, 0)}</Badge>
                     <Badge className="bg-emerald-600 hover:bg-emerald-600">
-                      +{fmtPct(upliftEurPct, 0)} panier
+                      +{fmtPct(upliftEurPctAll, 0)} panier moyen
+                    </Badge>
+                    <Badge variant="outline" className="border-emerald-300 text-emerald-700">
+                      +{fmtPct(upliftEurPct, 0)} quand sugg
                     </Badge>
                   </div>
                 </button>
