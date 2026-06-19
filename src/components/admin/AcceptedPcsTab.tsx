@@ -87,18 +87,20 @@ const AcceptedPcsTab = () => {
 
   const load = async () => {
     setLoading(true);
-    const [pharmRes, feedbackRes, historyRes] = await Promise.all([
+    const [pharmRes, feedbackData, historyData] = await Promise.all([
       supabase.from("pharmacies").select("id, name"),
-      supabase
-        .from("pc_feedback")
-        .select("id, pharmacy_id, medicament_nom, pc_nom, pc_categorie, created_at, action, analysis_id")
-        .order("created_at", { ascending: false })
-        .limit(10000),
-      supabase
-        .from("analysis_history")
-        .select("id, pharmacy_id, suggestions_count, medicaments")
-        .order("created_at", { ascending: false })
-        .limit(10000),
+      fetchAll<FeedbackRow>(() =>
+        supabase
+          .from("pc_feedback")
+          .select("id, pharmacy_id, medicament_nom, pc_nom, pc_categorie, created_at, action, analysis_id")
+          .order("created_at", { ascending: false }),
+      ),
+      fetchAll<AnalysisRow>(() =>
+        supabase
+          .from("analysis_history")
+          .select("id, pharmacy_id, suggestions_count, medicaments")
+          .order("created_at", { ascending: false }),
+      ),
     ]);
 
     const pharmMap = new Map<string, string>(
@@ -112,6 +114,7 @@ const AcceptedPcsTab = () => {
           pharmacy_id: id,
           pharmacy_name: pharmMap.get(id) || id.slice(0, 8),
           analyses: 0,
+          analyses_with_suggestions: 0,
           meds_in_analyses: 0,
           suggestions: 0,
           accepted: 0,
@@ -126,14 +129,16 @@ const AcceptedPcsTab = () => {
 
     const acceptedAnalysesByPharm = new Map<string, Set<string>>();
 
-    for (const h of (historyRes.data || []) as AnalysisRow[]) {
+    for (const h of historyData) {
       const g = ensure(h.pharmacy_id);
       g.analyses++;
-      g.suggestions += h.suggestions_count || 0;
+      const sc = h.suggestions_count || 0;
+      g.suggestions += sc;
+      if (sc > 0) g.analyses_with_suggestions++;
       g.meds_in_analyses += Array.isArray(h.medicaments) ? h.medicaments.length : 0;
     }
 
-    for (const fb of (feedbackRes.data || []) as FeedbackRow[]) {
+    for (const fb of feedbackData) {
       const g = ensure(fb.pharmacy_id);
       if (fb.action === "accepted") {
         g.accepted++;
