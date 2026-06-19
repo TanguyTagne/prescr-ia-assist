@@ -247,7 +247,7 @@ const AcceptedPcsTab = () => {
           </div>
           <div className="text-xl font-semibold mt-1">{global.analyses}</div>
           <div className="text-[10px] text-muted-foreground">
-            ø {fmtNum(global.avgMeds)} médic./analyse
+            dont {global.analyses_with_suggestions} avec PC suggéré · ø {fmtNum(global.avgMeds)} médic./analyse
           </div>
         </Card>
 
@@ -257,7 +257,7 @@ const AcceptedPcsTab = () => {
           </div>
           <div className="text-xl font-semibold mt-1">{global.suggestions}</div>
           <div className="text-[10px] text-muted-foreground">
-            ø {fmtNum(global.analyses > 0 ? global.suggestions / global.analyses : 0)} / analyse
+            ø {fmtNum(global.denom > 0 ? global.suggestions / global.denom : 0)} / analyse suggérée
           </div>
         </Card>
 
@@ -269,7 +269,7 @@ const AcceptedPcsTab = () => {
             {global.accepted}
           </div>
           <div className="text-[10px] text-muted-foreground">
-            ø {fmtNum(global.avgAcceptedPerAnalysis)} / analyse
+            ø {fmtNum(global.avgAcceptedPerAnalysis)} / analyse suggérée
           </div>
         </Card>
 
@@ -279,7 +279,7 @@ const AcceptedPcsTab = () => {
           </div>
           <div className="text-xl font-semibold mt-1">{fmtPct(global.acceptanceRate)}</div>
           <div className="text-[10px] text-muted-foreground">
-            {fmtPct(global.conversionRate, 0)} d'analyses converties
+            {fmtPct(global.conversionRate, 0)} d'analyses suggérées converties
           </div>
         </Card>
       </div>
