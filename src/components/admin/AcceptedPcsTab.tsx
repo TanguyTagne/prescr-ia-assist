@@ -400,7 +400,7 @@ const AcceptedPcsTab = () => {
                     <span className="font-medium truncate">{g.pharmacy_name}</span>
                   </div>
                   <div className="flex gap-1.5 flex-wrap justify-end">
-                    <Badge variant="outline">{g.analyses} analyses</Badge>
+                    <Badge variant="outline">{g.analyses} analyses ({g.analyses_with_suggestions} suggérées)</Badge>
                     <Badge variant="secondary">{g.accepted} acceptés</Badge>
                     <Badge variant="outline">{fmtPct(accRate, 0)} acc.</Badge>
                     <Badge variant="outline">{fmtEur(caTotal, 0)}</Badge>
