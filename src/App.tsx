@@ -14,6 +14,7 @@ import WidgetDemoTour from "@/components/WidgetDemoTour";
 import { isAsclionDesktopRuntime } from "@/lib/runtime";
 import { useInstanceHeartbeat } from "@/hooks/useInstanceHeartbeat";
 import { useGlobalBarcodeBridge } from "@/hooks/useGlobalBarcodeBridge";
+import { purgeClientCaches } from "@/lib/versionCheck";
 
 // Retry dynamic import on failure (handles stale Vite chunks / transient network).
 // On second failure, force a hard reload to fetch the latest asset manifest.
@@ -28,17 +29,10 @@ const lazyWithRetry = <T,>(factory: () => Promise<T>) =>
         const last = Number(sessionStorage.getItem(key) || 0);
         if (Date.now() - last > 10_000) {
           sessionStorage.setItem(key, String(Date.now()));
-          try {
-            if ("serviceWorker" in navigator) {
-              const regs = await navigator.serviceWorker.getRegistrations();
-              await Promise.all(regs.map((r) => r.unregister()));
-            }
-            if ("caches" in window) {
-              const keys = await caches.keys();
-              await Promise.all(keys.map((k) => caches.delete(k)));
-            }
-          } catch {}
-          window.location.reload();
+          await purgeClientCaches();
+          const url = new URL(window.location.href);
+          url.searchParams.set("__asclion_reload", String(Date.now()));
+          window.location.replace(url.toString());
         }
         throw err2;
       });
