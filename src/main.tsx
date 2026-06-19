@@ -6,11 +6,12 @@ import "./index.css";
 import { isAsclionDesktopRuntime } from "@/lib/runtime";
 import { processIncomingTrackingLink } from "@/lib/trackingAttribution";
 import { initCapacitor } from "@/lib/capacitor";
+import { ensureFreshAppVersionBeforeRender } from "@/lib/versionCheck";
 
 // Boot Capacitor native bridge (no-op in browser).
 initCapacitor();
 
-const SW_VERSION = "v8";
+const SW_VERSION = "v9";
 const isDesktopRuntime = isAsclionDesktopRuntime();
 
 // Process ?r=<slug> trackable links on every page load (web only)
@@ -41,10 +42,17 @@ if ("serviceWorker" in navigator) {
   });
 }
 
-createRoot(document.getElementById("root")!).render(
-  <HelmetProvider>
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
-  </HelmetProvider>
-);
+async function bootstrap() {
+  const shouldRender = await ensureFreshAppVersionBeforeRender();
+  if (!shouldRender) return;
+
+  createRoot(document.getElementById("root")!).render(
+    <HelmetProvider>
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
+    </HelmetProvider>
+  );
+}
+
+void bootstrap();

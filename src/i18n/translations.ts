@@ -13,7 +13,7 @@ export const translations = {
   "landing.title.line1": { fr: "Augmentez votre panier moyen,", en: "Grow your average basket," },
   "landing.title.line2": { fr: "sans sacrifier le conseil", en: "without compromising on advice" },
   "landing.subtitle": {
-    fr: "Asclion transforme chaque médicament scanné en opportunité de vente associée pertinente. Plus de produits complémentaires délivrés, un panier moyen qui décolle, et un patient mieux accompagné — sans effort supplémentaire pour l'équipe.",
+    fr: "Asclion transforme chaque médicament scanné en opportunité de vente associée pertinente. Plus de produits complémentaires délivrés, un panier moyen qui décolle, et un patient mieux accompagné, sans effort supplémentaire pour l'équipe.",
     en: "Asclion turns every scanned drug into a relevant cross-sell opportunity. More complementary products delivered, a higher average basket, and better patient care — with zero extra effort for your team.",
   },
   "landing.cta.access": { fr: "Booster mon chiffre — Demander une Demo", en: "Boost my revenue — Request a Demo" },
@@ -27,7 +27,7 @@ export const translations = {
   },
   "landing.how.step2.title": { fr: "L'IA repère les ventes associées", en: "AI spots cross-sell opportunities" },
   "landing.how.step2.desc": {
-    fr: "Interactions, effets secondaires, besoins latents : Asclion détecte tout ce qu'une équipe surchargée pourrait manquer — et le traduit en produits à proposer.",
+    fr: "Interactions, effets secondaires, besoins latents : Asclion détecte tout ce qu'une équipe surchargée pourrait manquer et le traduit en produits à proposer.",
     en: "Interactions, side effects, latent needs: Asclion catches what a busy team could miss — and turns it into products to offer.",
   },
   "landing.how.step3.title": { fr: "Vendez plus, mieux, au comptoir", en: "Sell more, sell better, at the counter" },
