@@ -38,12 +38,30 @@ interface PharmacyStats {
   pharmacy_id: string;
   pharmacy_name: string;
   analyses: number;
+  analyses_with_suggestions: number;
   meds_in_analyses: number;
   suggestions: number;
   accepted: number;
   rejected: number;
   analyses_with_accept: number;
   pcs: Map<string, { count: number; last: string; categorie: string | null; meds: Set<string> }>;
+}
+
+// Paginate around PostgREST 1000-row default cap
+async function fetchAll<T>(
+  build: () => any,
+  pageSize = 1000,
+  maxRows = 100000,
+): Promise<T[]> {
+  const out: T[] = [];
+  for (let from = 0; from < maxRows; from += pageSize) {
+    const { data, error } = await build().range(from, from + pageSize - 1);
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+    out.push(...(data as T[]));
+    if (data.length < pageSize) break;
+  }
+  return out;
 }
 
 // Hypothèses pricing (sources : panier moyen OTC France ~ 8-10€, ticket moyen officine ~ 42€)
