@@ -213,13 +213,16 @@ const AcceptedPcsTab = () => {
     const denom = totals.analyses_with_suggestions || totals.analyses;
     const avgMeds = totals.analyses > 0 ? totals.meds / totals.analyses : 0;
     const avgAcceptedPerAnalysis = denom > 0 ? totals.accepted / denom : 0;
+    const avgAcceptedPerAnalysisAll = totals.analyses > 0 ? totals.accepted / totals.analyses : 0;
     const acceptanceRate = totals.suggestions > 0 ? (totals.accepted / totals.suggestions) * 100 : 0;
     const conversionRate = denom > 0 ? (totals.analyses_with_accept / denom) * 100 : 0;
     const basketUpliftItems = avgMeds > 0 ? (avgAcceptedPerAnalysis / avgMeds) * 100 : 0;
     const upliftEurPerAnalysis = avgAcceptedPerAnalysis * AVG_PC_PRICE_EUR;
+    const upliftEurPerAnalysisAll = avgAcceptedPerAnalysisAll * AVG_PC_PRICE_EUR;
     const basketUpliftEur = (upliftEurPerAnalysis / AVG_BASKET_EUR) * 100;
+    const basketUpliftEurAll = (upliftEurPerAnalysisAll / AVG_BASKET_EUR) * 100;
     const totalCaGenerated = totals.accepted * AVG_PC_PRICE_EUR;
-    return { ...totals, denom, avgMeds, avgAcceptedPerAnalysis, acceptanceRate, conversionRate, basketUpliftItems, upliftEurPerAnalysis, basketUpliftEur, totalCaGenerated };
+    return { ...totals, denom, avgMeds, avgAcceptedPerAnalysis, avgAcceptedPerAnalysisAll, acceptanceRate, conversionRate, basketUpliftItems, upliftEurPerAnalysis, upliftEurPerAnalysisAll, basketUpliftEur, basketUpliftEurAll, totalCaGenerated };
   }, [groups]);
 
   if (loading) {
