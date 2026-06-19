@@ -291,13 +291,25 @@ const AcceptedPcsTab = () => {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card className="p-3 bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200/50">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <TrendingUp className="h-3.5 w-3.5 text-emerald-600" /> Uplift panier
+            <TrendingUp className="h-3.5 w-3.5 text-emerald-600" /> Uplift panier moyen
+          </div>
+          <div className="text-2xl font-bold mt-1 text-emerald-700 dark:text-emerald-500">
+            +{fmtPct(global.basketUpliftEurAll, 1)}
+          </div>
+          <div className="text-[10px] text-muted-foreground">
+            sur {global.analyses} analyses · {fmtEur(global.upliftEurPerAnalysisAll)} / analyse
+          </div>
+        </Card>
+
+        <Card className="p-3 bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200/50">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <TrendingUp className="h-3.5 w-3.5 text-emerald-600" /> Uplift quand PC proposé
           </div>
           <div className="text-2xl font-bold mt-1 text-emerald-700 dark:text-emerald-500">
             +{fmtPct(global.basketUpliftEur, 1)}
           </div>
           <div className="text-[10px] text-muted-foreground">
-            vs panier moyen {AVG_BASKET_EUR} €
+            sur {global.analyses_with_suggestions} analyses suggérées · {fmtEur(global.upliftEurPerAnalysis)} / analyse
           </div>
         </Card>
 
@@ -306,22 +318,10 @@ const AcceptedPcsTab = () => {
             <ShoppingBasket className="h-3.5 w-3.5 text-emerald-600" /> Panier moyen estimé
           </div>
           <div className="text-2xl font-bold mt-1 text-emerald-700 dark:text-emerald-500">
-            {fmtEur(AVG_BASKET_EUR + global.upliftEurPerAnalysis)}
+            {fmtEur(AVG_BASKET_EUR + global.upliftEurPerAnalysisAll)}
           </div>
           <div className="text-[10px] text-muted-foreground">
-            {AVG_BASKET_EUR} € + {fmtEur(global.upliftEurPerAnalysis)} de PCs
-          </div>
-        </Card>
-
-        <Card className="p-3">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <TrendingUp className="h-3.5 w-3.5" /> CA additionnel / analyse
-          </div>
-          <div className="text-2xl font-bold mt-1">
-            {fmtEur(global.upliftEurPerAnalysis)}
-          </div>
-          <div className="text-[10px] text-muted-foreground">
-            ø PCs acceptés × {AVG_PC_PRICE_EUR} €
+            {AVG_BASKET_EUR} € + {fmtEur(global.upliftEurPerAnalysisAll)} de PCs
           </div>
         </Card>
 
