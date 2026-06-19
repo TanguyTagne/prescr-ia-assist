@@ -421,13 +421,13 @@ const AcceptedPcsTab = () => {
 
                 {isOpen && (
                   <div className="mt-4 border-t pt-3 space-y-3">
-                    <div className="grid grid-cols-2 md:grid-cols-6 gap-2 text-xs">
+                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2 text-xs">
                       <div className="rounded border p-2">
                         <div className="text-muted-foreground">ø médic./analyse</div>
                         <div className="font-semibold">{fmtNum(avgMeds)}</div>
                       </div>
                       <div className="rounded border p-2">
-                        <div className="text-muted-foreground">ø PCs acceptés</div>
+                        <div className="text-muted-foreground">ø PCs acceptés / sugg</div>
                         <div className="font-semibold">{fmtNum(avgAcc)}</div>
                       </div>
                       <div className="rounded border p-2">
@@ -435,13 +435,19 @@ const AcceptedPcsTab = () => {
                         <div className="font-semibold">{fmtPct(convRate, 0)}</div>
                       </div>
                       <div className="rounded border p-2 bg-emerald-50/50 dark:bg-emerald-950/20">
-                        <div className="text-muted-foreground">+€ / analyse</div>
+                        <div className="text-muted-foreground">+€ / suggérée</div>
                         <div className="font-semibold text-emerald-700 dark:text-emerald-500">
                           {fmtEur(upliftEurAnalysis)}
                         </div>
                       </div>
                       <div className="rounded border p-2 bg-emerald-50/50 dark:bg-emerald-950/20">
-                        <div className="text-muted-foreground">Uplift panier</div>
+                        <div className="text-muted-foreground">Uplift panier moyen</div>
+                        <div className="font-semibold text-emerald-700 dark:text-emerald-500">
+                          +{fmtPct(upliftEurPctAll)}
+                        </div>
+                      </div>
+                      <div className="rounded border p-2 bg-emerald-50/50 dark:bg-emerald-950/20">
+                        <div className="text-muted-foreground">Uplift quand sugg</div>
                         <div className="font-semibold text-emerald-700 dark:text-emerald-500">
                           +{fmtPct(upliftEurPct)}
                         </div>
