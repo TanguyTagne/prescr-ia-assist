@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import RobotSnifferDiagnosticTab from "@/components/admin/RobotSnifferDiagnosticTab";
 import RobotConnectionWizard from "@/components/admin/RobotConnectionWizard";
+import RobotManualTest from "@/components/admin/RobotManualTest";
 
 
 interface ScanNotificationProps {
@@ -746,6 +747,9 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
                   <p className="text-[10px] text-muted-foreground -mt-1">
                     Recommandé : détecte le lien LGO ↔ robot, te fait valider par une vraie délivrance, et enregistre tout en capture <strong>passive</strong> (aucun risque pour la chaîne LGO ↔ robot).
                   </p>
+
+                  {/* Test manuel direct : saisir IP + port et sonder 20 s */}
+                  <RobotManualTest onSaved={loadRobotConfig} />
 
                   {/* Outils manuels d'origine — repliés par défaut */}
                   <details className="rounded-md border border-border/60 bg-background/40">
