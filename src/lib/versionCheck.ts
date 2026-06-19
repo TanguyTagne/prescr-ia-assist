@@ -12,7 +12,7 @@ import { isCriticalTaskInProgress } from "./criticalTask";
  */
 
 export const CURRENT_BUILD_ID: string =
-  (import.meta as any).env?.VITE_BUILD_ID || "local-dev";
+  import.meta.env.VITE_BUILD_ID || "local-dev";
 
 const RELOAD_COOLDOWN_MS = 5 * 60 * 1000;
 const JITTER_MAX_MS = 30_000;
@@ -38,8 +38,14 @@ function markReload() {
 }
 
 export async function fetchExpectedVersion(): Promise<string | null> {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 2500);
   try {
-    const res = await fetch(`/version.json?t=${Date.now()}`, { cache: "no-store" });
+    const res = await fetch(`/version.json?t=${Date.now()}`, {
+      cache: "no-store",
+      headers: { "Cache-Control": "no-cache" },
+      signal: controller.signal,
+    });
     if (!res.ok) return null;
     const json = (await res.json()) as { version?: string };
     return typeof json?.version === "string" ? json.version : null;
@@ -47,6 +53,8 @@ export async function fetchExpectedVersion(): Promise<string | null> {
     // Silent: heartbeat must keep ticking even if version.json is unreachable.
     if (import.meta.env.DEV) console.debug(`${TAG} version.json fetch failed`);
     return null;
+  } finally {
+    window.clearTimeout(timeout);
   }
 }
 
@@ -54,7 +62,7 @@ export async function fetchExpectedVersion(): Promise<string | null> {
  * Nuke service worker + cache storage so the next page load can't serve a
  * stale bundle from disk. Must run BEFORE `location.reload()`.
  */
-async function purgeClientCaches(): Promise<void> {
+export async function purgeClientCaches(): Promise<void> {
   try {
     if ("serviceWorker" in navigator) {
       const regs = await navigator.serviceWorker.getRegistrations();
@@ -71,6 +79,29 @@ async function purgeClientCaches(): Promise<void> {
   } catch {
     /* ignore */
   }
+}
+
+export async function ensureFreshAppVersionBeforeRender(): Promise<boolean> {
+  if (typeof window === "undefined") return true;
+
+  const expected = await fetchExpectedVersion();
+  if (!expected || expected === CURRENT_BUILD_ID) return true;
+
+  const key = "last_boot_forced_app_reload_at";
+  const last = Number(sessionStorage.getItem(key) || "0");
+  if (Date.now() - last < RELOAD_COOLDOWN_MS) {
+    console.warn(`${TAG} boot version mismatch detected but reload skipped due to cooldown`);
+    return true;
+  }
+
+  sessionStorage.setItem(key, String(Date.now()));
+  console.info(`${TAG} stale boot bundle detected, purging caches before render`);
+  await purgeClientCaches();
+
+  const url = new URL(window.location.href);
+  url.searchParams.set("__asclion_v", expected);
+  window.location.replace(url.toString());
+  return false;
 }
 
 function scheduleReload(currentVersion: string, expectedVersion: string) {

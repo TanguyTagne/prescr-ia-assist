@@ -1,5 +1,5 @@
-const CACHE_NAME = "asclion-v1";
-const PRECACHE_URLS = ["/", "/index.html", "/manifest.json", "/favicon.ico"];
+const CACHE_NAME = "asclion-v9";
+const PRECACHE_URLS = ["/manifest.json", "/favicon.ico"];
 
 const isBackendRequest = (url) =>
   url.includes("/functions/") || url.includes("supabase.co");
@@ -46,21 +46,20 @@ self.addEventListener("fetch", (event) => {
 
     if (isNavigationRequest(request)) {
       try {
-        const response = await fetch(request);
-        if (response && response.status === 200) {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put("/index.html", clone));
-        }
-        return response;
+        return await fetch(request, { cache: "no-store" });
       } catch {
-        return (await caches.match(request)) || (await caches.match("/index.html"));
+        return (await caches.match(request)) || Response.error();
       }
+    }
+
+    const url = new URL(request.url);
+    if (url.origin === self.location.origin && url.pathname.startsWith("/assets/")) {
+      return fetch(request, { cache: "no-store" });
     }
 
     const cached = await caches.match(request);
     const fetched = fetch(request)
       .then((response) => {
-        const url = new URL(request.url);
         if (response && response.status === 200 && url.origin === self.location.origin) {
           const clone = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
