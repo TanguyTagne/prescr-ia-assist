@@ -199,6 +199,7 @@ const AcceptedPcsTab = () => {
     const totals = groups.reduce(
       (acc, g) => {
         acc.analyses += g.analyses;
+        acc.analyses_with_suggestions += g.analyses_with_suggestions;
         acc.meds += g.meds_in_analyses;
         acc.suggestions += g.suggestions;
         acc.accepted += g.accepted;
@@ -206,17 +207,19 @@ const AcceptedPcsTab = () => {
         acc.analyses_with_accept += g.analyses_with_accept;
         return acc;
       },
-      { analyses: 0, meds: 0, suggestions: 0, accepted: 0, rejected: 0, analyses_with_accept: 0 },
+      { analyses: 0, analyses_with_suggestions: 0, meds: 0, suggestions: 0, accepted: 0, rejected: 0, analyses_with_accept: 0 },
     );
+    // Denominator for "per analyse" metrics = analyses où l'on a effectivement suggéré au moins 1 PC
+    const denom = totals.analyses_with_suggestions || totals.analyses;
     const avgMeds = totals.analyses > 0 ? totals.meds / totals.analyses : 0;
-    const avgAcceptedPerAnalysis = totals.analyses > 0 ? totals.accepted / totals.analyses : 0;
+    const avgAcceptedPerAnalysis = denom > 0 ? totals.accepted / denom : 0;
     const acceptanceRate = totals.suggestions > 0 ? (totals.accepted / totals.suggestions) * 100 : 0;
-    const conversionRate = totals.analyses > 0 ? (totals.analyses_with_accept / totals.analyses) * 100 : 0;
+    const conversionRate = denom > 0 ? (totals.analyses_with_accept / denom) * 100 : 0;
     const basketUpliftItems = avgMeds > 0 ? (avgAcceptedPerAnalysis / avgMeds) * 100 : 0;
     const upliftEurPerAnalysis = avgAcceptedPerAnalysis * AVG_PC_PRICE_EUR;
     const basketUpliftEur = (upliftEurPerAnalysis / AVG_BASKET_EUR) * 100;
     const totalCaGenerated = totals.accepted * AVG_PC_PRICE_EUR;
-    return { ...totals, avgMeds, avgAcceptedPerAnalysis, acceptanceRate, conversionRate, basketUpliftItems, upliftEurPerAnalysis, basketUpliftEur, totalCaGenerated };
+    return { ...totals, denom, avgMeds, avgAcceptedPerAnalysis, acceptanceRate, conversionRate, basketUpliftItems, upliftEurPerAnalysis, basketUpliftEur, totalCaGenerated };
   }, [groups]);
 
   if (loading) {
