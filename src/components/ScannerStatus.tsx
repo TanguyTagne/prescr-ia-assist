@@ -414,6 +414,32 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
     }
   };
 
+  // Variante "loopback" : capture la conversation LGO↔middleware sur 127.0.0.1
+  // (cas LEO Pharma + LMS). Lance lgo-loopback-diag.ps1 qui zippe le résultat
+  // sur le Bureau pour envoi au support Asclion.
+  const handleLoopbackDiagnostic = async () => {
+    if (!robotApi?.runLoopbackDiag) {
+      toast.error("Diagnostic disponible uniquement dans l'application desktop Asclion.");
+      return;
+    }
+    setRunningDiag(true);
+    try {
+      const res = await robotApi.runLoopbackDiag(60);
+      if (res?.ok) {
+        toast.success("Diag loopback lancé", {
+          description:
+            "Accepte l'invite Windows (UAC). Déclenche 1 ou 2 délivrances pendant la capture (60 s). Le zip est posé sur le Bureau — envoie-le au support.",
+        });
+      } else {
+        toast.error("Lancement impossible", { description: res?.error || "Erreur inconnue" });
+      }
+    } catch (err: any) {
+      toast.error("Erreur", { description: String(err?.message || err).slice(0, 180) });
+    } finally {
+      setRunningDiag(false);
+    }
+  };
+
   const handleSaveRobot = async () => {
     if (!robotApi) {
       toast.error("La configuration robot n'est disponible que dans l'application desktop Asclion.");
@@ -781,8 +807,20 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
                         {runningDiag ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Activity className="h-3.5 w-3.5" />}
                         Diagnostic robot (PC serveur)
                       </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="w-full h-8 gap-1.5 text-[11px]"
+                        onClick={handleLoopbackDiagnostic}
+                        disabled={runningDiag || !robotApi}
+                        aria-label="Capture loopback LGO↔middleware (60 s, zip support)"
+                      >
+                        {runningDiag ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Activity className="h-3.5 w-3.5" />}
+                        Diag loopback LGO↔middleware (1 clic)
+                      </Button>
                       <p className="text-[10px] text-muted-foreground">
-                        Le diagnostic ouvre une fenêtre élevée qui trouve le port, l'IP et le sens du trafic, puis écrit un journal sur le Bureau.
+                        Le diagnostic ouvre une fenêtre élevée qui trouve le port, l'IP et le sens du trafic, puis écrit un journal sur le Bureau. La variante <strong>loopback</strong> capture 60 s la conversation locale LGO↔middleware (cas LEO/LMS) et zippe le résultat pour le support.
                       </p>
 
                   {discoveryResults && (
