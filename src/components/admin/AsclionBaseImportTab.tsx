@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Trash2, Upload, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
-const FILE = "asclion-medicaments-pertinence.csv";
+const FILE = "asclion-medicaments-pertinence-enrichi.csv";
 const PAGE = 1000;
 
 export default function AsclionBaseImportTab() {
