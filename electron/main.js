@@ -3137,6 +3137,55 @@ ipcMain.handle("robot:run-server-diagnostic", async (_e, { seconds } = {}) => {
   });
 });
 
+// robot:run-loopback-diag
+// Lance le script "1-clic" lgo-loopback-diag.ps1 (Windows + admin) qui :
+//  - énumère les listeners TCP loopback (127.0.0.1)
+//  - identifie les process middleware (LMS, Rowa, Omnicell…)
+//  - capture la conversation LGO↔middleware pendant N secondes (WinDivert
+//    en mode -Loopback) et zippe le résultat sur le Bureau pour envoi support.
+// Aucune insertion dans le flux : capture passive en SNIFF.
+ipcMain.handle("robot:run-loopback-diag", async (_e, { seconds } = {}) => {
+  if (process.platform !== "win32") return { ok: false, error: "Windows uniquement" };
+  const diagDir = path
+    .join(__dirname, "native", "diag")
+    .replace(`app.asar${path.sep}`, `app.asar.unpacked${path.sep}`);
+  const script = path.join(diagDir, "lgo-loopback-diag.ps1");
+  if (!fs.existsSync(script)) {
+    return { ok: false, error: `Script de diagnostic loopback introuvable (${script})` };
+  }
+  const dur = Math.min(Math.max(Number(seconds) || 60, 10), 300);
+  const scriptEsc = script.replace(/'/g, "''");
+  const argList =
+    "@('-NoExit','-NoProfile','-ExecutionPolicy','Bypass'," +
+    "'-File','" + scriptEsc + "','-Seconds','" + dur + "')";
+  const launch = `Start-Process -FilePath 'powershell.exe' -Verb RunAs -ArgumentList ${argList}`;
+  return await new Promise((resolve) => {
+    let child;
+    try {
+      child = spawn(
+        "powershell.exe",
+        ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", launch],
+        { windowsHide: true },
+      );
+    } catch (e) {
+      resolve({ ok: false, error: `spawn: ${e && e.message}` });
+      return;
+    }
+    let stderr = "";
+    const timer = setTimeout(() => { try { child.kill(); } catch { /* noop */ } }, 15_000);
+    child.stderr.on("data", (d) => { stderr += d.toString("utf-8"); });
+    child.on("error", (err) => {
+      clearTimeout(timer);
+      resolve({ ok: false, error: `powershell: ${err && err.message}` });
+    });
+    child.on("close", (code) => {
+      clearTimeout(timer);
+      if (code === 0) resolve({ ok: true });
+      else resolve({ ok: false, error: (stderr.trim() || `PowerShell code ${code}`) + " — invite Windows (UAC) refusée ?" });
+    });
+  });
+});
+
 // ────────────────────────────────────────────────────────────
 // robot:calibrate-* — Calibration du canal LGO↔robot (COM, fichier, pipe…)
 // Délègue entièrement à electron/robot/calibrator.js.
