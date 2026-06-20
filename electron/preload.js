@@ -92,6 +92,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
     // trouve le port / l'IP / le sens de la liaison LGO↔robot et écrit un journal
     // sur le Bureau. À utiliser sur le PC serveur du robot.
     runServerDiagnostic: (seconds) => ipcRenderer.invoke("robot:run-server-diagnostic", { seconds }),
+    // Lance le diag loopback "1-clic" (lgo-loopback-diag.ps1) qui capture la
+    // conversation LGO↔middleware sur 127.0.0.1 pendant N secondes et zippe
+    // le résultat sur le Bureau. Utilisé quand le robot communique via une
+    // couche locale type LMS (cas LEO Pharma).
+    runLoopbackDiag: (seconds) => ipcRenderer.invoke("robot:run-loopback-diag", { seconds }),
     // Shared secret used to authenticate cross-PC /trigger calls. Surfaced in
     // Paramètres so the pharmacist can copy it to other Asclion installs in
     // the same officine. Distinct from getConfig so this exposure is
