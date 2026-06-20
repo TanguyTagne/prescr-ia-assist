@@ -20,6 +20,7 @@ import { useAuth } from "@/hooks/useAuth";
 
 import RobotConnectionWizard from "@/components/admin/RobotConnectionWizard";
 import RobotManualTest from "@/components/admin/RobotManualTest";
+import RobotCalibrationPanel from "@/components/admin/RobotCalibrationPanel";
 
 
 interface ScanNotificationProps {
