@@ -216,15 +216,15 @@ const Index = () => {
                         <Sparkles className="h-3 w-3 text-accent shrink-0" />
                         <h3 className="text-xs font-medium text-foreground truncate">{pc.produit}</h3>
                       </div>
+                      {pc.phrase_conseil && (
+                        <p className={`text-[11px] leading-snug italic ${pertinenceClass(pc.pertinence)}`}>
+                          « {pc.phrase_conseil} »
+                        </p>
+                      )}
                       {pc.categorie && (
                         <Badge variant="outline" className="text-[9px] font-normal">
                           {pc.categorie}
                         </Badge>
-                      )}
-                      {pc.phrase_conseil && (
-                        <p className="text-[11px] text-muted-foreground leading-snug italic">
-                          « {pc.phrase_conseil} »
-                        </p>
                       )}
                     </div>
                   ))}
