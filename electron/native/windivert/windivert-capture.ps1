@@ -28,7 +28,13 @@ param(
   [Parameter(Mandatory = $true)][string]$DllPath,
   [Parameter(Mandatory = $true)][int]$Port,
   [string]$DstIp = "",
-  [string]$Direction = "outbound"
+  [string]$Direction = "outbound",
+  # When set, captures loopback traffic (LGO ↔ local middleware like LMS).
+  # WinDivert 2.x exposes a dedicated `loopback` filter token that matches
+  # packets traveling on 127.0.0.0/8 / ::1 — invisible to the default
+  # NETWORK layer filter. Direction is ignored in this mode (loopback is
+  # neither inbound nor outbound from the stack's point of view).
+  [switch]$Loopback
 )
 
 $ErrorActionPreference = "Stop"
