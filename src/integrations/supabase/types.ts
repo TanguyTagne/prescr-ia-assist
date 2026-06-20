@@ -994,6 +994,8 @@ export type Database = {
           pc_2: string | null
           pertinence_pc1: string | null
           pertinence_pc2: string | null
+          phrase_conseil_pc1: string | null
+          phrase_conseil_pc2: string | null
           source: string
           updated_at: string
         }
@@ -1004,6 +1006,8 @@ export type Database = {
           pc_2?: string | null
           pertinence_pc1?: string | null
           pertinence_pc2?: string | null
+          phrase_conseil_pc1?: string | null
+          phrase_conseil_pc2?: string | null
           source?: string
           updated_at?: string
         }
@@ -1014,6 +1018,8 @@ export type Database = {
           pc_2?: string | null
           pertinence_pc1?: string | null
           pertinence_pc2?: string | null
+          phrase_conseil_pc1?: string | null
+          phrase_conseil_pc2?: string | null
           source?: string
           updated_at?: string
         }

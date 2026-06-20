@@ -408,7 +408,7 @@ async function clinicalLookup(
   const curatedTopPromise = medicament?.id
     ? supabase
         .from("medicament_curated_pcs")
-        .select("pc_1, pc_2, pertinence_pc1, pertinence_pc2")
+        .select("pc_1, pc_2, pertinence_pc1, pertinence_pc2, phrase_conseil_pc1, phrase_conseil_pc2")
         .eq("medicament_id", medicament.id)
         .maybeSingle()
     : Promise.resolve({ data: null });
@@ -419,12 +419,12 @@ async function clinicalLookup(
       .filter(Boolean);
 
   // Build top-curated PC objects from pc_1/pc_2 names, enriched from produits_complementaires when matchable.
-  const buildCuratedTop = async (row: { pc_1?: string | null; pc_2?: string | null; pertinence_pc1?: string | null; pertinence_pc2?: string | null } | null) => {
+  const buildCuratedTop = async (row: { pc_1?: string | null; pc_2?: string | null; pertinence_pc1?: string | null; pertinence_pc2?: string | null; phrase_conseil_pc1?: string | null; phrase_conseil_pc2?: string | null } | null) => {
     if (!row) return [];
     const pairs = [
-      { name: row.pc_1, pertinence: row.pertinence_pc1 },
-      { name: row.pc_2, pertinence: row.pertinence_pc2 },
-    ].filter((p): p is { name: string; pertinence: string | null } => !!p.name && p.name.trim().length > 0).slice(0, 2);
+      { name: row.pc_1, pertinence: row.pertinence_pc1, phrase: row.phrase_conseil_pc1 },
+      { name: row.pc_2, pertinence: row.pertinence_pc2, phrase: row.phrase_conseil_pc2 },
+    ].filter((p): p is { name: string; pertinence: string | null; phrase: string | null } => !!p.name && p.name.trim().length > 0).slice(0, 2);
     if (pairs.length === 0) return [];
     const names = pairs.map((p) => p.name.trim());
 
@@ -459,14 +459,16 @@ async function clinicalLookup(
       if (best) byKey.set(key, best);
     }
 
-    return pairs.map(({ name, pertinence }, idx) => {
+    return pairs.map(({ name, pertinence, phrase }, idx) => {
       const enrich = byKey.get(norm(name));
+      // Priorité phrase CSV > phrase DB produits_complementaires
+      const csvPhrase = (phrase || "").trim();
       return {
         produit: name,
         categorie: enrich?.categorie || "Conseil associé",
         description: enrich?.description || "",
         priorite: 100 - idx, // 100, 99 → always above mpv (≤95) and pathology PCs
-        phrase_conseil: enrich?.phrase_conseil || undefined,
+        phrase_conseil: csvPhrase || enrich?.phrase_conseil || undefined,
         pertinence: (pertinence || "").trim() || undefined,
         type_produit: enrich?.type_produit || undefined,
         pathologies: enrich?.pathologies || null,
