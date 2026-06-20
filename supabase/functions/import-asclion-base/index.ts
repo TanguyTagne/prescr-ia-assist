@@ -177,6 +177,15 @@ serve(async (req) => {
         const pc2 = (r["pc_2"] || "").trim();
         const pert1 = (r["pertinence_pc1"] || "").trim();
         const pert2 = (r["pertinence_pc2"] || "").trim();
+        // Phrase conseil — accepte plusieurs noms de colonnes possibles
+        const phrase1 = (
+          r["phrase_conseil_pc1"] || r["phrase_pc1"] || r["conseil_pc1"] ||
+          r["phrase_conseil_1"] || r["conseil_1"] || ""
+        ).trim();
+        const phrase2 = (
+          r["phrase_conseil_pc2"] || r["phrase_pc2"] || r["conseil_pc2"] ||
+          r["phrase_conseil_2"] || r["conseil_2"] || ""
+        ).trim();
         if (pc1 || pc2) {
           pcs.push({
             medicament_id: id,
@@ -184,6 +193,8 @@ serve(async (req) => {
             pc_2: pc2 || null,
             pertinence_pc1: pert1 || null,
             pertinence_pc2: pert2 || null,
+            phrase_conseil_pc1: phrase1 || null,
+            phrase_conseil_pc2: phrase2 || null,
             source: "asclion_2026_06",
           });
         }
