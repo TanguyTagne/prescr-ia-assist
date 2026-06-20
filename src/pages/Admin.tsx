@@ -33,6 +33,7 @@ import RemoteScannerDiagnosticTab from "@/components/admin/RemoteScannerDiagnost
 import MedicamentsManquantsTab from "@/components/admin/MedicamentsManquantsTab";
 import RoiManqueAGagnerTab from "@/components/admin/RoiManqueAGagnerTab";
 import SecurityTab from "@/components/admin/SecurityTab";
+import LgoCaptureDiagTab from "@/components/admin/LgoCaptureDiagTab";
 
 interface AccessRequest {
   id: string;
