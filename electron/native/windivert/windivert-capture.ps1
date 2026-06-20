@@ -42,10 +42,16 @@ $ErrorActionPreference = "Stop"
 try {
   # ── Build the WinDivert filter string ──────────────────────────────────
   $parts = @()
-  switch ($Direction.ToLower()) {
-    "inbound" { $parts += "inbound" }
-    "both"    { }                       # no direction clause = both ways
-    default   { $parts += "outbound" }  # per-till: the order WE send out
+  if ($Loopback.IsPresent) {
+    # Loopback mode: capture both directions of the local LGO↔middleware
+    # link. Direction clauses don't apply on loopback packets.
+    $parts += "loopback"
+  } else {
+    switch ($Direction.ToLower()) {
+      "inbound" { $parts += "inbound" }
+      "both"    { }                       # no direction clause = both ways
+      default   { $parts += "outbound" }  # per-till: the order WE send out
+    }
   }
   $parts += "tcp.DstPort == $Port"
   if ($DstIp -and $DstIp.Trim().Length -gt 0) {
