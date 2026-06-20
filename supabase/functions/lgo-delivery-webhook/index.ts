@@ -112,9 +112,11 @@ serve(async (req) => {
     .from("scan_queue")
     .insert({
       pharmacy_id,
-      barcode: cipRaw,
+      scan_type: "barcode",
+      status: "pending",
       source: `lgo_webhook:${source}`,
-      metadata: {
+      input_data: {
+        barcode: cipRaw,
         timestamp: payload.timestamp ?? new Date().toISOString(),
         extra: payload.metadata ?? null,
       },
