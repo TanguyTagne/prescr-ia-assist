@@ -273,6 +273,7 @@ const Admin = () => {
         {tab === "asclion-base" && <AsclionBaseImportTab />}
         {tab === "roi-manque-a-gagner" && <RoiManqueAGagnerTab />}
         {tab === "security" && <SecurityTab />}
+        {tab === "lgo-capture-diag" && <LgoCaptureDiagTab />}
       </div>
     </div>
   );
