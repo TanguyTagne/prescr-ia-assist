@@ -807,8 +807,20 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
                         {runningDiag ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Activity className="h-3.5 w-3.5" />}
                         Diagnostic robot (PC serveur)
                       </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="w-full h-8 gap-1.5 text-[11px]"
+                        onClick={handleLoopbackDiagnostic}
+                        disabled={runningDiag || !robotApi}
+                        aria-label="Capture loopback LGO↔middleware (60 s, zip support)"
+                      >
+                        {runningDiag ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Activity className="h-3.5 w-3.5" />}
+                        Diag loopback LGO↔middleware (1 clic)
+                      </Button>
                       <p className="text-[10px] text-muted-foreground">
-                        Le diagnostic ouvre une fenêtre élevée qui trouve le port, l'IP et le sens du trafic, puis écrit un journal sur le Bureau.
+                        Le diagnostic ouvre une fenêtre élevée qui trouve le port, l'IP et le sens du trafic, puis écrit un journal sur le Bureau. La variante <strong>loopback</strong> capture 60 s la conversation locale LGO↔middleware (cas LEO/LMS) et zippe le résultat pour le support.
                       </p>
 
                   {discoveryResults && (
