@@ -15,7 +15,6 @@ import { isAsclionDesktopRuntime } from "@/lib/runtime";
 import { supabase } from "@/integrations/supabase/client";
 import { useEnsureTables } from "@/hooks/useEnsureTables";
 import ScannerDetectionPanel from "./ScannerDetectionPanel";
-import RobotCalibrationPanel from "./RobotCalibrationPanel";
 
 const MAX_LOG = 200;
 
@@ -271,9 +270,6 @@ const HardwareDiagnosticTab = () => {
           Exporter le rapport
         </Button>
       </div>
-
-      {/* ── Calibration canal robot (COM, fichier, pipe…) ─────────────────── */}
-      <RobotCalibrationPanel />
 
       {/* ── Détection matérielle (HID direct via node-hid) ────────────────── */}
       <ScannerDetectionPanel />

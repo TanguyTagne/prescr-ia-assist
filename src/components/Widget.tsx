@@ -1,10 +1,15 @@
 // build: widget v2026.06.02.4 — BDPM-first CIP resolution + strict specificity (2+ pathos → med_id only)
 import { useState, useCallback, useEffect, useRef } from "react";
-import { X, Loader2, Mail, Lock, Eye, EyeOff, Monitor, HelpCircle, Pin, PinOff, Minimize2, Maximize2, LogOut, ScanLine, Shield, ShieldAlert } from "lucide-react";
+import { X, Loader2, Mail, Lock, Eye, EyeOff, Monitor, HelpCircle, Pin, PinOff, Minimize2, Maximize2, LogOut, ScanLine, Shield, ShieldAlert, Settings, ArrowLeft, Package, Keyboard } from "lucide-react";
 import OnboardingTour from "@/components/OnboardingTour";
 import AnalysisSkeleton from "@/components/AnalysisSkeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import RobotCalibrationPanel from "@/components/admin/RobotCalibrationPanel";
+import ProductMappingSettings from "@/components/ProductMappingSettings";
+import ShortcutsSettings from "@/components/ShortcutsSettings";
+import ScannerConfigGuide from "@/components/ScannerConfigGuide";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -869,11 +874,87 @@ const AdminModeButton = () => {
   );
 };
 
+// ── Panneau Paramètres (desktop uniquement) ───────────────────────────────────
+const WidgetSettings = ({ onClose, onSignOut }: { onClose: () => void; onSignOut: () => void }) => (
+  <div className="flex flex-col h-full">
+    {/* En-tête */}
+    <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-background sticky top-0 z-10">
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label="Retour"
+        className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded focus-visible:ring-2 focus-visible:ring-primary/50"
+      >
+        <ArrowLeft className="h-4 w-4" />
+      </button>
+      <span className="font-semibold text-sm">Paramètres</span>
+    </div>
+
+    {/* Contenu */}
+    <div className="flex-1 overflow-y-auto p-3 space-y-4">
+      {/* 1. Calibration du canal robot */}
+      <RobotCalibrationPanel />
+
+      {/* 2. Douchette code-barres */}
+      <Card>
+        <CardHeader className="pb-2 pt-4 px-4">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <ScanLine className="h-4 w-4 text-primary" />
+            Douchette code-barres
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="px-4 pb-4">
+          <ScannerConfigGuide />
+        </CardContent>
+      </Card>
+
+      {/* 3. Personnalisation des suggestions */}
+      <Card>
+        <CardHeader className="pb-2 pt-4 px-4">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Package className="h-4 w-4 text-primary" />
+            Personnalisation des suggestions
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="px-4 pb-4">
+          <ProductMappingSettings />
+        </CardContent>
+      </Card>
+
+      {/* 4. Raccourcis clavier */}
+      <Card>
+        <CardHeader className="pb-2 pt-4 px-4">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Keyboard className="h-4 w-4 text-primary" />
+            Raccourcis clavier
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="px-4 pb-4">
+          <ShortcutsSettings />
+        </CardContent>
+      </Card>
+
+      {/* 5. Déconnexion */}
+      <div className="pt-2 border-t border-border">
+        <Button
+          variant="outline"
+          onClick={onSignOut}
+          className="w-full gap-2 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30"
+        >
+          <LogOut className="h-4 w-4" />
+          Se déconnecter
+        </Button>
+      </div>
+    </div>
+  </div>
+);
+
 const Widget = ({ forceOpen = false }: {forceOpen?: boolean;}) => {
   const isDesktopRuntime = forceOpen || isAsclionDesktopRuntime();
 
   // Web: always open so visitors can naturally try the demo. Electron: forceOpen.
   const [open, setOpen] = useState(true);
+  const [showSettings, setShowSettings] = useState(false);
   const { user, loading, signOut, onboardingCompleted, refreshOnboarding } = useAuth();
   const { preset: pharmacyPreset, lgoType: pharmacyLgoType } = useLgoPreset();
   const [previewLgo, setPreviewLgo] = useState<LgoType | null>(null);
@@ -924,19 +1005,31 @@ const Widget = ({ forceOpen = false }: {forceOpen?: boolean;}) => {
             <PipControls />
             <SoundToggle />
             <RegisterSelector />
+            {user && (
+              <button
+                type="button"
+                onClick={() => setShowSettings((s) => !s)}
+                title="Paramètres"
+                aria-label="Ouvrir les paramètres"
+                className={`text-primary-foreground/80 hover:text-primary-foreground transition-colors p-1 rounded focus-visible:ring-2 focus-visible:ring-primary-foreground/50 ${showSettings ? "bg-primary-foreground/20" : ""}`}
+              >
+                <Settings className="h-3.5 w-3.5" />
+              </button>
+            )}
           </div>
           <div className="flex-1 overflow-y-auto">
-            {loading ?
-            <div className="flex items-center justify-center py-8">
+            {showSettings ? (
+              <WidgetSettings onClose={() => setShowSettings(false)} onSignOut={signOut} />
+            ) : loading ? (
+              <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-5 w-5 animate-spin text-primary" />
-              </div> :
-            !user ?
-            <WidgetAuth /> :
-
-            <WidgetApp />
-            }
+              </div>
+            ) : !user ? (
+              <WidgetAuth />
+            ) : (
+              <WidgetApp />
+            )}
           </div>
-          {/* "Se déconnecter" est désormais accessible uniquement via les réglages (icône engrenage). */}
         </div>
       </div>);
 
