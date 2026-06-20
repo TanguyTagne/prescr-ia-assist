@@ -1,68 +1,80 @@
-# Phrases conseil format court
+# Garantir la lecture des ordres LGO → robot
 
-Objectif : phrases conseil plus discrètes — un **bénéfice unique** en 3-7 mots, affichées à côté du nom PC en gras. Régénération de l'ensemble du catalogue (~4 900 lignes).
+Aucune méthode unique ne couvre 100 % du parc. La seule façon d'**assurer** qu'on lit le message, c'est d'empiler plusieurs voies d'interception, classées par fiabilité, et de basculer automatiquement sur la suivante quand la précédente ne voit rien pendant une vraie délivrance. C'est exactement la logique de l'assistant actuel, mais incomplète sur 3 points.
 
-## Format cible
-
-- **Longueur** : 3 à 7 mots, **20 caractères max** (hors nom PC)
-- **Style** : phrase verbale, bénéfice patient unique
-- **Pas de** : nom du produit répété, ponctuation finale, mots techniques interdits (liste existante conservée)
-
-Exemples :
-- `Magnésium B6` · *apaise les tensions*
-- `Smecta` · *calme la diarrhée*
-- `Hexomédine` · *désinfecte la gorge*
-- `Doliprane` · *soulage la douleur*
-
-## Affichage UI (AnalysisResults.tsx)
-
-Aujourd'hui, ligne 488 : nom PC en `font-semibold text-xs`, puis ligne 501-503 phrase tronquée à 45 chars en `text-[9.5px]` sur la ligne suivante.
-
-Changement : afficher le conseil **sur la même ligne** que le nom, séparé par un point médian, plus de troncature artificielle :
+## Hiérarchie des canaux à supporter (du plus fiable au plus universel)
 
 ```text
-● Magnésium B6 · apaise les tensions   [Prio]   [✓]
+1. API/webhook officielle du LGO       ← 100 % fiable, 0 % invasif
+2. Hook fichier / dossier "ordres"     ← très fiable (LGPI, certaines LEO)
+3. Capture TCP WWKS2 (LAN, pas loopback) ← le cas "manuel" Omnicell/Rowa direct
+4. Capture loopback LGO ↔ middleware    ← cas LEO/LMS, le bloquant actuel
+5. Interception port série (com0com)    ← robots RS232
+6. Lecture log applicatif du middleware ← dernier recours, déjà écrit sur disque
 ```
 
-- Nom : `font-semibold text-xs text-foreground`
-- Séparateur : `·` en `text-muted-foreground`
-- Conseil : `text-xs text-muted-foreground font-normal`
-- Suppression du `<p>` séparé ligne 501-503 et de la logique `shortHint`/split
-- Repli si phrase absente : afficher uniquement le nom (pas de séparateur)
+## Pourquoi le canal 4 (loopback LMS) est le point qui débloque LEO
 
-## Régénération du catalogue
+WinDivert ne voit pas le loopback Windows en SNIFF classique. Trois moyens fiables existent :
 
-Mise à jour de `supabase/functions/rewrite-phrases/index.ts` :
+- **`WINDIVERT_LAYER_REFLECT` + filtre `loopback`** (WinDivert 2.2 supporte la couche loopback depuis 2021), au lieu du layer NETWORK actuel
+- **ETW provider `Microsoft-Windows-TCPIP`** (Event Tracing for Windows) — capte les écritures TCP locales sans driver
+- **RawCap.exe** (Netresec, gratuit, signé) — capture loopback sans installation
 
-1. **Nouveau SYSTEM_PROMPT** :
-   - Règle stricte : **3 à 7 mots, 20 caractères max**, UNE phrase verbale, bénéfice unique
-   - **Interdit** : nom du produit, ponctuation finale, majuscule initiale (commence par un verbe d'action en minuscule)
-   - **Verbes encouragés** : apaise, calme, soulage, hydrate, protège, renforce, nourrit, désinfecte, facilite, complète, restaure
-   - Liste des mots techniques interdits conservée
-2. **Validation côté edge** : rejeter automatiquement (et redemander 1 fois max) toute phrase > 7 mots, > 60 caractères, ou contenant le nom du produit ; tronquer/fallback proprement si la 2e tentative échoue.
-3. **Batch existant** (40 lignes / appel) conservé pour éviter les timeouts.
+Une fois le port LMS identifié (Get-NetTCPConnection le voit déjà côté processus LMS), on lance la capture sur ce port et on log en mode diagnostic pour déterminer :
+- WWKS2 lisible → adaptateur Rowa s'applique direct
+- Binaire propriétaire LEO → reverse de 5–10 trames suffit (toujours du CIP 13 chiffres)
+- TLS → canal 4 condamné, on bascule sur 1, 2 ou 6
 
-## Exécution de la régénération
+## Ce qu'il faut ajouter à Asclion
 
-Boucle d'invocation de `rewrite-phrases` sur les ~4 900 lignes :
-- Pas de `ids` → mode pagination via `offset` / `next_offset` déjà supporté
-- ~123 appels (4 900 / 40), exécutés depuis un petit script déclenché manuellement (ou bouton admin existant)
-- Compteur progress + reporting des erreurs (déjà présent dans la réponse)
+### A. Mode capture loopback
+- `electron/native/windivert/windivert-capture.ps1` : ajouter flag `-Loopback` qui ouvre WinDivert avec filtre `loopback and tcp.DstPort == <port>`
+- Fallback ETW via `logman start` + `Microsoft-Windows-TCPIP` quand WinDivert loopback échoue
+- Bundle `RawCap.exe` (200 Ko, gratuit) en dernier recours
 
-## Mémoire projet
+### B. Auto-scan des ports middleware
+Dans l'assistant robot, quand `discover-port` ne remonte que du `127.0.0.1`, lancer automatiquement :
+1. Liste des PID/ports en LISTEN sur loopback (`Get-NetTCPConnection -State Listen`)
+2. Filtre sur processus connus middleware : `LMS*.exe`, `RowaService*`, `Pharmathek*`, `OmnicellAgent*`
+3. Capture loopback 60 s sur chaque candidat pendant délivrance test
+4. Adaptateur Diagnostic → dump base64 pour inspection à distance
 
-- Mettre à jour le Core : `Counsel phrases: "mi-commercial / mi-technique", focus on patient benefits` → `Counsel phrases: 3-7 mots, bénéfice patient unique, format ultra-court`
-- Mettre à jour `mem://features/counseling-phrases-spec` avec le nouveau format
+### C. Adaptateur LEO/LMS dédié
+Une fois 5–10 trames LMS récoltées en pharmacie test, écrire `adapters.js` → `leoLms` avec la regex/parseur du format. À ajouter dans la chaîne d'adaptateurs.
+
+### D. Canal 1 prêt à recevoir
+Edge function `lgo-delivery-webhook` (publique, HMAC signée) prête à brancher dès que LEO/Winpharma répond. Zéro code côté Electron nécessaire pour ce canal.
+
+### E. Canal 6 (log applicatif) en filet
+Reprendre le `useFolderWatcher` existant et le pointer sur les répertoires log connus (`C:\ProgramData\LEO\LMS\logs\*.log`, équivalents Rowa/Pharmathek). Tail incrémental + regex CIP. Marche même quand tout le reste échoue, latence 1-2 s.
+
+### F. Télémétrie "canal qui a fonctionné"
+Chaque scan robot capté envoie `{ pharmacy_id, channel: 'wwks2'|'loopback'|'serial'|'webhook'|'log' }` à `analytics_events`. Au bout de 20 pharmacies on saura quel canal couvre quel LGO, et l'assistant proposera direct le bon.
+
+## Plan d'implémentation proposé (ordre)
+
+1. **Ajouter le mode loopback à WinDivert + fallback ETW + RawCap** (canal 4)
+2. **Auto-scan ports middleware dans l'assistant robot** (UX du canal 4)
+3. **Bundler `cap-loopback-diag.ps1`** : un script "1 clic" qui capture 60 s sur tous les ports loopback du LMS et zippe le résultat pour analyse → débloque le diagnostic LEO sans attendre LEO
+4. **Edge function `lgo-delivery-webhook`** prête + doc côté admin (canal 1)
+5. **Watcher de logs middleware** comme filet (canal 6)
+6. **Adaptateur LEO/LMS** dès qu'on a les trames
+7. **Télémétrie canal**
+
+## Détails techniques
+
+- **WinDivert loopback** : disponible depuis 2.2.0, filtre `loopback` officiel, mais nécessite `WINDIVERT_FLAG_SNIFF | WINDIVERT_FLAG_RECV_ONLY` exactement comme aujourd'hui — pas de risque de coupure
+- **ETW** : `logman create trace asclion -p Microsoft-Windows-TCPIP -o trace.etl`, parser le .etl avec `tracerpt` → XML. Pas de driver, pas d'admin sur W10+
+- **RawCap** : `RawCap.exe -f 127.0.0.1 dump.pcap`, lecture du pcap en streaming Node via `pcap-parser` (pur JS)
+- **Sécurité** : tous les canaux restent passifs (sniff/lecture seule), aucun n'injecte de paquet dans la chaîne LGO→robot
 
 ## Hors scope
 
-- Pas de changement de schéma DB (`phrase_conseil text` reste suffisant)
-- Pas de modification de `analyze-prescription` (lit déjà `phrase_conseil` tel quel)
-- Widget.tsx ligne 532 : aucun changement nécessaire (transmet la valeur DB)
-- Pas de migration des phrases historiques en `cross_sell_tracking` (figées par design)
+- Pas de changement côté UI marketing/landing
+- Pas de modification de la chaîne scan douchette (déjà OK)
+- Pas de signature code Windows (sujet séparé)
 
-## Fichiers modifiés
+## Question à trancher avant d'implémenter
 
-- `supabase/functions/rewrite-phrases/index.ts` — nouveau prompt + validation longueur
-- `src/components/AnalysisResults.tsx` (≈ lignes 472-503) — affichage inline
-- `mem://index.md` + `mem://features/counseling-phrases-spec` — nouvelle spec
+Veux-tu que je commence par **(3) le script "1 clic" de diagnostic loopback** — qui te permettrait dès demain de récolter des trames LMS dans la pharmacie pilote et de débloquer LEO sans dépendre d'eux — ou par **(1+2) le mode loopback intégré à l'assistant** directement ?
