@@ -215,6 +215,10 @@ const Admin = () => {
             <ScanLine className="h-3.5 w-3.5" />
             Diag distants (par pharmacie)
           </Button>
+          <Button variant={tab === "lgo-capture-diag" ? "default" : "outline"} size="sm" onClick={() => setTab("lgo-capture-diag")} className="gap-1.5 border-indigo-300 text-indigo-700 hover:bg-indigo-50">
+            <Radio className="h-3.5 w-3.5" />
+            Diag capture LGO/Robot
+          </Button>
           <Button variant={tab === "medicaments-manquants" ? "default" : "outline"} size="sm" onClick={() => setTab("medicaments-manquants")} className="gap-1.5">
             <PackageSearch className="h-3.5 w-3.5" />
             Médicaments manquants
