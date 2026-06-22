@@ -31,6 +31,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { buildCorsHeaders } from "../_shared/cors.ts";
+import { fetchAllPages } from "../_shared/paginate.ts";
 
 // ── Fallback final : moyenne grossière par catégorie ───────────────────────
 // Utilisé UNIQUEMENT si le PC n'est ni dans pc_pricing ni dans pc_category_pricing.
