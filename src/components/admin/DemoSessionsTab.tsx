@@ -41,7 +41,7 @@ const DemoSessionsTab = () => {
         .from("demo_sessions" as any)
         .select("*")
         .order("created_at", { ascending: false })
-        .limit(500);
+        .limit(5000);
       setSessions((data as any[]) || []);
       setLoading(false);
     })();
