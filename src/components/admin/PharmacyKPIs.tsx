@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, Activity, AlertTriangle, ShoppingBag, TrendingUp, Users, ShoppingCart, Database } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import PatientCRM from "./PatientCRM";
+import { fetchAll } from "@/lib/supabaseFetchAll";
 
 interface PharmacyKPI {
   pharmacy_id: string;
@@ -56,13 +57,18 @@ const PharmacyKPIs = () => {
         .from("pharmacies")
         .select("id, name, city");
 
-      // Get all analysis history
-      const { data: history } = await supabase
-        .from("analysis_history" as any)
-        .select("*")
-        .order("created_at", { ascending: false });
+      // Get all analysis history (paginated to avoid PostgREST 1000-row cap)
+      const history = await fetchAll<any>(
+        () =>
+          supabase
+            .from("analysis_history" as any)
+            .select("*")
+            .order("created_at", { ascending: false }),
+        1000,
+        200_000
+      );
 
-      if (!pharmacies || !history) {
+      if (!pharmacies) {
         setLoading(false);
         return;
       }
@@ -109,12 +115,16 @@ const PharmacyKPIs = () => {
           .select("id", { count: "exact", head: true });
         totalSales = salesC || 0;
 
-        const { data: csData } = await supabase
-          .from("cross_sell_tracking" as any)
-          .select("was_sold")
-          .limit(1000);
+        const csData = await fetchAll<{ was_sold: boolean }>(
+          () =>
+            supabase
+              .from("cross_sell_tracking" as any)
+              .select("was_sold"),
+          1000,
+          100_000
+        );
         if (csData && csData.length > 0) {
-          const sold = (csData as any[]).filter(r => r.was_sold).length;
+          const sold = csData.filter((r) => r.was_sold).length;
           crossSellRate = Math.round((sold / csData.length) * 100);
         }
       } catch { /* tables may not exist yet */ }

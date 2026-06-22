@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { BarChart3, TrendingUp, TrendingDown, ArrowUpDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { fetchAll } from "@/lib/supabaseFetchAll";
 
 interface Metric {
   id: string;
@@ -28,13 +29,17 @@ const RecommendationMetrics = () => {
   }, []);
 
   const loadMetrics = async () => {
-    const { data } = await supabase
-      .from("recommendation_metrics")
-      .select("*")
-      .order("times_proposed", { ascending: false })
-      .limit(100);
+    const data = await fetchAll<Metric>(
+      () =>
+        supabase
+          .from("recommendation_metrics")
+          .select("*")
+          .order("times_proposed", { ascending: false }),
+      1000,
+      100_000
+    );
 
-    setMetrics((data as any[]) || []);
+    setMetrics(data || []);
     setLoading(false);
   };
 

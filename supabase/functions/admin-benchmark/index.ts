@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { fetchAllPages } from "../_shared/paginate.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -47,18 +48,28 @@ serve(async (req) => {
       });
     }
 
-    // Gather anonymized benchmark data
-    const { data: pharmacies } = await supabase.from("pharmacies").select("id, city, status");
-    const { data: history } = await supabase
-      .from("analysis_history")
-      .select("pharmacy_id, created_at, suggestions_count, has_major_interaction, interactions_count")
-      .order("created_at", { ascending: false })
-      .limit(5000);
-
-    const { data: feedback } = await supabase
-      .from("pc_feedback")
-      .select("pharmacy_id, action, created_at")
-      .limit(5000);
+    // Gather anonymized benchmark data (paginated to avoid PostgREST 1000-row cap)
+    const pharmacies = await fetchAllPages<any>(
+      () => supabase.from("pharmacies").select("id, city, status"),
+      1000,
+      100_000
+    );
+    const history = await fetchAllPages<any>(
+      () =>
+        supabase
+          .from("analysis_history")
+          .select("pharmacy_id, created_at, suggestions_count, has_major_interaction, interactions_count"),
+      1000,
+      100_000
+    );
+    const feedback = await fetchAllPages<any>(
+      () =>
+        supabase
+          .from("pc_feedback")
+          .select("pharmacy_id, action, created_at"),
+      1000,
+      100_000
+    );
 
     if (!pharmacies || !history) {
       return new Response(JSON.stringify({ error: "Données non disponibles" }), {

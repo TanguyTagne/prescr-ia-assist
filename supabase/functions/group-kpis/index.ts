@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { fetchAllPages } from "../_shared/paginate.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -63,9 +64,17 @@ serve(async (req) => {
     }
 
     // 1. Get groupement info + pharmacies
-    const [{ data: groupement }, { data: pharmacies }] = await Promise.all([
+    const [{ data: groupement }, pharmacies] = await Promise.all([
       supabase.from("groupements").select("*").eq("id", groupementId).maybeSingle(),
-      supabase.from("pharmacies").select("id, name, city, status").eq("groupement_id", groupementId),
+      fetchAllPages<any>(
+        () =>
+          supabase
+            .from("pharmacies")
+            .select("id, name, city, status")
+            .eq("groupement_id", groupementId),
+        1000,
+        100_000
+      ),
     ]);
 
     if (!groupement) {
@@ -81,42 +90,64 @@ serve(async (req) => {
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     const sinceISO = thirtyDaysAgo.toISOString();
 
-    // 2. Pull data in parallel
-    const [historyRes, feedbackRes, salesRes, allHistoryRes, allFeedbackRes] = await Promise.all([
+    // 2. Pull data in parallel (paginated to avoid PostgREST 1000-row cap)
+    const [history, feedback, sales, allHistory, allFeedback] = await Promise.all([
       pharmaIds.length > 0
-        ? supabase.from("analysis_history")
-            .select("pharmacy_id, created_at, suggestions_count, has_major_interaction, medicaments")
-            .in("pharmacy_id", pharmaIds)
-            .gte("created_at", sinceISO)
-        : Promise.resolve({ data: [] }),
+        ? fetchAllPages<any>(
+            () =>
+              supabase
+                .from("analysis_history")
+                .select("pharmacy_id, created_at, suggestions_count, has_major_interaction, medicaments")
+                .in("pharmacy_id", pharmaIds)
+                .gte("created_at", sinceISO),
+            1000,
+            100_000
+          )
+        : Promise.resolve([]),
       pharmaIds.length > 0
-        ? supabase.from("pc_feedback")
-            .select("pharmacy_id, action, pc_nom, pc_categorie, medicament_nom, created_at")
-            .in("pharmacy_id", pharmaIds)
-            .gte("created_at", sinceISO)
-        : Promise.resolve({ data: [] }),
+        ? fetchAllPages<any>(
+            () =>
+              supabase
+                .from("pc_feedback")
+                .select("pharmacy_id, action, pc_nom, pc_categorie, medicament_nom, created_at")
+                .in("pharmacy_id", pharmaIds)
+                .gte("created_at", sinceISO),
+            1000,
+            100_000
+          )
+        : Promise.resolve([]),
       pharmaIds.length > 0
-        ? supabase.from("sales_transactions")
-            .select("pharmacy_id, items, total_items, created_at")
-            .in("pharmacy_id", pharmaIds)
-            .gte("created_at", sinceISO)
-        : Promise.resolve({ data: [] }),
+        ? fetchAllPages<any>(
+            () =>
+              supabase
+                .from("sales_transactions")
+                .select("pharmacy_id, items, total_items, created_at")
+                .in("pharmacy_id", pharmaIds)
+                .gte("created_at", sinceISO),
+            1000,
+            100_000
+          )
+        : Promise.resolve([]),
       // National benchmark (anonymized)
-      supabase.from("analysis_history")
-        .select("pharmacy_id, suggestions_count")
-        .gte("created_at", sinceISO)
-        .limit(10000),
-      supabase.from("pc_feedback")
-        .select("pharmacy_id, action")
-        .gte("created_at", sinceISO)
-        .limit(10000),
+      fetchAllPages<any>(
+        () =>
+          supabase
+            .from("analysis_history")
+            .select("pharmacy_id, suggestions_count")
+            .gte("created_at", sinceISO),
+        1000,
+        100_000
+      ),
+      fetchAllPages<any>(
+        () =>
+          supabase
+            .from("pc_feedback")
+            .select("pharmacy_id, action")
+            .gte("created_at", sinceISO),
+        1000,
+        100_000
+      ),
     ]);
-
-    const history = (historyRes.data as any[]) || [];
-    const feedback = (feedbackRes.data as any[]) || [];
-    const sales = (salesRes.data as any[]) || [];
-    const allHistory = (allHistoryRes.data as any[]) || [];
-    const allFeedback = (allFeedbackRes.data as any[]) || [];
 
     // 3. Per-pharmacy stats
     const pharmacyStats = (pharmacies || []).map((p: any) => {
