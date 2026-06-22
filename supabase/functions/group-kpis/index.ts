@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { fetchAllPages } from "../_shared/paginate.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -63,9 +64,17 @@ serve(async (req) => {
     }
 
     // 1. Get groupement info + pharmacies
-    const [{ data: groupement }, { data: pharmacies }] = await Promise.all([
+    const [{ data: groupement }, pharmacies] = await Promise.all([
       supabase.from("groupements").select("*").eq("id", groupementId).maybeSingle(),
-      supabase.from("pharmacies").select("id, name, city, status").eq("groupement_id", groupementId),
+      fetchAllPages<any>(
+        () =>
+          supabase
+            .from("pharmacies")
+            .select("id, name, city, status")
+            .eq("groupement_id", groupementId),
+        1000,
+        100_000
+      ),
     ]);
 
     if (!groupement) {

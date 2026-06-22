@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { fetchAll } from "@/lib/supabaseFetchAll";
 
 /**
  * Diag Capture LGO/Robot — vue admin support.
@@ -71,17 +72,20 @@ export default function LgoCaptureDiagTab() {
       const sinceIso = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
       const [pharmRes, scanRes] = await Promise.all([
         supabase.from("pharmacies").select("id, name, city").order("name"),
-        supabase
-          .from("scan_queue")
-          .select("pharmacy_id, source, created_at, status")
-          .gte("created_at", sinceIso)
-          .order("created_at", { ascending: false })
-          .limit(5000),
+        fetchAll<ScanRow>(
+          () =>
+            supabase
+              .from("scan_queue")
+              .select("pharmacy_id, source, created_at, status")
+              .gte("created_at", sinceIso)
+              .order("created_at", { ascending: false }),
+          1000,
+          100_000
+        ),
       ]);
       if (pharmRes.error) throw pharmRes.error;
-      if (scanRes.error) throw scanRes.error;
       setPharmacies((pharmRes.data as Pharmacy[]) || []);
-      setScans((scanRes.data as ScanRow[]) || []);
+      setScans(scanRes);
     } catch (e: any) {
       toast.error("Chargement diag impossible: " + (e?.message || "erreur"));
     } finally {
