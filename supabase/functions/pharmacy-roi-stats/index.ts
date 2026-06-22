@@ -207,10 +207,15 @@ serve(async (req) => {
     const pcs_per_day_avg = activeDays > 0 ? total / activeDays : 0;
 
     // ════ 2. Benchmark réseau ═════════════════════════════════════════════
-    const { data: allFeedback } = await supabase
-      .from("pc_feedback")
-      .select("pharmacy_id, action, pc_categorie")
-      .gte("created_at", sinceIso);
+    const allFeedback = await fetchAllPages<any>(
+      () =>
+        supabase
+          .from("pc_feedback")
+          .select("pharmacy_id, action, pc_categorie")
+          .gte("created_at", sinceIso),
+      1000,
+      100_000
+    );
 
     // Group by pharmacy
     const byPharm: Record<string, { accepted: number; total: number }> = {};
@@ -242,19 +247,17 @@ serve(async (req) => {
       if (r.action === "accepted") myPcStats[key].accepted += 1;
     }
 
-    const networkPcStats: Record<string, { accepted: number; total: number }> = {};
-    for (const r of allFeedback ?? []) {
-      if (r.pharmacy_id === pharmacy_id) continue;
-      const { data: pcNomRow } = { data: null } as any;
-      // On a besoin du pc_nom — pour ça on doit refaire la query sans filtre
-    }
-
     // Re-fetch all feedback with pc_nom inclu (excl. notre pharmacie)
-    const { data: networkFeedback } = await supabase
-      .from("pc_feedback")
-      .select("pc_nom, action")
-      .neq("pharmacy_id", pharmacy_id)
-      .gte("created_at", sinceIso);
+    const networkFeedback = await fetchAllPages<any>(
+      () =>
+        supabase
+          .from("pc_feedback")
+          .select("pc_nom, action")
+          .neq("pharmacy_id", pharmacy_id)
+          .gte("created_at", sinceIso),
+      1000,
+      100_000
+    );
 
     for (const r of networkFeedback ?? []) {
       const key = r.pc_nom;
