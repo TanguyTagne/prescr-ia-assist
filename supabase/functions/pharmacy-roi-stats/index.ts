@@ -154,28 +154,37 @@ serve(async (req) => {
     // ════ 0. Chargement des tarifs réels (1 fois par appel) ═══════════════
     // pc_pricing       : prix exact par PC (top vendus)
     // pc_category_pricing : moyenne pondérée par catégorie (fallback)
-    const [pricesRes, catPricesRes] = await Promise.all([
-      supabase.from("pc_pricing")
-        .select("pc_nom_normalise, prix_unitaire_ttc"),
-      supabase.from("pc_category_pricing")
-        .select("categorie, prix_moyen_pondere"),
+    const [prices, catPricesList] = await Promise.all([
+      fetchAllPages<any>(
+        () => supabase.from("pc_pricing").select("pc_nom_normalise, prix_unitaire_ttc"),
+        1000,
+        100_000
+      ),
+      fetchAllPages<any>(
+        () => supabase.from("pc_category_pricing").select("categorie, prix_moyen_pondere"),
+        1000,
+        100_000
+      ),
     ]);
     const exactPrices = new Map<string, number>(
-      (pricesRes.data || []).map((r: any) => [r.pc_nom_normalise, Number(r.prix_unitaire_ttc)]),
+      prices.map((r: any) => [r.pc_nom_normalise, Number(r.prix_unitaire_ttc)]),
     );
     const catPrices = new Map<string, number>(
-      (catPricesRes.data || []).map((r: any) => [r.categorie.toLowerCase().trim(), Number(r.prix_moyen_pondere)]),
+      catPricesList.map((r: any) => [r.categorie.toLowerCase().trim(), Number(r.prix_moyen_pondere)]),
     );
     const priceFor = makePriceResolver(exactPrices, catPrices);
 
     // ════ 1. KPIs pharmacie ═══════════════════════════════════════════════
-    const { data: myFeedback, error: feedbackErr } = await supabase
-      .from("pc_feedback")
-      .select("action, pc_categorie, pc_nom, medicament_nom, created_at, detection_source")
-      .eq("pharmacy_id", pharmacy_id)
-      .gte("created_at", sinceIso);
-
-    if (feedbackErr) throw new Error("Erreur feedback: " + feedbackErr.message);
+    const myFeedback = await fetchAllPages<any>(
+      () =>
+        supabase
+          .from("pc_feedback")
+          .select("action, pc_categorie, pc_nom, medicament_nom, created_at, detection_source")
+          .eq("pharmacy_id", pharmacy_id)
+          .gte("created_at", sinceIso),
+      1000,
+      100_000
+    );
 
     const my = myFeedback ?? [];
     const accepted = my.filter(r => r.action === "accepted");
