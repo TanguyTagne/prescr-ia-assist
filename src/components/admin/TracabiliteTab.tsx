@@ -113,12 +113,12 @@ const TracabiliteTab = () => {
           .from("v_clinical_lineage" as any)
           .select("*")
           .order("created_at", { ascending: false })
-          .limit(500),
+          .limit(5000),
         supabase
           .from("lineage_audit_log")
           .select("*")
           .order("created_at", { ascending: false })
-          .limit(200),
+          .limit(5000),
       ]);
       setSources((sRes.data as any[]) || []);
       setLineage((lRes.data as any[]) || []);
