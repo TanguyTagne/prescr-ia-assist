@@ -88,15 +88,24 @@ contextBridge.exposeInMainWorld("electronAPI", {
     // real dispense is seen ({ ok, eanFound, frame }) or on timeout
     // ({ ok, eanFound:null, packets, payloadBytes, note }). Never touches the flow.
     probeCandidate: (args) => ipcRenderer.invoke("robot:probe-candidate", args || {}),
+    // ── Bouton unique « Tester cette caisse » ────────────────────────────
+    // Orchestrateur tout-en-un : prérequis → découverte → capture passive
+    // d'une vraie délivrance → verdict. En cas de succès, la config est
+    // enregistrée et la capture production démarrée côté main. Retourne le
+    // verdict { ok, working, status, ean, frame, port, serverIp, reason,
+    // advice, needsAdmin, … }.
+    selfTest: (durationMs) => ipcRenderer.invoke("robot:self-test", { durationMs }),
+    // Progression temps réel du self-test :
+    //   { phase:"capability"|"discover"|"waiting"|"packet"|"done", message?, packets?, deadlineMs?, preCandidate? }
+    onSelfTestEvent: (callback) => {
+      const handler = (_e, payload) => callback(payload);
+      ipcRenderer.on("robot:self-test-event", handler);
+      return () => ipcRenderer.removeListener("robot:self-test-event", handler);
+    },
     // Lance, SUR CE PC, le diagnostic réseau dans une fenêtre PowerShell élevée :
     // trouve le port / l'IP / le sens de la liaison LGO↔robot et écrit un journal
     // sur le Bureau. À utiliser sur le PC serveur du robot.
     runServerDiagnostic: (seconds) => ipcRenderer.invoke("robot:run-server-diagnostic", { seconds }),
-    // Lance le diag loopback "1-clic" (lgo-loopback-diag.ps1) qui capture la
-    // conversation LGO↔middleware sur 127.0.0.1 pendant N secondes et zippe
-    // le résultat sur le Bureau. Utilisé quand le robot communique via une
-    // couche locale type LMS (cas LEO Pharma).
-    runLoopbackDiag: (seconds) => ipcRenderer.invoke("robot:run-loopback-diag", { seconds }),
     // Shared secret used to authenticate cross-PC /trigger calls. Surfaced in
     // Paramètres so the pharmacist can copy it to other Asclion installs in
     // the same officine. Distinct from getConfig so this exposure is
