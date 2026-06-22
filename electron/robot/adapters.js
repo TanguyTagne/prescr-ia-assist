@@ -216,7 +216,10 @@ function redactPotentialPii(text) {
 
 // Best-effort decode: most robot protocols are XML-over-TCP (UTF-8) or
 // plain ASCII. Latin-1 fallback covers older Pharmathek deployments.
+// Accepts a Buffer (capture path) OR a string (already-reassembled WWKS2 frame
+// handed over by electron/robot/reassembler.js).
 function bufferToText(raw) {
+  if (typeof raw === "string") return raw;
   if (!Buffer.isBuffer(raw)) return "";
   try {
     return raw.toString("utf-8");
