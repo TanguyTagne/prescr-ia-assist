@@ -259,6 +259,7 @@ serve(async (req) => {
       100_000
     );
 
+    const networkPcStats: Record<string, { accepted: number; total: number }> = {};
     for (const r of networkFeedback ?? []) {
       const key = r.pc_nom;
       networkPcStats[key] = networkPcStats[key] || { accepted: 0, total: 0 };
