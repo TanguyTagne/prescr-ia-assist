@@ -41,7 +41,7 @@ const SignalementsTab = () => {
       .from("signalements" as any)
       .select("*")
       .order("created_at", { ascending: false })
-      .limit(500);
+      .limit(5000);
     if (error) {
       console.error(error);
       toast.error("Erreur de chargement");
