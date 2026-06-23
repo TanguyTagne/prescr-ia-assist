@@ -1,0 +1,17 @@
+{
+  "name": "asclion-rawinput-native",
+  "version": "1.0.0",
+  "description": "Native N-API binding for Windows Raw Input API — captures barcode scanner keystrokes system-wide without spawning PowerShell.",
+  "main": "index.js",
+  "private": true,
+  "scripts": {
+    "install": "node-gyp rebuild",
+    "rebuild": "node-gyp rebuild",
+    "rebuild:electron": "electron-rebuild -m . -v 33.3.1"
+  },
+  "dependencies": {
+    "node-addon-api": "^7.1.0",
+    "node-gyp": "^10.0.0"
+  },
+  "gypfile": true
+}

@@ -1,0 +1,7 @@
+project_id = "oknjfjplseopgymijnca"
+
+[functions.peek-import-csv]
+verify_jwt = false
+
+[functions.lgo-delivery-webhook]
+verify_jwt = false

@@ -27,6 +27,12 @@ const fs = require("fs");
 const { spawn } = require("child_process");
 
 const adapters = require("./adapters");
+const { TcpReassembler, flowKeyFromMeta, parseIpv4TcpPacket } = require("./reassembler");
+
+// Per-flow TCP reassembler shared by all three capture backends. It recombines
+// segments so the adapter always sees a COMPLETE <WWKS>…</WWKS> frame, even when
+// the dispense order is split across several packets. Reset on every stop().
+const reassembler = new TcpReassembler();
 
 let cap = null;
 let capLoadError = null;
@@ -215,6 +221,9 @@ function stop() {
   }
   state.started = false;
   state.mode = "idle";
+  // Drop any half-assembled frames so a restart never glues bytes from the old
+  // session onto the new one.
+  reassembler.reset();
 }
 
 function getStatus() {
@@ -283,7 +292,8 @@ function startNpcap() {
         const payloadLen = ipv4.info.totallen - (ipv4.hdrlen + tcp.hdrlen);
         if (payloadLen <= 0) return;
         const payload = buffer.slice(tcp.offset, tcp.offset + payloadLen);
-        handlePayload(payload, ipv4.info.srcaddr);
+        const flowKey = `${ipv4.info.srcaddr}:${tcp.info.srcport}>${ipv4.info.dstaddr}:${tcp.info.dstport}`;
+        handlePayload(payload, ipv4.info.srcaddr, flowKey);
       } catch (e) {
         state.lastError = `npcap packet decode: ${e && e.message}`;
       }
@@ -411,19 +421,20 @@ function handleWinDivertLine(line) {
   const sourceIp = state.captureDirection === "inbound" && meta?.dstPort === state.port
     ? meta.srcAddress
     : "127.0.0.1";
-  handlePayload(payload, sourceIp);
+  // Feed the TCP application bytes (not the IP/TCP headers) to the reassembler so
+  // multi-packet WWKS2 frames glue back together cleanly. Headerless packets
+  // (pure ACKs) carry no payload — skip them. Fall back to the whole packet only
+  // if the parser couldn't read the headers.
+  if (meta) {
+    if (!meta.payload || meta.payload.length === 0) return;
+    handlePayload(meta.payload, sourceIp, flowKeyFromMeta(meta));
+  } else {
+    handlePayload(payload, sourceIp, "_");
+  }
 }
 
-function parseIpv4TcpPacket(packet) {
-  if (!Buffer.isBuffer(packet) || packet.length < 40) return null;
-  if ((packet[0] >> 4) !== 4 || packet[9] !== 6) return null;
-  const ihl = (packet[0] & 0x0f) * 4;
-  if (packet.length < ihl + 20) return null;
-  const srcPort = packet.readUInt16BE(ihl);
-  const dstPort = packet.readUInt16BE(ihl + 2);
-  const ip = (off) => `${packet[off]}.${packet[off + 1]}.${packet[off + 2]}.${packet[off + 3]}`;
-  return { srcAddress: ip(12), dstAddress: ip(16), srcPort, dstPort };
-}
+// parseIpv4TcpPacket now lives in ./reassembler (returns the payload slice too)
+// and is imported at the top of this file.
 
 // ───── TCP listen fallback ───────────────────────────────────────────
 function startTcpListen(robot) {
@@ -463,9 +474,17 @@ function startTcpListen(robot) {
         socket.pipe(upstream);
         upstream.pipe(socket);
       }
+      const flowKey = `${peerIp}:${socket.remotePort || 0}>local:${socket.localPort || 0}`;
       socket.on("data", (chunk) => {
         state.packetsSeen++;
-        handlePayload(chunk, peerIp);
+        handlePayload(chunk, peerIp, flowKey);
+      });
+      socket.on("close", () => {
+        // Flush any buffered (non-WWKS-delimited) trailing bytes so a document
+        // that closes without a tracked end-tag still gets one extraction pass.
+        if (state.brand !== "diagnostic") {
+          for (const msg of reassembler.flush(flowKey)) triggerFromMessage(msg, peerIp);
+        }
       });
       socket.on("error", (err) => {
         state.lastError = `tcp socket: ${err && err.message}`;
@@ -495,18 +514,40 @@ function normalizeIp(raw) {
 }
 
 // ───── Common payload handler ────────────────────────────────────────
-function handlePayload(payload, sourceIp) {
+// Same code seen again within this window is treated as a retransmit/echo of the
+// same dispense, not a new one, so the widget pops exactly once.
+const DEDUP_WINDOW_MS = 1200;
+
+function handlePayload(payload, sourceIp, flowKey) {
   if (!state.adapter) return;
+  // Diagnostic mode must see every raw byte (its whole job is to dump the wire),
+  // so it bypasses reassembly. Real adapters receive complete WWKS2 frames.
+  const messages = state.brand === "diagnostic"
+    ? [payload]
+    : reassembler.push(flowKey || "_", payload);
+  for (const msg of messages) triggerFromMessage(msg, sourceIp);
+}
+
+// Extract a code from ONE already-complete message (raw packet in diagnostic
+// mode, or a reassembled WWKS2 frame) and fire the trigger once. Kept separate
+// from handlePayload so the tcp-listen close-flush can feed pre-reassembled
+// frames without pushing them back through the reassembler.
+function triggerFromMessage(msg, sourceIp) {
   let ean = null;
   try {
-    ean = state.adapter.extractEan(payload);
+    ean = state.adapter.extractEan(msg);
   } catch (e) {
     state.lastError = `adapter ${state.brand} threw: ${e && e.message}`;
     return;
   }
   if (!ean) return;
+  const now = Date.now();
+  if (ean === state.lastEan && now - state.lastEanAt < DEDUP_WINDOW_MS) {
+    state.lastEanAt = now; // refresh so a burst stays collapsed
+    return;
+  }
   state.lastEan = ean;
-  state.lastEanAt = Date.now();
+  state.lastEanAt = now;
   state.triggersSent++;
   runtimeRefs.log(`[ROBOT] EAN extracted: ${ean} (source ${sourceIp || "?"})`);
   fanoutTrigger(ean, sourceIp);

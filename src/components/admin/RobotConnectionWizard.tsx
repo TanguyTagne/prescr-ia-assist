@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Loader2, CheckCircle2, XCircle, AlertTriangle, ShieldCheck,
-  Network, Cable, ArrowRight, RefreshCw, Wand2, RotateCcw,
+  Network, Cable, ArrowRight, RefreshCw, Wand2, RotateCcw, Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +23,9 @@ import {
 // chaîne de dispensation. Le mode passif est forcé à l'enregistrement.
 
 type Step =
+  | "express"          // landing : un seul bouton
+  | "express-running"  // self-test en cours
+  | "express-result"   // verdict du self-test
   | "discovering"
   | "results"
   | "testing"
@@ -31,6 +34,25 @@ type Step =
   | "error";
 
 type RobotBrand = "rowa" | "pharmathek" | "generic";
+
+// Verdict renvoyé par electronAPI.robot.selfTest() (voir electron/robot/selftest.js).
+interface SelfTestResult {
+  ok: boolean;
+  working?: boolean;
+  status?: "ok" | "traffic_no_ean" | "no_traffic" | "no_capture" | "error";
+  ean?: string | null;
+  frame?: "wwks2" | "xml" | "raw" | null;
+  port?: number | null;
+  serverIp?: string | null;
+  captureDirection?: "inbound" | "outbound" | null;
+  packets?: number;
+  payloadBytes?: number;
+  sawWwks?: boolean;
+  needsAdmin?: boolean;
+  reason?: string;
+  advice?: string;
+  configSaved?: boolean;
+}
 
 interface ProbeResult {
   ok: boolean;
@@ -91,7 +113,7 @@ export default function RobotConnectionWizard({ open, onOpenChange, onConfigSave
   const robotApi = (typeof window !== "undefined" ? (window as any).electronAPI?.robot : null) as any;
   const systemApi = (typeof window !== "undefined" ? (window as any).electronAPI?.system : null) as any;
 
-  const [step, setStep] = useState<Step>("discovering");
+  const [step, setStep] = useState<Step>("express");
   const [candidates, setCandidates] = useState<DiscoveryCandidate[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [brand, setBrand] = useState<RobotBrand>("rowa");
@@ -100,6 +122,14 @@ export default function RobotConnectionWizard({ open, onOpenChange, onConfigSave
   const [errorInfo, setErrorInfo] = useState<{ message: string; needsAdmin: boolean } | null>(null);
   const [captureWarn, setCaptureWarn] = useState<{ message: string; needsAdmin: boolean } | null>(null);
   const [discoveryNote, setDiscoveryNote] = useState<string | null>(null);
+  // ── État du « bouton unique » (self-test) ───────────────────────────
+  const [selfPhase, setSelfPhase] = useState<string>("");
+  const [selfMsg, setSelfMsg] = useState<string>("");
+  const [selfPackets, setSelfPackets] = useState(0);
+  const [selfResult, setSelfResult] = useState<SelfTestResult | null>(null);
+  const [selfRemaining, setSelfRemaining] = useState<number | null>(null); // secondes restantes
+  const selfUnsubRef = useRef<null | (() => void)>(null);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const progressTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const cancelledRef = useRef(false);
 
@@ -115,8 +145,15 @@ export default function RobotConnectionWizard({ open, onOpenChange, onConfigSave
     }
   };
 
-  // Reset state when the dialog (re)opens, then launch discovery immediately —
-  // no intro screen, clicking the button starts the scan straight away.
+  const clearCountdown = () => {
+    if (countdownRef.current) {
+      clearInterval(countdownRef.current);
+      countdownRef.current = null;
+    }
+  };
+
+  // Reset state when the dialog (re)opens and land on the one-click express
+  // screen. Discovery / manual mode is one tap away but is no longer the default.
   useEffect(() => {
     if (open) {
       cancelledRef.current = false;
@@ -128,14 +165,80 @@ export default function RobotConnectionWizard({ open, onOpenChange, onConfigSave
       setErrorInfo(null);
       setCaptureWarn(null);
       setDiscoveryNote(null);
-      void runDiscovery();
+      setSelfResult(null);
+      setSelfPackets(0);
+      setSelfPhase("");
+      setSelfMsg("");
+      setSelfRemaining(null);
+      setStep("express");
     } else {
       cancelledRef.current = true;
       clearProgressTimer();
+      clearCountdown();
+      try { selfUnsubRef.current?.(); } catch { /* noop */ }
+      selfUnsubRef.current = null;
     }
-    return () => clearProgressTimer();
+    return () => { clearProgressTimer(); clearCountdown(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  // ───── Bouton unique — self-test tout-en-un ────────────────────────
+  // Un seul clic : prérequis → découverte → capture passive d'une vraie
+  // délivrance → verdict. Le main process enregistre la config et démarre la
+  // capture production si ça marche, donc « prochaine délivrance lue » = vrai.
+  const runExpress = useCallback(async () => {
+    if (!robotApi?.selfTest) {
+      toast.error("Test disponible uniquement dans l'application desktop Asclion.");
+      return;
+    }
+    setSelfResult(null);
+    setSelfPackets(0);
+    setSelfPhase("capability");
+    setSelfMsg("Vérification des prérequis…");
+    setStep("express-running");
+
+    try { selfUnsubRef.current?.(); } catch { /* noop */ }
+    selfUnsubRef.current = robotApi.onSelfTestEvent?.((ev: any) => {
+      if (!ev || cancelledRef.current) return;
+      if (ev.phase) setSelfPhase(ev.phase);
+      if (typeof ev.message === "string") setSelfMsg(ev.message);
+      if (typeof ev.packets === "number") setSelfPackets(ev.packets);
+      // Démarre le compte à rebours dès que la fenêtre d'écoute s'ouvre, pour
+      // que le pharmacien sache combien de temps il a pour aller déclencher
+      // une délivrance sur le LGO.
+      if (ev.phase === "waiting" && typeof ev.deadlineMs === "number") {
+        const end = Date.now() + ev.deadlineMs;
+        clearCountdown();
+        setSelfRemaining(Math.ceil(ev.deadlineMs / 1000));
+        countdownRef.current = setInterval(() => {
+          const rem = Math.max(0, Math.ceil((end - Date.now()) / 1000));
+          setSelfRemaining(rem);
+          if (rem <= 0) clearCountdown();
+        }, 250);
+      }
+    }) ?? null;
+
+    let res: SelfTestResult;
+    try {
+      res = (await robotApi.selfTest(PROBE_MS)) as SelfTestResult;
+    } catch (err: any) {
+      res = { ok: false, working: false, status: "error", reason: String(err?.message || err) };
+    } finally {
+      try { selfUnsubRef.current?.(); } catch { /* noop */ }
+      selfUnsubRef.current = null;
+      clearCountdown();
+      setSelfRemaining(null);
+    }
+    if (cancelledRef.current) return;
+    setSelfResult(res);
+    setStep("express-result");
+    if (res?.working) {
+      toast.success("Robot connecté", {
+        description: "Capture passive armée — Asclion lira automatiquement les prochaines délivrances de cette caisse.",
+      });
+      onConfigSaved?.();
+    }
+  }, [robotApi, onConfigSaved]);
 
   // ───── Découverte — table des connexions TCP de Windows ────────────
   // Moteur principal : Get-NetTCPConnection (via robot:discover-port), interrogé
@@ -381,6 +484,117 @@ export default function RobotConnectionWizard({ open, onOpenChange, onConfigSave
             Détection automatique du lien LGO ↔ robot, test par une vraie délivrance, en capture 100&nbsp;% passive.
           </DialogDescription>
         </DialogHeader>
+
+        {/* EXPRESS — un seul bouton */}
+        {step === "express" && (
+          <div className="space-y-4 mt-1">
+            <div className="rounded-md border border-primary/30 bg-primary/5 p-3 text-xs text-muted-foreground">
+              Un seul test : Asclion détecte le flux <strong>caisse ↔ serveur</strong>, écoute une vraie délivrance en
+              capture <strong>100&nbsp;% passive</strong>, et te dit si tout est bon. Aucun risque pour la chaîne LGO ↔ robot.
+            </div>
+            <Button className="w-full h-11 gap-2 text-sm" onClick={runExpress} disabled={!robotApi?.selfTest}>
+              <Zap className="h-4 w-4" />
+              Tester cette caisse
+            </Button>
+            <p className="text-[11px] text-muted-foreground text-center">
+              Garde le LGO ouvert : après le clic, tu auras <strong>~60&nbsp;s</strong> pour aller déclencher une
+              délivrance. Le test s'arrête net dès qu'un code est lu.
+            </p>
+            <button
+              type="button"
+              onClick={() => void runDiscovery()}
+              className="w-full text-[11px] text-muted-foreground underline underline-offset-2 hover:text-foreground"
+            >
+              Mode manuel (choisir le port / candidat moi-même)
+            </button>
+          </div>
+        )}
+
+        {/* EXPRESS — en cours */}
+        {step === "express-running" && (
+          <div className="space-y-3 mt-1">
+            <div className="rounded-md border border-primary/30 bg-primary/5 p-3">
+              <p className="text-sm font-medium flex items-center justify-between gap-2">
+                <span className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                  {selfPhase === "waiting" ? "En attente d'une délivrance…" : "Préparation du test…"}
+                </span>
+                {selfPhase === "waiting" && selfRemaining !== null && (
+                  <span className="font-mono text-base tabular-nums text-primary">{selfRemaining}s</span>
+                )}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">{selfMsg}</p>
+            </div>
+            {selfPhase === "waiting" && (
+              <p className="text-xs text-muted-foreground">
+                <strong>Déclenche maintenant une vraie sortie robot depuis le LGO de cette caisse.</strong> Asclion
+                observe le trafic sans jamais s'insérer dans la chaîne. Il reste {selfRemaining ?? "…"}&nbsp;s.
+              </p>
+            )}
+            {selfPackets > 0 && (
+              <p className="text-[11px] text-muted-foreground font-mono">{selfPackets} paquet(s) observé(s)…</p>
+            )}
+          </div>
+        )}
+
+        {/* EXPRESS — verdict */}
+        {step === "express-result" && selfResult && (
+          selfResult.working ? (
+            <div className="space-y-3 mt-1">
+              <div className="rounded-md border border-green-500/40 bg-green-500/5 p-3 space-y-1.5">
+                <p className="text-sm font-medium flex items-center gap-2 text-green-700">
+                  <CheckCircle2 className="h-4 w-4" />
+                  C'est bon — cette caisse est branchée&nbsp;!
+                </p>
+                <p className="text-xs">
+                  Code médicament capté : <span className="font-mono font-semibold">{selfResult.ean}</span>
+                  {selfResult.frame === "wwks2" && <Badge variant="outline" className="ml-2 text-[10px]">WWKS2</Badge>}
+                </p>
+                {selfResult.serverIp && (
+                  <p className="text-[11px] text-muted-foreground font-mono">
+                    {selfResult.serverIp}:{selfResult.port} · capture {selfResult.captureDirection}
+                  </p>
+                )}
+                <p className="text-[11px] text-green-700/90">
+                  Capture passive armée : Asclion lira automatiquement les prochaines délivrances de cette caisse.
+                </p>
+              </div>
+              <Button className="w-full gap-2" onClick={() => onOpenChange(false)}>
+                <CheckCircle2 className="h-4 w-4" />
+                Terminer
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-3 mt-1">
+              <div className="rounded-md border border-amber-400/50 bg-amber-50/60 p-3 space-y-1">
+                <p className="text-sm font-medium flex items-center gap-2 text-amber-700">
+                  <AlertTriangle className="h-4 w-4" />
+                  Pas encore opérationnel
+                </p>
+                <p className="text-xs text-muted-foreground">{selfResult.reason}</p>
+                {selfResult.advice && <p className="text-[11px] text-muted-foreground">{selfResult.advice}</p>}
+                {typeof selfResult.packets === "number" && selfResult.packets > 0 && (
+                  <p className="text-[11px] text-muted-foreground font-mono">{selfResult.packets} paquet(s) vus pendant le test.</p>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {selfResult.needsAdmin && (
+                  <Button size="sm" className="gap-1.5" onClick={relaunchAdmin}>
+                    <ShieldCheck className="h-4 w-4" />
+                    Relancer en administrateur
+                  </Button>
+                )}
+                <Button size="sm" className="gap-1.5" onClick={runExpress}>
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  Relancer le test
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => void runDiscovery()}>
+                  Mode manuel
+                </Button>
+              </div>
+            </div>
+          )
+        )}
 
         {/* DISCOVERING */}
         {step === "discovering" && (

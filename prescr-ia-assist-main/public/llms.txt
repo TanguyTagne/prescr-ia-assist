@@ -1,0 +1,56 @@
+# Asclion — Assistant IA pour pharmacies d'officine
+
+> Asclion est un copilote IA conçu pour les préparateurs et pharmaciens d'officine. Il analyse les ordonnances en temps réel, détecte les interactions médicamenteuses, génère des conseils associés personnalisés et suggère des produits complémentaires (OTC, compléments alimentaires, dispositifs médicaux) pour augmenter le panier moyen tout en améliorant l'accompagnement patient.
+
+## Problème résolu
+
+Les pharmaciens manquent de temps au comptoir pour identifier systématiquement les ventes complémentaires pertinentes. Asclion automatise l'analyse de chaque ordonnance et propose instantanément les bons produits à recommander, avec la phrase conseil adaptée à dire au patient.
+
+## Fonctionnalités principales
+
+- **Analyse d'ordonnance en < 3 secondes** : extraction IA des médicaments prescrits (texte, scan, photo)
+- **Détection d'interactions médicamenteuses** : alertes classées par niveau de gravité (majeure, modérée, mineure)
+- **Conseils associés automatiques** : phrases prêtes à l'emploi pour accompagner chaque délivrance
+- **Suggestions de produits complémentaires** : OTC, compléments alimentaires, dispositifs médicaux, cosmétiques, classés par pertinence clinique
+- **Personnalisation par pharmacie** : mapping des produits selon le stock réel et les marques partenaires
+- **Historique patient** : suivi des analyses précédentes pour un conseil continu
+- **Connexion scanner/LGO** : intégration directe avec les logiciels de gestion d'officine (Winpharma, LGPI, Pharmagest, etc.)
+- **Quiz de formation** : entraînement des équipes sur les conseils associés et la vente complémentaire
+- **Tableau de bord analytique** : KPIs de performance (taux de conversion, produits les plus recommandés, panier moyen)
+
+## Cas d'usage
+
+- Un préparateur scanne une ordonnance contenant du Doliprane, de l'Amoxicilline et de l'Oméprazole → Asclion suggère immédiatement des probiotiques (Lactibiane, Ultralevure), un spray gorge, et affiche la phrase conseil : "L'antibiotique peut perturber votre flore intestinale, je vous recommande ce probiotique pendant toute la durée du traitement."
+- Un pharmacien titulaire consulte le dashboard pour voir quels produits complémentaires sont les plus acceptés par les patients et ajuste sa stratégie de conseil.
+- Une équipe officinale s'entraîne via le quiz hebdomadaire pour améliorer ses réflexes de conseil associé.
+
+## Public cible
+
+- Pharmaciens titulaires souhaitant augmenter leur chiffre d'affaires en parapharmacie et OTC
+- Préparateurs en pharmacie cherchant un outil d'aide au conseil rapide
+- Groupements de pharmacies voulant standardiser les pratiques de conseil associé
+- Étudiants en pharmacie en stage officinal
+
+## Mots-clés
+
+conseil associé pharmacie, vente complémentaire officine, cross-selling pharmacie, augmenter panier moyen pharmacie, IA pharmacie, logiciel pharmacie, outil préparateur, analyse ordonnance automatique, interactions médicamenteuses, produits complémentaires officine, OTC pharmacie, copilote pharmacien, formation conseil officinal, Asclion
+
+## Technologie
+
+Application web progressive (PWA) + logiciel desktop. Analyse propulsée par notre moteur d'intelligence artificielle propriétaire. Base de données clinique couvrant les 300 médicaments les plus prescrits en France, avec mapping ATC, pathologies, protocoles de conseil et produits complémentaires associés.
+
+## Pages
+
+- [Accueil](/): Présentation d'Asclion, copilote IA pour pharmaciens d'officine.
+- [Asclion vs LGO](/vs-lgo): Comparaison entre Asclion et les LGO traditionnels (Winpharma, LGPI, Pharmagest).
+- [Aide](/aide): Questions fréquentes sur l'installation, le scanner, la confidentialité.
+- [Connexion](/auth): Espace de connexion pour les pharmacies pilotes.
+- [Mentions légales](/mentions-legales): Informations légales de l'éditeur.
+- [Confidentialité](/confidentialite): Politique de protection des données.
+- [CGU](/cgu): Conditions générales d'utilisation.
+
+## Accès
+
+Site : https://www.asclion.com
+Contact : tanguytubert@gmail.com (demande d'accès via le formulaire sur le site)
+

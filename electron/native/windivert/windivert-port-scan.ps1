@@ -51,7 +51,9 @@ public static class WDPortScan {
   [Console]::Out.WriteLine('{"status":"open filter=' + $filter.Replace('"','\"') + '"}')
   [Console]::Out.Flush()
 
-  $deadline = (Get-Date).AddSeconds([Math]::Max(5, [Math]::Min(30, $DurationSec)))
+  # Cap haute à 120 s pour que l'appelant pilote vraiment la fenêtre (le
+  # self-test demande 60 s, le test manuel jusqu'à 75 s). Plancher 5 s.
+  $deadline = (Get-Date).AddSeconds([Math]::Max(5, [Math]::Min(120, $DurationSec)))
   $buf = New-Object byte[] 65535
   while ((Get-Date) -lt $deadline) {
     [uint32]$recvLen = 0

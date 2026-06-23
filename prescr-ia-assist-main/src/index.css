@@ -1,0 +1,124 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 150 20% 98%;
+    --foreground: 200 25% 14%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 200 25% 14%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 200 25% 14%;
+
+    --primary: 173 58% 32%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 150 20% 94%;
+    --secondary-foreground: 200 25% 14%;
+
+    --muted: 150 15% 93%;
+    --muted-foreground: 200 12% 40%;
+
+    --accent: 173 40% 92%;
+    --accent-foreground: 173 58% 25%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 150 15% 88%;
+    --input: 150 15% 88%;
+    --ring: 173 58% 32%;
+
+    --radius: 0.75rem;
+
+    --pharmacy-green: 173 58% 32%;
+    --pharmacy-green-light: 173 40% 92%;
+    --pharmacy-teal: 180 50% 40%;
+    --pharmacy-warm: 30 80% 55%;
+    --pharmacy-warm-light: 30 60% 95%;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 173 58% 32%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 173 40% 92%;
+    --sidebar-accent-foreground: 173 58% 25%;
+    --sidebar-border: 150 15% 88%;
+    --sidebar-ring: 173 58% 32%;
+
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  }
+
+  .dark {
+    --background: 200 25% 8%;
+    --foreground: 150 15% 95%;
+    --card: 200 20% 12%;
+    --card-foreground: 150 15% 95%;
+    --popover: 200 20% 12%;
+    --popover-foreground: 150 15% 95%;
+    --primary: 173 58% 42%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 200 15% 16%;
+    --secondary-foreground: 150 15% 95%;
+    --muted: 200 15% 18%;
+    --muted-foreground: 150 10% 60%;
+    --accent: 173 30% 18%;
+    --accent-foreground: 173 50% 70%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 200 15% 20%;
+    --input: 200 15% 20%;
+    --ring: 173 58% 42%;
+    --sidebar-background: 200 20% 10%;
+    --sidebar-foreground: 150 15% 90%;
+    --sidebar-primary: 173 58% 42%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 173 30% 18%;
+    --sidebar-accent-foreground: 173 50% 70%;
+    --sidebar-border: 200 15% 20%;
+    --sidebar-ring: 173 58% 42%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    /* Respect device safe areas (iOS notch, Android gesture bar) when packaged
+       as a native app via Capacitor. No-op on regular browser viewports. */
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    overscroll-behavior: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+}
+
+@layer utilities {
+  .pharmacy-gradient {
+    background: linear-gradient(135deg, hsl(173 58% 32%), hsl(180 50% 40%));
+  }
+
+  .glass-card {
+    @apply bg-card/80 backdrop-blur-sm border border-border shadow-sm;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

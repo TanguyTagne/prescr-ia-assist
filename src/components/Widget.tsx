@@ -876,7 +876,7 @@ const AdminModeButton = () => {
 
 // ── Panneau Paramètres (desktop uniquement) ───────────────────────────────────
 const WidgetSettings = ({ onClose, onSignOut }: { onClose: () => void; onSignOut: () => void }) => (
-  <div className="flex flex-col h-full">
+  <div className="flex flex-col">
     {/* En-tête */}
     <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-background sticky top-0 z-10">
       <button
@@ -891,7 +891,7 @@ const WidgetSettings = ({ onClose, onSignOut }: { onClose: () => void; onSignOut
     </div>
 
     {/* Contenu */}
-    <div className="flex-1 overflow-y-auto p-3 space-y-4">
+    <div className="p-3 space-y-4">
       {/* 1. Calibration du canal robot */}
       <RobotCalibrationPanel />
 

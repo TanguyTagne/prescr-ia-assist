@@ -49,6 +49,7 @@
       "native/rawinput/build/Release/*.node",
       "native/rawinput/index.js",
       "native/windivert/**/*",
+      "native/diag/**/*",
       "robot/**/*"
     ],
     "win": {

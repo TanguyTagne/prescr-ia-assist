@@ -13,6 +13,8 @@ let robotSniffer = null;
 let robotListener = null;
 let robotAdapters = null;
 let robotCalibrator = null;
+let robotSelfTest = null;
+let robotReassembler = null;
 let robotSubsystemError = null;
 try {
   robotConfig = require("./robot/config");
@@ -20,6 +22,8 @@ try {
   robotListener = require("./robot/listener");
   robotAdapters = require("./robot/adapters");
   robotCalibrator = require("./robot/calibrator");
+  robotSelfTest = require("./robot/selftest");
+  robotReassembler = require("./robot/reassembler");
 } catch (e) {
   robotSubsystemError = e && e.message;
   console.error("[ROBOT] subsystem load failed:", robotSubsystemError);
@@ -2897,7 +2901,9 @@ function isLanOrLoopback(ip) {
   return false;
 }
 
-ipcMain.handle("robot:discover-port", async () => {
+// Core discovery routine, factored out so the one-click self-test orchestrator
+// (robot:self-test) can reuse the exact same netstat snapshot the wizard uses.
+async function discoverPortCore() {
   if (process.platform !== "win32") {
     return { ok: false, error: "Windows uniquement", candidates: [] };
   }
@@ -2985,6 +2991,74 @@ ipcMain.handle("robot:discover-port", async () => {
     });
     child.stdin && child.stdin.end();
   });
+}
+ipcMain.handle("robot:discover-port", discoverPortCore);
+
+// ────────────────────────────────────────────────────────────
+// robot:self-test — le « bouton unique »
+//
+// Enchaîne automatiquement : prérequis → pré-scan netstat → fenêtre de capture
+// passive (une vraie délivrance) → verdict clair. En cas de succès, persiste le
+// candidat gagnant {port, IP, sens} en mode passif et (re)démarre la capture
+// production : Asclion lira donc la prochaine délivrance de cette caisse.
+// Émet des événements de progression sur "robot:self-test-event".
+// ────────────────────────────────────────────────────────────
+ipcMain.handle("robot:self-test", async (_e, { durationMs } = {}) => {
+  if (!robotSelfTest) {
+    return { ok: false, working: false, status: "error", reason: robotSubsystemError || "Module self-test indisponible." };
+  }
+  const windivertDir = path
+    .join(__dirname, "native", "windivert")
+    .replace(`app.asar${path.sep}`, `app.asar.unpacked${path.sep}`);
+  const emit = (phase, extra) => {
+    try {
+      const w = mainWindow;
+      if (w && !w.isDestroyed()) w.webContents.send("robot:self-test-event", { phase, ...(extra || {}) });
+    } catch { /* noop */ }
+  };
+
+  let res;
+  try {
+    res = await robotSelfTest.run({
+      windivertDir,
+      extractAnyEan: robotAdapters && robotAdapters.extractAnyEan,
+      detectElevation,
+      discoverPort: discoverPortCore,
+      localIps: localIpv4Set(),
+      durationMs,
+      emit,
+      log: devLog,
+      warn: devWarn,
+    });
+  } catch (err) {
+    return { ok: false, working: false, status: "error", reason: String(err && err.message ? err.message : err) };
+  }
+
+  // Success → arm production capture with the discovered endpoint, in passive
+  // mode (WinDivert/Npcap, never the tcp-listen relay). Brand defaults to rowa
+  // (WWKS2) since that is what the extractor matched.
+  if (res && res.working && res.port && robotConfig && robotSniffer) {
+    try {
+      const next = robotConfig.save({
+        robot: {
+          enabled: true,
+          brand: "rowa",
+          port: res.port,
+          robotServerIp: res.serverIp || null,
+          captureDirection: res.captureDirection || "outbound",
+          captureBackend: "auto",
+          passiveOnly: true,
+          useNpcap: true,
+        },
+      });
+      robotSniffer.start(next);
+      res.configSaved = true;
+    } catch (e) {
+      res.configSaved = false;
+      res.saveError = String(e && e.message ? e.message : e);
+    }
+  }
+  return res;
 });
 
 ipcMain.handle("robot:auto-detect-port", async (_e, { durationMs } = {}) => {
@@ -3245,6 +3319,8 @@ ipcMain.handle("robot:probe-candidate", async (_e, { port, robotServerIp, durati
   let packets = 0;
   let payloadBytes = 0;
   let resolved = false;
+  // Reassemble per flow so a WWKS2 frame split across packets is still read.
+  const reasm = robotReassembler ? new robotReassembler.TcpReassembler() : null;
 
   return await new Promise((resolve) => {
     let child;
@@ -3292,16 +3368,22 @@ ipcMain.handle("robot:probe-candidate", async (_e, { port, robotServerIp, durati
         const payload = meta.payload;
         if (payload && payload.length) {
           payloadBytes += payload.length;
-          const text = payload.toString("utf8");
-          let ean = null;
-          try { ean = robotAdapters.extractAnyEan(text); } catch { ean = null; }
-          if (ean) {
-            // `frame` is a non-PII classification of the payload shape, safe to
-            // surface in the UI ("WWKS2 détecté"). We never return the raw text.
-            const frame = /<WWKS|OutputMessage|OutputRequest/i.test(text) ? "wwks2"
-              : /<\?xml|<[A-Za-z]/.test(text) ? "xml" : "raw";
-            finish({ eanFound: ean, frame });
-            return;
+          // Hand the segment to the reassembler and try each COMPLETE frame it
+          // returns (falls back to the raw segment if the module is unavailable).
+          const frames = reasm
+            ? reasm.push(robotReassembler.flowKeyFromMeta(meta), payload)
+            : [payload.toString("utf8")];
+          for (const text of frames) {
+            let ean = null;
+            try { ean = robotAdapters.extractAnyEan(text); } catch { ean = null; }
+            if (ean) {
+              // `frame` is a non-PII classification of the payload shape, safe to
+              // surface in the UI ("WWKS2 détecté"). We never return the raw text.
+              const frame = /<WWKS|OutputMessage|OutputRequest/i.test(text) ? "wwks2"
+                : /<\?xml|<[A-Za-z]/.test(text) ? "xml" : "raw";
+              finish({ eanFound: ean, frame });
+              return;
+            }
           }
         }
       }

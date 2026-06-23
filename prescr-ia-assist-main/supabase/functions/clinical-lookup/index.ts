@@ -1,0 +1,340 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+// Pediatric safety filter — drop adult-only PCs when scanned med is infant/child
+const PEDS_BLACKLIST = /(aspirine|aspégic ?(?!nourrisson)|kardégic|ibuprof[èe]ne ?400|nurofen ?400|paracétamol ?1000|doliprane ?1000|efferalgan ?1000|mopralpro|inexium|om[ée]prazole|esom[ée]prazole|pantoprazole|baume du tigre|harpagophyt|curcuma|magn[ée]sium ?(200|300|400|450)|spasfon lyoc|imodium adulte|nicopatch|nicorette|champix|cialis|viagra|huile essentielle (?!eucalyptus radiata))/i;
+const PEDS_WHITELIST = /(b[ée]b[ée]|nourrisson|enfant|p[ée]diatr|junior|kids|sirop|gouttes|suspension|st[ée]rimar|physiomer|prorhinel|bepanthen|mustela|weleda b[ée]b[ée]|calmosine|biogaia|p[ée]diakid|liniment|s[ée]rum physiologique|mouche-b[ée]b[ée]|zymad|doliprane 2,?4|doliprane sirop|advil enfant|nurofen enfant|efferalgan susp|forlax junior|movicol enfant|microlax b[ée]b[ée]|gaviscon nourrisson)/i;
+
+function filterPediatricSafe(pcs: any[], med: any): any[] {
+  const cible = med?.cible_age;
+  if (cible !== "nourrisson" && cible !== "enfant") return pcs;
+  return pcs.filter((p: any) => {
+    const ages: string[] = Array.isArray(p.cible_age) ? p.cible_age : [];
+    if (ages.includes("nourrisson") || ages.includes("enfant")) return true;
+    const text = `${p.produit || ""} ${p.description || ""}`;
+    if (PEDS_BLACKLIST.test(text)) return false;
+    if (PEDS_WHITELIST.test(text)) return true;
+    return false;
+  });
+}
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
+  // ── Auth guard (any authenticated user) ──
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+  {
+    const authClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+    const { data: userData, error: userErr } = await authClient.auth.getUser();
+    if (userErr || !userData?.user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+  }
+
+  try {
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    const { query, cip_code } = await req.json();
+
+    // Helper: extract core drug name (strip dosage, forms)
+    function extractCore(name: string): string {
+      return (name || "").trim()
+        .replace(/\d+\s*(mg|g|ml|ui|µg|mcg|%)/gi, "")
+        .replace(/\b(comprimé|comprimés|gélule|gélules|sachet|sachets|sirop|suspension|solution|crème|gel|patch|spray|gouttes|pommade|injectable|lyoc|effervescent|orodispersible|lp|fort|adulte|enfant|nourrisson|buvable)\b/gi, "")
+        .replace(/\s+/g, " ").trim();
+    }
+
+    // Step 1: Find medicament by CIP or name (with fuzzy matching)
+    let medicament = null;
+    if (cip_code) {
+      const { data } = await supabase
+        .from("medicaments")
+        .select("*, molecules(*)")
+        .eq("cip_code", cip_code)
+        .maybeSingle();
+      medicament = data;
+    }
+    if (!medicament && query) {
+      // Try exact match first
+      const { data: exact } = await supabase
+        .from("medicaments")
+        .select("*, molecules(*)")
+        .ilike("nom_commercial", query.trim())
+        .limit(1)
+        .maybeSingle();
+      medicament = exact;
+
+      // Try partial match
+      if (!medicament) {
+        const { data: partial } = await supabase
+          .from("medicaments")
+          .select("*, molecules(*)")
+          .ilike("nom_commercial", `%${query.trim()}%`)
+          .limit(1)
+          .maybeSingle();
+        medicament = partial;
+      }
+
+      // Try core name (strip dosage/form)
+      if (!medicament) {
+        const core = extractCore(query);
+        if (core && core !== query.trim()) {
+          const { data: coreMatch } = await supabase
+            .from("medicaments")
+            .select("*, molecules(*)")
+            .ilike("nom_commercial", `%${core}%`)
+            .limit(1)
+            .maybeSingle();
+          medicament = coreMatch;
+        }
+      }
+
+      // Try first word only (brand name)
+      if (!medicament) {
+        const firstWord = extractCore(query).split(/\s+/)[0];
+        if (firstWord && firstWord.length >= 3) {
+          const { data: brandMatch } = await supabase
+            .from("medicaments")
+            .select("*, molecules(*)")
+            .ilike("nom_commercial", `%${firstWord}%`)
+            .limit(1)
+            .maybeSingle();
+          medicament = brandMatch;
+        }
+      }
+    }
+
+    if (!medicament) {
+      const { data: mol } = await supabase
+        .from("molecules")
+        .select("*")
+        .ilike("nom_molecule", `%${query}%`)
+        .limit(1)
+        .maybeSingle();
+
+      if (!mol) {
+        return new Response(
+          JSON.stringify({ found: false, message: "Médicament non trouvé dans la base clinique" }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      medicament = { nom_commercial: query, molecules: mol, atc_code: mol.atc_code };
+    }
+
+    const molecule = medicament.molecules;
+    const atcCode = medicament.atc_code || molecule?.atc_code;
+
+    // Step 2: Get ATC class info
+    let classeAtc = null;
+    if (atcCode) {
+      const { data } = await supabase
+        .from("classe_atc")
+        .select("*")
+        .eq("atc_code", atcCode)
+        .maybeSingle();
+      classeAtc = data;
+    }
+
+    // Step 3: Get pathologies via molecule_pathologie + medicament_pathologie
+    let pathologies: any[] = [];
+    const pathologieIdSet = new Set<string>();
+
+    if (molecule?.id) {
+      const { data } = await supabase
+        .from("molecule_pathologie")
+        .select("pathologie_id, score_pertinence, pathologies(*)")
+        .eq("molecule_id", molecule.id);
+      for (const mp of data || []) {
+        if (mp.pathologies && !pathologieIdSet.has(mp.pathologies.id)) {
+          pathologieIdSet.add(mp.pathologies.id);
+          pathologies.push({ ...mp.pathologies, score_pertinence: mp.score_pertinence });
+        }
+      }
+    }
+
+    if (medicament?.id) {
+      const { data } = await supabase
+        .from("medicament_pathologie")
+        .select("pathologie_id, score_pertinence, pathologies(*)")
+        .eq("medicament_id", medicament.id);
+      for (const mp of data || []) {
+        if (mp.pathologies && !pathologieIdSet.has(mp.pathologies.id)) {
+          pathologieIdSet.add(mp.pathologies.id);
+          pathologies.push({ ...mp.pathologies, score_pertinence: mp.score_pertinence });
+        }
+      }
+    }
+
+    const pathologieIds = [...pathologieIdSet];
+
+    // Step 4: Get protocoles + ranked products for all pathologies
+    let protocoles: any[] = [];
+    let conseils: any[] = [];
+    let produits: any[] = [];
+    let rankedProduits: any[] = [];
+
+    // Direct medication-bound PCs (vaccines, chemo, opioids — covered by gpt55_orphan_fill)
+    const directMedPcsPromise = medicament?.id
+      ? supabase
+          .from("produits_complementaires")
+          .select("*, pathologies(nom_pathologie)")
+          .eq("medicament_id", medicament.id)
+          .order("priorite", { ascending: false })
+      : Promise.resolve({ data: [] });
+
+    if (pathologieIds.length > 0) {
+      const [protocolesRes, conseilsRes, produitsRes, rankingRes, directMedPcsRes] = await Promise.all([
+        supabase
+          .from("protocole_pathologie")
+          .select(`
+            *, pathologies(nom_pathologie),
+            conseil_1:conseils_associes!protocole_pathologie_conseil_1_id_fkey(conseil, description, conseil_code),
+            conseil_2:conseils_associes!protocole_pathologie_conseil_2_id_fkey(conseil, description, conseil_code),
+            produit_1:produits_complementaires!protocole_pathologie_produit_complementaire_1_id_fkey(produit, categorie, description, priorite, type_produit),
+            produit_2:produits_complementaires!protocole_pathologie_produit_complementaire_2_id_fkey(produit, categorie, description, priorite, type_produit),
+            produit_3:produits_complementaires!protocole_pathologie_produit_complementaire_3_id_fkey(produit, categorie, description, priorite, type_produit)
+          `)
+          .in("pathologie_id", pathologieIds)
+          .eq("actif", true),
+        supabase
+          .from("conseils_associes")
+          .select("*, pathologies(nom_pathologie)")
+          .in("pathologie_id", pathologieIds)
+          .order("priorite", { ascending: false }),
+        supabase
+          .from("produits_complementaires")
+          .select("*, pathologies(nom_pathologie)")
+          .in("pathologie_id", pathologieIds)
+          .order("priorite", { ascending: false }),
+        supabase
+          .from("produit_complementaire_ranking")
+          .select("*, produits_complementaires(produit, categorie, description, type_produit), pathologies(nom_pathologie)")
+          .in("pathologie_id", pathologieIds)
+          .order("score_final", { ascending: false }),
+        directMedPcsPromise,
+      ]);
+      protocoles = protocolesRes.data || [];
+      conseils = conseilsRes.data || [];
+      // Merge direct medication-bound PCs first (priority boost), dedupe by produit name
+      const directPcs = (directMedPcsRes.data || []).map((p: any) => ({ ...p, priorite: Math.max(p.priorite || 0, 85) }));
+      const seen = new Set<string>();
+      produits = [...directPcs, ...(produitsRes.data || [])].filter((p: any) => {
+        const k = (p.produit || "").toLowerCase().trim();
+        if (!k || seen.has(k)) return false;
+        seen.add(k);
+        return true;
+      });
+      produits = filterPediatricSafe(produits, medicament);
+      rankedProduits = rankingRes.data || [];
+    } else {
+      const directMedPcsRes = await directMedPcsPromise;
+      produits = (directMedPcsRes.data || []).map((p: any) => ({ ...p, priorite: Math.max(p.priorite || 0, 85) }));
+      produits = filterPediatricSafe(produits, medicament);
+    }
+
+    // Step 5: Build structured response
+    const response = {
+      found: true,
+      medicament: {
+        nom_commercial: medicament.nom_commercial,
+        cip_code: medicament.cip_code,
+        laboratoire: medicament.laboratoire,
+        forme_galenique: medicament.forme_galenique,
+        dosage: medicament.dosage,
+        est_otc: medicament.est_otc,
+        est_produit_conseil: medicament.est_produit_conseil,
+        statut_officine: medicament.statut_officine,
+      },
+      molecule: molecule ? {
+        nom: molecule.nom_molecule,
+        atc_code: molecule.atc_code,
+        classe_therapeutique: molecule.classe_therapeutique,
+      } : null,
+      classe_atc: classeAtc ? {
+        code: classeAtc.atc_code,
+        nom: classeAtc.nom_classe,
+        description: classeAtc.description,
+      } : null,
+      pathologies: pathologies.map((p: any) => ({
+        nom: p.nom_pathologie,
+        categorie: p.categorie,
+        niveau_gravite: p.niveau_gravite,
+        score_pertinence: p.score_pertinence,
+      })),
+      protocoles: protocoles.map((p: any) => ({
+        pathologie: p.pathologies?.nom_pathologie,
+        conseils: [
+          p.conseil_1 ? { conseil: p.conseil_1.conseil, description: p.conseil_1.description } : null,
+          p.conseil_2 ? { conseil: p.conseil_2.conseil, description: p.conseil_2.description } : null,
+        ].filter(Boolean),
+        produits_complementaires: [
+          p.produit_1 ? { produit: p.produit_1.produit, categorie: p.produit_1.categorie, justification: p.justification_1, priorite: p.priorite_produit_1 } : null,
+          p.produit_2 ? { produit: p.produit_2.produit, categorie: p.produit_2.categorie, justification: p.justification_2, priorite: p.priorite_produit_2 } : null,
+          p.produit_3 ? { produit: p.produit_3.produit, categorie: p.produit_3.categorie, justification: p.justification_3, priorite: p.priorite_produit_3 } : null,
+        ].filter(Boolean),
+        actif: p.actif,
+        version: p.version_protocole,
+      })),
+      conseils: conseils.map((c: any) => ({
+        conseil: c.conseil,
+        description: c.description,
+        priorite: c.priorite,
+        pathologie: c.pathologies?.nom_pathologie,
+      })),
+      produits_complementaires: produits.map((p: any) => ({
+        produit: p.produit,
+        categorie: p.categorie,
+        description: p.description,
+        priorite: p.priorite,
+        type_produit: p.type_produit,
+        pathologie: p.pathologies?.nom_pathologie,
+      })),
+      ranked_produits: rankedProduits.map((r: any) => ({
+        produit: r.produits_complementaires?.produit,
+        categorie: r.produits_complementaires?.categorie,
+        description: r.produits_complementaires?.description,
+        type_produit: r.produits_complementaires?.type_produit,
+        pathologie: r.pathologies?.nom_pathologie,
+        score_final: r.score_final,
+        scores: {
+          clinique: r.score_clinique,
+          pertinence: r.score_pertinence_pathologie,
+          cross_sell: r.score_cross_sell,
+          saisonnalite: r.score_saisonnalite,
+          popularite: r.score_popularite,
+        },
+      })),
+    };
+
+    return new Response(JSON.stringify(response), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  } catch (error) {
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+});

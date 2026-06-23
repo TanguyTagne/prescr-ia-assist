@@ -1,0 +1,58 @@
+import { createRoot } from "react-dom/client";
+import { BrowserRouter } from "react-router-dom";
+import { HelmetProvider } from "react-helmet-async";
+import App from "./App.tsx";
+import "./index.css";
+import { isAsclionDesktopRuntime } from "@/lib/runtime";
+import { processIncomingTrackingLink } from "@/lib/trackingAttribution";
+import { initCapacitor } from "@/lib/capacitor";
+import { ensureFreshAppVersionBeforeRender } from "@/lib/versionCheck";
+
+// Boot Capacitor native bridge (no-op in browser).
+initCapacitor();
+
+const SW_VERSION = "v9";
+const isDesktopRuntime = isAsclionDesktopRuntime();
+
+// Process ?r=<slug> trackable links on every page load (web only)
+if (!isDesktopRuntime) {
+  processIncomingTrackingLink();
+}
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", async () => {
+    // Disable SW in desktop + dev/preview to prevent stale bundles
+    if (!import.meta.env.PROD || isDesktopRuntime) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(registrations.map((r) => r.unregister()));
+
+      if ("caches" in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((key) => caches.delete(key)));
+      }
+      return;
+    }
+
+    navigator.serviceWorker
+      .register(`/sw.js?${SW_VERSION}`)
+      .then((registration) => registration.update())
+      .catch((err) => {
+        console.log("SW registration failed:", err);
+      });
+  });
+}
+
+async function bootstrap() {
+  const shouldRender = await ensureFreshAppVersionBeforeRender();
+  if (!shouldRender) return;
+
+  createRoot(document.getElementById("root")!).render(
+    <HelmetProvider>
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
+    </HelmetProvider>
+  );
+}
+
+void bootstrap();

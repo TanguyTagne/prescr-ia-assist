@@ -1,0 +1,197 @@
+name: Build Asclion Desktop
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  build-windows:
+    # PIN to windows-2022 (VS 2022 / v17 + Python 3.11). "windows-latest" moved to
+    # Windows Server 2025 + Visual Studio 18, which the bundled node-gyp 10.3.1
+    # cannot detect ("find VS unknown version undefined") → the native rawinput
+    # build fails and no release is produced. windows-2022 ships a VS that node-gyp
+    # understands, so the node-gyp/@electron-rebuild steps compile cleanly.
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+
+      # Supprime tous les artefacts existants du repo avant le nouveau build
+      - name: Delete all existing artifacts
+        shell: pwsh
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          try {
+            $artifacts = gh api "repos/$env:GITHUB_REPOSITORY/actions/artifacts" --paginate | ConvertFrom-Json
+            foreach ($a in $artifacts.artifacts) {
+              Write-Host "Suppression artefact $($a.name) (id=$($a.id))"
+              gh api -X DELETE "repos/$env:GITHUB_REPOSITORY/actions/artifacts/$($a.id)" 2>$null | Out-Null
+            }
+          } catch {
+            Write-Host "Purge ignorée: $_"
+          }
+
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # Python 3.11 requis pour node-gyp (uiohook-napi).
+      # Python 3.12+ a supprimé distutils => build natif échoue sous Windows.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # ── Auto-version bump ───────────────────────────────────────────────
+      # CRITICAL: electron-updater compares the version inside latest.yml
+      # against the version installed on the pharmacist's PC. If the version
+      # never changes, no auto-update is detected, and we have to redistribute
+      # the installer by hand.
+      #
+      # Strategy:
+      #   - On a `v*` tag push  → use the tag (without "v") as the version.
+      #                            Lets us cut explicit releases like v1.4.0.
+      #   - On any other push   → keep the major.minor from package.json and
+      #                            use the run number as patch. So v1.3.42,
+      #                            v1.3.43, ... each push = new auto-update.
+      # ────────────────────────────────────────────────────────────────────
+      - name: Determine release version
+        id: version
+        shell: pwsh
+        run: |
+          if ("${{ github.ref }}" -like "refs/tags/v*") {
+            $version = "${{ github.ref_name }}" -replace "^v",""
+          } else {
+            $pkgJson = Get-Content electron/package.json -Raw | ConvertFrom-Json
+            $base = ($pkgJson.version -split "-")[0]   # strip pre-release suffix if any
+            $parts = $base -split "\."
+            $version = "$($parts[0]).$($parts[1]).${{ github.run_number }}"
+          }
+          # SemVer validation — anything that doesn't match major.minor.patch
+          # will fail electron-updater client-side, so we fail the build early.
+          if ($version -notmatch "^\d+\.\d+\.\d+$") {
+            Write-Host "::error::Version `"$version`" is not valid semver"
+            exit 1
+          }
+          Write-Host "Release version: $version"
+          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+      - name: Sync electron/package.json version
+        shell: pwsh
+        run: |
+          $path = "electron/package.json"
+          $pkg = Get-Content $path -Raw | ConvertFrom-Json
+          $pkg.version = "${{ steps.version.outputs.version }}"
+          # Keep JSON formatting clean: 2-space indent, no escaped forward slashes.
+          ($pkg | ConvertTo-Json -Depth 100) -replace "\\/","/" | Set-Content $path -Encoding utf8
+          Write-Host "electron/package.json version is now: $($pkg.version)"
+
+      # Build the web app
+      - name: Install web dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Build web app
+        run: npm run build
+
+      # Copy web build into electron
+      - name: Copy web build to electron
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path electron/web
+          Copy-Item -Recurse -Force dist/* electron/web/
+
+      # Build Electron installer
+      - name: Install Electron dependencies
+        working-directory: electron
+        run: npm install
+
+      # ── Garde-fou Npcap ────────────────────────────────────────────────
+      # `cap` est une optionalDependency : si sa compilation native échoue,
+      # npm l'ignore SILENCIEUSEMENT et l'EXE part sans support Npcap
+      # (npcapAvailable=false sur tous les postes, même Npcap installé).
+      # On force la présence du module + rebuild ABI Electron, sinon échec.
+      - name: Verify & rebuild cap (Npcap) for Electron
+        working-directory: electron
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "node_modules/cap/package.json")) {
+            Write-Host "cap absent — installation explicite…"
+            npm install cap@0.2.1 --no-save
+          }
+          Write-Host "Rebuild cap contre l'ABI Electron…"
+          npx @electron/rebuild -f -w cap
+          $node = Get-ChildItem -Recurse "node_modules/cap" -Filter "cap.node" -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $node) {
+            Write-Host "::error::cap.node introuvable — le support Npcap ne serait pas embarqué dans l'EXE."
+            exit 1
+          }
+          Write-Host "OK: $($node.FullName) ($($node.Length) octets)"
+
+      # Garde-fou : le postinstall (build-native.js) DOIT avoir produit l'addon
+      # N-API Raw Input. C'est le chemin de capture PRINCIPAL, indépendant du
+      # focus — sans lui l'EXE ne peut pas lire les scans douchette pendant que
+      # le LGO a le focus. On refuse de packager un EXE sans ce binaire.
+      - name: Verify native Raw Input addon was built
+        shell: pwsh
+        run: |
+          $addon = "electron/native/rawinput/build/Release/asclion_rawinput.node"
+          if (-not (Test-Path $addon)) {
+            Write-Host "::error::Addon natif manquant : $addon"
+            Write-Host "Le postinstall node-gyp a échoué — l'EXE ne pourrait pas lire les douchettes HID pendant que le LGO a le focus."
+            exit 1
+          }
+          $size = (Get-Item $addon).Length
+          Write-Host "OK: $addon ($size octets)"
+
+      - name: Build Windows installer
+        working-directory: electron
+        run: npm run build:win -- --publish never
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag_name: v${{ steps.version.outputs.version }}
+          name: Asclion v${{ steps.version.outputs.version }}
+          # IMPORTANT : inclure latest.yml ET les .blockmap, pas seulement le .exe.
+          # Sans latest.yml dans la release, electron-updater ne peut PAS détecter
+          # les nouvelles versions → les installs existants restent figés sur
+          # leur version actuelle pour toujours.
+          files: |
+            electron/dist/*.exe
+            electron/dist/latest.yml
+            electron/dist/*.blockmap
+          generate_release_notes: true
+
+      # Garde uniquement la dernière release (supprime les anciennes + leurs tags)
+      - name: Cleanup old releases (keep only latest)
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $current = "v${{ steps.version.outputs.version }}"
+          $releases = gh release list --repo $env:GITHUB_REPOSITORY --limit 100 --json tagName | ConvertFrom-Json
+          foreach ($r in $releases) {
+            if ($r.tagName -ne $current) {
+              Write-Host "Suppression release $($r.tagName)"
+              gh release delete $r.tagName --repo $env:GITHUB_REPOSITORY --yes --cleanup-tag
+            }
+          }
+
+      # Upload artifact temporaire (7 jours, écrase le précédent)
+      - name: Upload installer as artifact (7-day retention)
+        uses: actions/upload-artifact@v4
+        with:
+          name: asclion-windows-installer
+          path: electron/dist/*.exe
+          retention-days: 7
+          overwrite: true
