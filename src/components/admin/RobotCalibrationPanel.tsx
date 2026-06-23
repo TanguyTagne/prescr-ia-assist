@@ -103,7 +103,19 @@ const RobotCalibrationPanel = () => {
     try {
       const res = await api.calibrateSnapshot();
       if (res?.ok && res.data) {
-        setSnapshot(res.data);
+        // Défensif : le diagnostic peut renvoyer un champ non-tableau (script
+        // absent, JSON partiel…). On force chaque liste à être un tableau,
+        // sinon un .map() plus bas fait planter toute l'app au rendu.
+        const d: any = res.data;
+        const arr = (v: any) => (Array.isArray(v) ? v : []);
+        setSnapshot({
+          ...d,
+          lgoProcs: arr(d.lgoProcs),
+          busyCom: arr(d.busyCom),
+          tcp: arr(d.tcp),
+          robotPipes: arr(d.robotPipes),
+          recentFiles: arr(d.recentFiles),
+        });
         if ((res.data.lgoProcs || []).length === 0) {
           toast.warning("Aucun processus LGO trouvé", {
             description: "Le LGO est peut-être arrêté ou son nom n'est pas encore connu d'Asclion.",
@@ -277,7 +289,7 @@ const RobotCalibrationPanel = () => {
                   <EmptyRow text="Aucun processus LGO détecté — LGO démarré ?" />
                 ) : (
                   <div className="space-y-1">
-                    {snapshot.lgoProcs.map((p, i) => (
+                    {(snapshot.lgoProcs || []).map((p, i) => (
                       <div key={i} className="flex items-start gap-2">
                         <CheckCircle2 className="h-3.5 w-3.5 text-green-600 mt-0.5 shrink-0" />
                         <div>
