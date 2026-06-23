@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Loader2, TrendingUp, Users, Activity, Target, DollarSign, Database, Shield, Zap, Building2, Sparkles, Save, Download } from "lucide-react";
+import { fetchAll } from "@/lib/supabaseFetchAll";
 
 // ────────────────────────────────────────────────────────────────────────────────
 // Manual KPIs (saved in localStorage — non-PII, founder inputs)
@@ -140,12 +141,17 @@ const InvestorKpisTab = () => {
         return count || 0;
       } catch { return 0; }
     };
-    const safeSelect = async <T,>(table: string, cols: string, filters?: (q: any) => any, limit = 5000): Promise<T[]> => {
+    const safeSelect = async <T,>(table: string, cols: string, filters?: (q: any) => any, maxRows = 100_000): Promise<T[]> => {
       try {
-        let q: any = supabase.from(table as any).select(cols).limit(limit);
-        if (filters) q = filters(q);
-        const { data } = await q;
-        return (data as T[]) || [];
+        return await fetchAll<T>(
+          () => {
+            let q: any = supabase.from(table as any).select(cols);
+            if (filters) q = filters(q);
+            return q;
+          },
+          1000,
+          maxRows
+        );
       } catch { return []; }
     };
 

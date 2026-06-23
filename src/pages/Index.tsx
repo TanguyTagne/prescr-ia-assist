@@ -14,6 +14,21 @@ interface PC {
   categorie?: string;
   description?: string;
   phrase_conseil?: string;
+  pertinence?: string;
+}
+
+// Code couleur pertinence — identique à AnalysisResults.tsx
+function pertinenceClass(p?: string): string {
+  if (!p) return "text-muted-foreground";
+  const k = p.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  if (k.startsWith("securit") || k.includes("alerte")) return "text-red-600 dark:text-red-400";
+  if (k.startsWith("effet")) return "text-amber-600 dark:text-amber-400";
+  if (k.startsWith("surveil")) return "text-sky-600 dark:text-sky-400";
+  if (k.startsWith("synerg")) return "text-emerald-600 dark:text-emerald-400";
+  if (k.startsWith("prevent")) return "text-teal-600 dark:text-teal-400";
+  if (k.startsWith("accompagn")) return "text-violet-600 dark:text-violet-400";
+  if (k.startsWith("confort")) return "text-pink-600 dark:text-pink-400";
+  return "text-muted-foreground";
 }
 
 interface MedFeedItem {
@@ -201,15 +216,15 @@ const Index = () => {
                         <Sparkles className="h-3 w-3 text-accent shrink-0" />
                         <h3 className="text-xs font-medium text-foreground truncate">{pc.produit}</h3>
                       </div>
+                      {pc.phrase_conseil && (
+                        <p className={`text-[11px] leading-snug italic ${pertinenceClass(pc.pertinence)}`}>
+                          « {pc.phrase_conseil} »
+                        </p>
+                      )}
                       {pc.categorie && (
                         <Badge variant="outline" className="text-[9px] font-normal">
                           {pc.categorie}
                         </Badge>
-                      )}
-                      {pc.phrase_conseil && (
-                        <p className="text-[11px] text-muted-foreground leading-snug italic">
-                          « {pc.phrase_conseil} »
-                        </p>
                       )}
                     </div>
                   ))}

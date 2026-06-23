@@ -17,9 +17,10 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
-import RobotSnifferDiagnosticTab from "@/components/admin/RobotSnifferDiagnosticTab";
+
 import RobotConnectionWizard from "@/components/admin/RobotConnectionWizard";
 import RobotManualTest from "@/components/admin/RobotManualTest";
+import RobotCalibrationPanel from "@/components/admin/RobotCalibrationPanel";
 
 
 interface ScanNotificationProps {
@@ -414,6 +415,32 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
     }
   };
 
+  // Variante "loopback" : capture la conversation LGO↔middleware sur 127.0.0.1
+  // (cas LEO Pharma + LMS). Lance lgo-loopback-diag.ps1 qui zippe le résultat
+  // sur le Bureau pour envoi au support Asclion.
+  const handleLoopbackDiagnostic = async () => {
+    if (!robotApi?.runLoopbackDiag) {
+      toast.error("Diagnostic disponible uniquement dans l'application desktop Asclion.");
+      return;
+    }
+    setRunningDiag(true);
+    try {
+      const res = await robotApi.runLoopbackDiag(60);
+      if (res?.ok) {
+        toast.success("Diag loopback lancé", {
+          description:
+            "Accepte l'invite Windows (UAC). Déclenche 1 ou 2 délivrances pendant la capture (60 s). Le zip est posé sur le Bureau — envoie-le au support.",
+        });
+      } else {
+        toast.error("Lancement impossible", { description: res?.error || "Erreur inconnue" });
+      }
+    } catch (err: any) {
+      toast.error("Erreur", { description: String(err?.message || err).slice(0, 180) });
+    } finally {
+      setRunningDiag(false);
+    }
+  };
+
   const handleSaveRobot = async () => {
     if (!robotApi) {
       toast.error("La configuration robot n'est disponible que dans l'application desktop Asclion.");
@@ -733,118 +760,11 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
                     </p>
                   )}
 
-                  {/* Action principale : assistant guidé (fusionne « Rechercher » + « Diagnostic ») */}
-                  <Button
-                    type="button"
-                    size="sm"
-                    className="w-full h-9 gap-1.5 text-xs"
-                    onClick={() => setShowWizard(true)}
-                    disabled={!robotApi}
-                  >
-                    <Wand2 className="h-4 w-4" />
-                    Assistant de connexion au robot
-                  </Button>
-                  <p className="text-[10px] text-muted-foreground -mt-1">
-                    Recommandé : détecte le lien LGO ↔ robot, te fait valider par une vraie délivrance, et enregistre tout en capture <strong>passive</strong> (aucun risque pour la chaîne LGO ↔ robot).
-                  </p>
+                  {/* Calibration robot — les deux boutons "propres" (snapshot + capture temps réel).
+                      Tout le reste (assistant, recherche TCP, diagnostics loopback/serveur) a été
+                      déplacé dans l'admin web → onglet « Diag capture LGO ». */}
+                  <RobotCalibrationPanel />
 
-                  {/* Test manuel direct : saisir IP + port et sonder 20 s */}
-                  <RobotManualTest onSaved={loadRobotConfig} />
-
-                  {/* Outils manuels d'origine — repliés par défaut */}
-                  <details className="rounded-md border border-border/60 bg-background/40">
-                    <summary className="cursor-pointer select-none px-2 py-1.5 text-[11px] font-medium text-muted-foreground hover:text-foreground">
-                      Avancé — outils manuels
-                    </summary>
-                    <div className="space-y-2 p-2 pt-1">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="w-full h-8 gap-1.5 text-[11px]"
-                        onClick={handleDiscoverPort}
-                        disabled={discovering || !robotApi}
-                        aria-label="Rechercher automatiquement le port du robot via les connexions TCP actives"
-                      >
-                        {discovering ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Search className="h-3.5 w-3.5" />}
-                        Rechercher le port (capture live 20 s)
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="w-full h-8 gap-1.5 text-[11px]"
-                        onClick={handleServerDiagnostic}
-                        disabled={runningDiag || !robotApi}
-                        aria-label="Lancer le diagnostic réseau sur le PC serveur du robot"
-                      >
-                        {runningDiag ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Activity className="h-3.5 w-3.5" />}
-                        Diagnostic robot (PC serveur)
-                      </Button>
-                      <p className="text-[10px] text-muted-foreground">
-                        Le diagnostic ouvre une fenêtre élevée qui trouve le port, l'IP et le sens du trafic, puis écrit un journal sur le Bureau.
-                      </p>
-
-                  {discoveryResults && (
-                    <div className="space-y-1 rounded-md border border-border bg-background/60 p-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-semibold">
-                          {discoveryResults.length === 0
-                            ? "Aucune connexion détectée"
-                            : `${discoveryResults.length} connexion${discoveryResults.length > 1 ? "s" : ""} TCP active${discoveryResults.length > 1 ? "s" : ""}`}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => { setDiscoveryResults(null); setDiscoveryNote(null); }}
-                          className="text-[10px] text-muted-foreground hover:text-foreground"
-                          aria-label="Masquer les résultats de recherche"
-                        >
-                          masquer
-                        </button>
-                      </div>
-                      {discoveryNote && (
-                        <p className="text-[10px] text-muted-foreground italic">{discoveryNote}</p>
-                      )}
-                      {discoveryResults.length > 0 && (
-                        <p className="text-[10px] text-muted-foreground">
-                          Clique sur la ligne qui correspond au LGO de la pharmacie.
-                        </p>
-                      )}
-                      <div className="space-y-1 max-h-40 overflow-y-auto">
-                        {discoveryResults.map((c, i) => (
-                          <button
-                            key={`${c.pid}-${c.localPort}-${i}`}
-                            type="button"
-                            onClick={() => handlePickCandidate(c)}
-                            className={`w-full text-left rounded border px-2 py-1.5 text-[11px] transition-colors ${
-                              c.isLgo
-                                ? "border-primary/40 bg-primary/10 hover:bg-primary/20"
-                                : "border-border hover:bg-muted"
-                            }`}
-                          >
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="font-mono font-medium truncate">
-                                {c.process}
-                              </span>
-                              <span className="font-mono text-muted-foreground shrink-0">
-                                :{c.remotePort}
-                              </span>
-                            </div>
-                            <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-                              <span className="font-mono truncate">→ {c.remoteAddress}</span>
-                              <span className="shrink-0 flex gap-1">
-                                {c.isLgo && <span className="text-primary">LGO</span>}
-                                {c.isKnownRobotPort && <span>port-robot</span>}
-                                {typeof c.packets === "number" && <span>{c.packets} paq.</span>}
-                              </span>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                    </div>
-                  </details>
 
                   {robotForm.brand === "generic" && (
                     <div className="space-y-1">
@@ -1100,10 +1020,6 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
               )}
             </div>
 
-            {/* Bloc 3 — Diagnostic capture robot */}
-            <div className="space-y-2 border-t border-border pt-4">
-              <RobotSnifferDiagnosticTab />
-            </div>
 
             <div className="border-t border-border pt-4">
               <Button

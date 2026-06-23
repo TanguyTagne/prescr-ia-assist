@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 import ProductMappingSettings from "@/components/ProductMappingSettings";
 import ShortcutsSettings from "@/components/ShortcutsSettings";
 import ScannerConfigGuide from "@/components/ScannerConfigGuide";
+import { fetchAll } from "@/lib/supabaseFetchAll";
 
 interface KpiData {
   ordonnancesDetected: number;
@@ -36,33 +37,70 @@ const Dashboard = () => {
 
   const loadDashboardData = async () => {
     try {
-      const { data: events } = await supabase
-        .from("analytics_events")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(100);
+      const [
+        ordRes,
+        widgetRes,
+        conseilRes,
+        suggRes,
+        recentRes,
+        latencyRows,
+      ] = await Promise.all([
+        supabase
+          .from("analytics_events")
+          .select("id", { count: "exact", head: true })
+          .eq("event_type", "ordonnance_analyzed"),
+        supabase
+          .from("analytics_events")
+          .select("id", { count: "exact", head: true })
+          .eq("event_type", "widget_shown"),
+        supabase
+          .from("analytics_events")
+          .select("id", { count: "exact", head: true })
+          .eq("event_type", "conseil_clicked"),
+        supabase
+          .from("analytics_events")
+          .select("id", { count: "exact", head: true })
+          .eq("event_type", "suggestion_used"),
+        supabase
+          .from("analytics_events")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .limit(20),
+        fetchAll<{ metadata: any }>(
+          () =>
+            supabase
+              .from("analytics_events")
+              .select("metadata")
+              .eq("event_type", "ordonnance_analyzed"),
+          1000,
+          50_000
+        ),
+      ]);
 
-      if (events) {
-        const ordonnances = events.filter(e => e.event_type === "ordonnance_analyzed");
-        const widgets = events.filter(e => e.event_type === "widget_shown");
-        const conseils = events.filter(e => e.event_type === "conseil_clicked");
-        const suggestions = events.filter(e => e.event_type === "suggestion_used");
-        const responseTimes = events
-          .filter(e => e.event_type === "ordonnance_analyzed" && (e.metadata as any)?.response_time)
-          .map(e => (e.metadata as any).response_time as number);
+      const responseTimes = latencyRows
+        .map((e) =>
+          Number(
+            (e.metadata as any)?.response_time ||
+              (e.metadata as any)?.duration_ms ||
+              0
+          )
+        )
+        .filter((n) => n > 0);
 
-        setKpis({
-          ordonnancesDetected: ordonnances.length,
-          widgetShown: widgets.length,
-          conseilClicks: conseils.length,
-          suggestionsUsed: suggestions.length,
-          avgResponseTime: responseTimes.length > 0
-            ? Math.round(responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length)
+      setKpis({
+        ordonnancesDetected: (ordRes.count as number) || 0,
+        widgetShown: (widgetRes.count as number) || 0,
+        conseilClicks: (conseilRes.count as number) || 0,
+        suggestionsUsed: (suggRes.count as number) || 0,
+        avgResponseTime:
+          responseTimes.length > 0
+            ? Math.round(
+                responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length
+              )
             : 0,
-        });
+      });
 
-        setRecentEvents(events.slice(0, 20));
-      }
+      setRecentEvents((recentRes.data as any[]) || []);
     } catch (e) {
       console.error("Dashboard load error:", e);
     } finally {

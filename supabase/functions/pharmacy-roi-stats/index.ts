@@ -31,6 +31,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { buildCorsHeaders } from "../_shared/cors.ts";
+import { fetchAllPages } from "../_shared/paginate.ts";
 
 // ── Fallback final : moyenne grossière par catégorie ───────────────────────
 // Utilisé UNIQUEMENT si le PC n'est ni dans pc_pricing ni dans pc_category_pricing.
@@ -153,28 +154,37 @@ serve(async (req) => {
     // ════ 0. Chargement des tarifs réels (1 fois par appel) ═══════════════
     // pc_pricing       : prix exact par PC (top vendus)
     // pc_category_pricing : moyenne pondérée par catégorie (fallback)
-    const [pricesRes, catPricesRes] = await Promise.all([
-      supabase.from("pc_pricing")
-        .select("pc_nom_normalise, prix_unitaire_ttc"),
-      supabase.from("pc_category_pricing")
-        .select("categorie, prix_moyen_pondere"),
+    const [prices, catPricesList] = await Promise.all([
+      fetchAllPages<any>(
+        () => supabase.from("pc_pricing").select("pc_nom_normalise, prix_unitaire_ttc"),
+        1000,
+        100_000
+      ),
+      fetchAllPages<any>(
+        () => supabase.from("pc_category_pricing").select("categorie, prix_moyen_pondere"),
+        1000,
+        100_000
+      ),
     ]);
     const exactPrices = new Map<string, number>(
-      (pricesRes.data || []).map((r: any) => [r.pc_nom_normalise, Number(r.prix_unitaire_ttc)]),
+      prices.map((r: any) => [r.pc_nom_normalise, Number(r.prix_unitaire_ttc)]),
     );
     const catPrices = new Map<string, number>(
-      (catPricesRes.data || []).map((r: any) => [r.categorie.toLowerCase().trim(), Number(r.prix_moyen_pondere)]),
+      catPricesList.map((r: any) => [r.categorie.toLowerCase().trim(), Number(r.prix_moyen_pondere)]),
     );
     const priceFor = makePriceResolver(exactPrices, catPrices);
 
     // ════ 1. KPIs pharmacie ═══════════════════════════════════════════════
-    const { data: myFeedback, error: feedbackErr } = await supabase
-      .from("pc_feedback")
-      .select("action, pc_categorie, pc_nom, medicament_nom, created_at, detection_source")
-      .eq("pharmacy_id", pharmacy_id)
-      .gte("created_at", sinceIso);
-
-    if (feedbackErr) throw new Error("Erreur feedback: " + feedbackErr.message);
+    const myFeedback = await fetchAllPages<any>(
+      () =>
+        supabase
+          .from("pc_feedback")
+          .select("action, pc_categorie, pc_nom, medicament_nom, created_at, detection_source")
+          .eq("pharmacy_id", pharmacy_id)
+          .gte("created_at", sinceIso),
+      1000,
+      100_000
+    );
 
     const my = myFeedback ?? [];
     const accepted = my.filter(r => r.action === "accepted");
@@ -197,10 +207,15 @@ serve(async (req) => {
     const pcs_per_day_avg = activeDays > 0 ? total / activeDays : 0;
 
     // ════ 2. Benchmark réseau ═════════════════════════════════════════════
-    const { data: allFeedback } = await supabase
-      .from("pc_feedback")
-      .select("pharmacy_id, action, pc_categorie")
-      .gte("created_at", sinceIso);
+    const allFeedback = await fetchAllPages<any>(
+      () =>
+        supabase
+          .from("pc_feedback")
+          .select("pharmacy_id, action, pc_categorie")
+          .gte("created_at", sinceIso),
+      1000,
+      100_000
+    );
 
     // Group by pharmacy
     const byPharm: Record<string, { accepted: number; total: number }> = {};
@@ -232,20 +247,19 @@ serve(async (req) => {
       if (r.action === "accepted") myPcStats[key].accepted += 1;
     }
 
-    const networkPcStats: Record<string, { accepted: number; total: number }> = {};
-    for (const r of allFeedback ?? []) {
-      if (r.pharmacy_id === pharmacy_id) continue;
-      const { data: pcNomRow } = { data: null } as any;
-      // On a besoin du pc_nom — pour ça on doit refaire la query sans filtre
-    }
-
     // Re-fetch all feedback with pc_nom inclu (excl. notre pharmacie)
-    const { data: networkFeedback } = await supabase
-      .from("pc_feedback")
-      .select("pc_nom, action")
-      .neq("pharmacy_id", pharmacy_id)
-      .gte("created_at", sinceIso);
+    const networkFeedback = await fetchAllPages<any>(
+      () =>
+        supabase
+          .from("pc_feedback")
+          .select("pc_nom, action")
+          .neq("pharmacy_id", pharmacy_id)
+          .gte("created_at", sinceIso),
+      1000,
+      100_000
+    );
 
+    const networkPcStats: Record<string, { accepted: number; total: number }> = {};
     for (const r of networkFeedback ?? []) {
       const key = r.pc_nom;
       networkPcStats[key] = networkPcStats[key] || { accepted: 0, total: 0 };

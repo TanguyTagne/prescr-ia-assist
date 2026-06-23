@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useEnsureTables } from "@/hooks/useEnsureTables";
+import { fetchAll } from "@/lib/supabaseFetchAll";
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -166,20 +167,21 @@ const MedicamentsManquantsTab = () => {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const { data, error } = await (supabase as any)
-        .from("scan_events")
-        .select("ean_code, created_at, pharmacies(name, city)")
-        .eq("status", "no_match")
-        .order("created_at", { ascending: false })
-        .limit(2000);
-
-      if (error) {
-        toast.error("Erreur de chargement : " + error.message);
-        return;
-      }
+      const data = await fetchAll<RawScanEvent>(
+        () =>
+          (supabase as any)
+            .from("scan_events")
+            .select("ean_code, created_at, pharmacies(name, city)")
+            .eq("status", "no_match")
+            .order("created_at", { ascending: false }),
+        1000,
+        50_000
+      );
 
       setRows(groupByEan(data as RawScanEvent[]));
       setLastRefresh(new Date());
+    } catch (e: any) {
+      toast.error("Erreur de chargement : " + (e?.message ?? String(e)));
     } finally {
       setLoading(false);
     }

@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { ArrowLeft, Loader2, Mail, Building2, BarChart3, RefreshCw, ShieldCheck, ShoppingCart, Target, Monitor, Trophy, Sparkles, UserPlus, Network, FileSearch, Shield, FileText, Gauge, UserCog, Link2, Flag, Sparkle, CheckCircle2, LineChart, ScanLine, PackageSearch, KeyRound } from "lucide-react";
+import { ArrowLeft, Loader2, Mail, Building2, BarChart3, RefreshCw, ShieldCheck, ShoppingCart, Target, Monitor, Trophy, Sparkles, UserPlus, Network, FileSearch, Shield, FileText, Gauge, UserCog, Link2, Flag, Sparkle, CheckCircle2, LineChart, ScanLine, PackageSearch, KeyRound, Radio } from "lucide-react";
 import InvestorKpisTab from "@/components/admin/InvestorKpisTab";
 import { useNavigate } from "react-router-dom";
 import RequestsTab from "@/components/admin/RequestsTab";
@@ -33,6 +33,7 @@ import RemoteScannerDiagnosticTab from "@/components/admin/RemoteScannerDiagnost
 import MedicamentsManquantsTab from "@/components/admin/MedicamentsManquantsTab";
 import RoiManqueAGagnerTab from "@/components/admin/RoiManqueAGagnerTab";
 import SecurityTab from "@/components/admin/SecurityTab";
+import LgoCaptureDiagTab from "@/components/admin/LgoCaptureDiagTab";
 
 interface AccessRequest {
   id: string;
@@ -67,7 +68,7 @@ const Admin = () => {
   const [requests, setRequests] = useState<AccessRequest[]>([]);
   const [pharmacies, setPharmacies] = useState<PharmacyWithLGO[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<"requests" | "pharmacies" | "kpis" | "investor" | "coverage" | "sales" | "perf" | "benchmark" | "registers" | "demo-sessions" | "demo-leads" | "tracking-links" | "groupements" | "tracabilite" | "conformite" | "rgpd" | "quotas" | "mes-donnees" | "signalements" | "audit-pc" | "accepted-pcs" | "hardware" | "remote-diag" | "medicaments-manquants" | "atc-audit" | "asclion-base" | "roi-manque-a-gagner" | "security">("kpis");
+  const [tab, setTab] = useState<"requests" | "pharmacies" | "kpis" | "investor" | "coverage" | "sales" | "perf" | "benchmark" | "registers" | "demo-sessions" | "demo-leads" | "tracking-links" | "groupements" | "tracabilite" | "conformite" | "rgpd" | "quotas" | "mes-donnees" | "signalements" | "audit-pc" | "accepted-pcs" | "hardware" | "remote-diag" | "medicaments-manquants" | "atc-audit" | "asclion-base" | "roi-manque-a-gagner" | "security" | "lgo-capture-diag">("kpis");
 
   useEffect(() => {
     loadData();
@@ -214,6 +215,10 @@ const Admin = () => {
             <ScanLine className="h-3.5 w-3.5" />
             Diag distants (par pharmacie)
           </Button>
+          <Button variant={tab === "lgo-capture-diag" ? "default" : "outline"} size="sm" onClick={() => setTab("lgo-capture-diag")} className="gap-1.5 border-indigo-300 text-indigo-700 hover:bg-indigo-50">
+            <Radio className="h-3.5 w-3.5" />
+            Diag capture LGO/Robot
+          </Button>
           <Button variant={tab === "medicaments-manquants" ? "default" : "outline"} size="sm" onClick={() => setTab("medicaments-manquants")} className="gap-1.5">
             <PackageSearch className="h-3.5 w-3.5" />
             Médicaments manquants
@@ -268,6 +273,7 @@ const Admin = () => {
         {tab === "asclion-base" && <AsclionBaseImportTab />}
         {tab === "roi-manque-a-gagner" && <RoiManqueAGagnerTab />}
         {tab === "security" && <SecurityTab />}
+        {tab === "lgo-capture-diag" && <LgoCaptureDiagTab />}
       </div>
     </div>
   );

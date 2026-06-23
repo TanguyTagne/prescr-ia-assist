@@ -264,7 +264,7 @@ const RemoteScannerDiagnosticTab = () => {
         )
         .gte("last_seen_at", threeMinAgo)
         .order("last_seen_at", { ascending: false })
-        .limit(500);
+        .limit(5000);
       if (error) throw error;
 
       const heartbeatRows = (data || []) as HeartbeatRow[];

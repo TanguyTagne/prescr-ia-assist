@@ -160,7 +160,7 @@ const HardwareDiagnosticTab = () => {
         .select("id, created_at, ean_code, status, product_name, suggestions_count, error_message, pharmacies(name, city)")
         .gte("created_at", since)
         .order("created_at", { ascending: false })
-        .limit(300);
+        .limit(5000);
       if (error) {
         console.error("[DIAG] scan_events load error:", error.message);
       } else if (data) {
