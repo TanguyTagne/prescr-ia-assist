@@ -314,7 +314,7 @@ const RobotCalibrationPanel = () => {
                   <EmptyRow text="Aucun port COM occupé (pas de communication série détectée)" />
                 ) : (
                   <div className="flex flex-wrap gap-1.5">
-                    {snapshot.busyCom.map((port) => (
+                    {(snapshot.busyCom || []).map((port) => (
                       <span key={port} className="inline-flex items-center gap-1 rounded bg-orange-500/10 border border-orange-500/30 text-orange-700 px-2 py-0.5 font-mono font-semibold">
                         <Usb className="h-3 w-3" />
                         {port}
@@ -331,7 +331,7 @@ const RobotCalibrationPanel = () => {
                   <EmptyRow text="Aucune connexion TCP active (communication non-réseau)" />
                 ) : (
                   <div className="space-y-0.5 font-mono">
-                    {snapshot.tcp.filter(c => c.state === "Established").slice(0, 6).map((c, i) => (
+                    {(snapshot.tcp || []).filter(c => c.state === "Established").slice(0, 6).map((c, i) => (
                       <div key={i} className="flex items-center gap-2">
                         <Network className="h-3 w-3 text-blue-500 shrink-0" />
                         <span className="text-muted-foreground">:{c.localPort}</span>
@@ -349,7 +349,7 @@ const RobotCalibrationPanel = () => {
                 <div>
                   <SectionLabel>Named Pipes robot détectés</SectionLabel>
                   <div className="space-y-0.5 font-mono">
-                    {snapshot.robotPipes.map((p, i) => (
+                    {(snapshot.robotPipes || []).map((p, i) => (
                       <div key={i} className="flex items-center gap-2">
                         <Cable className="h-3 w-3 text-purple-500 shrink-0" />
                         <span className="truncate">{p}</span>
@@ -366,7 +366,7 @@ const RobotCalibrationPanel = () => {
                   <EmptyRow text="Aucun fichier modifié récemment" />
                 ) : (
                   <div className="space-y-0.5">
-                    {snapshot.recentFiles.slice(0, 8).map((f, i) => (
+                    {(snapshot.recentFiles || []).slice(0, 8).map((f, i) => (
                       <div key={i} className="flex items-center gap-2 font-mono">
                         <span>{extIcon(f.ext)}</span>
                         <span className="truncate max-w-[240px]" title={f.path}>
