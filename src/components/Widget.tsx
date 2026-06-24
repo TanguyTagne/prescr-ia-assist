@@ -630,11 +630,12 @@ const WidgetApp = () => {
     lookupAndStream(code).finally(() => setIsLoading(false));
   }, [lookupAndStream, logScanEvent]);
 
-  // Listen for global HID scans (system-wide, dispatched by the Electron bridge)
+  // Listen for global HID scans + Leo robot dispenses (dispatched by the Electron bridge)
   useEffect(() => {
     const handler = (e: Event) => {
-      const detail = (e as CustomEvent<{ ean: string; at: number }>).detail;
+      const detail = (e as CustomEvent<{ ean: string; at: number; source?: string }>).detail;
       if (!detail?.ean) return;
+      // detail.source = "hid_scan" (default) or "lgo_robot" — propagated for analytics/logging
       handleBarcodeScan(detail.ean);
     };
     window.addEventListener(SCANNER.DOM_EVENT, handler);

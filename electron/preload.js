@@ -35,6 +35,14 @@ contextBridge.exposeInMainWorld("electronAPI", {
     return () => ipcRenderer.removeListener("global-barcode", handler);
   },
 
+  // Receive a robot Leo (Astera) dispense event — tailed from the LGO log file.
+  // Payload: { cip: string, at: number }
+  onRobotDispensed: (callback) => {
+    const handler = (_e, payload) => callback(payload);
+    ipcRenderer.on("robot-dispensed", handler);
+    return () => ipcRenderer.removeListener("robot-dispensed", handler);
+  },
+
   // Picture-in-Picture (always-on-top + compact mode)
   pip: {
     getState: () => ipcRenderer.invoke("pip:get-state"),

@@ -233,7 +233,7 @@ const RobotCalibrationPanel = () => {
   }
 
   // ─── Render principal ─────────────────────────────────────────────────────
-  const lgoFound = (snapshot?.lgoProcs || []).length > 0;
+  const lgoFound = (Array.isArray(snapshot?.lgoProcs) ? snapshot!.lgoProcs : []).length > 0;
 
   return (
     <Card>
@@ -285,11 +285,11 @@ const RobotCalibrationPanel = () => {
               {/* Processus LGO */}
               <div>
                 <SectionLabel>Processus LGO</SectionLabel>
-                {(snapshot.lgoProcs || []).length === 0 ? (
+                {(Array.isArray(snapshot.lgoProcs) ? snapshot.lgoProcs : []).length === 0 ? (
                   <EmptyRow text="Aucun processus LGO détecté — LGO démarré ?" />
                 ) : (
                   <div className="space-y-1">
-                    {(snapshot.lgoProcs || []).map((p, i) => (
+                    {(Array.isArray(snapshot.lgoProcs) ? snapshot.lgoProcs : []).map((p, i) => (
                       <div key={i} className="flex items-start gap-2">
                         <CheckCircle2 className="h-3.5 w-3.5 text-green-600 mt-0.5 shrink-0" />
                         <div>
@@ -310,11 +310,11 @@ const RobotCalibrationPanel = () => {
               {/* Ports COM occupés */}
               <div>
                 <SectionLabel>Ports COM occupés (candidats RS232)</SectionLabel>
-                {(snapshot.busyCom || []).length === 0 ? (
+                {(Array.isArray(snapshot.busyCom) ? snapshot.busyCom : []).length === 0 ? (
                   <EmptyRow text="Aucun port COM occupé (pas de communication série détectée)" />
                 ) : (
                   <div className="flex flex-wrap gap-1.5">
-                    {(snapshot.busyCom || []).map((port) => (
+                    {(Array.isArray(snapshot.busyCom) ? snapshot.busyCom : []).map((port) => (
                       <span key={port} className="inline-flex items-center gap-1 rounded bg-orange-500/10 border border-orange-500/30 text-orange-700 px-2 py-0.5 font-mono font-semibold">
                         <Usb className="h-3 w-3" />
                         {port}
@@ -327,11 +327,11 @@ const RobotCalibrationPanel = () => {
               {/* Connexions TCP */}
               <div>
                 <SectionLabel>Connexions TCP du LGO</SectionLabel>
-                {(snapshot.tcp || []).length === 0 ? (
+                {(Array.isArray(snapshot.tcp) ? snapshot.tcp : []).length === 0 ? (
                   <EmptyRow text="Aucune connexion TCP active (communication non-réseau)" />
                 ) : (
                   <div className="space-y-0.5 font-mono">
-                    {(snapshot.tcp || []).filter(c => c.state === "Established").slice(0, 6).map((c, i) => (
+                    {(Array.isArray(snapshot.tcp) ? snapshot.tcp : []).filter(c => c.state === "Established").slice(0, 6).map((c, i) => (
                       <div key={i} className="flex items-center gap-2">
                         <Network className="h-3 w-3 text-blue-500 shrink-0" />
                         <span className="text-muted-foreground">:{c.localPort}</span>
@@ -345,11 +345,11 @@ const RobotCalibrationPanel = () => {
               </div>
 
               {/* Named Pipes */}
-              {(snapshot.robotPipes || []).length > 0 && (
+              {(Array.isArray(snapshot.robotPipes) ? snapshot.robotPipes : []).length > 0 && (
                 <div>
                   <SectionLabel>Named Pipes robot détectés</SectionLabel>
                   <div className="space-y-0.5 font-mono">
-                    {(snapshot.robotPipes || []).map((p, i) => (
+                    {(Array.isArray(snapshot.robotPipes) ? snapshot.robotPipes : []).map((p, i) => (
                       <div key={i} className="flex items-center gap-2">
                         <Cable className="h-3 w-3 text-purple-500 shrink-0" />
                         <span className="truncate">{p}</span>
@@ -362,11 +362,11 @@ const RobotCalibrationPanel = () => {
               {/* Fichiers récents */}
               <div>
                 <SectionLabel>Fichiers actifs dans le répertoire LGO (5 min)</SectionLabel>
-                {(snapshot.recentFiles || []).length === 0 ? (
+                {(Array.isArray(snapshot.recentFiles) ? snapshot.recentFiles : []).length === 0 ? (
                   <EmptyRow text="Aucun fichier modifié récemment" />
                 ) : (
                   <div className="space-y-0.5">
-                    {(snapshot.recentFiles || []).slice(0, 8).map((f, i) => (
+                    {(Array.isArray(snapshot.recentFiles) ? snapshot.recentFiles : []).slice(0, 8).map((f, i) => (
                       <div key={i} className="flex items-center gap-2 font-mono">
                         <span>{extIcon(f.ext)}</span>
                         <span className="truncate max-w-[240px]" title={f.path}>
