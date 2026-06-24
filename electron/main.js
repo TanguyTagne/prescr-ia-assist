@@ -2469,6 +2469,9 @@ function bootScannerStack() {
 
   // 6) WebHID path is started by preload.js via navigator.hid after did-finish-load.
   //    Activates only if scanner is in HID POS mode (usage page 0x8C).
+
+  // 7) Leo (Astera) robot log watcher — pure fs.watch, zero deps, zero network.
+  startLeoDispenseWatcher();
 }
 
 function getScannerStatus() {
