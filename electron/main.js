@@ -28,6 +28,15 @@ try {
   robotSubsystemError = e && e.message;
   console.error("[ROBOT] subsystem load failed:", robotSubsystemError);
 }
+
+// Leo (Astera / Leo 2.0) robot log watcher — pure fs, no native deps.
+let leoWatcher = null;
+let leoWatcherStop = null;
+try {
+  leoWatcher = require("./leoWatcher");
+} catch (e) {
+  console.error("[LEO] watcher load failed:", e && e.message);
+}
 // Load uiohook-napi lazily — if the native binary fails to load (rare),
 // the app keeps working without the global scanner.
 let uIOhook = null;
@@ -1693,6 +1702,43 @@ function startUiohookFallback() {
 }
 
 // ────────────────────────────────────────────────────────────
+// Leo (Astera) robot dispense watcher — tails the LGO log file and
+// forwards each Completed ArticleId to the renderer as `robot-dispensed`.
+// Zero deps, zero network: the pharmacist just launches Asclion.
+// ────────────────────────────────────────────────────────────
+function startLeoDispenseWatcher() {
+  if (!leoWatcher || leoWatcherStop) return;
+  try {
+    const filePath = leoWatcher.resolveLeoLogPath(app);
+    leoWatcherStop = leoWatcher.startLeoWatcher({
+      filePath,
+      log: (m) => devLog(m),
+      onDispense: (cip) => {
+        const at = Date.now();
+        devLog(`[LEO] → robot-dispensed cip=${cip}`);
+        ensureWindowAlive();
+        if (!mainWindow) return;
+        const send = () => {
+          try {
+            mainWindow.webContents.send("robot-dispensed", { cip, at });
+          } catch (e) {
+            devWarn("[LEO] send failed:", e);
+          }
+        };
+        if (mainWindow.webContents.isLoading()) {
+          mainWindow.webContents.once("did-finish-load", send);
+        } else {
+          send();
+        }
+      },
+    });
+    devLog(`[LEO] watcher started on ${filePath}`);
+  } catch (e) {
+    console.error("[LEO] failed to start watcher:", e && e.message);
+  }
+}
+
+// ────────────────────────────────────────────────────────────
 // WebHID init script — injected into the renderer after every
 // page load (executeJavaScript with userGesture:true).
 //
@@ -2423,6 +2469,9 @@ function bootScannerStack() {
 
   // 6) WebHID path is started by preload.js via navigator.hid after did-finish-load.
   //    Activates only if scanner is in HID POS mode (usage page 0x8C).
+
+  // 7) Leo (Astera) robot log watcher — pure fs.watch, zero deps, zero network.
+  startLeoDispenseWatcher();
 }
 
 function getScannerStatus() {
