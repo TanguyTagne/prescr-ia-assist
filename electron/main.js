@@ -28,6 +28,15 @@ try {
   robotSubsystemError = e && e.message;
   console.error("[ROBOT] subsystem load failed:", robotSubsystemError);
 }
+
+// Leo (Astera / Leo 2.0) robot log watcher — pure fs, no native deps.
+let leoWatcher = null;
+let leoWatcherStop = null;
+try {
+  leoWatcher = require("./leoWatcher");
+} catch (e) {
+  console.error("[LEO] watcher load failed:", e && e.message);
+}
 // Load uiohook-napi lazily — if the native binary fails to load (rare),
 // the app keeps working without the global scanner.
 let uIOhook = null;
