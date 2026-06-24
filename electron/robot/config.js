@@ -63,6 +63,13 @@ const DEFAULT_CONFIG = Object.freeze({
     // peer (legacy behaviour). Setting at least one IP locks the listener
     // down to the LGO's machine — recommended in production.
     allowedClientIps: [],
+    // ── LGO communication-log watcher ───────────────────────────────────
+    // Absolute path to the LGO's own dispense/communication log. The watcher
+    // (electron/robot/lgoLogWatcher.js) tails it READ-ONLY and feeds every
+    // ArticleId="<CIP>" into the scan pipeline, so the conseil fires with no
+    // pharmacist action and no packet capture at all. null/empty → use the
+    // built-in default (LEO: …\Leo2.0\Logs\ServiceWindows\LeoAutomateCommunicationLog.txt).
+    leoLogPath: null,
   },
 });
 

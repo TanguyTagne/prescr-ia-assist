@@ -15,7 +15,9 @@ let robotAdapters = null;
 let robotCalibrator = null;
 let robotSelfTest = null;
 let robotReassembler = null;
+let robotLogWatcher = null;   // module factory (electron/robot/lgoLogWatcher.js)
 let robotSubsystemError = null;
+let lgoLogWatcher = null;     // running watcher instance (started in bootRobotSubsystem)
 try {
   robotConfig = require("./robot/config");
   robotSniffer = require("./robot/sniffer");
@@ -24,6 +26,7 @@ try {
   robotCalibrator = require("./robot/calibrator");
   robotSelfTest = require("./robot/selftest");
   robotReassembler = require("./robot/reassembler");
+  robotLogWatcher = require("./robot/lgoLogWatcher");
 } catch (e) {
   robotSubsystemError = e && e.message;
   console.error("[ROBOT] subsystem load failed:", robotSubsystemError);
@@ -2703,6 +2706,44 @@ function bootRobotSubsystem() {
     httpToken: sharedToken,
   });
   robotSniffer.start(cfg);
+
+  // ── LGO communication-log watcher ──────────────────────────────────────
+  // Third dispense source, alongside the HTTP listener and the packet sniffer.
+  // It tails the LGO's own log (LEO: LeoAutomateCommunicationLog.txt) READ-ONLY
+  // and feeds each ArticleId="<CIP>" into emitGlobalScan — the exact same entry
+  // point as a scan, so dedup, window pop and conseil are all handled in one
+  // place. 100% passive: it never touches the LGO↔robot link, and it works
+  // whatever the transport (TCP / serial / IPv6 server) because it reads what
+  // the LGO already wrote to disk. Failure to start is non-fatal.
+  try {
+    if (robotLogWatcher && typeof robotLogWatcher.createLgoLogWatcher === "function") {
+      lgoLogWatcher = robotLogWatcher.createLgoLogWatcher({
+        log: devLog,
+        warn: devWarn,
+        onDispense: (cip) => {
+          // 1) Drive the conseil through the proven scan pipeline (deduped).
+          emitGlobalScan(cip);
+          // 2) Dedicated, informational event for any robot-specific UI
+          //    (activity badge, debug panel). The conseil is ALREADY triggered
+          //    above — do not use this to trigger it a second time.
+          try {
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send("robot-dispensed", {
+                cip13: cip,
+                source: "lgo_robot",
+                timestamp: Date.now(),
+              });
+            }
+          } catch { /* noop */ }
+        },
+      });
+      const leoLogPath =
+        (cfg.robot && cfg.robot.leoLogPath) || robotLogWatcher.DEFAULT_LEO_LOG_PATH;
+      lgoLogWatcher.start(leoLogPath);
+    }
+  } catch (e) {
+    devWarn("[LGO-LOG] watcher failed to start (non-fatal):", (e && e.message) || e);
+  }
 }
 
 ipcMain.handle("robot:get-config", () => {
@@ -3444,4 +3485,5 @@ app.on("will-quit", () => {
   stopClipboardScanner();
   try { if (robotListener) robotListener.stop(); } catch { /* noop */ }
   try { if (robotSniffer) robotSniffer.stop(); } catch { /* noop */ }
+  try { if (lgoLogWatcher) lgoLogWatcher.stop(); } catch { /* noop */ }
 });

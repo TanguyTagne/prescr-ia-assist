@@ -135,6 +135,17 @@ contextBridge.exposeInMainWorld("electronAPI", {
       ipcRenderer.on("robot:calibrate-event", handler);
       return () => ipcRenderer.removeListener("robot:calibrate-event", handler);
     },
+    // ── Délivrance détectée via le log du LGO ────────────────────────────
+    // Le main process lit le journal du LGO en lecture seule (LEO :
+    // LeoAutomateCommunicationLog.txt) et émet "robot-dispensed"
+    // { cip13, source:"lgo_robot", timestamp } à chaque délivrance. Le conseil
+    // est DÉJÀ déclenché par le pipeline scan (onGlobalBarcode) ; cet événement
+    // est un signal dédié pour une éventuelle UI robot (badge d'activité, debug).
+    onDispensed: (callback) => {
+      const handler = (_e, payload) => callback(payload);
+      ipcRenderer.on("robot-dispensed", handler);
+      return () => ipcRenderer.removeListener("robot-dispensed", handler);
+    },
   },
 
   // Manual update trigger — surfaced in Paramètres
