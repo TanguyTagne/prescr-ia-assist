@@ -528,11 +528,24 @@ const WidgetApp = () => {
         // Les PCs proviennent EXCLUSIVEMENT de medicament_curated_pcs
         // (CSV "asclion medicaments finals"). Interdit de déduire depuis
         // la pathologie / ATC / produits_complementaires.
-        const { data: curated } = await supabase
-          .from("medicament_curated_pcs")
-          .select("pc_1, pc_2")
-          .eq("medicament_id", med.id)
-          .maybeSingle();
+        //
+        // GARDE : med.id peut être vide quand le CIP est connu de la BDPM
+        // (medicament_cip → on a le nom) mais ABSENT de `medicaments` (pas de
+        // ligne interne, donc pas de medicament_id). Lancer la requête avec un
+        // id vide produit `medicament_id=eq.` → 400 Bad Request et pollue la
+        // console, sans jamais rien renvoyer. Pas d'id interne = pas de PC
+        // curated possible : on saute proprement la requête.
+        let curated: { pc_1: string | null; pc_2: string | null } | null = null;
+        if (med.id) {
+          const { data } = await supabase
+            .from("medicament_curated_pcs")
+            .select("pc_1, pc_2")
+            .eq("medicament_id", med.id)
+            .maybeSingle();
+          curated = data;
+        } else {
+          logger.log(`[SCAN] ${ts} med=${med.nom_commercial} BDPM-only (pas d'id interne) — aucun PC curated possible`);
+        }
 
         const curatedPcs: string[] = [];
         if (curated?.pc_1) curatedPcs.push(curated.pc_1);
