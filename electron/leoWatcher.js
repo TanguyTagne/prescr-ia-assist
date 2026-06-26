@@ -252,9 +252,80 @@ function startLeoWatcher({ filePath, onDispense, log }) {
   };
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Config helpers shared with main.js (asclion.config.json under userData).
+// ─────────────────────────────────────────────────────────────────────────────
+function configPath(app) {
+  // Always write to userData — exe directory may be read-only on Windows.
+  return path.join(app.getPath("userData"), CONFIG_FILENAME);
+}
+
+function getConfig(app) {
+  return readConfig(app).config || {};
+}
+
+function setConfigValues(app, patch) {
+  const current = readConfig(app).config || {};
+  const next = { ...current, ...(patch || {}) };
+  const p = configPath(app);
+  try {
+    fs.mkdirSync(path.dirname(p), { recursive: true });
+    fs.writeFileSync(p, JSON.stringify(next, null, 2), "utf-8");
+  } catch (e) {
+    return { ok: false, error: e && e.message, config: current, path: p };
+  }
+  return { ok: true, config: next, path: p };
+}
+
+/**
+ * Synchronously read the last N lines of the Leo log (best-effort, never throws).
+ * Used by the WWKS2 detection wizard to spot the most frequent KeepAliveRequest Source.
+ */
+function readLogTail(filePath, maxLines = 50) {
+  try {
+    const st = fs.statSync(filePath);
+    // Read up to last 256 KiB — enough for ~thousands of short XML lines.
+    const chunk = Math.min(st.size, 256 * 1024);
+    const fd = fs.openSync(filePath, "r");
+    const buf = Buffer.allocUnsafe(chunk);
+    fs.readSync(fd, buf, 0, chunk, Math.max(0, st.size - chunk));
+    fs.closeSync(fd);
+    const lines = buf.toString("utf-8").split(/\r?\n/);
+    return lines.slice(-maxLines);
+  } catch {
+    return [];
+  }
+}
+
+function detectSourceFromKeepAlive(filePath) {
+  const lines = readLogTail(filePath, 200);
+  if (!lines.length) return null;
+  const counts = new Map();
+  for (const l of lines) {
+    if (l.indexOf("KeepAlive") === -1) continue;
+    let m;
+    KEEPALIVE_REQUEST_RE.lastIndex = 0;
+    while ((m = KEEPALIVE_REQUEST_RE.exec(l)) !== null) {
+      const v = Number(m[1]);
+      counts.set(v, (counts.get(v) || 0) + 1);
+    }
+  }
+  if (!counts.size) return null;
+  let best = null;
+  let bestN = 0;
+  for (const [k, n] of counts) if (n > bestN) { best = k; bestN = n; }
+  return best;
+}
+
 module.exports = {
   DEFAULT_LEO_LOG_PATH,
   CONFIG_FILENAME,
   resolveLeoLogPath,
   startLeoWatcher,
+  readConfig,
+  getConfig,
+  setConfigValues,
+  configPath,
+  readLogTail,
+  detectSourceFromKeepAlive,
 };
