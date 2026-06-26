@@ -1712,18 +1712,34 @@ function startUiohookFallback() {
 function startLeoDispenseWatcher() {
   if (!leoWatcher || leoWatcherStop) return;
   try {
+    // Only the PC explicitly designated as "Asclion principal" (typically the
+    // Leo server, leo00) tails the WWKS2 log. Other tills consume the routed
+    // events through Supabase Realtime, filtered by their own wwks2SourceId.
+    const cfg = leoWatcher.getConfig ? leoWatcher.getConfig(app) : {};
+    if (!cfg || cfg.isAsclionPrincipal !== true) {
+      devLog("[LEO] watcher disabled (this PC is not Asclion principal)");
+      return;
+    }
     const filePath = leoWatcher.resolveLeoLogPath(app);
     leoWatcherStop = leoWatcher.startLeoWatcher({
       filePath,
       log: (m) => devLog(m),
-      onDispense: (cip) => {
+      onDispense: (payload) => {
         const at = Date.now();
-        devLog(`[LEO] → robot-dispensed cip=${cip}`);
+        const { cip, wwks2SourceId, messageId } = payload || {};
+        devLog(
+          `[LEO-WATCHER] CIP13 détecté : ${cip} | caisse WWKS2 source : ${wwks2SourceId ?? "null (broadcast)"}`
+        );
         ensureWindowAlive();
         if (!mainWindow) return;
         const send = () => {
           try {
-            mainWindow.webContents.send("robot-dispensed", { cip, at });
+            mainWindow.webContents.send("robot-dispensed", {
+              cip,
+              at,
+              wwks2SourceId: wwks2SourceId ?? null,
+              messageId: messageId ?? null,
+            });
           } catch (e) {
             devWarn("[LEO] send failed:", e);
           }
@@ -1740,6 +1756,120 @@ function startLeoDispenseWatcher() {
     console.error("[LEO] failed to start watcher:", e && e.message);
   }
 }
+
+// ────────────────────────────────────────────────────────────
+// asclion.config.json — shared config (read by leoWatcher and the renderer
+// through these IPC handlers). Used to store wwks2SourceId per till and the
+// "isAsclionPrincipal" flag for the Leo server PC.
+// ────────────────────────────────────────────────────────────
+ipcMain.handle("config:get", () => {
+  if (!leoWatcher || !leoWatcher.getConfig) return {};
+  try { return leoWatcher.getConfig(app) || {}; } catch { return {}; }
+});
+
+ipcMain.handle("config:set", (_e, patch) => {
+  if (!leoWatcher || !leoWatcher.setConfigValues) {
+    return { ok: false, error: "watcher module unavailable" };
+  }
+  try {
+    const res = leoWatcher.setConfigValues(app, patch || {});
+    // If the "isAsclionPrincipal" flag flips, restart the watcher accordingly.
+    if (patch && Object.prototype.hasOwnProperty.call(patch, "isAsclionPrincipal")) {
+      try {
+        if (leoWatcherStop) { leoWatcherStop(); leoWatcherStop = null; }
+        startLeoDispenseWatcher();
+      } catch (err) {
+        devWarn("[LEO] restart after config change failed:", err && err.message);
+      }
+    }
+    return res;
+  } catch (e) {
+    return { ok: false, error: e && e.message };
+  }
+});
+
+ipcMain.handle("leo:read-log-tail", (_e, opts) => {
+  const n = (opts && Number(opts.lines)) || 50;
+  try {
+    const filePath = leoWatcher.resolveLeoLogPath(app);
+    return { ok: true, filePath, lines: leoWatcher.readLogTail(filePath, n) };
+  } catch (e) {
+    return { ok: false, error: e && e.message, lines: [] };
+  }
+});
+
+/**
+ * Detect the WWKS2 till id of this PC using three parallel strategies:
+ *   A) Local LAN IPv4 last octet (high confidence — universal).
+ *   B) Leo client config file (medium confidence — confirmation).
+ *   C) KeepAliveRequest Source most-frequent in the log (only on leo00).
+ * Returns { sourceId, confidence, method, candidates }.
+ */
+ipcMain.handle("leo:detect-source", async () => {
+  const candidates = { ip: null, config: null, log: null };
+  // --- A) IP -----------------------------------------------------------------
+  try {
+    const { networkInterfaces } = require("os");
+    const ifaces = networkInterfaces();
+    const ips = [];
+    for (const list of Object.values(ifaces || {})) {
+      for (const it of list || []) {
+        if (!it || it.internal) continue;
+        if (it.family !== "IPv4" && it.family !== 4) continue;
+        if (!it.address || it.address.startsWith("127.")) continue;
+        // Keep RFC-1918 private ranges only.
+        if (
+          it.address.startsWith("10.") ||
+          it.address.startsWith("192.168.") ||
+          /^172\.(1[6-9]|2\d|3[01])\./.test(it.address)
+        ) ips.push(it.address);
+      }
+    }
+    if (ips.length) {
+      const ip = ips[0];
+      const last = Number(ip.split(".").pop());
+      if (Number.isFinite(last)) candidates.ip = { sourceId: last, ip };
+    }
+  } catch (e) { devWarn("[WWKS2] IP detect failed:", e && e.message); }
+
+  // --- B) Leo client config --------------------------------------------------
+  try {
+    const cfgPath =
+      "C:\\Program Files (x86)\\Astera\\Leo2.0\\ClientLeo\\PosteClientLeoV200.cfg";
+    if (fs.existsSync(cfgPath)) {
+      const raw = fs.readFileSync(cfgPath, "utf-8");
+      const m = raw.match(/(?:poste|station|id|numero)[^=\n]*[=:]\s*(\d+)/i);
+      if (m) candidates.config = { sourceId: Number(m[1]), path: cfgPath };
+    }
+  } catch (e) { devWarn("[WWKS2] Leo cfg detect failed:", e && e.message); }
+
+  // --- C) KeepAlive log ------------------------------------------------------
+  try {
+    const logPath = leoWatcher.resolveLeoLogPath(app);
+    if (fs.existsSync(logPath)) {
+      const src = leoWatcher.detectSourceFromKeepAlive(logPath);
+      if (src != null) candidates.log = { sourceId: src, path: logPath };
+    }
+  } catch (e) { devWarn("[WWKS2] log detect failed:", e && e.message); }
+
+  // --- Pick best -------------------------------------------------------------
+  let sourceId = null;
+  let confidence = "low";
+  let method = null;
+  if (candidates.ip) { sourceId = candidates.ip.sourceId; method = "ip"; confidence = "high"; }
+  if (candidates.config && candidates.ip && candidates.config.sourceId === candidates.ip.sourceId) {
+    confidence = "high";
+  } else if (!candidates.ip && candidates.config) {
+    sourceId = candidates.config.sourceId; method = "config"; confidence = "medium";
+  } else if (!candidates.ip && !candidates.config && candidates.log) {
+    sourceId = candidates.log.sourceId; method = "log"; confidence = "medium";
+  }
+  // Conflict between IP and config → drop confidence to medium so the user picks.
+  if (candidates.ip && candidates.config && candidates.config.sourceId !== candidates.ip.sourceId) {
+    confidence = "medium";
+  }
+  return { sourceId, confidence, method, candidates };
+});
 
 // ────────────────────────────────────────────────────────────
 // WebHID init script — injected into the renderer after every

@@ -6,10 +6,7 @@ import AnalysisSkeleton from "@/components/AnalysisSkeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import RobotCalibrationPanel from "@/components/admin/RobotCalibrationPanel";
-import ProductMappingSettings from "@/components/ProductMappingSettings";
-import ShortcutsSettings from "@/components/ShortcutsSettings";
-import ScannerConfigGuide from "@/components/ScannerConfigGuide";
+import WwksSourceWizard from "@/components/WwksSourceWizard";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -904,51 +901,20 @@ const WidgetSettings = ({ onClose, onSignOut }: { onClose: () => void; onSignOut
       <span className="font-semibold text-sm">Paramètres</span>
     </div>
 
-    {/* Contenu */}
+    {/* Contenu : wizard WWKS2 + déconnexion uniquement */}
     <div className="p-3 space-y-4">
-      {/* 1. Calibration du canal robot */}
-      <RobotCalibrationPanel />
-
-      {/* 2. Douchette code-barres */}
       <Card>
         <CardHeader className="pb-2 pt-4 px-4">
           <CardTitle className="text-sm flex items-center gap-2">
-            <ScanLine className="h-4 w-4 text-primary" />
-            Douchette code-barres
+            <Settings className="h-4 w-4 text-primary" />
+            Robot automate — identifiant caisse (WWKS2)
           </CardTitle>
         </CardHeader>
         <CardContent className="px-4 pb-4">
-          <ScannerConfigGuide />
+          <WwksSourceWizard />
         </CardContent>
       </Card>
 
-      {/* 3. Personnalisation des suggestions */}
-      <Card>
-        <CardHeader className="pb-2 pt-4 px-4">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <Package className="h-4 w-4 text-primary" />
-            Personnalisation des suggestions
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="px-4 pb-4">
-          <ProductMappingSettings />
-        </CardContent>
-      </Card>
-
-      {/* 4. Raccourcis clavier */}
-      <Card>
-        <CardHeader className="pb-2 pt-4 px-4">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <Keyboard className="h-4 w-4 text-primary" />
-            Raccourcis clavier
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="px-4 pb-4">
-          <ShortcutsSettings />
-        </CardContent>
-      </Card>
-
-      {/* 5. Déconnexion */}
       <div className="pt-2 border-t border-border">
         <Button
           variant="outline"

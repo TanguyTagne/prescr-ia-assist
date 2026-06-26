@@ -3012,6 +3012,7 @@ export type Database = {
         Row: {
           created_at: string
           device_id: string | null
+          ean_code: string | null
           id: string
           input_data: Json
           pharmacy_id: string
@@ -3020,10 +3021,12 @@ export type Database = {
           scan_type: string
           source: string
           status: string
+          wwks2_source_id: number | null
         }
         Insert: {
           created_at?: string
           device_id?: string | null
+          ean_code?: string | null
           id?: string
           input_data?: Json
           pharmacy_id: string
@@ -3032,10 +3035,12 @@ export type Database = {
           scan_type?: string
           source?: string
           status?: string
+          wwks2_source_id?: number | null
         }
         Update: {
           created_at?: string
           device_id?: string | null
+          ean_code?: string | null
           id?: string
           input_data?: Json
           pharmacy_id?: string
@@ -3044,6 +3049,7 @@ export type Database = {
           scan_type?: string
           source?: string
           status?: string
+          wwks2_source_id?: number | null
         }
         Relationships: [
           {

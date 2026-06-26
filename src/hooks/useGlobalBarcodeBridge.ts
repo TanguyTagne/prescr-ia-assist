@@ -1,16 +1,17 @@
 import { useEffect } from "react";
 import { logger } from "@/lib/logger";
+import { supabase } from "@/integrations/supabase/client";
 
 /**
- * Bridge between Electron's main-process global HID listener and the React
- * renderer. Subscribes to the `global-barcode` IPC channel and re-broadcasts
- * each scan as a `CustomEvent('asclion:global-barcode')` on `window`, so any
- * component (e.g. WidgetApp) can react to it without coupling to Electron.
+ * Bridge between Electron's main-process events and the React renderer.
  *
- * Also bridges the `robot-dispensed` IPC channel (Leo / Astera LGO log
- * watcher): each dispense is forwarded through the SAME DOM event, tagged
- * with `source: 'lgo_robot'`, so the downstream pipeline treats a robot
- * drop exactly like a HID scan.
+ * - `global-barcode` (HID scan, system-wide) → DOM event `asclion:global-barcode`
+ *   with `source: 'hid_scan'`.
+ * - `robot-dispensed` (Leo WWKS2 log watcher, only on the "Asclion principal"
+ *   PC i.e. leo00) → DOM event `asclion:global-barcode` with
+ *   `source: 'lgo_robot'` AND insertion into `public.scan_queue` so the till
+ *   that requested the article (identified by `wwks2_source_id`) receives the
+ *   suggestion through Supabase Realtime.
  *
  * No-op in non-Electron environments.
  */
@@ -39,17 +40,48 @@ export function useGlobalBarcodeBridge() {
     }
 
     if (api.onRobotDispensed) {
-      const off = api.onRobotDispensed(({ cip, at }) => {
-        logger.log("[ASCLION-LEO] renderer received dispense", { cip, at });
+      const off = api.onRobotDispensed(async ({ cip, at, wwks2SourceId, messageId }) => {
+        logger.log("[ASCLION-LEO] renderer received dispense", { cip, at, wwks2SourceId, messageId });
         try {
           localStorage.setItem("asclion_last_scan_at", String(at));
           localStorage.setItem("asclion_last_scan_ean", cip);
         } catch {
           /* noop */
         }
+
+        // Always dispatch locally — the principal PC pharmacist sees suggestions too.
         window.dispatchEvent(
-          new CustomEvent("asclion:global-barcode", { detail: { ean: cip, at, source: "lgo_robot" } })
+          new CustomEvent("asclion:global-barcode", {
+            detail: { ean: cip, at, source: "lgo_robot", wwks2SourceId },
+          }),
         );
+
+        // Route the dispense to the till that requested it via Supabase
+        // Realtime. wwks2_source_id = null → broadcast to all tills (fallback).
+        try {
+          const { data: auth } = await supabase.auth.getUser();
+          const userId = auth?.user?.id;
+          if (!userId) return;
+          const { data: prof } = await supabase
+            .from("profiles")
+            .select("pharmacy_id")
+            .eq("id", userId)
+            .maybeSingle();
+          const pharmacyId = prof?.pharmacy_id;
+          if (!pharmacyId) return;
+          const { error } = await supabase.from("scan_queue").insert({
+            pharmacy_id: pharmacyId,
+            ean_code: cip,
+            source: "lgo_robot",
+            status: "pending",
+            scan_type: "barcode",
+            wwks2_source_id: wwks2SourceId ?? null,
+            input_data: { cip, messageId, at, wwks2SourceId: wwks2SourceId ?? null },
+          });
+          if (error) logger.warn("[ASCLION-LEO] scan_queue insert failed", error);
+        } catch (e) {
+          logger.warn("[ASCLION-LEO] scan_queue insert threw", e);
+        }
       });
       if (off) offs.push(off);
     }

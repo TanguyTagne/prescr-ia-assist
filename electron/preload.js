@@ -36,11 +36,23 @@ contextBridge.exposeInMainWorld("electronAPI", {
   },
 
   // Receive a robot Leo (Astera) dispense event — tailed from the LGO log file.
-  // Payload: { cip: string, at: number }
+  // Payload: { cip: string, at: number, wwks2SourceId: number|null, messageId: string|null }
   onRobotDispensed: (callback) => {
     const handler = (_e, payload) => callback(payload);
     ipcRenderer.on("robot-dispensed", handler);
     return () => ipcRenderer.removeListener("robot-dispensed", handler);
+  },
+
+  // ── asclion.config.json bridge (read/write from renderer) ─────────────────
+  config: {
+    get: () => ipcRenderer.invoke("config:get"),
+    set: (patch) => ipcRenderer.invoke("config:set", patch),
+  },
+
+  // ── WWKS2 till detection + Leo log tail (used by the Settings wizard) ────
+  leo: {
+    detectSource: () => ipcRenderer.invoke("leo:detect-source"),
+    readLogTail: (lines) => ipcRenderer.invoke("leo:read-log-tail", { lines }),
   },
 
   // Picture-in-Picture (always-on-top + compact mode)
