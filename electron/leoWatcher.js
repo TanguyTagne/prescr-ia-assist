@@ -23,8 +23,16 @@ const CONFIG_FILENAME = "asclion.config.json";
 // Detect "Completed OutputMessage with ArticleId" on a single line.
 // Lines that don't contain "Completed" are skipped before we run the regex.
 const ARTICLE_ID_RE = /ArticleId="(\d+)"/i;
+const OUTPUT_MESSAGE_ID_RE = /OutputMessage\s+[^>]*\bId="(\d+)"/i;
 const COMPLETED_HINT = "Completed";
 const OUTPUT_HINT = "OutputMessage";
+const OUTPUT_REQUEST_HINT = "OutputRequest";
+const KEEPALIVE_REQUEST_RE = /KeepAliveRequest[^>]*\bSource="(\d+)"/gi;
+
+// Size of the circular line buffer used to retrieve the matching OutputRequest
+// (and therefore its WWKS2 Source = till id) when an OutputMessage Completed
+// arrives a few lines later.
+const RING_BUFFER_SIZE = 100;
 
 // Dedup window — the Leo service occasionally writes the same Completed line
 // twice (retry / mirrored log). Without dedup the renderer would re-analyze.
