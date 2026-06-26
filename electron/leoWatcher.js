@@ -94,7 +94,39 @@ function startLeoWatcher({ filePath, onDispense, log }) {
   let stopped = false;
   const lastEmit = new Map(); // cip → ts
 
-  function emit(cip) {
+  // Circular buffer of the most recent N parsed lines, used to look up the
+  // OutputRequest (with its Source attribute = WWKS2 till id) when a matching
+  // OutputMessage Completed arrives.
+  const ring = new Array(RING_BUFFER_SIZE);
+  let ringIdx = 0;
+  function pushRing(line) {
+    ring[ringIdx] = line;
+    ringIdx = (ringIdx + 1) % RING_BUFFER_SIZE;
+  }
+  function findSourceForMessageId(id) {
+    if (!id) return null;
+    const re = new RegExp(
+      `${OUTPUT_REQUEST_HINT}[^>]*\\bId="${id}"[^>]*\\bSource="(\\d+)"|` +
+      `${OUTPUT_REQUEST_HINT}[^>]*\\bSource="(\\d+)"[^>]*\\bId="${id}"`,
+      "i",
+    );
+    // Walk newest → oldest.
+    for (let i = 0; i < RING_BUFFER_SIZE; i++) {
+      const idx = (ringIdx - 1 - i + RING_BUFFER_SIZE) % RING_BUFFER_SIZE;
+      const l = ring[idx];
+      if (!l) continue;
+      if (l.indexOf(OUTPUT_REQUEST_HINT) === -1) continue;
+      const m = l.match(re);
+      if (m) {
+        const v = m[1] || m[2];
+        if (v) return Number(v);
+      }
+    }
+    return null;
+  }
+
+  function emit(payload) {
+    const { cip } = payload;
     const now = Date.now();
     const prev = lastEmit.get(cip);
     if (prev && now - prev < DEDUP_MS) {
@@ -106,19 +138,23 @@ function startLeoWatcher({ filePath, onDispense, log }) {
     if (lastEmit.size > 500) {
       for (const [k, ts] of lastEmit) if (now - ts > 60_000) lastEmit.delete(k);
     }
-    dbg(`[LEO] dispense cip=${cip}`);
-    try { onDispense(cip); } catch (e) { dbg(`[LEO] onDispense threw: ${e && e.message}`); }
+    dbg(`[LEO] dispense cip=${cip} wwks2Source=${payload.wwks2SourceId ?? "?"}`);
+    try { onDispense(payload); } catch (e) { dbg(`[LEO] onDispense threw: ${e && e.message}`); }
   }
 
   function processLine(line) {
     if (!line) return;
+    pushRing(line);
     if (line.indexOf(COMPLETED_HINT) === -1) return;
     if (line.indexOf(OUTPUT_HINT) === -1) return;
     const m = line.match(ARTICLE_ID_RE);
     if (!m) return;
     const cip = m[1];
     if (!cip) return;
-    emit(cip);
+    const idMatch = line.match(OUTPUT_MESSAGE_ID_RE);
+    const messageId = idMatch ? idMatch[1] : null;
+    const wwks2SourceId = findSourceForMessageId(messageId);
+    emit({ cip, wwks2SourceId, messageId });
   }
 
   function processChunk(chunk) {
