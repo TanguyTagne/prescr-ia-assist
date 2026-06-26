@@ -45,6 +45,25 @@ declare global {
     reload: () => Promise<ScannerStatus>;
   }
 
+  interface AsclionConfig {
+    wwks2SourceId?: number;
+    isAsclionPrincipal?: boolean;
+    leoLogPath?: string;
+    [k: string]: unknown;
+  }
+
+  interface WwksDetectCandidate { sourceId: number; ip?: string; path?: string }
+  interface WwksDetectResult {
+    sourceId: number | null;
+    confidence: "high" | "medium" | "low";
+    method: "ip" | "config" | "log" | null;
+    candidates: {
+      ip: WwksDetectCandidate | null;
+      config: WwksDetectCandidate | null;
+      log: WwksDetectCandidate | null;
+    };
+  }
+
   interface ElectronAPI {
     isDesktop: true;
     platform: string;
@@ -52,7 +71,9 @@ declare global {
     onNotificationClick: (callback: () => void) => () => void;
     onLgoDetected: (callback: (payload: { lgo: string }) => void) => () => void;
     onGlobalBarcode: (callback: (payload: { ean: string; at: number }) => void) => () => void;
-    onRobotDispensed?: (callback: (payload: { cip: string; at: number }) => void) => () => void;
+    onRobotDispensed?: (
+      callback: (payload: { cip: string; at: number; wwks2SourceId: number | null; messageId: string | null }) => void
+    ) => () => void;
     autolaunch?: {
       status: () => Promise<unknown>;
       reinstall: () => Promise<any>;
@@ -63,6 +84,14 @@ declare global {
       isElevated: () => Promise<{ elevated: boolean; platform: string }>;
     };
     scanner?: ScannerAPI;
+    config?: {
+      get: () => Promise<AsclionConfig>;
+      set: (patch: Partial<AsclionConfig>) => Promise<{ ok: boolean; config?: AsclionConfig; path?: string; error?: string }>;
+    };
+    leo?: {
+      detectSource: () => Promise<WwksDetectResult>;
+      readLogTail: (lines?: number) => Promise<{ ok: boolean; filePath?: string; lines: string[]; error?: string }>;
+    };
   }
 
   interface Window {
