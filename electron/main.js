@@ -1712,18 +1712,34 @@ function startUiohookFallback() {
 function startLeoDispenseWatcher() {
   if (!leoWatcher || leoWatcherStop) return;
   try {
+    // Only the PC explicitly designated as "Asclion principal" (typically the
+    // Leo server, leo00) tails the WWKS2 log. Other tills consume the routed
+    // events through Supabase Realtime, filtered by their own wwks2SourceId.
+    const cfg = leoWatcher.getConfig ? leoWatcher.getConfig(app) : {};
+    if (!cfg || cfg.isAsclionPrincipal !== true) {
+      devLog("[LEO] watcher disabled (this PC is not Asclion principal)");
+      return;
+    }
     const filePath = leoWatcher.resolveLeoLogPath(app);
     leoWatcherStop = leoWatcher.startLeoWatcher({
       filePath,
       log: (m) => devLog(m),
-      onDispense: (cip) => {
+      onDispense: (payload) => {
         const at = Date.now();
-        devLog(`[LEO] → robot-dispensed cip=${cip}`);
+        const { cip, wwks2SourceId, messageId } = payload || {};
+        devLog(
+          `[LEO-WATCHER] CIP13 détecté : ${cip} | caisse WWKS2 source : ${wwks2SourceId ?? "null (broadcast)"}`
+        );
         ensureWindowAlive();
         if (!mainWindow) return;
         const send = () => {
           try {
-            mainWindow.webContents.send("robot-dispensed", { cip, at });
+            mainWindow.webContents.send("robot-dispensed", {
+              cip,
+              at,
+              wwks2SourceId: wwks2SourceId ?? null,
+              messageId: messageId ?? null,
+            });
           } catch (e) {
             devWarn("[LEO] send failed:", e);
           }
