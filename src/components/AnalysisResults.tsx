@@ -267,7 +267,35 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
                 }
               }
             }
+            }
           }
+        }
+      }
+
+      // ── Étape 3 : fallback via pc_cip_mapping (code-barre directement lié au libellé PC) ─
+      if (!match && proposedNamesMapRef.current.size > 0) {
+        const { data: pcRows } = await supabase
+          .from("pc_cip_mapping")
+          .select("pc_label_norm")
+          .eq("code", detail.ean);
+        for (const row of (pcRows as any[] | null) || []) {
+          const entry = proposedNamesMapRef.current.get(row.pc_label_norm);
+          if (entry) {
+            // eslint-disable-next-line no-console
+            console.debug(`[auto-accept] Match pc_cip_mapping : ${detail.ean} → "${entry.produit}"`);
+            match = entry;
+            break;
+          }
+          // Match préfixe sur libellé PC (cas "Tensiomètre" vs "Tensiomètre électronique")
+          for (const [normPc, e] of proposedNamesMapRef.current.entries()) {
+            if (normPc.startsWith(row.pc_label_norm) || row.pc_label_norm.startsWith(normPc)) {
+              match = e;
+              // eslint-disable-next-line no-console
+              console.debug(`[auto-accept] Match pc_cip_mapping (préfixe) : ${detail.ean} → "${e.produit}"`);
+              break;
+            }
+          }
+          if (match) break;
         }
       }
 
