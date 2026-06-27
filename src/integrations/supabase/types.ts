@@ -1698,6 +1698,54 @@ export type Database = {
         }
         Relationships: []
       }
+      pc_cip_mapping: {
+        Row: {
+          categorie: string | null
+          code: string
+          created_at: string
+          id: string
+          marque: string | null
+          occurrences: number | null
+          pc_label: string
+          pc_label_norm: string
+          produit_reference: string | null
+          source: string | null
+          statut: string | null
+          type_code: string | null
+          type_produit: string | null
+        }
+        Insert: {
+          categorie?: string | null
+          code: string
+          created_at?: string
+          id?: string
+          marque?: string | null
+          occurrences?: number | null
+          pc_label: string
+          pc_label_norm: string
+          produit_reference?: string | null
+          source?: string | null
+          statut?: string | null
+          type_code?: string | null
+          type_produit?: string | null
+        }
+        Update: {
+          categorie?: string | null
+          code?: string
+          created_at?: string
+          id?: string
+          marque?: string | null
+          occurrences?: number | null
+          pc_label?: string
+          pc_label_norm?: string
+          produit_reference?: string | null
+          source?: string | null
+          statut?: string | null
+          type_code?: string | null
+          type_produit?: string | null
+        }
+        Relationships: []
+      }
       pc_feedback: {
         Row: {
           action: string
