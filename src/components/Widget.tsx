@@ -979,7 +979,6 @@ const Widget = ({ forceOpen = false }: {forceOpen?: boolean;}) => {
           <div className="pharmacy-gradient px-3 py-1.5 flex items-center gap-2 shrink-0">
             <span className="text-sm font-bold text-primary-foreground tracking-tight">Asclion</span>
             <ScannerIndicator />
-            <LgoPreviewPicker current={lgoType} onChange={setPreviewLgo} isOverride={isPreview} />
             <div className="flex-1" />
             <AdminModeButton />
             <PipControls />
@@ -1037,7 +1036,7 @@ const Widget = ({ forceOpen = false }: {forceOpen?: boolean;}) => {
           <div className="overflow-y-auto max-h-[inherit] rounded-xl">
           <div className="pharmacy-gradient px-3 py-1.5 rounded-t-xl flex items-center gap-1.5 sticky top-0 z-10">
             <span className="text-[11px] font-bold text-primary-foreground tracking-tight">Asclion</span>
-            <LgoPreviewPicker current={lgoType} onChange={setPreviewLgo} isOverride={isPreview} />
+            
             <div className="flex-1" />
             <button
               onClick={() => window.open("/aide", "_blank", "noopener")}
