@@ -267,10 +267,10 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
                 }
               }
             }
-            }
           }
         }
       }
+
 
       // ── Étape 3 : fallback via pc_cip_mapping (code-barre directement lié au libellé PC) ─
       if (!match && proposedNamesMapRef.current.size > 0) {
