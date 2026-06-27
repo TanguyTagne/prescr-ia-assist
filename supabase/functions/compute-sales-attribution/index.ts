@@ -12,15 +12,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 
 // Prix moyen indicatif par catégorie (EUR). Affiné en V2 avec prix LGO réels.
-const CATEGORY_AVG_PRICE: Record<string, number> = {
-  probiotique: 12,
-  vitamine: 8,
-  antalgique: 5,
-  cosmetique: 18,
-  complement_alimentaire: 15,
-  dispositif_medical: 25,
-};
-const DEFAULT_AVG_PRICE = 7;
+// Prix moyen unifié des PC à 12€ (calibré 2026-06 sur retours pharmacies).
+const CATEGORY_AVG_PRICE: Record<string, number> = {};
+const DEFAULT_AVG_PRICE = 12;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });

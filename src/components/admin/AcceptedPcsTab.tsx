@@ -65,7 +65,7 @@ async function fetchAll<T>(
 }
 
 // Hypothèses pricing (sources : panier moyen OTC France ~ 8-10€, ticket moyen officine ~ 42€)
-const AVG_PC_PRICE_EUR = 9;
+const AVG_PC_PRICE_EUR = 12;
 const AVG_BASKET_EUR = 42;
 
 const fmtPct = (n: number, digits = 1) =>
