@@ -87,6 +87,29 @@ export default function AsclionBaseImportTab() {
             {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
             2. Importer le CSV
           </Button>
+          <Button
+            onClick={async () => {
+              setImporting(true);
+              push("→ Import mapping PC → CIP/EAN (auto-acceptation scan)");
+              try {
+                const { data, error } = await supabase.functions.invoke("import-pc-cip-mapping");
+                if (error) throw error;
+                if (data?.error) throw new Error(data.error);
+                push(`✓ ${data.inserted}/${data.parsed} codes liés aux PCs (erreurs: ${data.errors})`);
+                toast.success(`${data.inserted} codes PC importés`);
+              } catch (e: any) {
+                toast.error(e.message);
+                push(`✗ mapping PC : ${e.message}`);
+              } finally {
+                setImporting(false);
+              }
+            }}
+            disabled={wiping || importing}
+            variant="secondary"
+            className="gap-1.5"
+          >
+            3. Importer mapping PC → CIP/EAN
+          </Button>
         </div>
 
         {progress && (
