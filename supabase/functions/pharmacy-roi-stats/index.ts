@@ -36,28 +36,10 @@ import { fetchAllPages } from "../_shared/paginate.ts";
 // ── Fallback final : moyenne grossière par catégorie ───────────────────────
 // Utilisé UNIQUEMENT si le PC n'est ni dans pc_pricing ni dans pc_category_pricing.
 // La vraie source de vérité est en base (pc_pricing + pc_category_pricing).
-const FALLBACK_PAR_CATEGORIE: Record<string, number> = {
-  "complement":          12,
-  "complément":          12,
-  "complément alimentaire": 12,
-  "dispositif_medical":  15,
-  "dispositif médical":  15,
-  "dermocosmétique":     18,
-  "dermocosmetique":     18,
-  "cosmétique":          14,
-  "hygiène":              5,
-  "hygiene":              5,
-  "médicament otc":       6,
-  "medicament otc":       6,
-  "produit_conseil":      8,
-  "probiotique":         15,
-  "ophtalmologie":       12,
-  "premiers soins":       4,
-  "phytothérapie":       10,
-  "phytotherapie":       10,
-  "vitamine":            10,
-};
-const PRIX_DEFAULT = 8;
+// Calibration 2026-06 : prix moyen unifié des PC à 12€ pour tous les KPIs.
+// Les vrais prix proviennent de pc_pricing / pc_category_pricing quand disponibles.
+const FALLBACK_PAR_CATEGORIE: Record<string, number> = {};
+const PRIX_DEFAULT = 12;
 
 // Normalisation des noms (cohérente avec pc_pricing.pc_nom_normalise)
 function normalizePcName(s: string): string {
