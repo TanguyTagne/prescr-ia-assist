@@ -1,9 +1,10 @@
 /**
- * Importe asclion-medicaments-avec-pcs.csv depuis le bucket "imports".
+ * Importe asclion-medicaments-pertinence-enrichi.csv depuis le bucket "imports".
  * CSV = base définitive : id, cip_code, nom_commercial, laboratoire, dosage,
  *   forme_galenique, voie_administration, atc_code, nom_molecule,
  *   classe_therapeutique, cible_age, statut_officine, est_otc,
- *   est_produit_conseil, posologie, pc_1, pc_2, pc_3 (ignoré, max 2 PC)
+ *   est_produit_conseil, posologie, pc_1, pc_2, pc_3 (ignoré, max 2 PC),
+ *   pertinence_pc1, pertinence_pc2, phrase_conseil_pc1, phrase_conseil_pc2
  *
  * Modes :
  *   POST /import-asclion-base?mode=wipe         → vide medicaments + curated_pcs
@@ -17,6 +18,27 @@ import { buildCorsHeaders } from "../_shared/cors.ts";
 const BUCKET = "imports";
 const FILE = "asclion-medicaments-pertinence-enrichi.csv";
 const BATCH = 200;
+
+function normalizeHeaderKey(header: string): string {
+  return header
+    .trim()
+    .replace(/^"|"$/g, "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
+function rowValue(row: Record<string, string>, aliases: string[]): string {
+  for (const alias of aliases) {
+    const direct = row[alias];
+    if (direct != null && direct.trim() !== "") return direct.trim();
+    const normalized = row[normalizeHeaderKey(alias)];
+    if (normalized != null && normalized.trim() !== "") return normalized.trim();
+  }
+  return "";
+}
 
 function parseCsvLine(line: string, delim: string): string[] {
   const out: string[] = [];
@@ -62,7 +84,12 @@ function parseCsv(text: string): Record<string, string>[] {
     if (!line.trim()) continue;
     const vals = parseCsvLine(line, delim);
     const row: Record<string, string> = {};
-    headers.forEach((h, idx) => row[h] = (vals[idx] ?? "").trim());
+    headers.forEach((h, idx) => {
+      const value = (vals[idx] ?? "").trim();
+      row[h] = value;
+      const normalized = normalizeHeaderKey(h);
+      if (normalized && row[normalized] == null) row[normalized] = value;
+    });
     rows.push(row);
   }
   return rows;
@@ -114,6 +141,54 @@ serve(async (req) => {
       return new Response(JSON.stringify(data ?? { ok: true, deleted: 0 }), { headers: { ...cors, "Content-Type": "application/json" } });
     }
 
+    // ── UPLOAD CSV ENRICHI ──────────────────────────────────────────────
+    if (mode === "upload") {
+      const csvText = typeof bodyJson.csvText === "string" ? bodyJson.csvText : "";
+      const contentBase64 = typeof bodyJson.contentBase64 === "string" ? bodyJson.contentBase64 : "";
+
+      let bytes: Uint8Array;
+      if (contentBase64) {
+        const binary = atob(contentBase64);
+        bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      } else if (csvText) {
+        bytes = new TextEncoder().encode(csvText);
+      } else {
+        return new Response(JSON.stringify({ error: "CSV manquant" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
+      }
+
+      let previewText: string;
+      try {
+        previewText = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+      } catch {
+        previewText = new TextDecoder("windows-1252").decode(bytes);
+      }
+      const previewRows = parseCsv(previewText);
+      const first = previewRows[0] || {};
+      const hasPertinence = !!(
+        rowValue(first, ["pertinence_pc1", "pertinence pc1", "pertinence_1", "raison_pc1", "raison pc1"]) ||
+        rowValue(first, ["pertinence_pc2", "pertinence pc2", "pertinence_2", "raison_pc2", "raison pc2"])
+      );
+      const hasPhrase = !!(
+        rowValue(first, ["phrase_conseil_pc1", "phrase conseil pc1", "phrase_pc1", "conseil_pc1", "phrase_conseil_1", "conseil_1"]) ||
+        rowValue(first, ["phrase_conseil_pc2", "phrase conseil pc2", "phrase_pc2", "conseil_pc2", "phrase_conseil_2", "conseil_2"])
+      );
+
+      const { error: uploadErr } = await supabase.storage
+        .from(BUCKET)
+        .upload(FILE, bytes, { contentType: "text/csv; charset=utf-8", upsert: true });
+      if (uploadErr) throw uploadErr;
+
+      return new Response(JSON.stringify({
+        ok: true,
+        file: `${BUCKET}/${FILE}`,
+        size: bytes.byteLength,
+        rows: previewRows.length,
+        has_pertinence: hasPertinence,
+        has_phrase_conseil: hasPhrase,
+      }), { headers: { ...cors, "Content-Type": "application/json" } });
+    }
+
     // ── IMPORT ──────────────────────────────────────────────────────────
     if (mode === "import") {
       const offset = parseInt(url.searchParams.get("offset") ?? String(bodyJson.offset ?? 0), 10);
@@ -152,40 +227,35 @@ serve(async (req) => {
       const pcs: any[] = [];
       const atcByCode = new Map<string, string>();
       for (const r of slice) {
-        const id = r["id"];
+        const id = rowValue(r, ["id"]);
         if (!id || seen.has(id)) continue;
         seen.add(id);
-        const age = ALLOWED_AGE.has(r["cible_age"]) ? r["cible_age"] : "tous";
-        const atcCode = (r["atc_code"] || "").trim();
-        if (atcCode) atcByCode.set(atcCode, r["classe_therapeutique"] || atcCode);
+        const cibleAge = rowValue(r, ["cible_age", "age", "cible age"]);
+        const age = ALLOWED_AGE.has(cibleAge) ? cibleAge : "tous";
+        const atcCode = rowValue(r, ["atc_code", "code_atc", "atc code"]);
+        if (atcCode) atcByCode.set(atcCode, rowValue(r, ["classe_therapeutique", "classe thérapeutique", "classe_therapie"]) || atcCode);
         meds.push({
           id,
-          nom_commercial: r["nom_commercial"] || "?",
-          cip_code: cleanCip(r["cip_code"]),
+          nom_commercial: rowValue(r, ["nom_commercial", "nom commercial", "nom", "medicament", "médicament"]) || "?",
+          cip_code: cleanCip(rowValue(r, ["cip_code", "cip", "code_cip", "code cip"])),
           atc_code: atcCode || null,
-          laboratoire: r["laboratoire"] || null,
-          forme_galenique: r["forme_galenique"] || null,
-          dosage: r["dosage"] || null,
-          voie_administration: r["voie_administration"] || null,
-          posologie: r["posologie"] || null,
+          laboratoire: rowValue(r, ["laboratoire", "labo"]) || null,
+          forme_galenique: rowValue(r, ["forme_galenique", "forme galénique", "forme"]) || null,
+          dosage: rowValue(r, ["dosage"]) || null,
+          voie_administration: rowValue(r, ["voie_administration", "voie administration", "voie"]) || null,
+          posologie: rowValue(r, ["posologie"]) || null,
           cible_age: age,
-          statut_officine: r["statut_officine"] || "actif",
-          est_otc: asBool(r["est_otc"]),
-          est_produit_conseil: asBool(r["est_produit_conseil"]),
+          statut_officine: rowValue(r, ["statut_officine", "statut officine", "statut"]) || "actif",
+          est_otc: asBool(rowValue(r, ["est_otc", "otc"])),
+          est_produit_conseil: asBool(rowValue(r, ["est_produit_conseil", "produit_conseil", "est produit conseil"])),
         });
-        const pc1 = (r["pc_1"] || "").trim();
-        const pc2 = (r["pc_2"] || "").trim();
-        const pert1 = (r["pertinence_pc1"] || "").trim();
-        const pert2 = (r["pertinence_pc2"] || "").trim();
+        const pc1 = rowValue(r, ["pc_1", "pc1", "produit_complementaire_1", "produit complémentaire 1", "produit_conseil_1"]);
+        const pc2 = rowValue(r, ["pc_2", "pc2", "produit_complementaire_2", "produit complémentaire 2", "produit_conseil_2"]);
+        const pert1 = rowValue(r, ["pertinence_pc1", "pertinence pc1", "pertinence_1", "raison_pc1", "raison pc1", "raison_1"]);
+        const pert2 = rowValue(r, ["pertinence_pc2", "pertinence pc2", "pertinence_2", "raison_pc2", "raison pc2", "raison_2"]);
         // Phrase conseil — accepte plusieurs noms de colonnes possibles
-        const phrase1 = (
-          r["phrase_conseil_pc1"] || r["phrase_pc1"] || r["conseil_pc1"] ||
-          r["phrase_conseil_1"] || r["conseil_1"] || ""
-        ).trim();
-        const phrase2 = (
-          r["phrase_conseil_pc2"] || r["phrase_pc2"] || r["conseil_pc2"] ||
-          r["phrase_conseil_2"] || r["conseil_2"] || ""
-        ).trim();
+        const phrase1 = rowValue(r, ["phrase_conseil_pc1", "phrase conseil pc1", "phrase_pc1", "conseil_pc1", "phrase_conseil_1", "conseil_1", "phrase conseil 1"]);
+        const phrase2 = rowValue(r, ["phrase_conseil_pc2", "phrase conseil pc2", "phrase_pc2", "conseil_pc2", "phrase_conseil_2", "conseil_2", "phrase conseil 2"]);
         if (pc1 || pc2) {
           pcs.push({
             medicament_id: id,
@@ -243,7 +313,7 @@ serve(async (req) => {
     }
 
     return new Response(JSON.stringify({
-      error: "mode requis : ?mode=wipe ou ?mode=import&offset=0&limit=1000",
+        error: "mode requis : ?mode=upload, ?mode=wipe ou ?mode=import&offset=0&limit=1000",
     }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
