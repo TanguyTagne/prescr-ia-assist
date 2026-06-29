@@ -85,7 +85,7 @@ export default function AsclionBaseImportTab() {
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
         total = data.total_in_csv;
-        push(`lot offset=${offset} → ${data.meds_upserted} méds, ${data.pcs_upserted} PCs (échec: ${data.meds_failed}/${data.pcs_failed})`);
+        push(`lot offset=${offset} → ${data.meds_upserted} méds, ${data.pcs_upserted} PCs, ${data.pcs_with_pertinence ?? 0} pertinences, ${data.pcs_with_phrase_conseil ?? 0} phrases (échec: ${data.meds_failed}/${data.pcs_failed})`);
         setProgress({ done: Math.min(offset + PAGE, total), total });
         if (data.done || data.next_offset == null) {
           push(`✓ Import terminé : ${total} lignes traitées`);
