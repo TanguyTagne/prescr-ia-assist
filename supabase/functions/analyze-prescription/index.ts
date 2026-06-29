@@ -1,3 +1,4 @@
+// redeploy: propagate pertinence + phrase_conseil from medicament_curated_pcs
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
