@@ -133,6 +133,8 @@ export default function LeoRobotStatusPanel() {
         </Button>
       </div>
 
+      <LogDetectionWizard onApplied={() => { void refresh(); }} />
+
       <div className="rounded border bg-muted/30 p-2 text-[11px]">
         <div className="font-medium text-foreground mb-0.5">Dernière délivrance détectée</div>
         {last.cip13 ? (
