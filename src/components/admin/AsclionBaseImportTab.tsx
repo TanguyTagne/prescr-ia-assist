@@ -6,15 +6,19 @@ import { FileUp, Loader2, Trash2, Upload, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
 const FILE = "asclion-medicaments-pertinence-enrichi.csv";
+const PHRASES_FILE = "asclion-phrases-conseil.csv";
 const PAGE = 1000;
 
 export default function AsclionBaseImportTab() {
   const [wiping, setWiping] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadingPhrases, setUploadingPhrases] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [importingPhrases, setImportingPhrases] = useState(false);
   const [log, setLog] = useState<string[]>([]);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const phrasesInputRef = useRef<HTMLInputElement | null>(null);
 
   const push = (m: string) => setLog((l) => [...l, m]);
 
@@ -50,6 +54,32 @@ export default function AsclionBaseImportTab() {
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const uploadPhrasesCsv = async (file: File) => {
+    setUploadingPhrases(true);
+    setLog([]);
+    setProgress(null);
+    push(`→ Envoi du fichier phrases conseil : ${file.name}`);
+    try {
+      const contentBase64 = arrayBufferToBase64(await file.arrayBuffer());
+      const { data, error } = await supabase.functions.invoke("import-asclion-base", {
+        body: { mode: "upload_phrases", contentBase64, filename: file.name },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      push(`✓ Fichier phrases poussé dans imports/${PHRASES_FILE} (${data.rows ?? "?"} lignes)`);
+      push(`✓ Clé médicament détectée : ${data.has_med_key ? "oui" : "non"}`);
+      push(`✓ Clé PC détectée : ${data.has_pc_key ? "oui" : "non"}`);
+      push(`✓ Phrases conseil détectées : ${data.has_phrase_conseil ? "oui" : "non"}`);
+      toast.success("Fichier phrases conseil poussé");
+    } catch (e: any) {
+      toast.error(e.message);
+      push(`✗ push phrases : ${e.message}`);
+    } finally {
+      setUploadingPhrases(false);
+      if (phrasesInputRef.current) phrasesInputRef.current.value = "";
     }
   };
 
@@ -102,6 +132,40 @@ export default function AsclionBaseImportTab() {
     }
   };
 
+  const runPhrasesImport = async () => {
+    setImportingPhrases(true);
+    setLog([]);
+    push(`→ Import des phrases conseil depuis ${PHRASES_FILE} (lots de ${PAGE})`);
+    let offset = 0;
+    let total = 0;
+    try {
+      for (let i = 0; i < 50; i++) {
+        const { data, error } = await supabase.functions.invoke(
+          "import-asclion-base",
+          { body: { mode: "import_phrases", offset, limit: PAGE } },
+        );
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+        total = data.total_in_csv;
+        push(`lot offset=${offset} → ${data.phrases_updated} lignes appliquées, ${data.phrases_skipped} ignorées`);
+        setProgress({ done: Math.min(offset + PAGE, total), total });
+        if (data.done || data.next_offset == null) {
+          push(`✓ Import phrases terminé : ${total} lignes traitées`);
+          toast.success("Phrases conseil importées");
+          break;
+        }
+        offset = data.next_offset;
+      }
+    } catch (e: any) {
+      toast.error(e.message);
+      push(`✗ phrases conseil : ${e.message}`);
+    } finally {
+      setImportingPhrases(false);
+    }
+  };
+
+  const busy = wiping || uploading || uploadingPhrases || importing || importingPhrases;
+
   return (
     <Card>
       <CardHeader>
@@ -113,6 +177,9 @@ export default function AsclionBaseImportTab() {
       <CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">
           Fichier source : <code>imports/{FILE}</code>. Pousse d'abord le CSV enrichi, puis vide et importe la base par tranches de {PAGE} lignes. Les colonnes <strong>pertinence_pc1/2</strong> et <strong>phrase_conseil_pc1/2</strong> sont importées avec les PCs.
+        </p>
+        <p className="text-sm text-muted-foreground">
+          Si les phrases sont dans un fichier séparé, pousse-le aussi ici : colonnes acceptées <strong>medicament/nom_commercial/id</strong> + <strong>pc/pc_1/pc_2</strong> + <strong>phrase_conseil</strong> ou <strong>phrase_conseil_pc1/2</strong>. Il met à jour les phrases des PCs déjà importés.
         </p>
 
         <div className="flex flex-wrap gap-2">
@@ -126,17 +193,35 @@ export default function AsclionBaseImportTab() {
               if (file) uploadCsv(file);
             }}
           />
-          <Button onClick={() => fileInputRef.current?.click()} disabled={wiping || uploading || importing} variant="secondary" className="gap-1.5">
+          <input
+            ref={phrasesInputRef}
+            type="file"
+            accept=".csv,text/csv"
+            className="hidden"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) uploadPhrasesCsv(file);
+            }}
+          />
+          <Button onClick={() => fileInputRef.current?.click()} disabled={busy} variant="secondary" className="gap-1.5">
             {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileUp className="h-4 w-4" />}
             0. Pousser CSV enrichi
           </Button>
-          <Button onClick={wipe} disabled={wiping || uploading || importing} variant="destructive" className="gap-1.5">
+          <Button onClick={() => phrasesInputRef.current?.click()} disabled={busy} variant="secondary" className="gap-1.5">
+            {uploadingPhrases ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileUp className="h-4 w-4" />}
+            0bis. Pousser phrases conseil
+          </Button>
+          <Button onClick={wipe} disabled={busy} variant="destructive" className="gap-1.5">
             {wiping ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
             1. Vider la base
           </Button>
-          <Button onClick={runImport} disabled={wiping || uploading || importing} className="gap-1.5">
+          <Button onClick={runImport} disabled={busy} className="gap-1.5">
             {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
             2. Importer le CSV
+          </Button>
+          <Button onClick={runPhrasesImport} disabled={busy} variant="secondary" className="gap-1.5">
+            {importingPhrases ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+            2bis. Importer phrases conseil
           </Button>
           <Button
             onClick={async () => {
@@ -155,7 +240,7 @@ export default function AsclionBaseImportTab() {
                 setImporting(false);
               }
             }}
-            disabled={wiping || uploading || importing}
+            disabled={busy}
             variant="secondary"
             className="gap-1.5"
           >
