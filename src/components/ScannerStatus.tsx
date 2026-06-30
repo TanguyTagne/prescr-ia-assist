@@ -4,7 +4,7 @@ import { useFolderWatcher } from "@/hooks/useFolderWatcher";
 import { useBarcodeScanner } from "@/hooks/useBarcodeScanner";
 import { SCANNER } from "@/constants/scanner";
 import {
-  X, Wifi, WifiOff, ShoppingCart, FileText, Package,
+  X, ShoppingCart, FileText, Package,
   Settings, Check, Key, Copy, RefreshCw, Clipboard, Shield,
   FolderSearch, Loader2, Bot, Search, Activity, Wand2,
 } from "lucide-react";
@@ -164,7 +164,7 @@ const flattenRobotStatus = (st: any) => ({
 });
 
 export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: ScannerStatusProps) => {
-  const { latestScan, isListening, pharmacyId, dismissScan } = useScanQueue();
+  const { latestScan, pharmacyId, dismissScan } = useScanQueue();
   const { signOut } = useAuth();
   const [showSetup, setShowSetup] = useState(false);
   const [lgoForm, setLgoForm] = useState({ lgo_type: "winpharma", api_base_url: "", api_key: "" });
@@ -624,16 +624,7 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
                 Stop
               </Button>
             </div>
-          ) : (
-            <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-              {isListening ? (
-                <Wifi className="h-3 w-3 text-green-500" />
-              ) : (
-                <WifiOff className="h-3 w-3" />
-              )}
-              <span>Scanner prêt</span>
-            </div>
-          )}
+          ) : null}
         </div>
       </div>
 
