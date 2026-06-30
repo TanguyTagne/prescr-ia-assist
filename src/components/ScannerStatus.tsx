@@ -4,7 +4,7 @@ import { useFolderWatcher } from "@/hooks/useFolderWatcher";
 import { useBarcodeScanner } from "@/hooks/useBarcodeScanner";
 import { SCANNER } from "@/constants/scanner";
 import {
-  X, Wifi, WifiOff, ShoppingCart, FileText, Package,
+  X, ShoppingCart, FileText, Package,
   Settings, Check, Key, Copy, RefreshCw, Clipboard, Shield,
   FolderSearch, Loader2, Bot, Search, Activity, Wand2,
 } from "lucide-react";
