@@ -164,7 +164,7 @@ const flattenRobotStatus = (st: any) => ({
 });
 
 export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: ScannerStatusProps) => {
-  const { latestScan, isListening, pharmacyId, dismissScan } = useScanQueue();
+  const { latestScan, pharmacyId, dismissScan } = useScanQueue();
   const { signOut } = useAuth();
   const [showSetup, setShowSetup] = useState(false);
   const [lgoForm, setLgoForm] = useState({ lgo_type: "winpharma", api_base_url: "", api_key: "" });
