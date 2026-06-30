@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Loader2, CheckCircle2, AlertTriangle, RefreshCw, FolderOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import LogDetectionWizard from "@/components/LogDetectionWizard";
 
 /**
  * Architecture validée le 29/06/2026 :
