@@ -1705,43 +1705,41 @@ function startUiohookFallback() {
 }
 
 // ────────────────────────────────────────────────────────────
-// Leo (Astera) robot dispense watcher — tails the LGO log file and
-// forwards each Completed ArticleId to the renderer as `robot-dispensed`.
-// Zero deps, zero network: the pharmacist just launches Asclion.
+// Leo (Astera) robot dispense watcher — tails LeoClientAppLog.txt LOCALEMENT
+// sur chaque caisse et émet `robot-dispensed` { cip13, source, timestamp }
+// quand "SerialisationHelper.VerifyAsync:0XXXXXXXXXXXXX-..." apparaît.
+//
+// Architecture validée le 29/06/2026 :
+//   - Chaque caisse Léo écrit son CIP13 dans son propre LeoClientAppLog.txt
+//   - Routing 100% local, pas de réseau, pas de Supabase pour le robot
+//   - Plus de notion de "PC principal" — chaque Asclion est autonome
 // ────────────────────────────────────────────────────────────
+const lastDetection = { cip13: null, timestamp: null };
+
 function startLeoDispenseWatcher() {
   if (!leoWatcher || leoWatcherStop) return;
   try {
-    // Only the PC explicitly designated as "Asclion principal" (typically the
-    // Leo server, leo00) tails the WWKS2 log. Other tills consume the routed
-    // events through Supabase Realtime, filtered by their own wwks2SourceId.
-    const cfg = leoWatcher.getConfig ? leoWatcher.getConfig(app) : {};
-    if (!cfg || cfg.isAsclionPrincipal !== true) {
-      devLog("[LEO] watcher disabled (this PC is not Asclion principal)");
-      return;
-    }
-    const filePath = leoWatcher.resolveLeoLogPath(app);
-    leoWatcherStop = leoWatcher.startLeoWatcher({
+    const filePath = leoWatcher.resolveLeoClientLogPath(app);
+    leoWatcherStop = leoWatcher.startLeoClientWatcher({
       filePath,
       log: (m) => devLog(m),
       onDispense: (payload) => {
-        const at = Date.now();
-        const { cip, wwks2SourceId, messageId } = payload || {};
-        devLog(
-          `[LEO-WATCHER] CIP13 détecté : ${cip} | caisse WWKS2 source : ${wwks2SourceId ?? "null (broadcast)"}`
-        );
+        const { cip13, source, timestamp } = payload || {};
+        if (!cip13) return;
+        lastDetection.cip13 = cip13;
+        lastDetection.timestamp = timestamp || Date.now();
+        devLog(`[LEO-CLIENT-WATCHER] CIP13 détecté : ${cip13}`);
         ensureWindowAlive();
         if (!mainWindow) return;
         const send = () => {
           try {
             mainWindow.webContents.send("robot-dispensed", {
-              cip,
-              at,
-              wwks2SourceId: wwks2SourceId ?? null,
-              messageId: messageId ?? null,
+              cip13,
+              source: source || "lgo_robot",
+              timestamp: lastDetection.timestamp,
             });
           } catch (e) {
-            devWarn("[LEO] send failed:", e);
+            devWarn("[LEO-CLIENT-WATCHER] send failed:", e);
           }
         };
         if (mainWindow.webContents.isLoading()) {
@@ -1751,16 +1749,20 @@ function startLeoDispenseWatcher() {
         }
       },
     });
-    devLog(`[LEO] watcher started on ${filePath}`);
+    devLog(`[LEO-CLIENT-WATCHER] started on ${filePath}`);
   } catch (e) {
-    console.error("[LEO] failed to start watcher:", e && e.message);
+    console.error("[LEO-CLIENT-WATCHER] failed to start:", e && e.message);
   }
 }
 
+function restartLeoDispenseWatcher() {
+  try { if (leoWatcherStop) { leoWatcherStop(); leoWatcherStop = null; } }
+  catch (e) { devWarn("[LEO-CLIENT-WATCHER] stop failed:", e && e.message); }
+  startLeoDispenseWatcher();
+}
+
 // ────────────────────────────────────────────────────────────
-// asclion.config.json — shared config (read by leoWatcher and the renderer
-// through these IPC handlers). Used to store wwks2SourceId per till and the
-// "isAsclionPrincipal" flag for the Leo server PC.
+// asclion.config.json (clés: leoClientLogPath, …)
 // ────────────────────────────────────────────────────────────
 ipcMain.handle("config:get", () => {
   if (!leoWatcher || !leoWatcher.getConfig) return {};
@@ -1773,14 +1775,8 @@ ipcMain.handle("config:set", (_e, patch) => {
   }
   try {
     const res = leoWatcher.setConfigValues(app, patch || {});
-    // If the "isAsclionPrincipal" flag flips, restart the watcher accordingly.
-    if (patch && Object.prototype.hasOwnProperty.call(patch, "isAsclionPrincipal")) {
-      try {
-        if (leoWatcherStop) { leoWatcherStop(); leoWatcherStop = null; }
-        startLeoDispenseWatcher();
-      } catch (err) {
-        devWarn("[LEO] restart after config change failed:", err && err.message);
-      }
+    if (patch && Object.prototype.hasOwnProperty.call(patch, "leoClientLogPath")) {
+      restartLeoDispenseWatcher();
     }
     return res;
   } catch (e) {
@@ -1788,88 +1784,41 @@ ipcMain.handle("config:set", (_e, patch) => {
   }
 });
 
-ipcMain.handle("leo:read-log-tail", (_e, opts) => {
-  const n = (opts && Number(opts.lines)) || 50;
+// ── Vérifier l'existence + métadonnées du LeoClientAppLog ────────────────
+ipcMain.handle("leo:check-client-log", () => {
+  if (!leoWatcher || !leoWatcher.checkClientLog) {
+    return { exists: false, path: "", lastModified: null };
+  }
   try {
-    const filePath = leoWatcher.resolveLeoLogPath(app);
-    return { ok: true, filePath, lines: leoWatcher.readLogTail(filePath, n) };
+    const filePath = leoWatcher.resolveLeoClientLogPath(app);
+    return leoWatcher.checkClientLog(filePath);
   } catch (e) {
-    return { ok: false, error: e && e.message, lines: [] };
+    return { exists: false, path: "", lastModified: null, error: e && e.message };
   }
 });
 
-/**
- * Detect the WWKS2 till id of this PC using three parallel strategies:
- *   A) Local LAN IPv4 last octet (high confidence — universal).
- *   B) Leo client config file (medium confidence — confirmation).
- *   C) KeepAliveRequest Source most-frequent in the log (only on leo00).
- * Returns { sourceId, confidence, method, candidates }.
- */
-ipcMain.handle("leo:detect-source", async () => {
-  const candidates = { ip: null, config: null, log: null };
-  // --- A) IP -----------------------------------------------------------------
-  try {
-    const { networkInterfaces } = require("os");
-    const ifaces = networkInterfaces();
-    const ips = [];
-    for (const list of Object.values(ifaces || {})) {
-      for (const it of list || []) {
-        if (!it || it.internal) continue;
-        if (it.family !== "IPv4" && it.family !== 4) continue;
-        if (!it.address || it.address.startsWith("127.")) continue;
-        // Keep RFC-1918 private ranges only.
-        if (
-          it.address.startsWith("10.") ||
-          it.address.startsWith("192.168.") ||
-          /^172\.(1[6-9]|2\d|3[01])\./.test(it.address)
-        ) ips.push(it.address);
-      }
-    }
-    if (ips.length) {
-      const ip = ips[0];
-      const last = Number(ip.split(".").pop());
-      if (Number.isFinite(last)) candidates.ip = { sourceId: last, ip };
-    }
-  } catch (e) { devWarn("[WWKS2] IP detect failed:", e && e.message); }
-
-  // --- B) Leo client config --------------------------------------------------
-  try {
-    const cfgPath =
-      "C:\\Program Files (x86)\\Astera\\Leo2.0\\ClientLeo\\PosteClientLeoV200.cfg";
-    if (fs.existsSync(cfgPath)) {
-      const raw = fs.readFileSync(cfgPath, "utf-8");
-      const m = raw.match(/(?:poste|station|id|numero)[^=\n]*[=:]\s*(\d+)/i);
-      if (m) candidates.config = { sourceId: Number(m[1]), path: cfgPath };
-    }
-  } catch (e) { devWarn("[WWKS2] Leo cfg detect failed:", e && e.message); }
-
-  // --- C) KeepAlive log ------------------------------------------------------
-  try {
-    const logPath = leoWatcher.resolveLeoLogPath(app);
-    if (fs.existsSync(logPath)) {
-      const src = leoWatcher.detectSourceFromKeepAlive(logPath);
-      if (src != null) candidates.log = { sourceId: src, path: logPath };
-    }
-  } catch (e) { devWarn("[WWKS2] log detect failed:", e && e.message); }
-
-  // --- Pick best -------------------------------------------------------------
-  let sourceId = null;
-  let confidence = "low";
-  let method = null;
-  if (candidates.ip) { sourceId = candidates.ip.sourceId; method = "ip"; confidence = "high"; }
-  if (candidates.config && candidates.ip && candidates.config.sourceId === candidates.ip.sourceId) {
-    confidence = "high";
-  } else if (!candidates.ip && candidates.config) {
-    sourceId = candidates.config.sourceId; method = "config"; confidence = "medium";
-  } else if (!candidates.ip && !candidates.config && candidates.log) {
-    sourceId = candidates.log.sourceId; method = "log"; confidence = "medium";
+// ── Surcharger le chemin du LeoClientAppLog (si install non standard) ────
+ipcMain.handle("leo:set-client-log-path", (_e, filePath) => {
+  if (!leoWatcher || !leoWatcher.setConfigValues) {
+    return { ok: false, error: "watcher module unavailable" };
   }
-  // Conflict between IP and config → drop confidence to medium so the user picks.
-  if (candidates.ip && candidates.config && candidates.config.sourceId !== candidates.ip.sourceId) {
-    confidence = "medium";
+  if (typeof filePath !== "string" || !filePath.trim()) {
+    return { ok: false, error: "invalid path" };
   }
-  return { sourceId, confidence, method, candidates };
+  try {
+    const res = leoWatcher.setConfigValues(app, { leoClientLogPath: filePath.trim() });
+    restartLeoDispenseWatcher();
+    return { ok: !!res.ok, path: filePath.trim(), error: res.error };
+  } catch (e) {
+    return { ok: false, error: e && e.message };
+  }
 });
+
+// ── Dernière détection (CIP13 + timestamp) — utilisé par le panel UI ────
+ipcMain.handle("leo:get-last-detection", () => ({
+  cip13: lastDetection.cip13,
+  timestamp: lastDetection.timestamp,
+}));
 
 // ────────────────────────────────────────────────────────────
 // WebHID init script — injected into the renderer after every
