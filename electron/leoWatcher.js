@@ -20,8 +20,13 @@ const CONFIG_FILENAME = "asclion.config.json";
 
 // Extrait le CIP13 dans une ligne du log Léo client. Le préfixe "0" devant les
 // 13 chiffres correspond à l'octet de remplissage GS1 (data-matrix robot).
-const CIP13_RE = /SerialisationHelper\.VerifyAsync:0(\d{13})-/;
-const CIP13_HINT = "SerialisationHelper.VerifyAsync";
+const DEFAULT_CIP13_RE = /SerialisationHelper\.VerifyAsync:0(\d{13})-/;
+const DEFAULT_CIP13_HINT = "SerialisationHelper.VerifyAsync";
+
+// Fallback générique pour autres LGO (Winpharma, LGPI, Smart-Rx…) : isole un
+// CIP13 français (commence par 34) entouré de non-chiffres. Activé seulement
+// si la config indique un log NON Léo (leoClientLogPath custom).
+const GENERIC_FR_CIP13_RE = /(?<![0-9])(34\d{11})(?![0-9])/;
 
 // Fenêtre de déduplication : Léo écrit Request + Response pour le même CIP13
 // à quelques ms d'intervalle. 3s couvre largement, sans bloquer les vrais
