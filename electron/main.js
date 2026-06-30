@@ -2835,43 +2835,10 @@ function bootRobotSubsystem() {
   });
   robotSniffer.start(cfg);
 
-  // ── LGO communication-log watcher ──────────────────────────────────────
-  // Third dispense source, alongside the HTTP listener and the packet sniffer.
-  // It tails the LGO's own log (LEO: LeoAutomateCommunicationLog.txt) READ-ONLY
-  // and feeds each ArticleId="<CIP>" into emitGlobalScan — the exact same entry
-  // point as a scan, so dedup, window pop and conseil are all handled in one
-  // place. 100% passive: it never touches the LGO↔robot link, and it works
-  // whatever the transport (TCP / serial / IPv6 server) because it reads what
-  // the LGO already wrote to disk. Failure to start is non-fatal.
-  try {
-    if (robotLogWatcher && typeof robotLogWatcher.createLgoLogWatcher === "function") {
-      lgoLogWatcher = robotLogWatcher.createLgoLogWatcher({
-        log: devLog,
-        warn: devWarn,
-        onDispense: (cip) => {
-          // 1) Drive the conseil through the proven scan pipeline (deduped).
-          emitGlobalScan(cip);
-          // 2) Dedicated, informational event for any robot-specific UI
-          //    (activity badge, debug panel). The conseil is ALREADY triggered
-          //    above — do not use this to trigger it a second time.
-          try {
-            if (mainWindow && !mainWindow.isDestroyed()) {
-              mainWindow.webContents.send("robot-dispensed", {
-                cip13: cip,
-                source: "lgo_robot",
-                timestamp: Date.now(),
-              });
-            }
-          } catch { /* noop */ }
-        },
-      });
-      const leoLogPath =
-        (cfg.robot && cfg.robot.leoLogPath) || robotLogWatcher.DEFAULT_LEO_LOG_PATH;
-      lgoLogWatcher.start(leoLogPath);
-    }
-  } catch (e) {
-    devWarn("[LGO-LOG] watcher failed to start (non-fatal):", (e && e.message) || e);
-  }
+  // ── LeoAutomateCommunicationLog watcher SUPPRIMÉ (29/06/2026) ──────────
+  // Le routing robot par caisse passe désormais 100% en local via
+  // LeoClientAppLog.txt (cf. startLeoDispenseWatcher + electron/leoWatcher.js).
+  // Chaque caisse lit son propre log et émet `robot-dispensed` localement.
 }
 
 ipcMain.handle("robot:get-config", () => {
