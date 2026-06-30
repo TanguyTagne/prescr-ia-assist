@@ -40,6 +40,14 @@ try {
 } catch (e) {
   console.error("[LEO] watcher load failed:", e && e.message);
 }
+
+// Wizard générique de détection du log LGO/robot (pure fs, no native deps).
+let logScanner = null;
+try {
+  logScanner = require("./logScanner");
+} catch (e) {
+  console.error("[LOG-SCAN] module load failed:", e && e.message);
+}
 // Load uiohook-napi lazily — if the native binary fails to load (rare),
 // the app keeps working without the global scanner.
 let uIOhook = null;
