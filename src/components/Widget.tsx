@@ -532,11 +532,18 @@ const WidgetApp = () => {
         // id vide produit `medicament_id=eq.` → 400 Bad Request et pollue la
         // console, sans jamais rien renvoyer. Pas d'id interne = pas de PC
         // curated possible : on saute proprement la requête.
-        let curated: { pc_1: string | null; pc_2: string | null } | null = null;
+        let curated: {
+          pc_1: string | null;
+          pc_2: string | null;
+          pertinence_pc1: string | null;
+          pertinence_pc2: string | null;
+          phrase_conseil_pc1: string | null;
+          phrase_conseil_pc2: string | null;
+        } | null = null;
         if (med.id) {
           const { data } = await supabase
             .from("medicament_curated_pcs")
-            .select("pc_1, pc_2")
+            .select("pc_1, pc_2, pertinence_pc1, pertinence_pc2, phrase_conseil_pc1, phrase_conseil_pc2")
             .eq("medicament_id", med.id)
             .maybeSingle();
           curated = data;
@@ -544,17 +551,30 @@ const WidgetApp = () => {
           logger.log(`[SCAN] ${ts} med=${med.nom_commercial} BDPM-only (pas d'id interne) — aucun PC curated possible`);
         }
 
-        const curatedPcs: string[] = [];
-        if (curated?.pc_1) curatedPcs.push(curated.pc_1);
-        if (curated?.pc_2) curatedPcs.push(curated.pc_2);
+        const curatedPcs = [
+          {
+            produit: curated?.pc_1,
+            pertinence: curated?.pertinence_pc1,
+            phrase_conseil: curated?.phrase_conseil_pc1,
+          },
+          {
+            produit: curated?.pc_2,
+            pertinence: curated?.pertinence_pc2,
+            phrase_conseil: curated?.phrase_conseil_pc2,
+          },
+        ].filter((pc): pc is { produit: string; pertinence: string | null; phrase_conseil: string | null } =>
+          Boolean(pc.produit?.trim())
+        );
 
         if (curatedPcs.length > 0) {
-          recommendations = curatedPcs.map((produit) => ({
-            produit,
+          recommendations = curatedPcs.map((pc) => ({
+            produit: pc.produit,
             categorie: "",
             priorite: 90,
+            pertinence: pc.pertinence?.trim() || undefined,
+            phrase_conseil: pc.phrase_conseil?.trim() || undefined,
           }));
-          const newNames = curatedPcs.slice();
+          const newNames = curatedPcs.map((pc) => pc.produit);
           if (newNames.length > 0) {
             setBlockedProducts((prev) => [...new Set([...prev, ...newNames])]);
           }

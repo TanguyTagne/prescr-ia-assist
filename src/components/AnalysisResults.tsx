@@ -61,9 +61,32 @@ function normalizeName(s: string): string {
     .trim();
 }
 
+function normalizeLookupKey(s: string): string {
+  return (s || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\([^)]*\)/g, " ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function recommendationKey(medName: string, productName: string): string {
+  return `${normalizeLookupKey(medName)}::${normalizeLookupKey(productName)}`;
+}
+
+function productNamesMatch(a?: string | null, b?: string | null): boolean {
+  const left = normalizeLookupKey(a || "");
+  const right = normalizeLookupKey(b || "");
+  if (!left || !right) return false;
+  return left === right || left.startsWith(right) || right.startsWith(left);
+}
+
 const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsProps) => {
   const { t } = useI18n();
   const [orderedItems, setOrderedItems] = useState<Map<string, "manual_click" | "hid_auto">>(new Map());
+  const [curatedHints, setCuratedHints] = useState<Map<string, { pertinence?: string; phrase_conseil?: string }>>(new Map());
   const [expandedConseils, setExpandedConseils] = useState<Set<number>>(new Set());
   const [conseilGlobalOpen, setConseilGlobalOpen] = useState(false);
   const { recordFeedback } = usePcFeedback();
@@ -213,6 +236,68 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [result, demoMode]);
+
+  // Sécurité desktop : le scan HID local peut construire les recommandations sans passer
+  // par analyze-prescription. On enrichit donc directement depuis medicament_curated_pcs
+  // si pertinence / phrase_conseil manquent, afin que l'affichage ne dépende pas du chemin d'analyse.
+  useEffect(() => {
+    let cancelled = false;
+    const medsToEnrich = result.medicaments.filter((med) =>
+      (med.recommendations || []).some((rec) => !rec.pertinence?.trim() || !rec.phrase_conseil?.trim())
+    );
+
+    if (demoMode || medsToEnrich.length === 0) {
+      setCuratedHints(new Map());
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    (async () => {
+      const next = new Map<string, { pertinence?: string; phrase_conseil?: string }>();
+
+      for (const med of medsToEnrich) {
+        const medKey = normalizeLookupKey(med.nom);
+        const firstWord = medKey.split(" ")[0];
+        if (!firstWord || firstWord.length < 3) continue;
+
+        const { data: candidates } = await supabase
+          .from("medicaments")
+          .select("id, nom_commercial")
+          .or(`nom_commercial.ilike.${firstWord}%,nom_commercial.ilike.%${firstWord}%`)
+          .limit(25);
+
+        const ids = ((candidates as any[] | null) || []).map((row) => row.id).filter(Boolean);
+        if (ids.length === 0) continue;
+
+        const { data: rows } = await supabase
+          .from("medicament_curated_pcs")
+          .select("medicament_id, pc_1, pc_2, pertinence_pc1, pertinence_pc2, phrase_conseil_pc1, phrase_conseil_pc2")
+          .in("medicament_id", ids);
+
+        for (const rec of med.recommendations || []) {
+          if (rec.pertinence?.trim() && rec.phrase_conseil?.trim()) continue;
+          const match = ((rows as any[] | null) || []).find((row) =>
+            productNamesMatch(row.pc_1, rec.produit) || productNamesMatch(row.pc_2, rec.produit)
+          );
+          if (!match) continue;
+
+          const isPc1 = productNamesMatch(match.pc_1, rec.produit);
+          const pertinence = (isPc1 ? match.pertinence_pc1 : match.pertinence_pc2)?.trim() || undefined;
+          const phrase_conseil = (isPc1 ? match.phrase_conseil_pc1 : match.phrase_conseil_pc2)?.trim() || undefined;
+          if (pertinence || phrase_conseil) {
+            next.set(recommendationKey(med.nom, rec.produit), { pertinence, phrase_conseil });
+          }
+        }
+      }
+
+      if (!cancelled) setCuratedHints(next);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [result, demoMode]);
 
   useEffect(() => {
@@ -491,7 +576,9 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
                 const ordered = isOrdered(med.nom, rec.produit);
                 const orderSource = getOrderSource(med.nom, rec.produit);
                 const isAuto = orderSource === "hid_auto";
-                const shortHint = rec.phrase_conseil?.trim() || null;
+                const enriched = curatedHints.get(recommendationKey(med.nom, rec.produit));
+                const pertinence = rec.pertinence?.trim() || enriched?.pertinence || null;
+                const shortHint = rec.phrase_conseil?.trim() || enriched?.phrase_conseil || null;
                 const dotColors = ["bg-primary", "bg-blue-400", "bg-amber-400"];
                 return (
                   <div key={j} className="flex items-center gap-1">
@@ -511,24 +598,13 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1 flex-wrap">
                           <span className={`font-semibold text-xs ${ordered ? "text-muted-foreground line-through" : "text-foreground"}`}>{rec.produit}</span>
-                          {rec.pertinence && (
+                          {pertinence && (
                             <span
-                              className={`text-[11px] font-semibold ${ordered ? "text-muted-foreground" : pertinenceClass(rec.pertinence)}`}
+                              className={`text-[11px] font-semibold ${ordered ? "text-muted-foreground" : pertinenceClass(pertinence)}`}
                               title="Raison de la suggestion"
                             >
-                              · {rec.pertinence}
+                              · {pertinence}
                             </span>
-                          )}
-                          {shortHint && (
-                            <>
-                              <span className="text-[10px] text-muted-foreground">·</span>
-                              <span
-                                className={`text-[11px] font-medium truncate ${ordered ? "text-muted-foreground" : pertinenceClass(rec.pertinence)}`}
-                                title={shortHint}
-                              >
-                                {shortHint}
-                              </span>
-                            </>
                           )}
                           {isAuto && (
                             <Badge
@@ -539,6 +615,14 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
                             </Badge>
                           )}
                         </div>
+                        {shortHint && (
+                          <div
+                            className={`mt-0.5 text-[11px] font-medium leading-tight ${ordered ? "text-muted-foreground" : pertinenceClass(pertinence || undefined)}`}
+                            title={shortHint}
+                          >
+                            {shortHint}
+                          </div>
+                        )}
                       </div>
                     </button>
                     {!demoMode && (
