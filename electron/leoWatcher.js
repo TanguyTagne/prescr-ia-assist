@@ -20,8 +20,13 @@ const CONFIG_FILENAME = "asclion.config.json";
 
 // Extrait le CIP13 dans une ligne du log Léo client. Le préfixe "0" devant les
 // 13 chiffres correspond à l'octet de remplissage GS1 (data-matrix robot).
-const CIP13_RE = /SerialisationHelper\.VerifyAsync:0(\d{13})-/;
-const CIP13_HINT = "SerialisationHelper.VerifyAsync";
+const DEFAULT_CIP13_RE = /SerialisationHelper\.VerifyAsync:0(\d{13})-/;
+const DEFAULT_CIP13_HINT = "SerialisationHelper.VerifyAsync";
+
+// Fallback générique pour autres LGO (Winpharma, LGPI, Smart-Rx…) : isole un
+// CIP13 français (commence par 34) entouré de non-chiffres. Activé seulement
+// si la config indique un log NON Léo (leoClientLogPath custom).
+const GENERIC_FR_CIP13_RE = /(?<![0-9])(34\d{11})(?![0-9])/;
 
 // Fenêtre de déduplication : Léo écrit Request + Response pour le même CIP13
 // à quelques ms d'intervalle. 3s couvre largement, sans bloquer les vrais
@@ -80,11 +85,15 @@ function checkClientLog(filePath) {
 // Watcher (tail) — démarre au lancement d'Asclion, mode dégradé si le fichier
 // n'existe pas (re-tente périodiquement, ne crashe jamais).
 // ─────────────────────────────────────────────────────────────────────────────
-function startLeoClientWatcher({ filePath, onDispense, log }) {
+function startLeoClientWatcher({ filePath, onDispense, log, mode }) {
   if (!filePath || typeof onDispense !== "function") {
     throw new Error("startLeoClientWatcher: filePath and onDispense are required");
   }
   const dbg = typeof log === "function" ? log : () => {};
+
+  // mode "leo" (par défaut) : regex stricte Léo. mode "generic" : fallback FR CIP13.
+  // "auto" : essaie Léo, sinon générique sur la même ligne.
+  const watchMode = mode || "auto";
 
   let offset = 0;
   let pending = "";
@@ -112,9 +121,15 @@ function startLeoClientWatcher({ filePath, onDispense, log }) {
   }
 
   function processLine(line) {
-    if (!line || line.indexOf(CIP13_HINT) === -1) return;
-    const m = line.match(CIP13_RE);
-    if (m && m[1]) emit(m[1]);
+    if (!line) return;
+    if (watchMode !== "generic" && line.indexOf(DEFAULT_CIP13_HINT) !== -1) {
+      const m = line.match(DEFAULT_CIP13_RE);
+      if (m && m[1]) { emit(m[1]); return; }
+    }
+    if (watchMode === "generic" || watchMode === "auto") {
+      const m2 = line.match(GENERIC_FR_CIP13_RE);
+      if (m2 && m2[1]) emit(m2[1]);
+    }
   }
 
   function processChunk(chunk) {

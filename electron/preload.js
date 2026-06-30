@@ -55,6 +55,18 @@ contextBridge.exposeInMainWorld("electronAPI", {
     checkClientLog: () => ipcRenderer.invoke("leo:check-client-log"),
     setClientLogPath: (filePath) => ipcRenderer.invoke("leo:set-client-log-path", filePath),
     getLastDetection: () => ipcRenderer.invoke("leo:get-last-detection"),
+    // ── Wizard générique : "Détecter automatiquement le log" ───────────
+    // Snapshot des .log/.txt récents → délivrance robot → diff + CIP →
+    // candidats classés. Couvre Léo, Winpharma, LGPI, Smart-Rx, etc.
+    scanStart: (durationMs, extraRoots) =>
+      ipcRenderer.invoke("leo:scan-start", { durationMs, extraRoots }),
+    scanStop: () => ipcRenderer.invoke("leo:scan-stop"),
+    scanStatus: () => ipcRenderer.invoke("leo:scan-status"),
+    onScanEvent: (callback) => {
+      const handler = (_e, payload) => callback(payload);
+      ipcRenderer.on("leo:scan-event", handler);
+      return () => ipcRenderer.removeListener("leo:scan-event", handler);
+    },
   },
 
   // Picture-in-Picture (always-on-top + compact mode)

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Loader2, CheckCircle2, AlertTriangle, RefreshCw, FolderOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import LogDetectionWizard from "@/components/LogDetectionWizard";
 
 /**
  * Architecture validée le 29/06/2026 :
@@ -131,6 +132,8 @@ export default function LeoRobotStatusPanel() {
           Personnaliser
         </Button>
       </div>
+
+      <LogDetectionWizard onApplied={() => { void refresh(); }} />
 
       <div className="rounded border bg-muted/30 p-2 text-[11px]">
         <div className="font-medium text-foreground mb-0.5">Dernière délivrance détectée</div>

@@ -40,6 +40,14 @@ try {
 } catch (e) {
   console.error("[LEO] watcher load failed:", e && e.message);
 }
+
+// Wizard générique de détection du log LGO/robot (pure fs, no native deps).
+let logScanner = null;
+try {
+  logScanner = require("./logScanner");
+} catch (e) {
+  console.error("[LOG-SCAN] module load failed:", e && e.message);
+}
 // Load uiohook-napi lazily — if the native binary fails to load (rare),
 // the app keeps working without the global scanner.
 let uIOhook = null;
@@ -1720,8 +1728,11 @@ function startLeoDispenseWatcher() {
   if (!leoWatcher || leoWatcherStop) return;
   try {
     const filePath = leoWatcher.resolveLeoClientLogPath(app);
+    const cfg = (leoWatcher.getConfig && leoWatcher.getConfig(app)) || {};
+    const mode = typeof cfg.robotLogMode === "string" ? cfg.robotLogMode : "auto";
     leoWatcherStop = leoWatcher.startLeoClientWatcher({
       filePath,
+      mode,
       log: (m) => devLog(m),
       onDispense: (payload) => {
         const { cip13, source, timestamp } = payload || {};
@@ -1819,6 +1830,45 @@ ipcMain.handle("leo:get-last-detection", () => ({
   cip13: lastDetection.cip13,
   timestamp: lastDetection.timestamp,
 }));
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Wizard générique « Détecter automatiquement le log »
+// Snapshot des .log/.txt du PC → délivrance robot → diff + CIP → classement.
+// Marche pour Léo, Winpharma, LGPI, Smart-Rx… sans codage en dur du LGO.
+// ─────────────────────────────────────────────────────────────────────────────
+function sendScanEvent(payload) {
+  ensureWindowAlive();
+  if (!mainWindow) return;
+  try { mainWindow.webContents.send("leo:scan-event", payload); }
+  catch (e) { devWarn("[LOG-SCAN] event send failed:", e && e.message); }
+}
+
+ipcMain.handle("leo:scan-start", (_e, args) => {
+  if (!logScanner) return { ok: false, error: "log scanner module unavailable" };
+  const { durationMs, extraRoots } = args || {};
+  try {
+    return logScanner.startScan({
+      durationMs,
+      extraRoots,
+      log: (m) => devLog(m),
+      onEvent: (payload) => sendScanEvent(payload),
+    });
+  } catch (e) {
+    return { ok: false, error: e && e.message };
+  }
+});
+
+ipcMain.handle("leo:scan-stop", () => {
+  if (!logScanner) return { ok: false, error: "log scanner module unavailable" };
+  try { return logScanner.stopScan(); }
+  catch (e) { return { ok: false, error: e && e.message }; }
+});
+
+ipcMain.handle("leo:scan-status", () => {
+  if (!logScanner) return { running: false, error: "log scanner module unavailable" };
+  try { return logScanner.statusScan(); }
+  catch (e) { return { running: false, error: e && e.message }; }
+});
 
 // ────────────────────────────────────────────────────────────
 // WebHID init script — injected into the renderer after every

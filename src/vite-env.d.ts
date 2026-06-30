@@ -62,6 +62,33 @@ declare global {
     timestamp: number | null;
   }
 
+  interface LogScanCandidate {
+    path: string;
+    sizeBefore: number;
+    sizeAfter: number;
+    sizeDelta: number;
+    mtimeMs: number;
+    cipMatches: string[];
+    frCipMatches: string[];
+    snippet: string;
+    score: number;
+  }
+
+  interface LogScanResult {
+    phase: "done";
+    reason: string;
+    fileCount: number;
+    rootCount: number;
+    roots: string[];
+    candidates: LogScanCandidate[];
+    candidatesWithCip: number;
+  }
+
+  type LogScanEvent =
+    | { phase: "discover" }
+    | { phase: "ready"; deadlineMs: number; fileCount: number; rootCount: number }
+    | LogScanResult;
+
   interface ElectronAPI {
     isDesktop: true;
     platform: string;
@@ -90,6 +117,12 @@ declare global {
       checkClientLog: () => Promise<LeoClientLogCheck>;
       setClientLogPath: (path: string) => Promise<{ ok: boolean; error?: string; path?: string }>;
       getLastDetection: () => Promise<LeoLastDetection>;
+      scanStart: (durationMs?: number, extraRoots?: string[]) => Promise<{
+        ok: boolean; error?: string; deadlineMs?: number; fileCount?: number; rootCount?: number;
+      }>;
+      scanStop: () => Promise<{ ok: boolean; error?: string; result?: LogScanResult | null }>;
+      scanStatus: () => Promise<{ running: boolean; startedAt?: number; deadlineMs?: number; fileCount?: number; rootCount?: number; error?: string }>;
+      onScanEvent: (cb: (payload: LogScanEvent) => void) => () => void;
     };
   }
 
