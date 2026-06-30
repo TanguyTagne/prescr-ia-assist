@@ -9,6 +9,8 @@
  * Modes :
  *   POST /import-asclion-base?mode=wipe         → vide medicaments + curated_pcs
  *   POST /import-asclion-base?mode=import&offset=0&limit=1000 → importe une tranche
+ *   POST /import-asclion-base?mode=upload_phrases → pousse un CSV séparé de phrases conseil
+ *   POST /import-asclion-base?mode=import_phrases&offset=0&limit=1000 → applique les phrases aux PCs existants
  * Admin only.
  */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -17,6 +19,7 @@ import { buildCorsHeaders } from "../_shared/cors.ts";
 
 const BUCKET = "imports";
 const FILE = "asclion-medicaments-pertinence-enrichi.csv";
+const PHRASES_FILE = "asclion-phrases-conseil.csv";
 const BATCH = 200;
 
 function normalizeHeaderKey(header: string): string {
@@ -107,6 +110,198 @@ function cleanCip(raw: string): string | null {
   return s || null;
 }
 
+function normalizeLookupKey(value: string): string {
+  return (value || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\([^)]*\)/g, " ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function productNamesMatch(a?: string | null, b?: string | null): boolean {
+  const left = normalizeLookupKey(a || "");
+  const right = normalizeLookupKey(b || "");
+  if (!left || !right) return false;
+  return left === right || left.startsWith(right) || right.startsWith(left);
+}
+
+function cleanText(value: string): string | null {
+  const cleaned = (value || "").trim();
+  return cleaned.length > 0 ? cleaned : null;
+}
+
+function csvBytesFromBody(bodyJson: any): Uint8Array | null {
+  const csvText = typeof bodyJson.csvText === "string" ? bodyJson.csvText : "";
+  const contentBase64 = typeof bodyJson.contentBase64 === "string" ? bodyJson.contentBase64 : "";
+  if (contentBase64) {
+    const binary = atob(contentBase64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return bytes;
+  }
+  if (csvText) return new TextEncoder().encode(csvText);
+  return null;
+}
+
+function decodeCsvBytes(bytes: Uint8Array): string {
+  try {
+    return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  } catch {
+    return new TextDecoder("windows-1252").decode(bytes);
+  }
+}
+
+async function findMedicamentId(supabase: any, row: Record<string, string>): Promise<string | null> {
+  const directId = rowValue(row, ["medicament_id", "id_medicament", "id"]);
+  if (directId) return directId;
+
+  const medName = rowValue(row, [
+    "nom_commercial",
+    "nom commercial",
+    "medicament",
+    "médicament",
+    "medicament_nom",
+    "nom_medicament",
+    "nom médicament",
+    "nom",
+  ]);
+  if (!medName) return null;
+
+  const normalizedTarget = normalizeLookupKey(medName);
+  const firstWord = normalizedTarget.split(" ")[0];
+  if (!firstWord || firstWord.length < 3) return null;
+
+  const { data } = await supabase
+    .from("medicaments")
+    .select("id, nom_commercial")
+    .or(`nom_commercial.ilike.${medName},nom_commercial.ilike.${firstWord}%`)
+    .limit(20);
+
+  const rows = (data || []) as any[];
+  const exact = rows.find((r) => normalizeLookupKey(r.nom_commercial || "") === normalizedTarget);
+  return (exact || rows[0])?.id ?? null;
+}
+
+async function applyPcHintGlobally(
+  supabase: any,
+  pcName: string,
+  patch: { pertinence?: string | null; phrase_conseil?: string | null },
+): Promise<{ matched: number; updated: number }> {
+  const firstWord = normalizeLookupKey(pcName).split(" ")[0];
+  if (!firstWord || firstWord.length < 3) return { matched: 0, updated: 0 };
+
+  const { data: rows } = await supabase
+    .from("medicament_curated_pcs")
+    .select("medicament_id, pc_1, pc_2")
+    .or(`pc_1.ilike.${firstWord}%,pc_2.ilike.${firstWord}%`)
+    .limit(1000);
+
+  let matched = 0;
+  let updated = 0;
+  for (const row of (rows || []) as any[]) {
+    const update: Record<string, string> = {};
+    if (productNamesMatch(row.pc_1, pcName)) {
+      matched++;
+      if (patch.pertinence) update.pertinence_pc1 = patch.pertinence;
+      if (patch.phrase_conseil) update.phrase_conseil_pc1 = patch.phrase_conseil;
+    }
+    if (productNamesMatch(row.pc_2, pcName)) {
+      matched++;
+      if (patch.pertinence) update.pertinence_pc2 = patch.pertinence;
+      if (patch.phrase_conseil) update.phrase_conseil_pc2 = patch.phrase_conseil;
+    }
+    if (Object.keys(update).length === 0) continue;
+    const { error } = await supabase
+      .from("medicament_curated_pcs")
+      .update(update)
+      .eq("medicament_id", row.medicament_id);
+    if (!error) updated++;
+  }
+  return { matched, updated };
+}
+
+async function applyPhraseRow(supabase: any, row: Record<string, string>): Promise<"updated" | "skipped"> {
+  const pcLong = rowValue(row, [
+    "pc",
+    "produit",
+    "produit_complementaire",
+    "produit complémentaire",
+    "produit_conseil",
+    "nom_pc",
+    "pc_nom",
+  ]);
+  const phraseLong = cleanText(rowValue(row, [
+    "phrase_conseil",
+    "phrase conseil",
+    "phrase",
+    "conseil",
+    "phrase_patient",
+    "benefice_patient",
+    "bénéfice patient",
+  ]));
+  const pertinenceLong = cleanText(rowValue(row, ["pertinence", "raison", "raison_suggestion", "raison suggestion", "type"]));
+
+  const pc1 = rowValue(row, ["pc_1", "pc1", "produit_complementaire_1", "produit complémentaire 1", "produit_conseil_1"]);
+  const pc2 = rowValue(row, ["pc_2", "pc2", "produit_complementaire_2", "produit complémentaire 2", "produit_conseil_2"]);
+  const phrase1 = cleanText(rowValue(row, ["phrase_conseil_pc1", "phrase conseil pc1", "phrase_pc1", "conseil_pc1", "phrase_conseil_1", "conseil_1", "phrase conseil 1"]));
+  const phrase2 = cleanText(rowValue(row, ["phrase_conseil_pc2", "phrase conseil pc2", "phrase_pc2", "conseil_pc2", "phrase_conseil_2", "conseil_2", "phrase conseil 2"]));
+  const pert1 = cleanText(rowValue(row, ["pertinence_pc1", "pertinence pc1", "pertinence_1", "raison_pc1", "raison pc1", "raison_1"]));
+  const pert2 = cleanText(rowValue(row, ["pertinence_pc2", "pertinence pc2", "pertinence_2", "raison_pc2", "raison pc2", "raison_2"]));
+
+  const medId = await findMedicamentId(supabase, row);
+  if (medId) {
+    const directPatch: Record<string, string> = {};
+    if (phrase1) directPatch.phrase_conseil_pc1 = phrase1;
+    if (phrase2) directPatch.phrase_conseil_pc2 = phrase2;
+    if (pert1) directPatch.pertinence_pc1 = pert1;
+    if (pert2) directPatch.pertinence_pc2 = pert2;
+
+    if (Object.keys(directPatch).length > 0) {
+      const { error } = await supabase.from("medicament_curated_pcs").update(directPatch).eq("medicament_id", medId);
+      return error ? "skipped" : "updated";
+    }
+
+    if (pcLong && (phraseLong || pertinenceLong)) {
+      const { data: curated } = await supabase
+        .from("medicament_curated_pcs")
+        .select("pc_1, pc_2")
+        .eq("medicament_id", medId)
+        .maybeSingle();
+      if (!curated) return "skipped";
+      const patch: Record<string, string> = {};
+      if (productNamesMatch(curated.pc_1, pcLong)) {
+        if (phraseLong) patch.phrase_conseil_pc1 = phraseLong;
+        if (pertinenceLong) patch.pertinence_pc1 = pertinenceLong;
+      } else if (productNamesMatch(curated.pc_2, pcLong)) {
+        if (phraseLong) patch.phrase_conseil_pc2 = phraseLong;
+        if (pertinenceLong) patch.pertinence_pc2 = pertinenceLong;
+      }
+      if (Object.keys(patch).length === 0) return "skipped";
+      const { error } = await supabase.from("medicament_curated_pcs").update(patch).eq("medicament_id", medId);
+      return error ? "skipped" : "updated";
+    }
+  }
+
+  // Dernier recours : fichier avec seulement PC + phrase/pertinence → applique à tous les PCs du même nom.
+  if (pcLong && (phraseLong || pertinenceLong)) {
+    const res = await applyPcHintGlobally(supabase, pcLong, { phrase_conseil: phraseLong, pertinence: pertinenceLong });
+    return res.updated > 0 ? "updated" : "skipped";
+  }
+  if (pc1 && (phrase1 || pert1)) {
+    const res = await applyPcHintGlobally(supabase, pc1, { phrase_conseil: phrase1, pertinence: pert1 });
+    if (res.updated > 0) return "updated";
+  }
+  if (pc2 && (phrase2 || pert2)) {
+    const res = await applyPcHintGlobally(supabase, pc2, { phrase_conseil: phrase2, pertinence: pert2 });
+    if (res.updated > 0) return "updated";
+  }
+
+  return "skipped";
+}
+
 function asBool(s: string): boolean {
   return s === "t" || s === "true" || s === "1";
 }
@@ -143,35 +338,25 @@ serve(async (req) => {
 
     // ── UPLOAD CSV ENRICHI ──────────────────────────────────────────────
     if (mode === "upload") {
-      const csvText = typeof bodyJson.csvText === "string" ? bodyJson.csvText : "";
-      const contentBase64 = typeof bodyJson.contentBase64 === "string" ? bodyJson.contentBase64 : "";
-
-      let bytes: Uint8Array;
-      if (contentBase64) {
-        const binary = atob(contentBase64);
-        bytes = new Uint8Array(binary.length);
-        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-      } else if (csvText) {
-        bytes = new TextEncoder().encode(csvText);
-      } else {
+      const bytes = csvBytesFromBody(bodyJson);
+      if (!bytes) {
         return new Response(JSON.stringify({ error: "CSV manquant" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
       }
 
-      let previewText: string;
-      try {
-        previewText = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
-      } catch {
-        previewText = new TextDecoder("windows-1252").decode(bytes);
-      }
+      const previewText = decodeCsvBytes(bytes);
       const previewRows = parseCsv(previewText);
-      const first = previewRows[0] || {};
-      const hasPertinence = !!(
-        rowValue(first, ["pertinence_pc1", "pertinence pc1", "pertinence_1", "raison_pc1", "raison pc1"]) ||
-        rowValue(first, ["pertinence_pc2", "pertinence pc2", "pertinence_2", "raison_pc2", "raison pc2"])
+      const previewSample = previewRows.slice(0, 200);
+      const hasPertinence = previewSample.some((row) =>
+        !!(
+          rowValue(row, ["pertinence_pc1", "pertinence pc1", "pertinence_1", "raison_pc1", "raison pc1", "pertinence", "raison"]) ||
+          rowValue(row, ["pertinence_pc2", "pertinence pc2", "pertinence_2", "raison_pc2", "raison pc2"])
+        )
       );
-      const hasPhrase = !!(
-        rowValue(first, ["phrase_conseil_pc1", "phrase conseil pc1", "phrase_pc1", "conseil_pc1", "phrase_conseil_1", "conseil_1"]) ||
-        rowValue(first, ["phrase_conseil_pc2", "phrase conseil pc2", "phrase_pc2", "conseil_pc2", "phrase_conseil_2", "conseil_2"])
+      const hasPhrase = previewSample.some((row) =>
+        !!(
+          rowValue(row, ["phrase_conseil_pc1", "phrase conseil pc1", "phrase_pc1", "conseil_pc1", "phrase_conseil_1", "conseil_1", "phrase_conseil", "phrase conseil", "phrase", "conseil"]) ||
+          rowValue(row, ["phrase_conseil_pc2", "phrase conseil pc2", "phrase_pc2", "conseil_pc2", "phrase_conseil_2", "conseil_2"])
+        )
       );
 
       const { error: uploadErr } = await supabase.storage
@@ -186,6 +371,71 @@ serve(async (req) => {
         rows: previewRows.length,
         has_pertinence: hasPertinence,
         has_phrase_conseil: hasPhrase,
+      }), { headers: { ...cors, "Content-Type": "application/json" } });
+    }
+
+    // ── UPLOAD FICHIER PHRASES CONSEIL SÉPARÉ ───────────────────────────
+    if (mode === "upload_phrases") {
+      const bytes = csvBytesFromBody(bodyJson);
+      if (!bytes) {
+        return new Response(JSON.stringify({ error: "CSV phrases manquant" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
+      }
+
+      const previewText = decodeCsvBytes(bytes);
+      const previewRows = parseCsv(previewText);
+      const previewSample = previewRows.slice(0, 200);
+      const hasMedKey = previewSample.some((row) => !!rowValue(row, ["medicament_id", "id_medicament", "id", "nom_commercial", "medicament", "médicament", "nom_medicament"]));
+      const hasPcKey = previewSample.some((row) => !!rowValue(row, ["pc", "produit", "produit_complementaire", "produit complémentaire", "pc_1", "pc1", "pc_2", "pc2"]));
+      const hasPhrase = previewSample.some((row) => !!rowValue(row, ["phrase_conseil", "phrase conseil", "phrase", "conseil", "phrase_conseil_pc1", "phrase conseil pc1", "phrase_conseil_pc2", "phrase conseil pc2"]));
+
+      const { error: uploadErr } = await supabase.storage
+        .from(BUCKET)
+        .upload(PHRASES_FILE, bytes, { contentType: "text/csv; charset=utf-8", upsert: true });
+      if (uploadErr) throw uploadErr;
+
+      return new Response(JSON.stringify({
+        ok: true,
+        file: `${BUCKET}/${PHRASES_FILE}`,
+        size: bytes.byteLength,
+        rows: previewRows.length,
+        has_med_key: hasMedKey,
+        has_pc_key: hasPcKey,
+        has_phrase_conseil: hasPhrase,
+      }), { headers: { ...cors, "Content-Type": "application/json" } });
+    }
+
+    // ── IMPORT FICHIER PHRASES CONSEIL SÉPARÉ ───────────────────────────
+    if (mode === "import_phrases") {
+      const offset = parseInt(url.searchParams.get("offset") ?? String(bodyJson.offset ?? 0), 10);
+      const limit = parseInt(url.searchParams.get("limit") ?? String(bodyJson.limit ?? 1000), 10);
+
+      const { data: blob, error: stErr } = await supabase.storage.from(BUCKET).download(PHRASES_FILE);
+      if (stErr || !blob) throw new Error(`Fichier phrases introuvable: ${stErr?.message ?? "blob null"}`);
+      const buf = new Uint8Array(await blob.arrayBuffer());
+      const text = decodeCsvBytes(buf);
+      const rows = parseCsv(text);
+      const total = rows.length;
+      const slice = rows.slice(offset, offset + limit);
+
+      let updated = 0;
+      let skipped = 0;
+      for (const row of slice) {
+        const status = await applyPhraseRow(supabase, row);
+        if (status === "updated") updated++;
+        else skipped++;
+      }
+
+      const nextOffset = offset + limit;
+      return new Response(JSON.stringify({
+        ok: true,
+        total_in_csv: total,
+        offset,
+        limit,
+        processed: slice.length,
+        phrases_updated: updated,
+        phrases_skipped: skipped,
+        next_offset: nextOffset < total ? nextOffset : null,
+        done: nextOffset >= total,
       }), { headers: { ...cors, "Content-Type": "application/json" } });
     }
 
@@ -317,7 +567,7 @@ serve(async (req) => {
     }
 
     return new Response(JSON.stringify({
-        error: "mode requis : ?mode=upload, ?mode=wipe ou ?mode=import&offset=0&limit=1000",
+        error: "mode requis : ?mode=upload, ?mode=upload_phrases, ?mode=wipe, ?mode=import&offset=0&limit=1000 ou ?mode=import_phrases&offset=0&limit=1000",
     }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
