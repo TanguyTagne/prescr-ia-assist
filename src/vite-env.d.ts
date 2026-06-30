@@ -46,22 +46,20 @@ declare global {
   }
 
   interface AsclionConfig {
-    wwks2SourceId?: number;
-    isAsclionPrincipal?: boolean;
-    leoLogPath?: string;
+    leoClientLogPath?: string;
     [k: string]: unknown;
   }
 
-  interface WwksDetectCandidate { sourceId: number; ip?: string; path?: string }
-  interface WwksDetectResult {
-    sourceId: number | null;
-    confidence: "high" | "medium" | "low";
-    method: "ip" | "config" | "log" | null;
-    candidates: {
-      ip: WwksDetectCandidate | null;
-      config: WwksDetectCandidate | null;
-      log: WwksDetectCandidate | null;
-    };
+  interface LeoClientLogCheck {
+    exists: boolean;
+    path: string;
+    lastModified: string | Date | null;
+    size?: number;
+  }
+
+  interface LeoLastDetection {
+    cip13: string | null;
+    timestamp: number | null;
   }
 
   interface ElectronAPI {
@@ -72,7 +70,7 @@ declare global {
     onLgoDetected: (callback: (payload: { lgo: string }) => void) => () => void;
     onGlobalBarcode: (callback: (payload: { ean: string; at: number }) => void) => () => void;
     onRobotDispensed?: (
-      callback: (payload: { cip: string; at: number; wwks2SourceId: number | null; messageId: string | null }) => void
+      callback: (payload: { cip13: string; source: string; timestamp: number }) => void
     ) => () => void;
     autolaunch?: {
       status: () => Promise<unknown>;
@@ -89,8 +87,9 @@ declare global {
       set: (patch: Partial<AsclionConfig>) => Promise<{ ok: boolean; config?: AsclionConfig; path?: string; error?: string }>;
     };
     leo?: {
-      detectSource: () => Promise<WwksDetectResult>;
-      readLogTail: (lines?: number) => Promise<{ ok: boolean; filePath?: string; lines: string[]; error?: string }>;
+      checkClientLog: () => Promise<LeoClientLogCheck>;
+      setClientLogPath: (path: string) => Promise<{ ok: boolean; error?: string; path?: string }>;
+      getLastDetection: () => Promise<LeoLastDetection>;
     };
   }
 

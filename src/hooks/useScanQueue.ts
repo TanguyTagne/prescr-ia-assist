@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -13,25 +13,17 @@ export interface ScanEvent {
   created_at: string;
   processed_at: string | null;
   ean_code?: string | null;
-  wwks2_source_id?: number | null;
   input_data?: any;
 }
 
 /**
  * Realtime subscription to the pharmacy's `scan_queue`.
  *
- * WWKS2 multi-till routing:
- *   - If `asclion.config.json` defines a `wwks2SourceId` on this PC (typically
- *     LEO21, LEO22, …), only events with the matching `wwks2_source_id` are
- *     surfaced — plus events with `wwks2_source_id IS NULL` (broadcast
- *     fallback when the watcher couldn't extract the till id).
- *   - If no `wwks2SourceId` is configured (web preview, demo, single-till
- *     setups), every event is delivered (no behavioural regression).
- *
- * When a robot dispense (`source === 'lgo_robot'`) reaches this till, it is
- * also re-emitted as the same DOM event used by HID scans, so the existing
- * lookup pipeline (analyse-prescription / PC suggestions) handles it without
- * duplicate logic on the consumer side.
+ * Note (29/06/2026) : le routing robot par caisse passe désormais 100% en
+ * local via `LeoClientAppLog.txt` (cf. electron/leoWatcher.js). Cette
+ * souscription Supabase reste utile pour les autres sources (scans
+ * ordonnance, intégrations LGO non-robot), mais elle n'est plus filtrée
+ * par caisse — chaque PC reçoit l'ensemble des événements de la pharmacie.
  */
 export function useScanQueue() {
   const { user } = useAuth();
@@ -39,17 +31,6 @@ export function useScanQueue() {
   const [scanHistory, setScanHistory] = useState<ScanEvent[]>([]);
   const [isListening, setIsListening] = useState(false);
   const [pharmacyId, setPharmacyId] = useState<string | null>(null);
-  const wwksSourceRef = useRef<number | null>(null);
-
-  // Load the local till id from Electron config (no-op in web).
-  useEffect(() => {
-    const api = typeof window !== "undefined" ? window.electronAPI : undefined;
-    if (!api?.config?.get) { wwksSourceRef.current = null; return; }
-    api.config.get().then((cfg) => {
-      const v = cfg?.wwks2SourceId;
-      wwksSourceRef.current = typeof v === "number" ? v : null;
-    }).catch(() => { wwksSourceRef.current = null; });
-  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -67,13 +48,6 @@ export function useScanQueue() {
     if (!pharmacyId) return;
     setIsListening(true);
 
-    const matchesThisTill = (scan: ScanEvent): boolean => {
-      const local = wwksSourceRef.current;
-      if (local == null) return true; // no till configured → accept everything
-      const v = scan.wwks2_source_id;
-      return v == null || v === local;
-    };
-
     const channel = supabase
       .channel(`scan_queue_${pharmacyId}`)
       .on(
@@ -81,18 +55,12 @@ export function useScanQueue() {
         { event: "INSERT", schema: "public", table: "scan_queue", filter: `pharmacy_id=eq.${pharmacyId}` },
         (payload) => {
           const scan = payload.new as ScanEvent;
-          if (!matchesThisTill(scan)) return;
           setLatestScan(scan);
           setScanHistory((prev) => [scan, ...prev].slice(0, 50));
 
-          // Robot dispense → replay as a local barcode so the existing pipeline
-          // (lookup CIP → recommendations) fires without duplicate logic.
-          if (scan.source === "lgo_robot" && scan.ean_code) {
-            window.dispatchEvent(new CustomEvent("asclion:global-barcode", {
-              detail: { ean: scan.ean_code, at: Date.now(), source: "lgo_robot", wwks2SourceId: scan.wwks2_source_id ?? null },
-            }));
-          }
-
+          // Le routing robot par caisse est désormais 100% local. On ne
+          // re-dispatch PAS les events `lgo_robot` venus de Realtime — la
+          // caisse qui a délivré les voit déjà via son propre LeoClientAppLog.
           if (scan.status === "completed") {
             const isPrescription = scan.scan_type === "prescription";
             const count = scan.result?.suggestions?.length || 0;
@@ -120,7 +88,6 @@ export function useScanQueue() {
         { event: "UPDATE", schema: "public", table: "scan_queue", filter: `pharmacy_id=eq.${pharmacyId}` },
         (payload) => {
           const scan = payload.new as ScanEvent;
-          if (!matchesThisTill(scan)) return;
           setLatestScan(scan);
           setScanHistory((prev) => prev.map((s) => (s.id === scan.id ? scan : s)));
 
