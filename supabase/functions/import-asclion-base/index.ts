@@ -410,7 +410,12 @@ serve(async (req) => {
       const limit = parseInt(url.searchParams.get("limit") ?? String(bodyJson.limit ?? 1000), 10);
 
       const { data: blob, error: stErr } = await supabase.storage.from(BUCKET).download(PHRASES_FILE);
-      if (stErr || !blob) throw new Error(`Fichier phrases introuvable: ${stErr?.message ?? "blob null"}`);
+      if (stErr || !blob) {
+        return new Response(JSON.stringify({
+          ok: false,
+          error: `Fichier ${PHRASES_FILE} absent du bucket imports. Utilise d'abord le bouton "0bis. Pousser phrases conseil" pour uploader le CSV.`,
+        }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
+      }
       const buf = new Uint8Array(await blob.arrayBuffer());
       const text = decodeCsvBytes(buf);
       const rows = parseCsv(text);
