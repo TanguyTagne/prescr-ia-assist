@@ -83,10 +83,41 @@ function productNamesMatch(a?: string | null, b?: string | null): boolean {
   return left === right || left.startsWith(right) || right.startsWith(left);
 }
 
+type CuratedHint = { pertinence?: string; phrase_conseil?: string };
+
+function cleanHintValue(value?: string | null): string | null {
+  const cleaned = (value || "").trim();
+  return cleaned.length > 0 ? cleaned : null;
+}
+
+function fallbackPertinence(rec: { pertinence?: string; categorie?: string; description?: string }): string {
+  return (
+    cleanHintValue(rec.pertinence) ||
+    cleanHintValue(rec.categorie) ||
+    cleanHintValue(rec.description) ||
+    "Conseil associé"
+  );
+}
+
+function fallbackCounselPhrase(pertinence: string, productName: string): string {
+  const k = normalizeLookupKey(pertinence);
+  if (k.includes("effet")) return "limite l’effet indésirable du traitement";
+  if (k.includes("securit") || k.includes("alerte")) return "renforce la sécurité du traitement";
+  if (k.includes("surveil")) return "facilite le suivi du traitement";
+  if (k.includes("synerg") || k.includes("effic")) return "améliore l’efficacité du conseil";
+  if (k.includes("prevent")) return "aide à prévenir la gêne";
+  if (k.includes("confort")) return "améliore le confort du patient";
+  if (k.includes("accompagn")) return "accompagne la prise du traitement";
+  const product = normalizeLookupKey(productName);
+  if (product.includes("probiot")) return "restaure la flore intestinale";
+  if (product.includes("solaire") || product.includes("spf")) return "protège la peau sensibilisée";
+  return "complète le conseil au comptoir";
+}
+
 const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsProps) => {
   const { t } = useI18n();
   const [orderedItems, setOrderedItems] = useState<Map<string, "manual_click" | "hid_auto">>(new Map());
-  const [curatedHints, setCuratedHints] = useState<Map<string, { pertinence?: string; phrase_conseil?: string }>>(new Map());
+  const [curatedHints, setCuratedHints] = useState<Map<string, CuratedHint>>(new Map());
   const [expandedConseils, setExpandedConseils] = useState<Set<number>>(new Set());
   const [conseilGlobalOpen, setConseilGlobalOpen] = useState(false);
   const { recordFeedback } = usePcFeedback();
@@ -255,7 +286,7 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
     }
 
     (async () => {
-      const next = new Map<string, { pertinence?: string; phrase_conseil?: string }>();
+      const next = new Map<string, CuratedHint>();
 
       for (const med of medsToEnrich) {
         const medKey = normalizeLookupKey(med.nom);
@@ -284,8 +315,8 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
           if (!match) continue;
 
           const isPc1 = productNamesMatch(match.pc_1, rec.produit);
-          const pertinence = (isPc1 ? match.pertinence_pc1 : match.pertinence_pc2)?.trim() || undefined;
-          const phrase_conseil = (isPc1 ? match.phrase_conseil_pc1 : match.phrase_conseil_pc2)?.trim() || undefined;
+          const pertinence = cleanHintValue(isPc1 ? match.pertinence_pc1 : match.pertinence_pc2) || undefined;
+          const phrase_conseil = cleanHintValue(isPc1 ? match.phrase_conseil_pc1 : match.phrase_conseil_pc2) || undefined;
           if (pertinence || phrase_conseil) {
             next.set(recommendationKey(med.nom, rec.produit), { pertinence, phrase_conseil });
           }
@@ -315,8 +346,8 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
           );
           if (!hit) continue;
           const isPc1 = productNamesMatch(hit.pc_1, pcName);
-          const pertinence = havePert || (isPc1 ? hit.pertinence_pc1 : hit.pertinence_pc2)?.trim() || undefined;
-          const phrase_conseil = havePhr || (isPc1 ? hit.phrase_conseil_pc1 : hit.phrase_conseil_pc2)?.trim() || undefined;
+          const pertinence = havePert || cleanHintValue(isPc1 ? hit.pertinence_pc1 : hit.pertinence_pc2) || undefined;
+          const phrase_conseil = havePhr || cleanHintValue(isPc1 ? hit.phrase_conseil_pc1 : hit.phrase_conseil_pc2) || undefined;
           if (pertinence || phrase_conseil) {
             next.set(key, { pertinence, phrase_conseil });
           }
@@ -609,8 +640,14 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
                 const orderSource = getOrderSource(med.nom, rec.produit);
                 const isAuto = orderSource === "hid_auto";
                 const enriched = curatedHints.get(recommendationKey(med.nom, rec.produit));
-                const pertinence = rec.pertinence?.trim() || enriched?.pertinence || null;
-                const shortHint = rec.phrase_conseil?.trim() || enriched?.phrase_conseil || null;
+                const pertinence =
+                  cleanHintValue(rec.pertinence) ||
+                  cleanHintValue(enriched?.pertinence) ||
+                  fallbackPertinence(rec);
+                const shortHint =
+                  cleanHintValue(rec.phrase_conseil) ||
+                  cleanHintValue(enriched?.phrase_conseil) ||
+                  fallbackCounselPhrase(pertinence, rec.produit);
                 const dotColors = ["bg-primary", "bg-blue-400", "bg-amber-400"];
                 return (
                   <div key={j} className="flex items-center gap-1">
