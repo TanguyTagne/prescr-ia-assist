@@ -635,32 +635,8 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
             </div>
           )}
         </div>
-
-        <div className="flex items-center gap-1 shrink-0">
-          {/* Connect scanner button (folder picker) */}
-          {isFolderApiSupported && !isWatching && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-6 text-[10px] gap-1 px-2"
-              onClick={startWatching}
-            >
-              <FolderSearch className="h-3 w-3" />
-              Connecter scanner
-            </Button>
-          )}
-          {/* Paramètres */}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-6 text-[10px] gap-1 text-muted-foreground hover:text-foreground px-1.5"
-            onClick={() => { setShowSetup(true); loadRobotConfig(); loadLgoConfig(); }}
-            aria-label="Paramètres Asclion"
-          >
-            <Settings className="h-3 w-3" />
-          </Button>
-        </div>
       </div>
+
 
 
       {/* Latest scan notification */}
