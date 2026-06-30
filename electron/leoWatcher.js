@@ -85,11 +85,15 @@ function checkClientLog(filePath) {
 // Watcher (tail) — démarre au lancement d'Asclion, mode dégradé si le fichier
 // n'existe pas (re-tente périodiquement, ne crashe jamais).
 // ─────────────────────────────────────────────────────────────────────────────
-function startLeoClientWatcher({ filePath, onDispense, log }) {
+function startLeoClientWatcher({ filePath, onDispense, log, mode }) {
   if (!filePath || typeof onDispense !== "function") {
     throw new Error("startLeoClientWatcher: filePath and onDispense are required");
   }
   const dbg = typeof log === "function" ? log : () => {};
+
+  // mode "leo" (par défaut) : regex stricte Léo. mode "generic" : fallback FR CIP13.
+  // "auto" : essaie Léo, sinon générique sur la même ligne.
+  const watchMode = mode || "auto";
 
   let offset = 0;
   let pending = "";
@@ -117,9 +121,15 @@ function startLeoClientWatcher({ filePath, onDispense, log }) {
   }
 
   function processLine(line) {
-    if (!line || line.indexOf(CIP13_HINT) === -1) return;
-    const m = line.match(CIP13_RE);
-    if (m && m[1]) emit(m[1]);
+    if (!line) return;
+    if (watchMode !== "generic" && line.indexOf(DEFAULT_CIP13_HINT) !== -1) {
+      const m = line.match(DEFAULT_CIP13_RE);
+      if (m && m[1]) { emit(m[1]); return; }
+    }
+    if (watchMode === "generic" || watchMode === "auto") {
+      const m2 = line.match(GENERIC_FR_CIP13_RE);
+      if (m2 && m2[1]) emit(m2[1]);
+    }
   }
 
   function processChunk(chunk) {
