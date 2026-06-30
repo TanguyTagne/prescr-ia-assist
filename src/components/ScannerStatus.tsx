@@ -624,16 +624,7 @@ export const ScannerStatus = ({ onViewResult, onNewFile, onBarcodeScan }: Scanne
                 Stop
               </Button>
             </div>
-          ) : (
-            <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-              {isListening ? (
-                <Wifi className="h-3 w-3 text-green-500" />
-              ) : (
-                <WifiOff className="h-3 w-3" />
-              )}
-              <span>Scanner prêt</span>
-            </div>
-          )}
+          ) : null}
         </div>
       </div>
 
