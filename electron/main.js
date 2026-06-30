@@ -1728,8 +1728,11 @@ function startLeoDispenseWatcher() {
   if (!leoWatcher || leoWatcherStop) return;
   try {
     const filePath = leoWatcher.resolveLeoClientLogPath(app);
+    const cfg = (leoWatcher.getConfig && leoWatcher.getConfig(app)) || {};
+    const mode = typeof cfg.robotLogMode === "string" ? cfg.robotLogMode : "auto";
     leoWatcherStop = leoWatcher.startLeoClientWatcher({
       filePath,
+      mode,
       log: (m) => devLog(m),
       onDispense: (payload) => {
         const { cip13, source, timestamp } = payload || {};
