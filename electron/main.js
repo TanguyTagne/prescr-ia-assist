@@ -1828,6 +1828,45 @@ ipcMain.handle("leo:get-last-detection", () => ({
   timestamp: lastDetection.timestamp,
 }));
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Wizard générique « Détecter automatiquement le log »
+// Snapshot des .log/.txt du PC → délivrance robot → diff + CIP → classement.
+// Marche pour Léo, Winpharma, LGPI, Smart-Rx… sans codage en dur du LGO.
+// ─────────────────────────────────────────────────────────────────────────────
+function sendScanEvent(payload) {
+  ensureWindowAlive();
+  if (!mainWindow) return;
+  try { mainWindow.webContents.send("leo:scan-event", payload); }
+  catch (e) { devWarn("[LOG-SCAN] event send failed:", e && e.message); }
+}
+
+ipcMain.handle("leo:scan-start", (_e, args) => {
+  if (!logScanner) return { ok: false, error: "log scanner module unavailable" };
+  const { durationMs, extraRoots } = args || {};
+  try {
+    return logScanner.startScan({
+      durationMs,
+      extraRoots,
+      log: (m) => devLog(m),
+      onEvent: (payload) => sendScanEvent(payload),
+    });
+  } catch (e) {
+    return { ok: false, error: e && e.message };
+  }
+});
+
+ipcMain.handle("leo:scan-stop", () => {
+  if (!logScanner) return { ok: false, error: "log scanner module unavailable" };
+  try { return logScanner.stopScan(); }
+  catch (e) { return { ok: false, error: e && e.message }; }
+});
+
+ipcMain.handle("leo:scan-status", () => {
+  if (!logScanner) return { running: false, error: "log scanner module unavailable" };
+  try { return logScanner.statusScan(); }
+  catch (e) { return { running: false, error: e && e.message }; }
+});
+
 // ────────────────────────────────────────────────────────────
 // WebHID init script — injected into the renderer after every
 // page load (executeJavaScript with userGesture:true).
