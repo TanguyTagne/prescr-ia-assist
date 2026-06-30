@@ -62,6 +62,33 @@ declare global {
     timestamp: number | null;
   }
 
+  interface LogScanCandidate {
+    path: string;
+    sizeBefore: number;
+    sizeAfter: number;
+    sizeDelta: number;
+    mtimeMs: number;
+    cipMatches: string[];
+    frCipMatches: string[];
+    snippet: string;
+    score: number;
+  }
+
+  interface LogScanResult {
+    phase: "done";
+    reason: string;
+    fileCount: number;
+    rootCount: number;
+    roots: string[];
+    candidates: LogScanCandidate[];
+    candidatesWithCip: number;
+  }
+
+  type LogScanEvent =
+    | { phase: "discover" }
+    | { phase: "ready"; deadlineMs: number; fileCount: number; rootCount: number }
+    | LogScanResult;
+
   interface ElectronAPI {
     isDesktop: true;
     platform: string;
