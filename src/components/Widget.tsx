@@ -6,7 +6,7 @@ import AnalysisSkeleton from "@/components/AnalysisSkeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import WwksSourceWizard from "@/components/WwksSourceWizard";
+import LeoRobotStatusPanel from "@/components/LeoRobotStatusPanel";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -907,11 +907,11 @@ const WidgetSettings = ({ onClose, onSignOut }: { onClose: () => void; onSignOut
         <CardHeader className="pb-2 pt-4 px-4">
           <CardTitle className="text-sm flex items-center gap-2">
             <Settings className="h-4 w-4 text-primary" />
-            Robot automate — identifiant caisse (WWKS2)
+            Robot automate (Léo)
           </CardTitle>
         </CardHeader>
         <CardContent className="px-4 pb-4">
-          <WwksSourceWizard />
+          <LeoRobotStatusPanel />
         </CardContent>
       </Card>
 

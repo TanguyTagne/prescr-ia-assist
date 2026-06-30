@@ -35,8 +35,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
     return () => ipcRenderer.removeListener("global-barcode", handler);
   },
 
-  // Receive a robot Leo (Astera) dispense event — tailed from the LGO log file.
-  // Payload: { cip: string, at: number, wwks2SourceId: number|null, messageId: string|null }
+  // Receive a robot Leo (Astera) dispense event — tailed from the LOCAL
+  // LeoClientAppLog.txt of this till.
+  // Payload: { cip13: string, source: 'lgo_robot', timestamp: number }
   onRobotDispensed: (callback) => {
     const handler = (_e, payload) => callback(payload);
     ipcRenderer.on("robot-dispensed", handler);
@@ -49,10 +50,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
     set: (patch) => ipcRenderer.invoke("config:set", patch),
   },
 
-  // ── WWKS2 till detection + Leo log tail (used by the Settings wizard) ────
+  // ── Leo client log watcher (status + chemin personnalisé) ────────────────
   leo: {
-    detectSource: () => ipcRenderer.invoke("leo:detect-source"),
-    readLogTail: (lines) => ipcRenderer.invoke("leo:read-log-tail", { lines }),
+    checkClientLog: () => ipcRenderer.invoke("leo:check-client-log"),
+    setClientLogPath: (filePath) => ipcRenderer.invoke("leo:set-client-log-path", filePath),
+    getLastDetection: () => ipcRenderer.invoke("leo:get-last-detection"),
   },
 
   // Picture-in-Picture (always-on-top + compact mode)
