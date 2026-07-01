@@ -1,19 +1,20 @@
-// lgo-delivery-webhook — endpoint optionnel pour pousser une délivrance LGO
-// dans scan_queue. Tout passe normalement en local (IP+port, COM, sniff
-// loopback), donc PAS d'auth HMAC : seul `pharmacy_id` (UUID) + `cip` valide
-// sont requis. Le pharmacy_id agit comme jeton d'opacité ; un CIP invalide ou
-// une pharmacie inconnue est rejeté.
+// lgo-delivery-webhook — endpoint pour pousser une délivrance LGO dans
+// scan_queue. Authentification par clé API scanner (header `x-scanner-key`)
+// identique à scanner-webhook : la clé identifie la pharmacie ; le body ne peut
+// PAS surcharger pharmacy_id.
 //
 // Body attendu:
-//   { "pharmacy_id": "<uuid>", "cip": "<7-13 digits>",
+//   { "cip": "<7-13 digits>",
 //     "source"?: string, "timestamp"?: ISO, "metadata"?: object }
+// Header requis:
+//   x-scanner-key: <api_key provisionnée dans pharmacy_scanner_keys>
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-scanner-key",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
@@ -28,6 +29,11 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   if (req.method !== "POST") return err(405, "Method not allowed");
 
+  const apiKey = req.headers.get("x-scanner-key")?.trim();
+  if (!apiKey || apiKey.length < 16) {
+    return err(401, "Missing or invalid x-scanner-key");
+  }
+
   let payload: Record<string, unknown>;
   try {
     payload = await req.json();
@@ -35,13 +41,9 @@ serve(async (req) => {
     return err(400, "Invalid JSON");
   }
 
-  const pharmacy_id = String(payload.pharmacy_id ?? "").trim();
   const cipRaw = String(payload.cip ?? "").trim();
   const source = String(payload.source ?? "lgo").trim().slice(0, 32);
 
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(pharmacy_id)) {
-    return err(400, "Invalid pharmacy_id");
-  }
   if (!/^\d{7,13}$/.test(cipRaw)) {
     return err(400, "Invalid CIP");
   }
@@ -51,13 +53,16 @@ serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
 
-  const { data: pharm, error: pharmErr } = await supabase
-    .from("pharmacies")
-    .select("id")
-    .eq("id", pharmacy_id)
+  // Verified pharmacy_id derived from the scanner key — never trust body input.
+  const { data: keyRow, error: keyErr } = await supabase
+    .from("pharmacy_scanner_keys")
+    .select("pharmacy_id, active")
+    .eq("api_key", apiKey)
     .maybeSingle();
-  if (pharmErr) return err(500, pharmErr.message);
-  if (!pharm) return err(404, "Pharmacy not found");
+  if (keyErr) return err(500, keyErr.message);
+  if (!keyRow || !keyRow.active) return err(403, "Invalid or inactive scanner key");
+
+  const pharmacy_id = keyRow.pharmacy_id as string;
 
   const { data: queued, error: qErr } = await supabase
     .from("scan_queue")
