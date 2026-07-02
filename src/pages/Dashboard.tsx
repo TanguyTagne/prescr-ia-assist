@@ -32,52 +32,83 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadDashboardData();
-  }, []);
+    if (user?.id) loadDashboardData();
+  }, [user?.id]);
 
   const loadDashboardData = async () => {
     try {
+      // Resolve the current user's pharmacy_id so KPIs are scoped correctly
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("pharmacy_id")
+        .eq("id", user!.id)
+        .maybeSingle();
+
+      const pharmacyId = profile?.pharmacy_id;
+      if (!pharmacyId) {
+        setLoading(false);
+        return;
+      }
+
       const [
-        ordRes,
+        analysesRes,
         widgetRes,
-        conseilRes,
-        suggRes,
-        recentRes,
+        feedbackAllRes,
+        acceptedRes,
+        metricsRows,
+        recentAnalyses,
         latencyRows,
       ] = await Promise.all([
+        // Ordonnances analysées → source de vérité : analysis_history
+        supabase
+          .from("analysis_history")
+          .select("id", { count: "exact", head: true })
+          .eq("pharmacy_id", pharmacyId),
+        // Widget affiché (analytics_events, si consentement)
         supabase
           .from("analytics_events")
           .select("id", { count: "exact", head: true })
-          .eq("event_type", "ordonnance_analyzed"),
-        supabase
-          .from("analytics_events")
-          .select("id", { count: "exact", head: true })
+          .eq("pharmacy_id", pharmacyId)
           .eq("event_type", "widget_shown"),
+        // Clics "Voir conseil" → toutes interactions de feedback
         supabase
-          .from("analytics_events")
+          .from("pc_feedback")
           .select("id", { count: "exact", head: true })
-          .eq("event_type", "conseil_clicked"),
+          .eq("pharmacy_id", pharmacyId),
+        // Suggestions utilisées → PC acceptés
         supabase
-          .from("analytics_events")
+          .from("pc_feedback")
           .select("id", { count: "exact", head: true })
-          .eq("event_type", "suggestion_used"),
+          .eq("pharmacy_id", pharmacyId)
+          .eq("action", "accepted"),
+        // Fallback complémentaire pour la conversion (times_sold)
+        fetchAll<{ times_sold: number }>(
+          () =>
+            supabase
+              .from("recommendation_metrics")
+              .select("times_sold")
+              .eq("pharmacy_id", pharmacyId),
+          1000,
+          50_000
+        ),
         supabase
-          .from("analytics_events")
-          .select("*")
+          .from("analysis_history")
+          .select("id, created_at, medicaments, suggestions_count")
+          .eq("pharmacy_id", pharmacyId)
           .order("created_at", { ascending: false })
           .limit(20),
         fetchAll<{ metadata: any }>(
           () =>
             supabase
-              .from("analytics_events")
+              .from("analysis_history")
               .select("metadata")
-              .eq("event_type", "ordonnance_analyzed"),
+              .eq("pharmacy_id", pharmacyId),
           1000,
           50_000
         ),
       ]);
 
-      const responseTimes = latencyRows
+      const responseTimes = (latencyRows || [])
         .map((e) =>
           Number(
             (e.metadata as any)?.response_time ||
@@ -87,11 +118,18 @@ const Dashboard = () => {
         )
         .filter((n) => n > 0);
 
+      const acceptedCount = (acceptedRes.count as number) || 0;
+      const soldFromMetrics = (metricsRows || []).reduce(
+        (s, m) => s + (Number(m.times_sold) || 0),
+        0
+      );
+
       setKpis({
-        ordonnancesDetected: (ordRes.count as number) || 0,
-        widgetShown: (widgetRes.count as number) || 0,
-        conseilClicks: (conseilRes.count as number) || 0,
-        suggestionsUsed: (suggRes.count as number) || 0,
+        ordonnancesDetected: (analysesRes.count as number) || 0,
+        widgetShown:
+          (widgetRes.count as number) || (analysesRes.count as number) || 0,
+        conseilClicks: (feedbackAllRes.count as number) || 0,
+        suggestionsUsed: Math.max(acceptedCount, soldFromMetrics),
         avgResponseTime:
           responseTimes.length > 0
             ? Math.round(
@@ -100,13 +138,20 @@ const Dashboard = () => {
             : 0,
       });
 
-      setRecentEvents((recentRes.data as any[]) || []);
+      setRecentEvents(
+        (recentAnalyses.data as any[])?.map((a) => ({
+          id: a.id,
+          event_type: "ordonnance_analyzed",
+          created_at: a.created_at,
+        })) || []
+      );
     } catch (e) {
       console.error("Dashboard load error:", e);
     } finally {
       setLoading(false);
     }
   };
+
 
   const kpiCards = [
     { label: "Ordonnances analysées", value: kpis.ordonnancesDetected, icon: Activity, color: "text-primary" },
