@@ -40,7 +40,30 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Forbidden - admin only" }), { status: 403, headers: corsHeaders });
     }
 
-    const { email, scope } = await req.json();
+    const { email, scope, pharmacy_id } = await req.json();
+
+    if (pharmacy_id) {
+      // Sign out every user attached to the given pharmacy
+      const { data: profiles, error: profErr } = await supabaseAdmin
+        .from("profiles")
+        .select("id")
+        .eq("pharmacy_id", pharmacy_id);
+      if (profErr) {
+        return new Response(JSON.stringify({ error: profErr.message }), { status: 500, headers: corsHeaders });
+      }
+      let count = 0;
+      for (const p of (profiles || [])) {
+        try {
+          await supabaseAdmin.auth.admin.signOut((p as any).id, "global");
+          count++;
+        } catch (e) {
+          console.error("signOut failed for", (p as any).id, e);
+        }
+      }
+      return new Response(JSON.stringify({ success: true, message: `${count} user(s) signed out for pharmacy ${pharmacy_id}` }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     if (scope === "all") {
       // Sign out ALL users by listing them and signing each out
