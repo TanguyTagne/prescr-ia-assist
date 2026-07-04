@@ -415,6 +415,32 @@ const PharmaciesTab = ({ pharmacies, onRefresh }: PharmaciesTabProps) => {
                   </Button>
                 )}
 
+                {(status === "paused" || status === "disabled") && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs gap-1"
+                    disabled={isDisabled}
+                    onClick={async () => {
+                      setLoading(pharm.id);
+                      try {
+                        const { data, error } = await supabase.functions.invoke("force-logout", {
+                          body: { pharmacy_id: pharm.id },
+                        });
+                        if (error) throw error;
+                        toast.success(data?.message || "Postes déconnectés");
+                        reloadAccountCounts();
+                      } catch (e: any) {
+                        toast.error(e.message || "Échec de la déconnexion");
+                      } finally {
+                        setLoading(null);
+                      }
+                    }}
+                  >
+                    Déconnecter les postes
+                  </Button>
+                )}
+
                 {status !== "disabled" && (
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
