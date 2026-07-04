@@ -167,10 +167,28 @@ const PharmaciesTab = ({ pharmacies, onRefresh }: PharmaciesTabProps) => {
 
       if (error) throw error;
 
+      // On suspension / désactivation : forcer la déconnexion de tous les
+      // postes déjà connectés à cette pharmacie pour couper l'usage en cours.
+      if (newStatus === "paused" || newStatus === "disabled") {
+        try {
+          const { data: forceRes, error: forceErr } = await supabase.functions.invoke("force-logout", {
+            body: { pharmacy_id: pharmacyId },
+          });
+          if (forceErr) {
+            console.error("force-logout error:", forceErr);
+            toast.warning("Statut mis à jour, mais échec de la déconnexion forcée");
+          } else if (forceRes?.message) {
+            toast.info(forceRes.message);
+          }
+        } catch (e: any) {
+          console.error("force-logout invoke failed:", e);
+        }
+      }
+
       const labels: Record<string, string> = {
         active: "Pharmacie réactivée",
-        paused: "Accès mis en pause",
-        disabled: "Accès supprimé",
+        paused: "Accès mis en pause — utilisateurs déconnectés",
+        disabled: "Accès supprimé — utilisateurs déconnectés",
       };
       toast.success(labels[newStatus] || "Statut mis à jour");
       onRefresh();
