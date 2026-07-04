@@ -167,10 +167,28 @@ const PharmaciesTab = ({ pharmacies, onRefresh }: PharmaciesTabProps) => {
 
       if (error) throw error;
 
+      // On suspension / désactivation : forcer la déconnexion de tous les
+      // postes déjà connectés à cette pharmacie pour couper l'usage en cours.
+      if (newStatus === "paused" || newStatus === "disabled") {
+        try {
+          const { data: forceRes, error: forceErr } = await supabase.functions.invoke("force-logout", {
+            body: { pharmacy_id: pharmacyId },
+          });
+          if (forceErr) {
+            console.error("force-logout error:", forceErr);
+            toast.warning("Statut mis à jour, mais échec de la déconnexion forcée");
+          } else if (forceRes?.message) {
+            toast.info(forceRes.message);
+          }
+        } catch (e: any) {
+          console.error("force-logout invoke failed:", e);
+        }
+      }
+
       const labels: Record<string, string> = {
         active: "Pharmacie réactivée",
-        paused: "Accès mis en pause",
-        disabled: "Accès supprimé",
+        paused: "Accès mis en pause — utilisateurs déconnectés",
+        disabled: "Accès supprimé — utilisateurs déconnectés",
       };
       toast.success(labels[newStatus] || "Statut mis à jour");
       onRefresh();
@@ -394,6 +412,32 @@ const PharmaciesTab = ({ pharmacies, onRefresh }: PharmaciesTabProps) => {
                   >
                     <Play className="h-3 w-3" />
                     Réactiver
+                  </Button>
+                )}
+
+                {(status === "paused" || status === "disabled") && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs gap-1"
+                    disabled={isDisabled}
+                    onClick={async () => {
+                      setLoading(pharm.id);
+                      try {
+                        const { data, error } = await supabase.functions.invoke("force-logout", {
+                          body: { pharmacy_id: pharm.id },
+                        });
+                        if (error) throw error;
+                        toast.success(data?.message || "Postes déconnectés");
+                        reloadAccountCounts();
+                      } catch (e: any) {
+                        toast.error(e.message || "Échec de la déconnexion");
+                      } finally {
+                        setLoading(null);
+                      }
+                    }}
+                  >
+                    Déconnecter les postes
                   </Button>
                 )}
 

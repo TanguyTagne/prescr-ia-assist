@@ -1475,7 +1475,7 @@ serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // ====== QUOTA CHECK (server-side, atomic, multi-PC safe) ======
+    // ====== PHARMACY STATUS + QUOTA CHECK (server-side, atomic, multi-PC safe) ======
     try {
       const userId = claimsData?.claims?.sub;
       if (!userId) throw new Error("__skip_quota__");
@@ -1486,6 +1486,25 @@ serve(async (req) => {
         .maybeSingle();
       const pharmacyIdForQuota = (profile as any)?.pharmacy_id;
       if (pharmacyIdForQuota) {
+        // Block suspended/disabled pharmacies at the API layer
+        const { data: pharm } = await supabase
+          .from("pharmacies")
+          .select("status")
+          .eq("id", pharmacyIdForQuota)
+          .maybeSingle();
+        const pharmStatus = (pharm as any)?.status;
+        if (pharmStatus === "paused" || pharmStatus === "disabled") {
+          return new Response(
+            JSON.stringify({
+              error: "PHARMACY_SUSPENDED",
+              message: pharmStatus === "paused"
+                ? "L'accès de cette pharmacie a été mis en pause. Contactez Asclion."
+                : "L'accès de cette pharmacie a été désactivé. Contactez Asclion.",
+            }),
+            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          );
+        }
+
         const { data: quotaRes, error: quotaErr } = await supabase.rpc("check_and_increment_quota", {
           _pharmacy_id: pharmacyIdForQuota,
           _quota_type: "analysis",
@@ -1509,7 +1528,7 @@ serve(async (req) => {
         }).then(() => {}, (e: any) => console.error("ai_call quota error:", e));
       }
     } catch (qErr) {
-      console.error("Quota check failed (non-blocking):", qErr);
+      console.error("Quota / status check failed (non-blocking):", qErr);
     }
 
     // Parse blocked products from basket context (anti-loop)
