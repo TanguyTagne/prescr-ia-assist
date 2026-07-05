@@ -148,6 +148,12 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
   const mountedAtRef = useRef<number>(Date.now());
   // EAN auto-détectés depuis le dernier reset, pour permettre l'annulation par re-scan
   const autoDetectedEansRef = useRef<Set<string>>(new Set());
+  // Dernier scan qui n'a matché AUCUN PC suggéré. Si le pharmacien accepte
+  // manuellement un PC dans les 30s qui suivent, on apprend l'association
+  // EAN↔PC dans pc_cip_mapping (source=learned_from_click) pour que le
+  // même scan soit auto-attribué la prochaine fois. Objectif : 100% tracking.
+  const lastUnmatchedScanRef = useRef<{ ean: string; at: number } | null>(null);
+  const LEARN_WINDOW_MS = 30_000;
 
   useEffect(() => {
     mountedAtRef.current = Date.now();
@@ -447,7 +453,12 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
         }
       }
 
-      if (!match) return;
+      if (!match) {
+        // On mémorise l'EAN non attribué : si le pharmacien clique manuellement
+        // sur un PC dans les 30s, on apprendra l'association.
+        lastUnmatchedScanRef.current = { ean: detail.ean, at: Date.now() };
+        return;
+      }
 
       // Toggle anti faux-positif : si l'EAN a déjà été auto-détecté dans la
       // fenêtre, le re-scan annule l'auto-acceptation (retour rayon, refus client…)
@@ -559,6 +570,39 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
       supabase.functions.invoke("lgo-push-cart", {
         body: { products: [{ name: produit, category: categorie }] },
       }).catch(() => {});
+
+      // 🎯 Apprentissage automatique : si un EAN non attribué a été scanné
+      // dans les 30s précédant ce clic, on enregistre l'association pour
+      // que le prochain scan identique soit auto-détecté (tracking 100%).
+      const pending = lastUnmatchedScanRef.current;
+      if (pending && Date.now() - pending.at < LEARN_WINDOW_MS) {
+        lastUnmatchedScanRef.current = null;
+        const label = (produit || "").trim();
+        const norm = normalizeLookupKey(label);
+        if (label && norm && pending.ean) {
+          void (supabase as any)
+            .from("pc_cip_mapping")
+            .insert(
+              {
+                pc_label: label,
+                pc_label_norm: norm,
+                categorie: categorie || null,
+                code: pending.ean,
+                type_code: pending.ean.length === 13 ? "ean13" : "cip",
+                source: "learned_from_click",
+                statut: "pending",
+                occurrences: 1,
+              },
+              { count: "exact" }
+            )
+            .then(({ error }: any) => {
+              if (error && !/duplicate|unique/i.test(error.message || "")) {
+                console.warn("[learn-pc-cip] insert failed:", error.message);
+              }
+            });
+        }
+      }
+
       toast.success(`${produit} ${t("results.acceptedToast")}`);
     } else {
       // Auto-détecté via scan douchette : toast discret 1.5s

@@ -17,7 +17,10 @@ export const usePcFeedback = () => {
     detectionSource: "manual_click" | "hid_auto" | "lgo_sale" | "inferred" = "manual_click"
   ) => {
 
-    if (!user) return;
+    if (!user) {
+      console.warn("[pc-feedback] utilisateur non connecté — action non trackée dans les KPIs");
+      return;
+    }
 
     try {
       const { data: profile } = await supabase
@@ -26,7 +29,10 @@ export const usePcFeedback = () => {
         .eq("id", user.id)
         .single();
 
-      if (!profile?.pharmacy_id) return;
+      if (!profile?.pharmacy_id) {
+        console.warn("[pc-feedback] pharmacy_id manquant — action non trackée dans les KPIs");
+        return;
+      }
 
       const registerId = localStorage.getItem(STORAGE_KEY) || null;
 
