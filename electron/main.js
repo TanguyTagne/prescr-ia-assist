@@ -577,21 +577,63 @@ ipcMain.handle("attention:bring-to-front", () => {
     // Renderer confirmed the scan deserves attention — clear the show-gate
     // (set by ensureWindowAlive when the window was recreated mid-scan).
     suppressShowOnReady = false;
-    if (mainWindow.isMinimized()) mainWindow.restore();
+
+    // ── Robust foreground on Windows ──────────────────────────────────
+    // Windows blocks SetForegroundWindow when another process owns the
+    // foreground and there has been no recent user input in OUR process
+    // (typical after a double-click on the LGO). Result: focus() silently
+    // fails and Asclion stays hidden behind the LGO. We work around it
+    // with three complementary tricks, applied together:
+    //   1. minimize()+restore() — a restore from minimized is one of the
+    //      very few operations Windows allows to steal the foreground,
+    //      even without recent input in our process.
+    //   2. setAlwaysOnTop(true, "screen-saver") — highest z-order level,
+    //      guarantees the window is visually on top even if focus stays
+    //      on the LGO.
+    //   3. app.focus({ steal: true }) + moveTop() + focus() — best-effort
+    //      focus grab, retried a few times over the first 400ms because
+    //      Windows sometimes ignores the first call right after a click.
+    const wasVisible = mainWindow.isVisible() && !mainWindow.isMinimized();
+    if (!wasVisible) {
+      // Minimize→restore is the reliable "steal foreground" trick on Win.
+      try {
+        mainWindow.minimize();
+      } catch { /* noop */ }
+      try {
+        mainWindow.restore();
+      } catch { /* noop */ }
+    }
     mainWindow.show();
-    // Force-foreground hack: temporarily pin always-on-top, then restore PiP state
-    const wasOnTop = mainWindow.isAlwaysOnTop();
-    mainWindow.setAlwaysOnTop(true, "floating");
+    mainWindow.setAlwaysOnTop(true, "screen-saver");
     mainWindow.moveTop();
-    mainWindow.focus();
-    // Hold the foreground pin for 3 seconds, then release so that clicking
-    // another window (e.g. the LGO) sends Asclion back to the background.
+    try { app.focus({ steal: true }); } catch { /* noop */ }
+    try { mainWindow.focus(); } catch { /* noop */ }
+
+    // Retry focus a couple of times — Windows sometimes drops the first
+    // SetForegroundWindow right after another process' click.
+    const retries = [80, 200, 400];
+    retries.forEach((delay) => {
+      setTimeout(() => {
+        try {
+          if (!mainWindow || mainWindow.isDestroyed()) return;
+          if (mainWindow.isFocused()) return;
+          mainWindow.moveTop();
+          try { app.focus({ steal: true }); } catch { /* noop */ }
+          mainWindow.focus();
+        } catch { /* noop */ }
+      }, delay);
+    });
+
+    // Hold the foreground pin for 3 seconds — even if focus() was blocked,
+    // the "screen-saver" always-on-top level keeps the widget visually on
+    // top so the pharmacist SEES the recommendations. After 3s we drop
+    // back to the persisted PiP preference so a click on the LGO can send
+    // Asclion to the background normally.
     setTimeout(() => {
       try {
-        if (!mainWindow) return;
-        // Restore the persisted PiP preference (not the temporary force)
+        if (!mainWindow || mainWindow.isDestroyed()) return;
         mainWindow.setAlwaysOnTop(pipState.alwaysOnTop, "floating");
-        if (!pipState.alwaysOnTop && wasOnTop === false) {
+        if (!pipState.alwaysOnTop) {
           mainWindow.setAlwaysOnTop(false);
         }
       } catch {
