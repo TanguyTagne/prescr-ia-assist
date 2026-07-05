@@ -148,6 +148,12 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
   const mountedAtRef = useRef<number>(Date.now());
   // EAN auto-détectés depuis le dernier reset, pour permettre l'annulation par re-scan
   const autoDetectedEansRef = useRef<Set<string>>(new Set());
+  // Dernier scan qui n'a matché AUCUN PC suggéré. Si le pharmacien accepte
+  // manuellement un PC dans les 30s qui suivent, on apprend l'association
+  // EAN↔PC dans pc_cip_mapping (source=learned_from_click) pour que le
+  // même scan soit auto-attribué la prochaine fois. Objectif : 100% tracking.
+  const lastUnmatchedScanRef = useRef<{ ean: string; at: number } | null>(null);
+  const LEARN_WINDOW_MS = 30_000;
 
   useEffect(() => {
     mountedAtRef.current = Date.now();
