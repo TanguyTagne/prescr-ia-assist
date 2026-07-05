@@ -453,7 +453,12 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
         }
       }
 
-      if (!match) return;
+      if (!match) {
+        // On mémorise l'EAN non attribué : si le pharmacien clique manuellement
+        // sur un PC dans les 30s, on apprendra l'association.
+        lastUnmatchedScanRef.current = { ean: detail.ean, at: Date.now() };
+        return;
+      }
 
       // Toggle anti faux-positif : si l'EAN a déjà été auto-détecté dans la
       // fenêtre, le re-scan annule l'auto-acceptation (retour rayon, refus client…)
