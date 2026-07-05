@@ -570,6 +570,39 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
       supabase.functions.invoke("lgo-push-cart", {
         body: { products: [{ name: produit, category: categorie }] },
       }).catch(() => {});
+
+      // 🎯 Apprentissage automatique : si un EAN non attribué a été scanné
+      // dans les 30s précédant ce clic, on enregistre l'association pour
+      // que le prochain scan identique soit auto-détecté (tracking 100%).
+      const pending = lastUnmatchedScanRef.current;
+      if (pending && Date.now() - pending.at < LEARN_WINDOW_MS) {
+        lastUnmatchedScanRef.current = null;
+        const label = (produit || "").trim();
+        const norm = normalizeLookupKey(label);
+        if (label && norm && pending.ean) {
+          void (supabase as any)
+            .from("pc_cip_mapping")
+            .insert(
+              {
+                pc_label: label,
+                pc_label_norm: norm,
+                categorie: categorie || null,
+                code: pending.ean,
+                type_code: pending.ean.length === 13 ? "ean13" : "cip",
+                source: "learned_from_click",
+                statut: "pending",
+                occurrences: 1,
+              },
+              { count: "exact" }
+            )
+            .then(({ error }: any) => {
+              if (error && !/duplicate|unique/i.test(error.message || "")) {
+                console.warn("[learn-pc-cip] insert failed:", error.message);
+              }
+            });
+        }
+      }
+
       toast.success(`${produit} ${t("results.acceptedToast")}`);
     } else {
       // Auto-détecté via scan douchette : toast discret 1.5s
