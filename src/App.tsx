@@ -259,6 +259,7 @@ const App = () => {
           </Suspense>
           </I18nProvider>
           </RegisterProvider>
+          </PharmacyAccessGuard>
         </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>
