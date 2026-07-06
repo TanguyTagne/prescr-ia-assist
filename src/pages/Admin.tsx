@@ -229,27 +229,21 @@ const Admin = () => {
         {tab === "requests" && <RequestsTab requests={requests} onRefresh={loadData} />}
         {tab === "pharmacies" && <PharmaciesTab pharmacies={pharmacies} onRefresh={loadData} />}
         {tab === "coverage" && <CoverageTab />}
-        {tab === "sales" && <SalesTab />}
         {tab === "perf" && <RecommendationMetrics />}
-        {tab === "registers" && <RegistersTab />}
         {tab === "benchmark" && <BenchmarkTab />}
         {tab === "groupements" && <GroupementsTab />}
         {tab === "tracabilite" && <TracabiliteTab />}
         {tab === "conformite" && <ConformiteTab />}
         {tab === "rgpd" && <RgpdTab />}
         {tab === "quotas" && <QuotasTab />}
-        {tab === "mes-donnees" && <MesDonneesPanel />}
         {tab === "signalements" && <SignalementsTab />}
         {tab === "audit-pc" && <AuditPcTab />}
         {tab === "accepted-pcs" && <AcceptedPcsTab />}
-        {tab === "hardware" && <HardwareDiagnosticTab />}
         {tab === "remote-diag" && <RemoteScannerDiagnosticTab />}
         {tab === "medicaments-manquants" && <MedicamentsManquantsTab />}
-        {tab === "atc-audit" && <AtcAuditTab />}
         {tab === "asclion-base" && <AsclionBaseImportTab />}
         {tab === "roi-manque-a-gagner" && <RoiManqueAGagnerTab />}
         {tab === "security" && <SecurityTab />}
-        {tab === "lgo-capture-diag" && <LgoCaptureDiagTab />}
       </div>
     </div>
   );
