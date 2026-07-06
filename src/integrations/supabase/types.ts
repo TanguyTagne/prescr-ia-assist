@@ -3560,6 +3560,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_pharmacy_active: { Args: { _pharmacy_id: string }; Returns: boolean }
       wipe_asclion_base: { Args: never; Returns: Json }
     }
     Enums: {
