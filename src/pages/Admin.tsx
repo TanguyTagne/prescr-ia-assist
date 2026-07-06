@@ -203,10 +203,6 @@ const Admin = () => {
             <PackageSearch className="h-3.5 w-3.5" />
             Médicaments manquants
           </Button>
-          <Button variant={tab === "atc-audit" ? "default" : "outline"} size="sm" onClick={() => setTab("atc-audit")} className="gap-1.5 border-amber-300 text-amber-700 hover:bg-amber-50">
-            <PackageSearch className="h-3.5 w-3.5" />
-            Audit ATC ↔ Médicament
-          </Button>
           <Button variant={tab === "asclion-base" ? "default" : "outline"} size="sm" onClick={() => setTab("asclion-base")} className="gap-1.5 border-red-300 text-red-700 hover:bg-red-50">
             <PackageSearch className="h-3.5 w-3.5" />
             Import base Asclion (2 PCs)
