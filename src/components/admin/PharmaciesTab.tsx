@@ -408,11 +408,14 @@ const PharmaciesTab = ({ pharmacies, onRefresh }: PharmaciesTabProps) => {
                     onClick={async () => {
                       setLoading(pharm.id);
                       try {
-                        const { data, error } = await supabase.functions.invoke("force-logout", {
-                          body: { pharmacy_id: pharm.id },
+                        // Re-apply the current suspended status: bans, revokes
+                        // sessions, wipes heartbeats — in one atomic call.
+                        const { data, error } = await supabase.functions.invoke("set-pharmacy-access", {
+                          body: { pharmacy_id: pharm.id, status },
                         });
                         if (error) throw error;
-                        toast.success(data?.message || "Postes déconnectés");
+                        if (data?.error) throw new Error(data.error);
+                        toast.success(`${data?.sessions_revoked || 0} session(s) révoquée(s), ${data?.heartbeats_deleted || 0} poste(s) déconnecté(s)`);
                         reloadAccountCounts();
                       } catch (e: any) {
                         toast.error(e.message || "Échec de la déconnexion");
