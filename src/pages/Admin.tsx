@@ -3,17 +3,15 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { ArrowLeft, Loader2, Mail, Building2, BarChart3, RefreshCw, ShieldCheck, ShoppingCart, Target, Monitor, Trophy, Sparkles, UserPlus, Network, FileSearch, Shield, FileText, Gauge, UserCog, Link2, Flag, Sparkle, CheckCircle2, LineChart, ScanLine, PackageSearch, KeyRound, Radio } from "lucide-react";
+import { ArrowLeft, Loader2, Mail, Building2, BarChart3, RefreshCw, ShieldCheck, Target, Trophy, Sparkles, UserPlus, Network, FileSearch, Shield, FileText, Gauge, Link2, Flag, Sparkle, CheckCircle2, LineChart, ScanLine, PackageSearch, KeyRound } from "lucide-react";
 import InvestorKpisTab from "@/components/admin/InvestorKpisTab";
 import { useNavigate } from "react-router-dom";
 import RequestsTab from "@/components/admin/RequestsTab";
 import PharmaciesTab from "@/components/admin/PharmaciesTab";
 import PharmacyKPIs from "@/components/admin/PharmacyKPIs";
 import CoverageTab from "@/components/admin/CoverageTab";
-import SalesTab from "@/components/admin/SalesTab";
 import RecommendationMetrics from "@/components/admin/RecommendationMetrics";
 import BenchmarkTab from "@/components/admin/BenchmarkTab";
-import RegistersTab from "@/components/admin/RegistersTab";
 import DemoSessionsTab from "@/components/admin/DemoSessionsTab";
 import DemoLeadsTab from "@/components/admin/DemoLeadsTab";
 import GroupementsTab from "@/components/admin/GroupementsTab";
@@ -21,19 +19,15 @@ import TracabiliteTab from "@/components/admin/TracabiliteTab";
 import ConformiteTab from "@/components/admin/ConformiteTab";
 import RgpdTab from "@/components/admin/RgpdTab";
 import QuotasTab from "@/components/admin/QuotasTab";
-import MesDonneesPanel from "@/components/admin/MesDonneesPanel";
 import TrackingLinksTab from "@/components/admin/TrackingLinksTab";
 import SignalementsTab from "@/components/admin/SignalementsTab";
 import AuditPcTab from "@/components/admin/AuditPcTab";
-import AtcAuditTab from "@/components/admin/AtcAuditTab";
 import AsclionBaseImportTab from "@/components/admin/AsclionBaseImportTab";
 import AcceptedPcsTab from "@/components/admin/AcceptedPcsTab";
-import HardwareDiagnosticTab from "@/components/admin/HardwareDiagnosticTab";
 import RemoteScannerDiagnosticTab from "@/components/admin/RemoteScannerDiagnosticTab";
 import MedicamentsManquantsTab from "@/components/admin/MedicamentsManquantsTab";
 import RoiManqueAGagnerTab from "@/components/admin/RoiManqueAGagnerTab";
 import SecurityTab from "@/components/admin/SecurityTab";
-import LgoCaptureDiagTab from "@/components/admin/LgoCaptureDiagTab";
 
 interface AccessRequest {
   id: string;
@@ -68,7 +62,7 @@ const Admin = () => {
   const [requests, setRequests] = useState<AccessRequest[]>([]);
   const [pharmacies, setPharmacies] = useState<PharmacyWithLGO[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<"requests" | "pharmacies" | "kpis" | "investor" | "coverage" | "sales" | "perf" | "benchmark" | "registers" | "demo-sessions" | "demo-leads" | "tracking-links" | "groupements" | "tracabilite" | "conformite" | "rgpd" | "quotas" | "mes-donnees" | "signalements" | "audit-pc" | "accepted-pcs" | "hardware" | "remote-diag" | "medicaments-manquants" | "atc-audit" | "asclion-base" | "roi-manque-a-gagner" | "security" | "lgo-capture-diag">("kpis");
+  const [tab, setTab] = useState<"requests" | "pharmacies" | "kpis" | "investor" | "coverage" | "perf" | "benchmark" | "demo-sessions" | "demo-leads" | "tracking-links" | "groupements" | "tracabilite" | "conformite" | "rgpd" | "quotas" | "signalements" | "audit-pc" | "accepted-pcs" | "remote-diag" | "medicaments-manquants" | "asclion-base" | "roi-manque-a-gagner" | "security">("kpis");
 
   useEffect(() => {
     loadData();
@@ -163,17 +157,9 @@ const Admin = () => {
             <Sparkle className="h-3.5 w-3.5" />
             Audit PC
           </Button>
-          <Button variant={tab === "sales" ? "default" : "outline"} size="sm" onClick={() => setTab("sales")} className="gap-1.5">
-            <ShoppingCart className="h-3.5 w-3.5" />
-            Ventes
-          </Button>
           <Button variant={tab === "perf" ? "default" : "outline"} size="sm" onClick={() => setTab("perf")} className="gap-1.5">
             <Target className="h-3.5 w-3.5" />
             Perf. PC
-          </Button>
-          <Button variant={tab === "registers" ? "default" : "outline"} size="sm" onClick={() => setTab("registers")} className="gap-1.5">
-            <Monitor className="h-3.5 w-3.5" />
-            Caisses
           </Button>
           <Button variant={tab === "benchmark" ? "default" : "outline"} size="sm" onClick={() => setTab("benchmark")} className="gap-1.5">
             <Trophy className="h-3.5 w-3.5" />
@@ -203,29 +189,13 @@ const Admin = () => {
             <CheckCircle2 className="h-3.5 w-3.5" />
             PC acceptés
           </Button>
-          <Button variant={tab === "mes-donnees" ? "default" : "outline"} size="sm" onClick={() => setTab("mes-donnees")} className="gap-1.5">
-            <UserCog className="h-3.5 w-3.5" />
-            Mes données
-          </Button>
-          <Button variant={tab === "hardware" ? "default" : "outline"} size="sm" onClick={() => setTab("hardware")} className="gap-1.5">
-            <ScanLine className="h-3.5 w-3.5" />
-            Diagnostic Hardware
-          </Button>
           <Button variant={tab === "remote-diag" ? "default" : "outline"} size="sm" onClick={() => setTab("remote-diag")} className="gap-1.5">
             <ScanLine className="h-3.5 w-3.5" />
             Diag distants (par pharmacie)
           </Button>
-          <Button variant={tab === "lgo-capture-diag" ? "default" : "outline"} size="sm" onClick={() => setTab("lgo-capture-diag")} className="gap-1.5 border-indigo-300 text-indigo-700 hover:bg-indigo-50">
-            <Radio className="h-3.5 w-3.5" />
-            Diag capture LGO/Robot
-          </Button>
           <Button variant={tab === "medicaments-manquants" ? "default" : "outline"} size="sm" onClick={() => setTab("medicaments-manquants")} className="gap-1.5">
             <PackageSearch className="h-3.5 w-3.5" />
             Médicaments manquants
-          </Button>
-          <Button variant={tab === "atc-audit" ? "default" : "outline"} size="sm" onClick={() => setTab("atc-audit")} className="gap-1.5 border-amber-300 text-amber-700 hover:bg-amber-50">
-            <PackageSearch className="h-3.5 w-3.5" />
-            Audit ATC ↔ Médicament
           </Button>
           <Button variant={tab === "asclion-base" ? "default" : "outline"} size="sm" onClick={() => setTab("asclion-base")} className="gap-1.5 border-red-300 text-red-700 hover:bg-red-50">
             <PackageSearch className="h-3.5 w-3.5" />
@@ -253,27 +223,21 @@ const Admin = () => {
         {tab === "requests" && <RequestsTab requests={requests} onRefresh={loadData} />}
         {tab === "pharmacies" && <PharmaciesTab pharmacies={pharmacies} onRefresh={loadData} />}
         {tab === "coverage" && <CoverageTab />}
-        {tab === "sales" && <SalesTab />}
         {tab === "perf" && <RecommendationMetrics />}
-        {tab === "registers" && <RegistersTab />}
         {tab === "benchmark" && <BenchmarkTab />}
         {tab === "groupements" && <GroupementsTab />}
         {tab === "tracabilite" && <TracabiliteTab />}
         {tab === "conformite" && <ConformiteTab />}
         {tab === "rgpd" && <RgpdTab />}
         {tab === "quotas" && <QuotasTab />}
-        {tab === "mes-donnees" && <MesDonneesPanel />}
         {tab === "signalements" && <SignalementsTab />}
         {tab === "audit-pc" && <AuditPcTab />}
         {tab === "accepted-pcs" && <AcceptedPcsTab />}
-        {tab === "hardware" && <HardwareDiagnosticTab />}
         {tab === "remote-diag" && <RemoteScannerDiagnosticTab />}
         {tab === "medicaments-manquants" && <MedicamentsManquantsTab />}
-        {tab === "atc-audit" && <AtcAuditTab />}
         {tab === "asclion-base" && <AsclionBaseImportTab />}
         {tab === "roi-manque-a-gagner" && <RoiManqueAGagnerTab />}
         {tab === "security" && <SecurityTab />}
-        {tab === "lgo-capture-diag" && <LgoCaptureDiagTab />}
       </div>
     </div>
   );
