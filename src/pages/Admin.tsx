@@ -62,7 +62,7 @@ const Admin = () => {
   const [requests, setRequests] = useState<AccessRequest[]>([]);
   const [pharmacies, setPharmacies] = useState<PharmacyWithLGO[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<"requests" | "pharmacies" | "kpis" | "investor" | "coverage" | "sales" | "perf" | "benchmark" | "registers" | "demo-sessions" | "demo-leads" | "tracking-links" | "groupements" | "tracabilite" | "conformite" | "rgpd" | "quotas" | "mes-donnees" | "signalements" | "audit-pc" | "accepted-pcs" | "hardware" | "remote-diag" | "medicaments-manquants" | "atc-audit" | "asclion-base" | "roi-manque-a-gagner" | "security" | "lgo-capture-diag">("kpis");
+  const [tab, setTab] = useState<"requests" | "pharmacies" | "kpis" | "investor" | "coverage" | "perf" | "benchmark" | "demo-sessions" | "demo-leads" | "tracking-links" | "groupements" | "tracabilite" | "conformite" | "rgpd" | "quotas" | "signalements" | "audit-pc" | "accepted-pcs" | "remote-diag" | "medicaments-manquants" | "asclion-base" | "roi-manque-a-gagner" | "security">("kpis");
 
   useEffect(() => {
     loadData();
