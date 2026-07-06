@@ -195,21 +195,9 @@ const Admin = () => {
             <CheckCircle2 className="h-3.5 w-3.5" />
             PC acceptés
           </Button>
-          <Button variant={tab === "mes-donnees" ? "default" : "outline"} size="sm" onClick={() => setTab("mes-donnees")} className="gap-1.5">
-            <UserCog className="h-3.5 w-3.5" />
-            Mes données
-          </Button>
-          <Button variant={tab === "hardware" ? "default" : "outline"} size="sm" onClick={() => setTab("hardware")} className="gap-1.5">
-            <ScanLine className="h-3.5 w-3.5" />
-            Diagnostic Hardware
-          </Button>
           <Button variant={tab === "remote-diag" ? "default" : "outline"} size="sm" onClick={() => setTab("remote-diag")} className="gap-1.5">
             <ScanLine className="h-3.5 w-3.5" />
             Diag distants (par pharmacie)
-          </Button>
-          <Button variant={tab === "lgo-capture-diag" ? "default" : "outline"} size="sm" onClick={() => setTab("lgo-capture-diag")} className="gap-1.5 border-indigo-300 text-indigo-700 hover:bg-indigo-50">
-            <Radio className="h-3.5 w-3.5" />
-            Diag capture LGO/Robot
           </Button>
           <Button variant={tab === "medicaments-manquants" ? "default" : "outline"} size="sm" onClick={() => setTab("medicaments-manquants")} className="gap-1.5">
             <PackageSearch className="h-3.5 w-3.5" />
