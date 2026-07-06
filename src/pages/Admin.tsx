@@ -163,17 +163,9 @@ const Admin = () => {
             <Sparkle className="h-3.5 w-3.5" />
             Audit PC
           </Button>
-          <Button variant={tab === "sales" ? "default" : "outline"} size="sm" onClick={() => setTab("sales")} className="gap-1.5">
-            <ShoppingCart className="h-3.5 w-3.5" />
-            Ventes
-          </Button>
           <Button variant={tab === "perf" ? "default" : "outline"} size="sm" onClick={() => setTab("perf")} className="gap-1.5">
             <Target className="h-3.5 w-3.5" />
             Perf. PC
-          </Button>
-          <Button variant={tab === "registers" ? "default" : "outline"} size="sm" onClick={() => setTab("registers")} className="gap-1.5">
-            <Monitor className="h-3.5 w-3.5" />
-            Caisses
           </Button>
           <Button variant={tab === "benchmark" ? "default" : "outline"} size="sm" onClick={() => setTab("benchmark")} className="gap-1.5">
             <Trophy className="h-3.5 w-3.5" />
