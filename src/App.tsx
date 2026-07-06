@@ -13,6 +13,7 @@ import LgoAutoDetectPrompt from "@/components/LgoAutoDetectPrompt";
 import WidgetDemoTour from "@/components/WidgetDemoTour";
 import { isAsclionDesktopRuntime } from "@/lib/runtime";
 import { useInstanceHeartbeat } from "@/hooks/useInstanceHeartbeat";
+import { PharmacyAccessGuard } from "@/components/PharmacyAccessGuard";
 import { useGlobalBarcodeBridge } from "@/hooks/useGlobalBarcodeBridge";
 import { purgeClientCaches } from "@/lib/versionCheck";
 
@@ -198,6 +199,7 @@ const App = () => {
         <Toaster />
         <Sonner />
         <AuthProvider>
+          <PharmacyAccessGuard>
           <InstanceHeartbeatMount />
           <RegisterProvider>
           <I18nProvider>
@@ -257,6 +259,7 @@ const App = () => {
           </Suspense>
           </I18nProvider>
           </RegisterProvider>
+          </PharmacyAccessGuard>
         </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>

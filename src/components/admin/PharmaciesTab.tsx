@@ -160,35 +160,19 @@ const PharmaciesTab = ({ pharmacies, onRefresh }: PharmaciesTabProps) => {
   const handleStatusChange = async (pharmacyId: string, newStatus: string) => {
     setLoading(pharmacyId);
     try {
-      const { error } = await supabase
-        .from("pharmacies")
-        .update({ status: newStatus } as any)
-        .eq("id", pharmacyId);
-
+      // set-pharmacy-access is the atomic kill switch: it updates the pharmacy
+      // status, bans/unbans all non-admin users, revokes their sessions via the
+      // GoTrue admin logout endpoint, and wipes heartbeats.
+      const { data, error } = await supabase.functions.invoke("set-pharmacy-access", {
+        body: { pharmacy_id: pharmacyId, status: newStatus },
+      });
       if (error) throw error;
-
-      // On suspension / désactivation : forcer la déconnexion de tous les
-      // postes déjà connectés à cette pharmacie pour couper l'usage en cours.
-      if (newStatus === "paused" || newStatus === "disabled") {
-        try {
-          const { data: forceRes, error: forceErr } = await supabase.functions.invoke("force-logout", {
-            body: { pharmacy_id: pharmacyId },
-          });
-          if (forceErr) {
-            console.error("force-logout error:", forceErr);
-            toast.warning("Statut mis à jour, mais échec de la déconnexion forcée");
-          } else if (forceRes?.message) {
-            toast.info(forceRes.message);
-          }
-        } catch (e: any) {
-          console.error("force-logout invoke failed:", e);
-        }
-      }
+      if (data?.error) throw new Error(data.error);
 
       const labels: Record<string, string> = {
-        active: "Pharmacie réactivée",
-        paused: "Accès mis en pause — utilisateurs déconnectés",
-        disabled: "Accès supprimé — utilisateurs déconnectés",
+        active: `Pharmacie réactivée — ${data?.unbanned || 0} compte(s) débanni(s)`,
+        paused: `Accès mis en pause — ${data?.banned || 0} banni(s), ${data?.sessions_revoked || 0} session(s) révoquée(s), ${data?.heartbeats_deleted || 0} poste(s) déconnecté(s)`,
+        disabled: `Accès désactivé — ${data?.banned || 0} banni(s), ${data?.sessions_revoked || 0} session(s) révoquée(s), ${data?.heartbeats_deleted || 0} poste(s) déconnecté(s)`,
       };
       toast.success(labels[newStatus] || "Statut mis à jour");
       onRefresh();
@@ -424,11 +408,14 @@ const PharmaciesTab = ({ pharmacies, onRefresh }: PharmaciesTabProps) => {
                     onClick={async () => {
                       setLoading(pharm.id);
                       try {
-                        const { data, error } = await supabase.functions.invoke("force-logout", {
-                          body: { pharmacy_id: pharm.id },
+                        // Re-apply the current suspended status: bans, revokes
+                        // sessions, wipes heartbeats — in one atomic call.
+                        const { data, error } = await supabase.functions.invoke("set-pharmacy-access", {
+                          body: { pharmacy_id: pharm.id, status },
                         });
                         if (error) throw error;
-                        toast.success(data?.message || "Postes déconnectés");
+                        if (data?.error) throw new Error(data.error);
+                        toast.success(`${data?.sessions_revoked || 0} session(s) révoquée(s), ${data?.heartbeats_deleted || 0} poste(s) déconnecté(s)`);
                         reloadAccountCounts();
                       } catch (e: any) {
                         toast.error(e.message || "Échec de la déconnexion");

@@ -53,7 +53,15 @@ const Auth = () => {
     try {
       if (isLogin) {
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
+        if (error) {
+          // A banned user gets "User is banned" (or 400 with error_code "user_banned") from GoTrue
+          const msg = (error.message || "").toLowerCase();
+          if (msg.includes("banned") || msg.includes("suspended") || (error as any)?.code === "user_banned") {
+            toast.error("Compte suspendu — contactez Asclion");
+            return;
+          }
+          throw error;
+        }
         // Route by role: admins → /admin, group managers → /groupement, others → /dashboard
         let destination = "/dashboard";
         if (data?.user) {

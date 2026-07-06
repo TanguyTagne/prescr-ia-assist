@@ -1496,7 +1496,8 @@ serve(async (req) => {
         if (pharmStatus === "paused" || pharmStatus === "disabled") {
           return new Response(
             JSON.stringify({
-              error: "PHARMACY_SUSPENDED",
+              code: "PHARMACY_DISABLED",
+              error: "PHARMACY_DISABLED",
               message: pharmStatus === "paused"
                 ? "L'accès de cette pharmacie a été mis en pause. Contactez Asclion."
                 : "L'accès de cette pharmacie a été désactivé. Contactez Asclion.",

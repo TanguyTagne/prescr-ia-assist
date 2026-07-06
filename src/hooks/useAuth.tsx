@@ -76,76 +76,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    let statusChannel: ReturnType<typeof supabase.channel> | null = null;
-    let pollTimer: ReturnType<typeof setInterval> | null = null;
-
-    const cleanupWatchers = () => {
-      if (statusChannel) {
-        supabase.removeChannel(statusChannel);
-        statusChannel = null;
-      }
-      if (pollTimer) {
-        clearInterval(pollTimer);
-        pollTimer = null;
-      }
-    };
-
-    const watchPharmacyStatus = async (userId: string) => {
-      cleanupWatchers();
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("pharmacy_id")
-        .eq("id", userId)
-        .maybeSingle();
-      const pharmacyId = profile?.pharmacy_id;
-      if (!pharmacyId) return;
-
-      // Realtime: react instantly when admin toggles status
-      statusChannel = supabase
-        .channel(`pharmacy-status-${pharmacyId}-${Math.random().toString(36).slice(2, 8)}`)
-        .on(
-          "postgres_changes",
-          { event: "UPDATE", schema: "public", table: "pharmacies", filter: `id=eq.${pharmacyId}` },
-          (payload) => {
-            const newStatus = (payload.new as any)?.status || "active";
-            setPharmacyStatus(newStatus);
-            if (newStatus !== "active") {
-              // Hard sign-out so token can't be reused on any tab / route
-              supabase.auth.signOut({ scope: "global" }).catch(() => {});
-            }
-          },
-        )
-        .subscribe();
-
-      // Safety net: re-check every 60s (in case realtime drops)
-      pollTimer = setInterval(async () => {
-        const { data: pharm } = await supabase
-          .from("pharmacies")
-          .select("status")
-          .eq("id", pharmacyId)
-          .maybeSingle();
-        const s = pharm?.status || "active";
-        setPharmacyStatus(s);
-        if (s !== "active") {
-          supabase.auth.signOut({ scope: "global" }).catch(() => {});
-        }
-      }, 60_000);
-    };
-
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        // Defer to avoid deadlock inside the auth callback, then await role load
         setTimeout(async () => {
           await Promise.all([fetchRole(session.user.id), fetchPharmacyStatus(session.user.id)]);
-          watchPharmacyStatus(session.user.id);
           setLoading(false);
         }, 0);
       } else {
-        cleanupWatchers();
         setIsAdmin(false);
         setIsGroupManager(false);
         setManagedGroupementId(null);
@@ -160,14 +101,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(session?.user ?? null);
       if (session?.user) {
         await Promise.all([fetchRole(session.user.id), fetchPharmacyStatus(session.user.id)]);
-        watchPharmacyStatus(session.user.id);
       }
       setLoading(false);
     });
 
     return () => {
       subscription.unsubscribe();
-      cleanupWatchers();
     };
   }, []);
 
