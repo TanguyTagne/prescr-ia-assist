@@ -102,7 +102,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       // Realtime: react instantly when admin toggles status
       statusChannel = supabase
-        .channel(`pharmacy-status-${pharmacyId}`)
+        .channel(`pharmacy-status-${pharmacyId}-${Math.random().toString(36).slice(2, 8)}`)
         .on(
           "postgres_changes",
           { event: "UPDATE", schema: "public", table: "pharmacies", filter: `id=eq.${pharmacyId}` },
