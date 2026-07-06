@@ -199,6 +199,7 @@ const App = () => {
         <Toaster />
         <Sonner />
         <AuthProvider>
+          <PharmacyAccessGuard>
           <InstanceHeartbeatMount />
           <RegisterProvider>
           <I18nProvider>
