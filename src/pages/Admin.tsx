@@ -234,7 +234,7 @@ const Admin = () => {
         {tab === "medicaments-manquants" && <MedicamentsManquantsTab />}
         {tab === "asclion-base" && <AsclionBaseImportTab />}
         {tab === "roi-manque-a-gagner" && <RoiManqueAGagnerTab />}
-        {tab === "security" && <SecurityTab />}
+        
       </div>
     </div>
   );
