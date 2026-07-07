@@ -238,6 +238,7 @@ const Admin = () => {
         
       </div>
     </div>
+    </AdminEmail2FAGate>
   );
 };
 
