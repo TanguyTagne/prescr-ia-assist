@@ -74,6 +74,12 @@ serve(async (req) => {
         <p style="color:#666;margin:20px 0 0;font-size:13px">Ce code expire dans 10 minutes. Si vous n'êtes pas à l'origine de cette demande, ignorez ce message et changez votre mot de passe.</p>
       </div>`;
 
+    // Resend free tier limitation: onboarding@resend.dev can only deliver to
+    // the Resend account owner. Allow an override via env until a real domain
+    // is verified in Resend (then remove the override and use user.email).
+    const overrideTo = Deno.env.get("RESEND_2FA_OVERRIDE_TO");
+    const recipient = overrideTo || user.email;
+
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -82,7 +88,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         from: "Asclion Admin <onboarding@resend.dev>",
-        to: user.email,
+        to: recipient,
         subject: `Code Asclion Admin : ${code}`,
         html,
       }),
@@ -96,7 +102,7 @@ serve(async (req) => {
       });
     }
 
-    return new Response(JSON.stringify({ success: true, email: user.email }), {
+    return new Response(JSON.stringify({ success: true, email: recipient }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
