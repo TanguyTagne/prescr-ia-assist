@@ -135,20 +135,24 @@ export default function AsclionBaseImportTab() {
   const runPhrasesImport = async () => {
     setImportingPhrases(true);
     setLog([]);
-    push(`→ Import des phrases conseil depuis ${PHRASES_FILE} (lots de ${PAGE})`);
+    // Les phrases sont beaucoup plus lentes (plusieurs requêtes DB par ligne),
+    // on prend des lots plus petits pour ne pas dépasser le timeout de 150s.
+    const PHRASES_PAGE = 150;
+    push(`→ Import des phrases conseil depuis ${PHRASES_FILE} (lots de ${PHRASES_PAGE})`);
     let offset = 0;
     let total = 0;
     try {
-      for (let i = 0; i < 50; i++) {
+      for (let i = 0; i < 500; i++) {
         const { data, error } = await supabase.functions.invoke(
           "import-asclion-base",
-          { body: { mode: "import_phrases", offset, limit: PAGE } },
+          { body: { mode: "import_phrases", offset, limit: PHRASES_PAGE } },
         );
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
         total = data.total_in_csv;
-        push(`lot offset=${offset} → ${data.phrases_updated} lignes appliquées, ${data.phrases_skipped} ignorées`);
-        setProgress({ done: Math.min(offset + PAGE, total), total });
+        const processed = data.processed ?? PHRASES_PAGE;
+        push(`lot offset=${offset} → ${data.phrases_updated} lignes appliquées, ${data.phrases_skipped} ignorées (${processed} traitées)`);
+        setProgress({ done: Math.min(offset + processed, total), total });
         if (data.done || data.next_offset == null) {
           push(`✓ Import phrases terminé : ${total} lignes traitées`);
           toast.success("Phrases conseil importées");
