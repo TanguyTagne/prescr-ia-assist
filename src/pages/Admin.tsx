@@ -3,7 +3,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { ArrowLeft, Loader2, Mail, Building2, BarChart3, RefreshCw, ShieldCheck, Target, Trophy, Sparkles, UserPlus, Network, FileSearch, Shield, FileText, Gauge, Link2, Flag, Sparkle, CheckCircle2, LineChart, ScanLine, PackageSearch, KeyRound } from "lucide-react";
+import { ArrowLeft, Loader2, Mail, Building2, BarChart3, RefreshCw, ShieldCheck, Target, Trophy, Sparkles, UserPlus, Network, FileSearch, Shield, FileText, Gauge, Link2, Flag, Sparkle, CheckCircle2, LineChart, ScanLine, PackageSearch } from "lucide-react";
+import AdminEmail2FAGate from "@/components/AdminEmail2FAGate";
 import InvestorKpisTab from "@/components/admin/InvestorKpisTab";
 import { useNavigate } from "react-router-dom";
 import RequestsTab from "@/components/admin/RequestsTab";
@@ -27,7 +28,7 @@ import AcceptedPcsTab from "@/components/admin/AcceptedPcsTab";
 import RemoteScannerDiagnosticTab from "@/components/admin/RemoteScannerDiagnosticTab";
 import MedicamentsManquantsTab from "@/components/admin/MedicamentsManquantsTab";
 import RoiManqueAGagnerTab from "@/components/admin/RoiManqueAGagnerTab";
-import SecurityTab from "@/components/admin/SecurityTab";
+
 
 interface AccessRequest {
   id: string;
@@ -62,7 +63,7 @@ const Admin = () => {
   const [requests, setRequests] = useState<AccessRequest[]>([]);
   const [pharmacies, setPharmacies] = useState<PharmacyWithLGO[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<"requests" | "pharmacies" | "kpis" | "investor" | "coverage" | "perf" | "benchmark" | "demo-sessions" | "demo-leads" | "tracking-links" | "groupements" | "tracabilite" | "conformite" | "rgpd" | "quotas" | "signalements" | "audit-pc" | "accepted-pcs" | "remote-diag" | "medicaments-manquants" | "asclion-base" | "roi-manque-a-gagner" | "security">("kpis");
+  const [tab, setTab] = useState<"requests" | "pharmacies" | "kpis" | "investor" | "coverage" | "perf" | "benchmark" | "demo-sessions" | "demo-leads" | "tracking-links" | "groupements" | "tracabilite" | "conformite" | "rgpd" | "quotas" | "signalements" | "audit-pc" | "accepted-pcs" | "remote-diag" | "medicaments-manquants" | "asclion-base" | "roi-manque-a-gagner">("kpis");
 
   useEffect(() => {
     loadData();
@@ -102,6 +103,7 @@ const Admin = () => {
   }
 
   return (
+    <AdminEmail2FAGate>
     <div className="min-h-screen bg-background">
       <div className="container max-w-4xl mx-auto px-4 py-6 space-y-6">
         <div className="flex items-center gap-3">
@@ -205,10 +207,6 @@ const Admin = () => {
             <Trophy className="h-3.5 w-3.5" />
             ROI & Manque à gagner
           </Button>
-          <Button variant={tab === "security" ? "default" : "outline"} size="sm" onClick={() => setTab("security")} className="gap-1.5">
-            <KeyRound className="h-3.5 w-3.5" />
-            Sécurité (2FA)
-          </Button>
           <Button variant="outline" size="sm" onClick={() => navigate("/groupement")} className="gap-1.5">
             <Network className="h-3.5 w-3.5" />
             Ouvrir dashboard groupement →
@@ -237,9 +235,10 @@ const Admin = () => {
         {tab === "medicaments-manquants" && <MedicamentsManquantsTab />}
         {tab === "asclion-base" && <AsclionBaseImportTab />}
         {tab === "roi-manque-a-gagner" && <RoiManqueAGagnerTab />}
-        {tab === "security" && <SecurityTab />}
+        
       </div>
     </div>
+    </AdminEmail2FAGate>
   );
 };
 
