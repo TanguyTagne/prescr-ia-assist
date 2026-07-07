@@ -422,21 +422,28 @@ serve(async (req) => {
       const total = rows.length;
       const slice = rows.slice(offset, offset + limit);
 
+      // Budget-temps : chaque ligne peut coûter plusieurs requêtes DB.
+      // On sort tôt avant 120s pour éviter l'IDLE_TIMEOUT (150s) de l'edge runtime.
+      const startedAt = Date.now();
+      const TIME_BUDGET_MS = 120_000;
       let updated = 0;
       let skipped = 0;
+      let processed = 0;
       for (const row of slice) {
+        if (Date.now() - startedAt > TIME_BUDGET_MS) break;
         const status = await applyPhraseRow(supabase, row);
         if (status === "updated") updated++;
         else skipped++;
+        processed++;
       }
 
-      const nextOffset = offset + limit;
+      const nextOffset = offset + processed;
       return new Response(JSON.stringify({
         ok: true,
         total_in_csv: total,
         offset,
         limit,
-        processed: slice.length,
+        processed,
         phrases_updated: updated,
         phrases_skipped: skipped,
         next_offset: nextOffset < total ? nextOffset : null,
