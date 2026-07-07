@@ -92,6 +92,48 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_2fa_codes: {
+        Row: {
+          attempts: number
+          code_hash: string
+          created_at: string
+          expires_at: string
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          code_hash: string
+          created_at?: string
+          expires_at: string
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          code_hash?: string
+          created_at?: string
+          expires_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      admin_2fa_sessions: {
+        Row: {
+          updated_at: string
+          user_id: string
+          verified_until: string
+        }
+        Insert: {
+          updated_at?: string
+          user_id: string
+          verified_until: string
+        }
+        Update: {
+          updated_at?: string
+          user_id?: string
+          verified_until?: string
+        }
+        Relationships: []
+      }
       analysis_history: {
         Row: {
           created_at: string
@@ -3560,6 +3602,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_admin_2fa_verified: { Args: never; Returns: boolean }
       is_pharmacy_active: { Args: { _user_id: string }; Returns: boolean }
       wipe_asclion_base: { Args: never; Returns: Json }
     }
