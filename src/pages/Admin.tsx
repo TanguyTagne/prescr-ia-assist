@@ -28,7 +28,7 @@ import AcceptedPcsTab from "@/components/admin/AcceptedPcsTab";
 import RemoteScannerDiagnosticTab from "@/components/admin/RemoteScannerDiagnosticTab";
 import MedicamentsManquantsTab from "@/components/admin/MedicamentsManquantsTab";
 import RoiManqueAGagnerTab from "@/components/admin/RoiManqueAGagnerTab";
-import SecurityTab from "@/components/admin/SecurityTab";
+
 
 interface AccessRequest {
   id: string;
