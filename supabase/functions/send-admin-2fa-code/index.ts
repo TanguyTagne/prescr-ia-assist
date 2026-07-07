@@ -102,7 +102,7 @@ serve(async (req) => {
       });
     }
 
-    return new Response(JSON.stringify({ success: true, email: user.email }), {
+    return new Response(JSON.stringify({ success: true, email: recipient }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
