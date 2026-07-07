@@ -206,10 +206,6 @@ const Admin = () => {
             <Trophy className="h-3.5 w-3.5" />
             ROI & Manque à gagner
           </Button>
-          <Button variant={tab === "security" ? "default" : "outline"} size="sm" onClick={() => setTab("security")} className="gap-1.5">
-            <KeyRound className="h-3.5 w-3.5" />
-            Sécurité (2FA)
-          </Button>
           <Button variant="outline" size="sm" onClick={() => navigate("/groupement")} className="gap-1.5">
             <Network className="h-3.5 w-3.5" />
             Ouvrir dashboard groupement →
