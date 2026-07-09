@@ -29,6 +29,12 @@ interface UnmatchedMed {
   status: string;
 }
 
+const getAnalyzedMedicationCount = (row: any): number => {
+  const fromMetadata = Number(row?.metadata?.medications_count);
+  if (Number.isFinite(fromMetadata) && fromMetadata > 0) return fromMetadata;
+  return Array.isArray(row?.medicaments) ? row.medicaments.length : 0;
+};
+
 const PharmacyKPIs = () => {
   const [kpis, setKpis] = useState<PharmacyKPI[]>([]);
   const [loading, setLoading] = useState(true);
@@ -88,7 +94,7 @@ const PharmacyKPIs = () => {
           pharmacy_id: p.id,
           pharmacy_name: p.name,
           city: p.city,
-          total_analyses: pharmHistory.length,
+          total_analyses: pharmHistory.reduce((sum, h) => sum + getAnalyzedMedicationCount(h), 0),
           unique_patients: patientHashes.size,
           total_interactions: pharmHistory.reduce((s, h) => s + (h.interactions_count || 0), 0),
           major_interactions: pharmHistory.filter((h) => h.has_major_interaction).length,
@@ -168,7 +174,7 @@ const PharmacyKPIs = () => {
       } catch { /* table may not exist yet */ }
 
       setGlobalStats({
-        totalAnalyses: historyItems.length,
+        totalAnalyses: historyItems.reduce((sum, h) => sum + getAnalyzedMedicationCount(h), 0),
         totalPharmacies: pharmacies.length,
         totalPatients: totalPatientSet.size,
         majorInteractions: historyItems.filter((h) => h.has_major_interaction).length,

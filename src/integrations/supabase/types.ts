@@ -3602,6 +3602,14 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_pharmacy_quota_usage: {
+        Args: {
+          _ai_call_count?: number
+          _medication_count?: number
+          _pharmacy_id: string
+        }
+        Returns: Json
+      }
       is_admin_2fa_verified: { Args: never; Returns: boolean }
       is_pharmacy_active: { Args: { _user_id: string }; Returns: boolean }
       wipe_asclion_base: { Args: never; Returns: Json }

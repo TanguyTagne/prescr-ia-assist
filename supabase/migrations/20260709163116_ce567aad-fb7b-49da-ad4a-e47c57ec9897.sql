@@ -1,0 +1,2 @@
+REVOKE EXECUTE ON FUNCTION public.increment_pharmacy_quota_usage(uuid, integer, integer) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.increment_pharmacy_quota_usage(uuid, integer, integer) TO service_role;
