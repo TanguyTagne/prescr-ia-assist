@@ -1417,6 +1417,10 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  let quotaPharmacyIdForUsage: string | null = null;
+  let quotaUsageCounted = false;
+  let extractedMedicationCountForUsage = 0;
+
   try {
     // ====== AUTH CHECK ======
     const authHeader = req.headers.get("Authorization");
@@ -1486,6 +1490,7 @@ serve(async (req) => {
         .maybeSingle();
       const pharmacyIdForQuota = (profile as any)?.pharmacy_id;
       if (pharmacyIdForQuota) {
+        quotaPharmacyIdForUsage = pharmacyIdForQuota;
         // Block suspended/disabled pharmacies at the API layer
         const { data: pharm } = await supabase
           .from("pharmacies")
@@ -1522,11 +1527,6 @@ serve(async (req) => {
             { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
           );
         }
-        // Also increment monthly AI call counter (non-blocking on failure)
-        supabase.rpc("check_and_increment_quota", {
-          _pharmacy_id: pharmacyIdForQuota,
-          _quota_type: "ai_call",
-        }).then(() => {}, (e: any) => console.error("ai_call quota error:", e));
       }
     } catch (qErr) {
       console.error("Quota / status check failed (non-blocking):", qErr);
@@ -1591,6 +1591,20 @@ serve(async (req) => {
 
     medEntries = aiResult.medicaments_detectes || [];
     extractedPatientName = aiResult.patient_nom || null;
+    extractedMedicationCountForUsage = medEntries.length;
+
+    if (quotaPharmacyIdForUsage) {
+      try {
+        await supabase.rpc("increment_pharmacy_quota_usage", {
+          _pharmacy_id: quotaPharmacyIdForUsage,
+          _medication_count: extractedMedicationCountForUsage,
+          _ai_call_count: 1,
+        });
+        quotaUsageCounted = true;
+      } catch (usageErr) {
+        console.error("Failed to count analyzed medications:", usageErr);
+      }
+    }
 
     if (medEntries.length === 0) {
       return new Response(JSON.stringify({
@@ -2196,7 +2210,13 @@ serve(async (req) => {
               interactions_count: interactions.length,
               suggestions_count: totalRecs,
               has_major_interaction: hasMajor,
-              metadata: { sources, contextes_count: allContexts.length, clinical_kb_matches: clinicalResults.length },
+              metadata: {
+                sources,
+                contextes_count: allContexts.length,
+                clinical_kb_matches: clinicalResults.length,
+                medications_count: extractedMedicationCountForUsage,
+                quota_counted: quotaUsageCounted,
+              },
             });
 
             // Track recommendation metrics in parallel
@@ -2305,6 +2325,22 @@ serve(async (req) => {
 
     return response;
   } catch (e) {
+    if (quotaPharmacyIdForUsage && !quotaUsageCounted) {
+      try {
+        const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+        const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+        if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
+          const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+          await supabase.rpc("increment_pharmacy_quota_usage", {
+            _pharmacy_id: quotaPharmacyIdForUsage,
+            _medication_count: extractedMedicationCountForUsage,
+            _ai_call_count: 1,
+          });
+        }
+      } catch (usageErr) {
+        console.error("Failed to count failed analysis attempt:", usageErr);
+      }
+    }
     console.error("analyze-prescription error:", e);
     const msg = e instanceof Error ? e.message : "Erreur inconnue";
     if (msg === "RATE_LIMIT") return new Response(JSON.stringify({ error: "Trop de requêtes, réessayez." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
