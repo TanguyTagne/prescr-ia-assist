@@ -25,6 +25,7 @@ interface FeedbackRow {
   created_at: string;
   action: string;
   analysis_id: string | null;
+  detection_source: string | null;
 }
 
 interface AnalysisRow {
@@ -32,6 +33,15 @@ interface AnalysisRow {
   pharmacy_id: string;
   suggestions_count: number;
   medicaments: any;
+}
+
+interface PcStats {
+  count: number;
+  last: string;
+  categorie: string | null;
+  meds: Set<string>;
+  manual: number;
+  auto: number;
 }
 
 interface PharmacyStats {
@@ -42,10 +52,15 @@ interface PharmacyStats {
   meds_in_analyses: number;
   suggestions: number;
   accepted: number;
+  accepted_manual: number;
+  accepted_auto: number;
   rejected: number;
   analyses_with_accept: number;
-  pcs: Map<string, { count: number; last: string; categorie: string | null; meds: Set<string> }>;
+  pcs: Map<string, PcStats>;
 }
+
+const isAutoSource = (s: string | null) =>
+  s === "hid_auto" || s === "lgo_sale" || s === "inferred";
 
 // Paginate around PostgREST 1000-row default cap
 async function fetchAll<T>(
@@ -92,7 +107,7 @@ const AcceptedPcsTab = () => {
       fetchAll<FeedbackRow>(() =>
         supabase
           .from("pc_feedback")
-          .select("id, pharmacy_id, medicament_nom, pc_nom, pc_categorie, created_at, action, analysis_id")
+          .select("id, pharmacy_id, medicament_nom, pc_nom, pc_categorie, created_at, action, analysis_id, detection_source")
           .order("created_at", { ascending: false }),
       ),
       fetchAll<AnalysisRow>(() =>
@@ -118,6 +133,8 @@ const AcceptedPcsTab = () => {
           meds_in_analyses: 0,
           suggestions: 0,
           accepted: 0,
+          accepted_manual: 0,
+          accepted_auto: 0,
           rejected: 0,
           analyses_with_accept: 0,
           pcs: new Map(),
@@ -142,6 +159,9 @@ const AcceptedPcsTab = () => {
       const g = ensure(fb.pharmacy_id);
       if (fb.action === "accepted") {
         g.accepted++;
+        const auto = isAutoSource(fb.detection_source);
+        if (auto) g.accepted_auto++;
+        else g.accepted_manual++;
         if (fb.analysis_id) {
           let s = acceptedAnalysesByPharm.get(fb.pharmacy_id);
           if (!s) {
@@ -154,12 +174,16 @@ const AcceptedPcsTab = () => {
         if (existing) {
           existing.count++;
           existing.meds.add(fb.medicament_nom);
+          if (auto) existing.auto++;
+          else existing.manual++;
         } else {
           g.pcs.set(fb.pc_nom, {
             count: 1,
             last: fb.created_at,
             categorie: fb.pc_categorie,
             meds: new Set([fb.medicament_nom]),
+            manual: auto ? 0 : 1,
+            auto: auto ? 1 : 0,
           });
         }
       } else if (fb.action === "rejected" || fb.action === "dismissed") {
@@ -408,6 +432,12 @@ const AcceptedPcsTab = () => {
                   <div className="flex gap-1.5 flex-wrap justify-end">
                     <Badge variant="outline">{g.analyses} analyses ({g.analyses_with_suggestions} suggérées)</Badge>
                     <Badge variant="secondary">{g.accepted} acceptés</Badge>
+                    <Badge variant="outline" className="border-blue-300 text-blue-700">
+                      👤 {g.accepted_manual} manuel
+                    </Badge>
+                    <Badge variant="outline" className="border-purple-300 text-purple-700">
+                      🤖 {g.accepted_auto} auto CIP
+                    </Badge>
                     <Badge variant="outline">{fmtPct(accRate, 0)} acc.</Badge>
                     <Badge variant="outline">{fmtEur(caTotal, 0)}</Badge>
                     <Badge className="bg-emerald-600 hover:bg-emerald-600">
@@ -476,6 +506,18 @@ const AcceptedPcsTab = () => {
                                 {data.categorie ? `${data.categorie} • ` : ""}
                                 Suite à : {Array.from(data.meds).slice(0, 3).join(", ")}
                                 {data.meds.size > 3 ? `, +${data.meds.size - 3}` : ""}
+                              </div>
+                              <div className="flex gap-1 mt-1">
+                                {data.manual > 0 && (
+                                  <Badge variant="outline" className="border-blue-300 text-blue-700 text-[10px] px-1.5 py-0">
+                                    👤 {data.manual} clic pharmacien
+                                  </Badge>
+                                )}
+                                {data.auto > 0 && (
+                                  <Badge variant="outline" className="border-purple-300 text-purple-700 text-[10px] px-1.5 py-0">
+                                    🤖 {data.auto} scan CIP auto
+                                  </Badge>
+                                )}
                               </div>
                             </div>
                             <div className="text-right shrink-0">
