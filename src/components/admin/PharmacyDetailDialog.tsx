@@ -70,6 +70,12 @@ const PharmacyDetailDialog = ({ pharmacyId, pharmacyName, open, onOpenChange }: 
   const [accepted, setAccepted] = useState<AcceptedRow[]>([]);
   const [analyses, setAnalyses] = useState<AnalysisRow[]>([]);
 
+  const getAnalyzedMedicationCount = (row: any): number => {
+    const fromMetadata = Number(row?.metadata?.medications_count);
+    if (Number.isFinite(fromMetadata) && fromMetadata > 0) return fromMetadata;
+    return Array.isArray(row?.medicaments) ? row.medicaments.length : 0;
+  };
+
   useEffect(() => {
     if (!open || !pharmacyId) return;
     let cancelled = false;
@@ -77,7 +83,7 @@ const PharmacyDetailDialog = ({ pharmacyId, pharmacyName, open, onOpenChange }: 
       setLoading(true);
       try {
         const [histRes, recentHistRes, scanRes, accRes] = await Promise.all([
-          supabase.from("analysis_history" as any).select("patient_hash, has_major_interaction, suggestions_count").eq("pharmacy_id", pharmacyId),
+          supabase.from("analysis_history" as any).select("patient_hash, has_major_interaction, suggestions_count, medicaments, metadata").eq("pharmacy_id", pharmacyId),
           supabase.from("analysis_history" as any).select("id, created_at, medicaments, suggestions_count, interactions_count, has_major_interaction").eq("pharmacy_id", pharmacyId).order("created_at", { ascending: false }).limit(20),
           supabase.from("scan_events" as any).select("id, created_at, ean_code, status, product_name, suggestions_count, register_id").eq("pharmacy_id", pharmacyId).order("created_at", { ascending: false }).limit(100),
           supabase.from("accepted_combinations" as any).select("id, created_at, pc_accepte, pc_categorie, medicament_source, medicaments_analyses, pcs_proposes").eq("pharmacy_id", pharmacyId).order("created_at", { ascending: false }).limit(100),
@@ -87,7 +93,7 @@ const PharmacyDetailDialog = ({ pharmacyId, pharmacyName, open, onOpenChange }: 
         const sc = (scanRes.data as any[]) || [];
         const ac = (accRes.data as any[]) || [];
         setKpi({
-          total_analyses: hist.length,
+          total_analyses: hist.reduce((sum, h) => sum + getAnalyzedMedicationCount(h), 0),
           unique_patients: new Set(hist.map((h) => h.patient_hash)).size,
           major_interactions: hist.filter((h) => h.has_major_interaction).length,
           avg_suggestions: hist.length ? Math.round((hist.reduce((s, h) => s + (h.suggestions_count || 0), 0) / hist.length) * 10) / 10 : 0,
