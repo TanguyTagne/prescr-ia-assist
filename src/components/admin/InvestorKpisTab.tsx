@@ -166,7 +166,7 @@ const InvestorKpisTab = () => {
     ] = await Promise.all([
       safeSelect<{ id: string; created_at: string; status?: string; groupement_id?: string }>("pharmacies", "id, created_at, status, groupement_id"),
       safeSelect<{ id: string; pharmacy_id: string; created_at: string }>("profiles", "id, pharmacy_id, created_at"),
-      safeSelect<{ pharmacy_id: string; user_id: string; created_at: string; metadata: any }>("analysis_history", "pharmacy_id, user_id, created_at, metadata", undefined, 10000),
+      safeSelect<{ pharmacy_id: string; user_id: string; created_at: string; metadata: any; medicaments: any }>("analysis_history", "pharmacy_id, user_id, created_at, metadata, medicaments", undefined, 10000),
       safeCount("demo_sessions"),
       safeSelect<{ session_id: string; created_at: string }>("demo_sessions", "session_id, created_at", q => q.gte("created_at", d30)),
       safeCount("demo_leads"),
@@ -204,10 +204,15 @@ const InvestorKpisTab = () => {
     const active_users_30d = activeUserSet.size;
 
     // Activation: pharmacies with >=10 analyses lifetime
+    const medicationCount = (h: { metadata?: any; medicaments?: any }) => {
+      const fromMetadata = Number(h.metadata?.medications_count);
+      if (Number.isFinite(fromMetadata) && fromMetadata > 0) return fromMetadata;
+      return Array.isArray(h.medicaments) ? h.medicaments.length : 0;
+    };
     const analysesByPharm = new Map<string, number>();
     const firstAnalysisByPharm = new Map<string, string>();
     for (const h of history) {
-      analysesByPharm.set(h.pharmacy_id, (analysesByPharm.get(h.pharmacy_id) || 0) + 1);
+      analysesByPharm.set(h.pharmacy_id, (analysesByPharm.get(h.pharmacy_id) || 0) + medicationCount(h));
       const prev = firstAnalysisByPharm.get(h.pharmacy_id);
       if (!prev || h.created_at < prev) firstAnalysisByPharm.set(h.pharmacy_id, h.created_at);
     }
@@ -236,8 +241,8 @@ const InvestorKpisTab = () => {
     const logo_churn_30d_pct = Math.max(0, 100 - retention_m1_pct);
 
     // Volume
-    const analyses_30d = history.filter(h => h.created_at >= d30).length;
-    const analyses_7d = history.filter(h => h.created_at >= d7).length;
+    const analyses_30d = history.filter(h => h.created_at >= d30).reduce((sum, h) => sum + medicationCount(h), 0);
+    const analyses_7d = history.filter(h => h.created_at >= d7).reduce((sum, h) => sum + medicationCount(h), 0);
     const analyses_per_active_pharmacy_30d = mau > 0 ? analyses_30d / mau : 0;
 
     // Funnel
@@ -277,7 +282,7 @@ const InvestorKpisTab = () => {
       total_users, active_users_30d,
       activated_pharmacies: activated, activation_rate_pct, avg_ttfv_days,
       retention_m1_pct, retention_m3_pct, retention_m6_pct, retention_m12_pct, logo_churn_30d_pct,
-      total_analyses: history.length, analyses_30d, analyses_7d, analyses_per_active_pharmacy_30d,
+      total_analyses: history.reduce((sum, h) => sum + medicationCount(h), 0), analyses_30d, analyses_7d, analyses_per_active_pharmacy_30d,
       demo_sessions_total: sessionsAll, demo_sessions_30d, demo_leads_total: leadsAll, demo_leads_30d: leadsRecent, session_to_lead_pct,
       access_requests_total, access_requests_pending, requests_to_pharmacy_pct,
       tracking_links_count, tracking_clicks_total, tracking_demos_total, tracking_leads_total,
