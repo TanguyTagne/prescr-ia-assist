@@ -133,6 +133,8 @@ const AcceptedPcsTab = () => {
           meds_in_analyses: 0,
           suggestions: 0,
           accepted: 0,
+          accepted_manual: 0,
+          accepted_auto: 0,
           rejected: 0,
           analyses_with_accept: 0,
           pcs: new Map(),
