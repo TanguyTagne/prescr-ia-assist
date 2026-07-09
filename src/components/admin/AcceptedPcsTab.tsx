@@ -107,7 +107,7 @@ const AcceptedPcsTab = () => {
       fetchAll<FeedbackRow>(() =>
         supabase
           .from("pc_feedback")
-          .select("id, pharmacy_id, medicament_nom, pc_nom, pc_categorie, created_at, action, analysis_id")
+          .select("id, pharmacy_id, medicament_nom, pc_nom, pc_categorie, created_at, action, analysis_id, detection_source")
           .order("created_at", { ascending: false }),
       ),
       fetchAll<AnalysisRow>(() =>
