@@ -432,6 +432,12 @@ const AcceptedPcsTab = () => {
                   <div className="flex gap-1.5 flex-wrap justify-end">
                     <Badge variant="outline">{g.analyses} analyses ({g.analyses_with_suggestions} suggérées)</Badge>
                     <Badge variant="secondary">{g.accepted} acceptés</Badge>
+                    <Badge variant="outline" className="border-blue-300 text-blue-700">
+                      👤 {g.accepted_manual} manuel
+                    </Badge>
+                    <Badge variant="outline" className="border-purple-300 text-purple-700">
+                      🤖 {g.accepted_auto} auto CIP
+                    </Badge>
                     <Badge variant="outline">{fmtPct(accRate, 0)} acc.</Badge>
                     <Badge variant="outline">{fmtEur(caTotal, 0)}</Badge>
                     <Badge className="bg-emerald-600 hover:bg-emerald-600">
