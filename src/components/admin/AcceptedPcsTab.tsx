@@ -507,6 +507,18 @@ const AcceptedPcsTab = () => {
                                 Suite à : {Array.from(data.meds).slice(0, 3).join(", ")}
                                 {data.meds.size > 3 ? `, +${data.meds.size - 3}` : ""}
                               </div>
+                              <div className="flex gap-1 mt-1">
+                                {data.manual > 0 && (
+                                  <Badge variant="outline" className="border-blue-300 text-blue-700 text-[10px] px-1.5 py-0">
+                                    👤 {data.manual} clic pharmacien
+                                  </Badge>
+                                )}
+                                {data.auto > 0 && (
+                                  <Badge variant="outline" className="border-purple-300 text-purple-700 text-[10px] px-1.5 py-0">
+                                    🤖 {data.auto} scan CIP auto
+                                  </Badge>
+                                )}
+                              </div>
                             </div>
                             <div className="text-right shrink-0">
                               <Badge variant="outline">{data.count}×</Badge>
