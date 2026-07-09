@@ -159,6 +159,9 @@ const AcceptedPcsTab = () => {
       const g = ensure(fb.pharmacy_id);
       if (fb.action === "accepted") {
         g.accepted++;
+        const auto = isAutoSource(fb.detection_source);
+        if (auto) g.accepted_auto++;
+        else g.accepted_manual++;
         if (fb.analysis_id) {
           let s = acceptedAnalysesByPharm.get(fb.pharmacy_id);
           if (!s) {
@@ -171,12 +174,16 @@ const AcceptedPcsTab = () => {
         if (existing) {
           existing.count++;
           existing.meds.add(fb.medicament_nom);
+          if (auto) existing.auto++;
+          else existing.manual++;
         } else {
           g.pcs.set(fb.pc_nom, {
             count: 1,
             last: fb.created_at,
             categorie: fb.pc_categorie,
             meds: new Set([fb.medicament_nom]),
+            manual: auto ? 0 : 1,
+            auto: auto ? 1 : 0,
           });
         }
       } else if (fb.action === "rejected" || fb.action === "dismissed") {
