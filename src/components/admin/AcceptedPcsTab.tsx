@@ -25,6 +25,7 @@ interface FeedbackRow {
   created_at: string;
   action: string;
   analysis_id: string | null;
+  detection_source: string | null;
 }
 
 interface AnalysisRow {
@@ -32,6 +33,15 @@ interface AnalysisRow {
   pharmacy_id: string;
   suggestions_count: number;
   medicaments: any;
+}
+
+interface PcStats {
+  count: number;
+  last: string;
+  categorie: string | null;
+  meds: Set<string>;
+  manual: number;
+  auto: number;
 }
 
 interface PharmacyStats {
@@ -42,10 +52,15 @@ interface PharmacyStats {
   meds_in_analyses: number;
   suggestions: number;
   accepted: number;
+  accepted_manual: number;
+  accepted_auto: number;
   rejected: number;
   analyses_with_accept: number;
-  pcs: Map<string, { count: number; last: string; categorie: string | null; meds: Set<string> }>;
+  pcs: Map<string, PcStats>;
 }
+
+const isAutoSource = (s: string | null) =>
+  s === "hid_auto" || s === "lgo_sale" || s === "inferred";
 
 // Paginate around PostgREST 1000-row default cap
 async function fetchAll<T>(
