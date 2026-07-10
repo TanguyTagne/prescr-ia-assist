@@ -1,33 +1,34 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { ArrowLeft, Loader2, Mail, Building2, BarChart3, RefreshCw, ShieldCheck, Target, Trophy, Sparkles, UserPlus, Network, FileSearch, Shield, FileText, Gauge, Link2, Flag, Sparkle, CheckCircle2, LineChart, ScanLine, PackageSearch } from "lucide-react";
 import AdminEmail2FAGate from "@/components/AdminEmail2FAGate";
-import InvestorKpisTab from "@/components/admin/InvestorKpisTab";
 import { useNavigate } from "react-router-dom";
-import RequestsTab from "@/components/admin/RequestsTab";
-import PharmaciesTab from "@/components/admin/PharmaciesTab";
 import PharmacyKPIs from "@/components/admin/PharmacyKPIs";
-import CoverageTab from "@/components/admin/CoverageTab";
-import RecommendationMetrics from "@/components/admin/RecommendationMetrics";
-import BenchmarkTab from "@/components/admin/BenchmarkTab";
-import DemoSessionsTab from "@/components/admin/DemoSessionsTab";
-import DemoLeadsTab from "@/components/admin/DemoLeadsTab";
-import GroupementsTab from "@/components/admin/GroupementsTab";
-import TracabiliteTab from "@/components/admin/TracabiliteTab";
-import ConformiteTab from "@/components/admin/ConformiteTab";
-import RgpdTab from "@/components/admin/RgpdTab";
-import QuotasTab from "@/components/admin/QuotasTab";
-import TrackingLinksTab from "@/components/admin/TrackingLinksTab";
-import SignalementsTab from "@/components/admin/SignalementsTab";
-import AuditPcTab from "@/components/admin/AuditPcTab";
-import AsclionBaseImportTab from "@/components/admin/AsclionBaseImportTab";
-import AcceptedPcsTab from "@/components/admin/AcceptedPcsTab";
-import RemoteScannerDiagnosticTab from "@/components/admin/RemoteScannerDiagnosticTab";
-import MedicamentsManquantsTab from "@/components/admin/MedicamentsManquantsTab";
-import RoiManqueAGagnerTab from "@/components/admin/RoiManqueAGagnerTab";
+
+const InvestorKpisTab = lazy(() => import("@/components/admin/InvestorKpisTab"));
+const RequestsTab = lazy(() => import("@/components/admin/RequestsTab"));
+const PharmaciesTab = lazy(() => import("@/components/admin/PharmaciesTab"));
+const CoverageTab = lazy(() => import("@/components/admin/CoverageTab"));
+const RecommendationMetrics = lazy(() => import("@/components/admin/RecommendationMetrics"));
+const BenchmarkTab = lazy(() => import("@/components/admin/BenchmarkTab"));
+const DemoSessionsTab = lazy(() => import("@/components/admin/DemoSessionsTab"));
+const DemoLeadsTab = lazy(() => import("@/components/admin/DemoLeadsTab"));
+const GroupementsTab = lazy(() => import("@/components/admin/GroupementsTab"));
+const TracabiliteTab = lazy(() => import("@/components/admin/TracabiliteTab"));
+const ConformiteTab = lazy(() => import("@/components/admin/ConformiteTab"));
+const RgpdTab = lazy(() => import("@/components/admin/RgpdTab"));
+const QuotasTab = lazy(() => import("@/components/admin/QuotasTab"));
+const TrackingLinksTab = lazy(() => import("@/components/admin/TrackingLinksTab"));
+const SignalementsTab = lazy(() => import("@/components/admin/SignalementsTab"));
+const AuditPcTab = lazy(() => import("@/components/admin/AuditPcTab"));
+const AsclionBaseImportTab = lazy(() => import("@/components/admin/AsclionBaseImportTab"));
+const AcceptedPcsTab = lazy(() => import("@/components/admin/AcceptedPcsTab"));
+const RemoteScannerDiagnosticTab = lazy(() => import("@/components/admin/RemoteScannerDiagnosticTab"));
+const MedicamentsManquantsTab = lazy(() => import("@/components/admin/MedicamentsManquantsTab"));
+const RoiManqueAGagnerTab = lazy(() => import("@/components/admin/RoiManqueAGagnerTab"));
 
 
 interface AccessRequest {
