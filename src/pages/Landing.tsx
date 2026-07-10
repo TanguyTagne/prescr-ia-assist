@@ -228,6 +228,51 @@ const Landing = () => {
           </div>
         </section>
 
+        <section className="py-16 px-4">
+          <div className="container max-w-5xl mx-auto">
+            <div className="pharmacy-gradient rounded-2xl p-[1px]">
+              <div className="rounded-2xl bg-background p-8 md:p-10 space-y-8">
+                <div className="text-center space-y-3 max-w-2xl mx-auto">
+                  <div className="h-12 w-12 rounded-2xl bg-accent flex items-center justify-center mx-auto">
+                    <Gift className="h-6 w-6 text-accent-foreground" />
+                  </div>
+                  <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
+                    {t("landing.referral.title")}
+                  </h2>
+                  <p className="text-muted-foreground leading-relaxed">
+                    {t("landing.referral.subtitle")}
+                  </p>
+                </div>
+                <div className="grid md:grid-cols-3 gap-4">
+                  {[
+                    { icon: Gift, title: t("landing.referral.card1.title"), desc: t("landing.referral.card1.desc") },
+                    { icon: Users, title: t("landing.referral.card2.title"), desc: t("landing.referral.card2.desc") },
+                    { icon: InfinityIcon, title: t("landing.referral.card3.title"), desc: t("landing.referral.card3.desc") },
+                  ].map((c, i) => (
+                    <div key={i} className="glass-card rounded-xl p-5 space-y-2">
+                      <div className="h-9 w-9 rounded-lg bg-accent flex items-center justify-center">
+                        <c.icon className="h-4.5 w-4.5 text-accent-foreground" />
+                      </div>
+                      <h3 className="font-semibold text-sm">{c.title}</h3>
+                      <p className="text-xs text-muted-foreground leading-relaxed">{c.desc}</p>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex justify-center">
+                  <Button variant="outline" asChild className="gap-2">
+                    <a href="#demande-acces">
+                      <Gift className="h-4 w-4" />
+                      {t("landing.referral.cta")}
+                    </a>
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+
+
         <section id="demande-acces" className="py-16 px-4">
           <div className="container max-w-xl mx-auto space-y-6">
             <div className="text-center space-y-3">
