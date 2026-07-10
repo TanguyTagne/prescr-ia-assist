@@ -18,16 +18,16 @@ const fmtCA = (n: number, lang: string) =>
 const GainSimulator = () => {
   const { t, lang } = useI18n();
   const [caM, setCaM] = useState(2.6); // millions €
-  const [days, setDays] = useState(6);
 
   const { basse, haute, tpj } = useMemo(() => {
     const ca = caM * 1_000_000;
-    const transactionsParJour = ca / 42 / (days * 50);
-    const monthlyVisits = (days * 50) / 12;
-    const basse = transactionsParJour * 0.05 * 7 * 0.3 * monthlyVisits;
-    const haute = transactionsParJour * 0.12 * 8 * 0.3 * monthlyVisits;
+    // Hypothèse : ~300 jours ouvrés/an, panier moyen 42€
+    const transactionsParJour = ca / 42 / 300;
+    const monthlyTransactions = transactionsParJour * 25;
+    const basse = monthlyTransactions * 0.05 * 7 * 0.3;
+    const haute = monthlyTransactions * 0.12 * 8 * 0.3;
     return { basse, haute, tpj: Math.round(transactionsParJour) };
-  }, [caM, days]);
+  }, [caM]);
 
   const scrollToForm = () => {
     document.getElementById("demande-acces")?.scrollIntoView({ behavior: "smooth" });
@@ -66,23 +66,8 @@ const GainSimulator = () => {
           />
         </div>
 
-        <div>
-          <div className="flex items-baseline justify-between mb-2">
-            <label className="text-sm font-medium text-muted-foreground">
-              {t("landing.sim.days")}
-            </label>
-            <span className="text-lg font-bold text-primary tabular-nums">{days}</span>
-          </div>
-          <Slider
-            value={[days]}
-            min={5}
-            max={7}
-            step={1}
-            onValueChange={(v) => setDays(v[0])}
-            aria-label={t("landing.sim.days")}
-          />
-        </div>
       </div>
+
 
       <div className="rounded-xl bg-accent/70 border border-accent-foreground/10 p-4 space-y-2">
         <div className="flex items-center gap-2 text-xs font-medium text-accent-foreground/80 uppercase tracking-wide">
