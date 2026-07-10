@@ -475,21 +475,29 @@ const AcceptedPcsTab = () => {
                     <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
                     <span className="font-medium break-words leading-tight">{g.pharmacy_name}</span>
                   </div>
-                  <div className="flex gap-1.5 flex-wrap justify-end">
-                    <Badge variant="outline">{g.analyses} analyses ({g.analyses_with_suggestions} suggérées)</Badge>
-                    <Badge variant="secondary">{g.accepted} acceptés</Badge>
-                    <Badge variant="outline" className="border-blue-300 text-blue-700">
+                  <div className="flex gap-1 flex-wrap justify-end items-center">
+                    <Badge variant="outline" className="px-1.5 py-0 text-[10px] leading-none">
+                      {g.analyses} analyses ({g.analyses_with_suggestions} suggérées)
+                    </Badge>
+                    <Badge variant="secondary" className="px-1.5 py-0 text-[10px] leading-none">
+                      {g.accepted} acceptés
+                    </Badge>
+                    <Badge variant="outline" className="px-1.5 py-0 text-[10px] leading-none border-blue-300 text-blue-700">
                       👤 {g.accepted_manual} manuel
                     </Badge>
-                    <Badge variant="outline" className="border-purple-300 text-purple-700">
+                    <Badge variant="outline" className="px-1.5 py-0 text-[10px] leading-none border-purple-300 text-purple-700">
                       🤖 {g.accepted_auto} auto CIP
                     </Badge>
-                    <Badge variant="outline">{fmtPct(accRate, 0)} acc.</Badge>
-                    <Badge variant="outline">{fmtEur(caTotal, 0)}</Badge>
-                    <Badge className="bg-emerald-600 hover:bg-emerald-600">
+                    <Badge variant="outline" className="px-1.5 py-0 text-[10px] leading-none">
+                      {fmtPct(accRate, 0)} acc.
+                    </Badge>
+                    <Badge variant="outline" className="px-1.5 py-0 text-[10px] leading-none">
+                      {fmtEur(caTotal, 0)}
+                    </Badge>
+                    <Badge className="px-1.5 py-0 text-[10px] leading-none bg-emerald-600 hover:bg-emerald-600">
                       +{fmtPct(upliftEurPctAll, 0)} panier moyen
                     </Badge>
-                    <Badge variant="outline" className="border-emerald-300 text-emerald-700">
+                    <Badge variant="outline" className="px-1.5 py-0 text-[10px] leading-none border-emerald-300 text-emerald-700">
                       +{fmtPct(upliftEurPct, 0)} quand sugg
                     </Badge>
                   </div>
