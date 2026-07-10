@@ -466,14 +466,14 @@ const AcceptedPcsTab = () => {
                   }
                   className="w-full flex items-center justify-between gap-3 text-left"
                 >
-                  <div className="flex items-center gap-2 min-w-0">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
                     {isOpen ? (
                       <ChevronDown className="h-4 w-4 shrink-0" />
                     ) : (
                       <ChevronRight className="h-4 w-4 shrink-0" />
                     )}
                     <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-                    <span className="font-medium truncate">{g.pharmacy_name}</span>
+                    <span className="font-medium break-words leading-tight">{g.pharmacy_name}</span>
                   </div>
                   <div className="flex gap-1.5 flex-wrap justify-end">
                     <Badge variant="outline">{g.analyses} analyses ({g.analyses_with_suggestions} suggérées)</Badge>
