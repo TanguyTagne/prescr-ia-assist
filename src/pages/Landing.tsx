@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { ArrowRight, Download, BarChart3, LogOut, Zap, Send, Loader2, Settings, FolderSearch, ShieldCheck } from "lucide-react";
+import { ArrowRight, Download, BarChart3, LogOut, Zap, Send, Loader2, Settings, FolderSearch, ShieldCheck, Gift, Users, Infinity as InfinityIcon } from "lucide-react";
+import GainSimulator from "@/components/GainSimulator";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
