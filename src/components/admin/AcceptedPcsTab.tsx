@@ -14,6 +14,7 @@ import {
   Target,
   ShoppingBasket,
   Percent,
+  CalendarRange,
 } from "lucide-react";
 
 interface FeedbackRow {
@@ -33,6 +34,7 @@ interface AnalysisRow {
   pharmacy_id: string;
   suggestions_count: number;
   medicaments: any;
+  created_at: string;
 }
 
 interface PcStats {
@@ -59,10 +61,27 @@ interface PharmacyStats {
   pcs: Map<string, PcStats>;
 }
 
+type Period = "all" | "month" | "quarter" | "year";
+
+const PERIOD_LABELS: Record<Period, string> = {
+  all: "Tout",
+  year: "Année",
+  quarter: "Trimestre",
+  month: "Mois",
+};
+
+const periodStart = (p: Period): Date | null => {
+  if (p === "all") return null;
+  const d = new Date();
+  if (p === "month") return new Date(d.getFullYear(), d.getMonth(), 1);
+  if (p === "quarter") return new Date(d.getFullYear(), Math.floor(d.getMonth() / 3) * 3, 1);
+  if (p === "year") return new Date(d.getFullYear(), 0, 1);
+  return null;
+};
+
 const isAutoSource = (s: string | null) =>
   s === "hid_auto" || s === "lgo_sale" || s === "inferred";
 
-// Paginate around PostgREST 1000-row default cap
 async function fetchAll<T>(
   build: () => any,
   pageSize = 1000,
@@ -79,7 +98,6 @@ async function fetchAll<T>(
   return out;
 }
 
-// Hypothèses pricing (sources : panier moyen OTC France ~ 8-10€, ticket moyen officine ~ 42€)
 const AVG_PC_PRICE_EUR = 12;
 const AVG_BASKET_EUR = 42;
 
@@ -92,9 +110,12 @@ const fmtEur = (n: number, digits = 2) =>
 
 const AcceptedPcsTab = () => {
   const [loading, setLoading] = useState(true);
-  const [groups, setGroups] = useState<PharmacyStats[]>([]);
+  const [feedbackRows, setFeedbackRows] = useState<FeedbackRow[]>([]);
+  const [analysisRows, setAnalysisRows] = useState<AnalysisRow[]>([]);
+  const [pharmMap, setPharmMap] = useState<Map<string, string>>(new Map());
   const [filter, setFilter] = useState("");
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [period, setPeriod] = useState<Period>("all");
 
   useEffect(() => {
     load();
@@ -113,14 +134,20 @@ const AcceptedPcsTab = () => {
       fetchAll<AnalysisRow>(() =>
         supabase
           .from("analysis_history")
-          .select("id, pharmacy_id, suggestions_count, medicaments")
+          .select("id, pharmacy_id, suggestions_count, medicaments, created_at")
           .order("created_at", { ascending: false }),
       ),
     ]);
+    setPharmMap(new Map((pharmRes.data || []).map((p: any) => [p.id, p.name])));
+    setFeedbackRows(feedbackData);
+    setAnalysisRows(historyData);
+    setLoading(false);
+  };
 
-    const pharmMap = new Map<string, string>(
-      (pharmRes.data || []).map((p: any) => [p.id, p.name]),
-    );
+  const groups = useMemo<PharmacyStats[]>(() => {
+    const start = periodStart(period);
+    const inPeriod = (iso: string) => (start ? new Date(iso) >= start : true);
+
     const byPharm = new Map<string, PharmacyStats>();
     const ensure = (id: string): PharmacyStats => {
       let g = byPharm.get(id);
@@ -146,7 +173,8 @@ const AcceptedPcsTab = () => {
 
     const acceptedAnalysesByPharm = new Map<string, Set<string>>();
 
-    for (const h of historyData) {
+    for (const h of analysisRows) {
+      if (!inPeriod(h.created_at)) continue;
       const g = ensure(h.pharmacy_id);
       g.analyses++;
       const sc = h.suggestions_count || 0;
@@ -155,7 +183,8 @@ const AcceptedPcsTab = () => {
       g.meds_in_analyses += Array.isArray(h.medicaments) ? h.medicaments.length : 0;
     }
 
-    for (const fb of feedbackData) {
+    for (const fb of feedbackRows) {
+      if (!inPeriod(fb.created_at)) continue;
       const g = ensure(fb.pharmacy_id);
       if (fb.action === "accepted") {
         g.accepted++;
@@ -196,11 +225,8 @@ const AcceptedPcsTab = () => {
       if (g) g.analyses_with_accept = s.size;
     }
 
-    setGroups(
-      Array.from(byPharm.values()).sort((a, b) => b.accepted - a.accepted),
-    );
-    setLoading(false);
-  };
+    return Array.from(byPharm.values()).sort((a, b) => b.accepted - a.accepted);
+  }, [feedbackRows, analysisRows, pharmMap, period]);
 
   const filtered = useMemo(() => {
     const q = filter.trim().toLowerCase();
@@ -233,7 +259,6 @@ const AcceptedPcsTab = () => {
       },
       { analyses: 0, analyses_with_suggestions: 0, meds: 0, suggestions: 0, accepted: 0, rejected: 0, analyses_with_accept: 0 },
     );
-    // Denominator for "per analyse" metrics = analyses où l'on a effectivement suggéré au moins 1 PC
     const denom = totals.analyses_with_suggestions || totals.analyses;
     const avgMeds = totals.analyses > 0 ? totals.meds / totals.analyses : 0;
     const avgAcceptedPerAnalysis = denom > 0 ? totals.accepted / denom : 0;
@@ -259,11 +284,34 @@ const AcceptedPcsTab = () => {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h2 className="text-2xl font-semibold">PC acceptés &amp; impact panier</h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          Suivi des PCs validés (commande / clic) et de leur impact sur le panier moyen.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-2xl font-semibold">PC acceptés &amp; impact panier</h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Suivi des PCs validés (commande / clic) et de leur impact sur le panier moyen.
+          </p>
+        </div>
+        <div className="flex items-center gap-1 rounded-lg border p-1 bg-background">
+          <CalendarRange className="h-3.5 w-3.5 text-muted-foreground ml-1.5 mr-0.5" />
+          {(Object.keys(PERIOD_LABELS) as Period[]).map((p) => (
+            <Button
+              key={p}
+              size="sm"
+              variant={period === p ? "default" : "ghost"}
+              className="h-7 px-2.5 text-xs"
+              onClick={() => setPeriod(p)}
+            >
+              {PERIOD_LABELS[p]}
+            </Button>
+          ))}
+        </div>
+      </div>
+
+      <div className="text-xs text-muted-foreground -mt-2">
+        Période&nbsp;: <strong>{PERIOD_LABELS[period]}</strong>
+        {period !== "all" && (
+          <> · depuis le {periodStart(period)!.toLocaleDateString("fr-FR")}</>
+        )}
       </div>
 
       {/* Global KPIs */}
@@ -366,7 +414,7 @@ const AcceptedPcsTab = () => {
         <ShoppingBasket className="h-4 w-4 mt-0.5 shrink-0" />
         <div>
           <strong>Méthode :</strong> Uplift € = (ø PCs acceptés/analyse × prix moyen PC {AVG_PC_PRICE_EUR} €) ÷ panier moyen officine {AVG_BASKET_EUR} €.
-          Sur {global.analyses} analyse(s), chaque ordonnance ajoute en moyenne {fmtNum(global.avgAcceptedPerAnalysis)} PC validé(s) ≈ <strong>{fmtEur(global.upliftEurPerAnalysis)}</strong> de CA additionnel,
+          Sur {global.analyses} analyse(s) ({PERIOD_LABELS[period].toLowerCase()}), chaque ordonnance ajoute en moyenne {fmtNum(global.avgAcceptedPerAnalysis)} PC validé(s) ≈ <strong>{fmtEur(global.upliftEurPerAnalysis)}</strong> de CA additionnel,
           soit <strong>+{fmtPct(global.basketUpliftEur)}</strong> sur le panier moyen.
           En volume : +{fmtPct(global.basketUpliftItems)} d'articles vs ordonnance seule.
           <br />
@@ -375,8 +423,6 @@ const AcceptedPcsTab = () => {
           </span>
         </div>
       </Card>
-
-
 
       <Input
         placeholder="Filtrer par PC ou pharmacie…"
@@ -387,7 +433,7 @@ const AcceptedPcsTab = () => {
 
       {filtered.length === 0 ? (
         <Card className="p-8 text-center text-sm text-muted-foreground">
-          Aucune donnée pour le moment.
+          Aucune donnée pour la période sélectionnée.
         </Card>
       ) : (
         <div className="space-y-3">
@@ -490,7 +536,7 @@ const AcceptedPcsTab = () => {
                       </div>
                     </div>
                     <div className="text-[10px] text-muted-foreground italic">
-                      Volume : +{fmtPct(upliftItems, 0)} d'articles ({g.pcs.size} PC uniques).
+                      Volume : +{fmtPct(upliftItems, 0)} d'articles ({g.pcs.size} PC uniques) · période {PERIOD_LABELS[period].toLowerCase()}.
                     </div>
 
                     {pcList.length > 0 && (
