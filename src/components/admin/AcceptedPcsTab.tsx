@@ -464,7 +464,7 @@ const AcceptedPcsTab = () => {
                       [g.pharmacy_id]: !isOpen,
                     }))
                   }
-                  className="w-full flex items-center justify-between gap-3 text-left"
+                  className="w-full flex items-start justify-between gap-3 text-left"
                 >
                   <div className="flex items-center gap-2 min-w-0 flex-1">
                     {isOpen ? (
@@ -475,31 +475,38 @@ const AcceptedPcsTab = () => {
                     <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
                     <span className="font-medium break-words leading-tight">{g.pharmacy_name}</span>
                   </div>
-                  <div className="flex gap-1 flex-wrap justify-end items-center">
-                    <Badge variant="outline" className="px-1.5 py-0 text-[10px] leading-none">
-                      {g.analyses} analyses ({g.analyses_with_suggestions} suggérées)
-                    </Badge>
-                    <Badge variant="secondary" className="px-1.5 py-0 text-[10px] leading-none">
-                      {g.accepted} acceptés
-                    </Badge>
-                    <Badge variant="outline" className="px-1.5 py-0 text-[10px] leading-none border-blue-300 text-blue-700">
-                      👤 {g.accepted_manual} manuel
-                    </Badge>
-                    <Badge variant="outline" className="px-1.5 py-0 text-[10px] leading-none border-purple-300 text-purple-700">
-                      🤖 {g.accepted_auto} auto CIP
-                    </Badge>
-                    <Badge variant="outline" className="px-1.5 py-0 text-[10px] leading-none">
-                      {fmtPct(accRate, 0)} acc.
-                    </Badge>
-                    <Badge variant="outline" className="px-1.5 py-0 text-[10px] leading-none">
-                      {fmtEur(caTotal, 0)}
-                    </Badge>
-                    <Badge className="px-1.5 py-0 text-[10px] leading-none bg-emerald-600 hover:bg-emerald-600">
-                      +{fmtPct(upliftEurPctAll, 0)} panier moyen
-                    </Badge>
-                    <Badge variant="outline" className="px-1.5 py-0 text-[10px] leading-none border-emerald-300 text-emerald-700">
-                      +{fmtPct(upliftEurPct, 0)} quand sugg
-                    </Badge>
+                  <div className="flex flex-col gap-1 items-end shrink-0">
+                    <div className="flex gap-1 flex-nowrap items-center">
+                      <Badge variant="outline" className="px-1.5 py-0 text-[10px] leading-none whitespace-nowrap">
+                        {g.analyses} analyses
+                      </Badge>
+                      <Badge variant="outline" className="px-1.5 py-0 text-[10px] leading-none whitespace-nowrap">
+                        {g.suggestions} PC proposés
+                      </Badge>
+                      <Badge variant="secondary" className="px-1.5 py-0 text-[10px] leading-none whitespace-nowrap">
+                        {g.accepted} acceptés
+                      </Badge>
+                      <Badge variant="outline" className="px-1.5 py-0 text-[10px] leading-none whitespace-nowrap border-blue-300 text-blue-700">
+                        👤 {g.accepted_manual} manuel
+                      </Badge>
+                      <Badge variant="outline" className="px-1.5 py-0 text-[10px] leading-none whitespace-nowrap border-purple-300 text-purple-700">
+                        🤖 {g.accepted_auto} auto CIP
+                      </Badge>
+                    </div>
+                    <div className="flex gap-1 flex-nowrap items-center">
+                      <Badge variant="outline" className="px-1.5 py-0 text-[10px] leading-none whitespace-nowrap">
+                        {fmtPct(accRate, 0)} acc.
+                      </Badge>
+                      <Badge variant="outline" className="px-1.5 py-0 text-[10px] leading-none whitespace-nowrap">
+                        {fmtEur(caTotal, 0)}
+                      </Badge>
+                      <Badge className="px-1.5 py-0 text-[10px] leading-none whitespace-nowrap bg-emerald-600 hover:bg-emerald-600">
+                        +{fmtPct(upliftEurPctAll, 0)} panier moyen
+                      </Badge>
+                      <Badge variant="outline" className="px-1.5 py-0 text-[10px] leading-none whitespace-nowrap border-emerald-300 text-emerald-700">
+                        +{fmtPct(upliftEurPct, 0)} quand sugg
+                      </Badge>
+                    </div>
                   </div>
                 </button>
 
