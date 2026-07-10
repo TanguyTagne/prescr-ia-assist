@@ -66,23 +66,8 @@ const GainSimulator = () => {
           />
         </div>
 
-        <div>
-          <div className="flex items-baseline justify-between mb-2">
-            <label className="text-sm font-medium text-muted-foreground">
-              {t("landing.sim.days")}
-            </label>
-            <span className="text-lg font-bold text-primary tabular-nums">{days}</span>
-          </div>
-          <Slider
-            value={[days]}
-            min={5}
-            max={7}
-            step={1}
-            onValueChange={(v) => setDays(v[0])}
-            aria-label={t("landing.sim.days")}
-          />
-        </div>
       </div>
+
 
       <div className="rounded-xl bg-accent/70 border border-accent-foreground/10 p-4 space-y-2">
         <div className="flex items-center gap-2 text-xs font-medium text-accent-foreground/80 uppercase tracking-wide">
