@@ -45,6 +45,48 @@ export const translations = {
   "landing.results.speed.desc": { fr: "Une opportunité commerciale identifiée sans ralentir l'équipe", en: "A sales opportunity surfaced without slowing the team down" },
   "landing.results.disclaimer": { fr: "Indicateurs constatés sur nos pharmacies pilotes — variables selon assortiment et usage.", en: "Figures observed on our pilot pharmacies — vary by product mix and usage." },
 
+  // ===== SIMULATOR =====
+  "landing.sim.badge": { fr: "Simulateur gratuit", en: "Free simulator" },
+  "landing.sim.title": { fr: "Le potentiel de votre officine", en: "Your pharmacy's potential" },
+  "landing.sim.ca": { fr: "Chiffre d'affaires annuel", en: "Annual revenue" },
+  "landing.sim.days": { fr: "Jours d'ouverture / semaine", en: "Opening days / week" },
+  "landing.sim.result.label": { fr: "Marge additionnelle estimée", en: "Estimated additional margin" },
+  "landing.sim.result.unit": { fr: "€ / mois", en: "€ / month" },
+  "landing.sim.result.hint": {
+    fr: "soit ~{n} passages/jour et 5 à 12 % de conseils aboutis en plus",
+    en: "i.e. ~{n} visits/day and 5 to 12% more successful advice",
+  },
+  "landing.sim.cta": { fr: "Recevoir mon diagnostic personnalisé", en: "Get my personalised diagnosis" },
+  "landing.sim.disclaimer": {
+    fr: "Estimation basée sur les moyennes des officines françaises (panier moyen 42 €, données 2025). Résultats variables selon l'officine.",
+    en: "Estimate based on French pharmacy averages (avg basket €42, 2025 data). Results vary by pharmacy.",
+  },
+
+  // ===== REFERRAL =====
+  "landing.referral.title": { fr: "Parrainez une consœur, un confrère", en: "Refer a fellow pharmacist" },
+  "landing.referral.subtitle": {
+    fr: "Les meilleures officines se recommandent entre elles. Asclion aussi.",
+    en: "The best pharmacies recommend each other. Asclion too.",
+  },
+  "landing.referral.card1.title": { fr: "1 mois offert", en: "1 month free" },
+  "landing.referral.card1.desc": {
+    fr: "sur votre abonnement, pour chaque officine parrainée qui s'équipe",
+    en: "on your subscription, for each referred pharmacy that signs up",
+  },
+  "landing.referral.card2.title": { fr: "Essai prolongé", en: "Extended trial" },
+  "landing.referral.card2.desc": {
+    fr: "pour l'officine parrainée : elle démarre sereinement",
+    en: "for the referred pharmacy: a smooth start",
+  },
+  "landing.referral.card3.title": { fr: "Cumulable", en: "Stackable" },
+  "landing.referral.card3.desc": {
+    fr: "12 parrainages = votre année offerte",
+    en: "12 referrals = your year on us",
+  },
+  "landing.referral.cta": { fr: "Demander mon code de parrainage", en: "Request my referral code" },
+
+
+
   "landing.access.title": { fr: "Demande de renseignements", en: "Request information" },
   "landing.access.desc": {
     fr: "Remplissez le formulaire ci-dessous, notre équipe vous recontactera dans les plus brefs délais.",

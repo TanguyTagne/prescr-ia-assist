@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { ArrowRight, Download, BarChart3, LogOut, Zap, Send, Loader2, Settings, FolderSearch, ShieldCheck } from "lucide-react";
+import { ArrowRight, Download, BarChart3, LogOut, Zap, Send, Loader2, Settings, FolderSearch, ShieldCheck, Gift, Users, Infinity as InfinityIcon } from "lucide-react";
+import GainSimulator from "@/components/GainSimulator";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -170,30 +171,44 @@ const Landing = () => {
       </nav>
 
       <main>
-        <section className="py-20 px-4">
-          <div className="container max-w-3xl mx-auto text-center space-y-6">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent text-accent-foreground text-xs font-medium">
-              <Zap className="h-3 w-3" />
-              {t("landing.badge")}
+        <section className="relative py-16 md:py-20 px-4 overflow-hidden">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 -z-10"
+            style={{
+              background:
+                "radial-gradient(ellipse 60% 50% at 50% 20%, hsl(var(--pharmacy-green-light) / 0.55), transparent 70%)",
+            }}
+          />
+          <div className="container max-w-6xl mx-auto grid lg:grid-cols-2 gap-10 lg:gap-14 items-center">
+            <div className="space-y-6 text-center lg:text-left">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent text-accent-foreground text-xs font-medium">
+                <Zap className="h-3 w-3" />
+                {t("landing.badge")}
+              </div>
+              <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight leading-tight">
+                {t("landing.title.line1")}
+                <br />
+                <span className="text-primary">{t("landing.title.line2")}</span>
+              </h1>
+              <p className="text-lg text-muted-foreground max-w-xl mx-auto lg:mx-0 leading-relaxed">
+                {t("landing.subtitle")}
+              </p>
+              <div className="flex flex-col sm:flex-row items-center lg:items-start justify-center lg:justify-start gap-3 pt-2">
+                <Button size="lg" asChild className="h-12 px-8 text-base font-semibold pharmacy-gradient border-0 gap-2">
+                  <a href="#demande-acces">
+                    <Send className="h-5 w-5" />
+                    {t("landing.cta.access")}
+                  </a>
+                </Button>
+              </div>
             </div>
-            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight leading-tight">
-              {t("landing.title.line1")}
-              <br />
-              <span className="text-primary">{t("landing.title.line2")}</span>
-            </h1>
-            <p className="text-lg text-muted-foreground max-w-xl mx-auto leading-relaxed">
-              {t("landing.subtitle")}
-            </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-              <Button size="lg" asChild className="h-12 px-8 text-base font-semibold pharmacy-gradient border-0 gap-2">
-                <a href="#demande-acces">
-                  <Send className="h-5 w-5" />
-                  {t("landing.cta.access")}
-                </a>
-              </Button>
+            <div className="lg:pl-4">
+              <GainSimulator />
             </div>
           </div>
         </section>
+
 
 
         <section className="py-16 px-4 bg-secondary/50">
@@ -212,6 +227,51 @@ const Landing = () => {
             </div>
           </div>
         </section>
+
+        <section className="py-16 px-4">
+          <div className="container max-w-5xl mx-auto">
+            <div className="pharmacy-gradient rounded-2xl p-[1px]">
+              <div className="rounded-2xl bg-background p-8 md:p-10 space-y-8">
+                <div className="text-center space-y-3 max-w-2xl mx-auto">
+                  <div className="h-12 w-12 rounded-2xl bg-accent flex items-center justify-center mx-auto">
+                    <Gift className="h-6 w-6 text-accent-foreground" />
+                  </div>
+                  <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
+                    {t("landing.referral.title")}
+                  </h2>
+                  <p className="text-muted-foreground leading-relaxed">
+                    {t("landing.referral.subtitle")}
+                  </p>
+                </div>
+                <div className="grid md:grid-cols-3 gap-4">
+                  {[
+                    { icon: Gift, title: t("landing.referral.card1.title"), desc: t("landing.referral.card1.desc") },
+                    { icon: Users, title: t("landing.referral.card2.title"), desc: t("landing.referral.card2.desc") },
+                    { icon: InfinityIcon, title: t("landing.referral.card3.title"), desc: t("landing.referral.card3.desc") },
+                  ].map((c, i) => (
+                    <div key={i} className="glass-card rounded-xl p-5 space-y-2">
+                      <div className="h-9 w-9 rounded-lg bg-accent flex items-center justify-center">
+                        <c.icon className="h-4.5 w-4.5 text-accent-foreground" />
+                      </div>
+                      <h3 className="font-semibold text-sm">{c.title}</h3>
+                      <p className="text-xs text-muted-foreground leading-relaxed">{c.desc}</p>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex justify-center">
+                  <Button variant="outline" asChild className="gap-2">
+                    <a href="#demande-acces">
+                      <Gift className="h-4 w-4" />
+                      {t("landing.referral.cta")}
+                    </a>
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+
 
         <section id="demande-acces" className="py-16 px-4">
           <div className="container max-w-xl mx-auto space-y-6">
