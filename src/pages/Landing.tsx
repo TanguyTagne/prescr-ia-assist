@@ -171,30 +171,44 @@ const Landing = () => {
       </nav>
 
       <main>
-        <section className="py-20 px-4">
-          <div className="container max-w-3xl mx-auto text-center space-y-6">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent text-accent-foreground text-xs font-medium">
-              <Zap className="h-3 w-3" />
-              {t("landing.badge")}
+        <section className="relative py-16 md:py-20 px-4 overflow-hidden">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 -z-10"
+            style={{
+              background:
+                "radial-gradient(ellipse 60% 50% at 50% 20%, hsl(var(--pharmacy-green-light) / 0.55), transparent 70%)",
+            }}
+          />
+          <div className="container max-w-6xl mx-auto grid lg:grid-cols-2 gap-10 lg:gap-14 items-center">
+            <div className="space-y-6 text-center lg:text-left">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent text-accent-foreground text-xs font-medium">
+                <Zap className="h-3 w-3" />
+                {t("landing.badge")}
+              </div>
+              <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight leading-tight">
+                {t("landing.title.line1")}
+                <br />
+                <span className="text-primary">{t("landing.title.line2")}</span>
+              </h1>
+              <p className="text-lg text-muted-foreground max-w-xl mx-auto lg:mx-0 leading-relaxed">
+                {t("landing.subtitle")}
+              </p>
+              <div className="flex flex-col sm:flex-row items-center lg:items-start justify-center lg:justify-start gap-3 pt-2">
+                <Button size="lg" asChild className="h-12 px-8 text-base font-semibold pharmacy-gradient border-0 gap-2">
+                  <a href="#demande-acces">
+                    <Send className="h-5 w-5" />
+                    {t("landing.cta.access")}
+                  </a>
+                </Button>
+              </div>
             </div>
-            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight leading-tight">
-              {t("landing.title.line1")}
-              <br />
-              <span className="text-primary">{t("landing.title.line2")}</span>
-            </h1>
-            <p className="text-lg text-muted-foreground max-w-xl mx-auto leading-relaxed">
-              {t("landing.subtitle")}
-            </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-              <Button size="lg" asChild className="h-12 px-8 text-base font-semibold pharmacy-gradient border-0 gap-2">
-                <a href="#demande-acces">
-                  <Send className="h-5 w-5" />
-                  {t("landing.cta.access")}
-                </a>
-              </Button>
+            <div className="lg:pl-4">
+              <GainSimulator />
             </div>
           </div>
         </section>
+
 
 
         <section className="py-16 px-4 bg-secondary/50">
