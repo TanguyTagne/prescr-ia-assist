@@ -215,27 +215,30 @@ const Admin = () => {
         </div>
 
         {tab === "kpis" && <PharmacyKPIs />}
-        {tab === "investor" && <InvestorKpisTab />}
-        {tab === "demo-leads" && <DemoLeadsTab />}
-        {tab === "demo-sessions" && <DemoSessionsTab />}
-        {tab === "tracking-links" && <TrackingLinksTab />}
-        {tab === "requests" && <RequestsTab requests={requests} onRefresh={loadData} />}
-        {tab === "pharmacies" && <PharmaciesTab pharmacies={pharmacies} onRefresh={loadData} />}
-        {tab === "coverage" && <CoverageTab />}
-        {tab === "perf" && <RecommendationMetrics />}
-        {tab === "benchmark" && <BenchmarkTab />}
-        {tab === "groupements" && <GroupementsTab />}
-        {tab === "tracabilite" && <TracabiliteTab />}
-        {tab === "conformite" && <ConformiteTab />}
-        {tab === "rgpd" && <RgpdTab />}
-        {tab === "quotas" && <QuotasTab />}
-        {tab === "signalements" && <SignalementsTab />}
-        {tab === "audit-pc" && <AuditPcTab />}
-        {tab === "accepted-pcs" && <AcceptedPcsTab />}
-        {tab === "remote-diag" && <RemoteScannerDiagnosticTab />}
-        {tab === "medicaments-manquants" && <MedicamentsManquantsTab />}
-        {tab === "asclion-base" && <AsclionBaseImportTab />}
-        {tab === "roi-manque-a-gagner" && <RoiManqueAGagnerTab />}
+        <Suspense fallback={<div className="flex items-center justify-center py-12"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>}>
+          {tab === "investor" && <InvestorKpisTab />}
+          {tab === "demo-leads" && <DemoLeadsTab />}
+          {tab === "demo-sessions" && <DemoSessionsTab />}
+          {tab === "tracking-links" && <TrackingLinksTab />}
+          {tab === "requests" && <RequestsTab requests={requests} onRefresh={loadData} />}
+          {tab === "pharmacies" && <PharmaciesTab pharmacies={pharmacies} onRefresh={loadData} />}
+          {tab === "coverage" && <CoverageTab />}
+          {tab === "perf" && <RecommendationMetrics />}
+          {tab === "benchmark" && <BenchmarkTab />}
+          {tab === "groupements" && <GroupementsTab />}
+          {tab === "tracabilite" && <TracabiliteTab />}
+          {tab === "conformite" && <ConformiteTab />}
+          {tab === "rgpd" && <RgpdTab />}
+          {tab === "quotas" && <QuotasTab />}
+          {tab === "signalements" && <SignalementsTab />}
+          {tab === "audit-pc" && <AuditPcTab />}
+          {tab === "accepted-pcs" && <AcceptedPcsTab />}
+          {tab === "remote-diag" && <RemoteScannerDiagnosticTab />}
+          {tab === "medicaments-manquants" && <MedicamentsManquantsTab />}
+          {tab === "asclion-base" && <AsclionBaseImportTab />}
+          {tab === "roi-manque-a-gagner" && <RoiManqueAGagnerTab />}
+        </Suspense>
+
         
       </div>
     </div>
