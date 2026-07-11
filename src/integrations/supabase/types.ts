@@ -2221,51 +2221,6 @@ export type Database = {
           },
         ]
       }
-      pharmacy_quotas: {
-        Row: {
-          created_at: string
-          current_daily_analyses: number
-          current_monthly_ai_calls: number
-          daily_analyses_limit: number
-          last_reset_daily: string
-          last_reset_monthly: string
-          max_upload_size_mb: number
-          monthly_ai_calls_limit: number
-          notes: string | null
-          over_limit_count: number
-          pharmacy_id: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          current_daily_analyses?: number
-          current_monthly_ai_calls?: number
-          daily_analyses_limit?: number
-          last_reset_daily?: string
-          last_reset_monthly?: string
-          max_upload_size_mb?: number
-          monthly_ai_calls_limit?: number
-          notes?: string | null
-          over_limit_count?: number
-          pharmacy_id: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          current_daily_analyses?: number
-          current_monthly_ai_calls?: number
-          daily_analyses_limit?: number
-          last_reset_daily?: string
-          last_reset_monthly?: string
-          max_upload_size_mb?: number
-          monthly_ai_calls_limit?: number
-          notes?: string | null
-          over_limit_count?: number
-          pharmacy_id?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
       pharmacy_registers: {
         Row: {
           active: boolean
@@ -3563,10 +3518,6 @@ export type Database = {
       }
     }
     Functions: {
-      check_and_increment_quota: {
-        Args: { _pharmacy_id: string; _quota_type: string }
-        Returns: Json
-      }
       current_user_pharmacy_id: { Args: never; Returns: string }
       get_medicaments_coverage_stats: { Args: never; Returns: Json }
       get_pharmacy_connection_counts: {
@@ -3601,14 +3552,6 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
-      }
-      increment_pharmacy_quota_usage: {
-        Args: {
-          _ai_call_count?: number
-          _medication_count?: number
-          _pharmacy_id: string
-        }
-        Returns: Json
       }
       is_admin_2fa_verified: { Args: never; Returns: boolean }
       is_pharmacy_active: { Args: { _user_id: string }; Returns: boolean }
