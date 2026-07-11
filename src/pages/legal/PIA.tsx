@@ -109,7 +109,7 @@ const PIA = () => {
             <li><strong>Chiffrement :</strong> TLS 1.3 en transit, AES-256 au repos (Supabase)</li>
             <li><strong>Contrôle d'accès :</strong> Row-Level Security PostgreSQL, JWT, isolation par pharmacy_id</li>
             <li><strong>Traçabilité :</strong> journal d'audit append-only sur toutes les modifications cliniques</li>
-            <li><strong>Quotas :</strong> limites applicatives par pharmacie pour détecter les abus</li>
+            
             <li><strong>Hébergement :</strong> UE uniquement (Frankfurt, Allemagne)</li>
             <li><strong>Suppression :</strong> droit à l'effacement opérationnel via interface utilisateur</li>
             <li><strong>Sensibilisation :</strong> formation des équipes via /aide</li>

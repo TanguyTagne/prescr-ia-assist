@@ -84,7 +84,7 @@ serve(async (req) => {
 
     if (action === "export") {
       // Récupère toutes les données de la pharmacie
-      const [analyses, feedback, sales, registers, reminders, lgoConfig, mapping, prefs, quotas] = await Promise.all([
+      const [analyses, feedback, sales, registers, reminders, lgoConfig, mapping, prefs] = await Promise.all([
         supabase.from("analysis_history").select("*").eq("pharmacy_id", pharmacyId),
         supabase.from("pc_feedback").select("*").eq("pharmacy_id", pharmacyId),
         supabase.from("sales_transactions" as any).select("*").eq("pharmacy_id", pharmacyId),
@@ -93,7 +93,6 @@ serve(async (req) => {
         supabase.from("pharmacy_lgo_config" as any).select("id, pharmacy_id, lgo_type, api_base_url, auth_method, enabled, created_at, updated_at").eq("pharmacy_id", pharmacyId),
         supabase.from("product_mapping" as any).select("*").eq("pharmacy_id", pharmacyId),
         supabase.from("pharmacy_preferences").select("*").eq("pharmacy_id", pharmacyId),
-        supabase.from("pharmacy_quotas").select("*").eq("pharmacy_id", pharmacyId),
       ]);
 
       const exportPayload = {
@@ -112,7 +111,7 @@ serve(async (req) => {
         lgo_config: lgoConfig.data || [],
         product_mapping: mapping.data || [],
         preferences: prefs.data || [],
-        quotas: quotas.data || [],
+        
       };
 
       // Mise à jour log
