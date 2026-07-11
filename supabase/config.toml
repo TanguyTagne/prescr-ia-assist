@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.lgo-delivery-webhook]
 verify_jwt = false
+
+[functions.notify-form-error]
+verify_jwt = false
