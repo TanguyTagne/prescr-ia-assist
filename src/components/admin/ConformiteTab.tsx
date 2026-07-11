@@ -29,7 +29,7 @@ Généré le ${new Date().toLocaleString("fr-FR")}
 ✅ Chiffrement TLS 1.3 en transit
 ✅ Hash SHA-256 irréversible des noms patients (PII scrubbing)
 ✅ Isolation par pharmacy_id (multi-tenant strict)
-✅ Quotas applicatifs par pharmacie (anti-abus)
+
 ✅ Force-logout admin (révocation sessions)
 
 ═══════════════════════════════════════════════════
@@ -129,7 +129,7 @@ Support sécurité : voir /mentions-legales
           <ChecklistItem text="Chiffrement TLS 1.3 en transit" />
           <ChecklistItem text="Hash SHA-256 irréversible des noms patients" />
           <ChecklistItem text="Isolation multi-tenant par pharmacy_id" />
-          <ChecklistItem text="Quotas applicatifs par pharmacie (anti-abus)" />
+          
           <ChecklistItem text="Force-logout admin (révocation sessions)" />
         </ul>
       </Card>

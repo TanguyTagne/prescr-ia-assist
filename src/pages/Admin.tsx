@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { ArrowLeft, Loader2, Mail, Building2, BarChart3, RefreshCw, ShieldCheck, Target, Trophy, Sparkles, UserPlus, Network, FileSearch, Shield, FileText, Gauge, Link2, Flag, Sparkle, CheckCircle2, LineChart, ScanLine, PackageSearch } from "lucide-react";
+import { ArrowLeft, Loader2, Mail, Building2, BarChart3, RefreshCw, ShieldCheck, Target, Trophy, Sparkles, UserPlus, Network, FileSearch, Shield, FileText, Link2, Flag, Sparkle, CheckCircle2, LineChart, ScanLine, PackageSearch } from "lucide-react";
 import AdminEmail2FAGate from "@/components/AdminEmail2FAGate";
 import { useNavigate } from "react-router-dom";
 import PharmacyKPIs from "@/components/admin/PharmacyKPIs";
@@ -20,7 +20,7 @@ const GroupementsTab = lazy(() => import("@/components/admin/GroupementsTab"));
 const TracabiliteTab = lazy(() => import("@/components/admin/TracabiliteTab"));
 const ConformiteTab = lazy(() => import("@/components/admin/ConformiteTab"));
 const RgpdTab = lazy(() => import("@/components/admin/RgpdTab"));
-const QuotasTab = lazy(() => import("@/components/admin/QuotasTab"));
+
 const TrackingLinksTab = lazy(() => import("@/components/admin/TrackingLinksTab"));
 const SignalementsTab = lazy(() => import("@/components/admin/SignalementsTab"));
 const AuditPcTab = lazy(() => import("@/components/admin/AuditPcTab"));
@@ -64,7 +64,7 @@ const Admin = () => {
   const [requests, setRequests] = useState<AccessRequest[]>([]);
   const [pharmacies, setPharmacies] = useState<PharmacyWithLGO[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<"requests" | "pharmacies" | "kpis" | "investor" | "coverage" | "perf" | "benchmark" | "demo-sessions" | "demo-leads" | "tracking-links" | "groupements" | "tracabilite" | "conformite" | "rgpd" | "quotas" | "signalements" | "audit-pc" | "accepted-pcs" | "remote-diag" | "medicaments-manquants" | "asclion-base" | "roi-manque-a-gagner">("kpis");
+  const [tab, setTab] = useState<"requests" | "pharmacies" | "kpis" | "investor" | "coverage" | "perf" | "benchmark" | "demo-sessions" | "demo-leads" | "tracking-links" | "groupements" | "tracabilite" | "conformite" | "rgpd" | "signalements" | "audit-pc" | "accepted-pcs" | "remote-diag" | "medicaments-manquants" | "asclion-base" | "roi-manque-a-gagner">("kpis");
 
   useEffect(() => {
     loadData();
@@ -184,10 +184,6 @@ const Admin = () => {
             <FileText className="h-3.5 w-3.5" />
             RGPD
           </Button>
-          <Button variant={tab === "quotas" ? "default" : "outline"} size="sm" onClick={() => setTab("quotas")} className="gap-1.5">
-            <Gauge className="h-3.5 w-3.5" />
-            Quotas
-          </Button>
           <Button variant={tab === "accepted-pcs" ? "default" : "outline"} size="sm" onClick={() => setTab("accepted-pcs")} className="gap-1.5">
             <CheckCircle2 className="h-3.5 w-3.5" />
             PC acceptés
@@ -229,7 +225,7 @@ const Admin = () => {
           {tab === "tracabilite" && <TracabiliteTab />}
           {tab === "conformite" && <ConformiteTab />}
           {tab === "rgpd" && <RgpdTab />}
-          {tab === "quotas" && <QuotasTab />}
+          
           {tab === "signalements" && <SignalementsTab />}
           {tab === "audit-pc" && <AuditPcTab />}
           {tab === "accepted-pcs" && <AcceptedPcsTab />}

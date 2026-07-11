@@ -1417,8 +1417,6 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  let quotaPharmacyIdForUsage: string | null = null;
-  let quotaUsageCounted = false;
   let extractedMedicationCountForUsage = 0;
 
   try {
@@ -1479,57 +1477,39 @@ serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // ====== PHARMACY STATUS + QUOTA CHECK (server-side, atomic, multi-PC safe) ======
+    // ====== PHARMACY STATUS CHECK (server-side) ======
     try {
       const userId = claimsData?.claims?.sub;
-      if (!userId) throw new Error("__skip_quota__");
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("pharmacy_id")
-        .eq("id", userId)
-        .maybeSingle();
-      const pharmacyIdForQuota = (profile as any)?.pharmacy_id;
-      if (pharmacyIdForQuota) {
-        quotaPharmacyIdForUsage = pharmacyIdForQuota;
-        // Block suspended/disabled pharmacies at the API layer
-        const { data: pharm } = await supabase
-          .from("pharmacies")
-          .select("status")
-          .eq("id", pharmacyIdForQuota)
+      if (userId) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("pharmacy_id")
+          .eq("id", userId)
           .maybeSingle();
-        const pharmStatus = (pharm as any)?.status;
-        if (pharmStatus === "paused" || pharmStatus === "disabled") {
-          return new Response(
-            JSON.stringify({
-              code: "PHARMACY_DISABLED",
-              error: "PHARMACY_DISABLED",
-              message: pharmStatus === "paused"
-                ? "L'accès de cette pharmacie a été mis en pause. Contactez Asclion."
-                : "L'accès de cette pharmacie a été désactivé. Contactez Asclion.",
-            }),
-            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-          );
-        }
-
-        const { data: quotaRes, error: quotaErr } = await supabase.rpc("check_and_increment_quota", {
-          _pharmacy_id: pharmacyIdForQuota,
-          _quota_type: "analysis",
-        });
-        if (quotaErr) {
-          console.error("Quota RPC error:", quotaErr);
-        } else if (quotaRes && (quotaRes as any).allowed === false) {
-          return new Response(
-            JSON.stringify({
-              error: "QUOTA_EXCEEDED",
-              message: "Quota journalier d'analyses atteint.",
-              quota: quotaRes,
-            }),
-            { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-          );
+        const pharmacyIdForStatus = (profile as any)?.pharmacy_id;
+        if (pharmacyIdForStatus) {
+          const { data: pharm } = await supabase
+            .from("pharmacies")
+            .select("status")
+            .eq("id", pharmacyIdForStatus)
+            .maybeSingle();
+          const pharmStatus = (pharm as any)?.status;
+          if (pharmStatus === "paused" || pharmStatus === "disabled") {
+            return new Response(
+              JSON.stringify({
+                code: "PHARMACY_DISABLED",
+                error: "PHARMACY_DISABLED",
+                message: pharmStatus === "paused"
+                  ? "L'accès de cette pharmacie a été mis en pause. Contactez Asclion."
+                  : "L'accès de cette pharmacie a été désactivé. Contactez Asclion.",
+              }),
+              { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+            );
+          }
         }
       }
     } catch (qErr) {
-      console.error("Quota / status check failed (non-blocking):", qErr);
+      console.error("Pharmacy status check failed (non-blocking):", qErr);
     }
 
     // Parse blocked products from basket context (anti-loop)
@@ -1593,18 +1573,6 @@ serve(async (req) => {
     extractedPatientName = aiResult.patient_nom || null;
     extractedMedicationCountForUsage = medEntries.length;
 
-    if (quotaPharmacyIdForUsage) {
-      try {
-        await supabase.rpc("increment_pharmacy_quota_usage", {
-          _pharmacy_id: quotaPharmacyIdForUsage,
-          _medication_count: extractedMedicationCountForUsage,
-          _ai_call_count: 1,
-        });
-        quotaUsageCounted = true;
-      } catch (usageErr) {
-        console.error("Failed to count analyzed medications:", usageErr);
-      }
-    }
 
     if (medEntries.length === 0) {
       return new Response(JSON.stringify({
@@ -2215,7 +2183,6 @@ serve(async (req) => {
                 contextes_count: allContexts.length,
                 clinical_kb_matches: clinicalResults.length,
                 medications_count: extractedMedicationCountForUsage,
-                quota_counted: quotaUsageCounted,
               },
             });
 
@@ -2325,22 +2292,6 @@ serve(async (req) => {
 
     return response;
   } catch (e) {
-    if (quotaPharmacyIdForUsage && !quotaUsageCounted) {
-      try {
-        const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
-        const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-        if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
-          const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-          await supabase.rpc("increment_pharmacy_quota_usage", {
-            _pharmacy_id: quotaPharmacyIdForUsage,
-            _medication_count: extractedMedicationCountForUsage,
-            _ai_call_count: 1,
-          });
-        }
-      } catch (usageErr) {
-        console.error("Failed to count failed analysis attempt:", usageErr);
-      }
-    }
     console.error("analyze-prescription error:", e);
     const msg = e instanceof Error ? e.message : "Erreur inconnue";
     if (msg === "RATE_LIMIT") return new Response(JSON.stringify({ error: "Trop de requêtes, réessayez." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
