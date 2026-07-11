@@ -49,6 +49,16 @@ const AccessRequestForm = () => {
       toast.success(t("form.success.toast"));
     } catch (err: any) {
       toast.error(err.message || t("form.error.toast"));
+      // Fire-and-forget: notifie l'admin pour ne perdre aucun lead
+      supabase.functions.invoke("notify-form-error", {
+        body: {
+          form,
+          errorMessage: err?.message || String(err),
+          errorCode: err?.code,
+          errorDetails: err?.details || err?.hint || (err?.stack ? String(err.stack).slice(0, 1000) : undefined),
+          url: typeof window !== "undefined" ? window.location.href : undefined,
+        },
+      }).catch(console.error);
     } finally {
       setLoading(false);
     }
