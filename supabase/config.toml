@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.notify-form-error]
 verify_jwt = false
+
+[functions.send-monthly-recap]
+verify_jwt = false
