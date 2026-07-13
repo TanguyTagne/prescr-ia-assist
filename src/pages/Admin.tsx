@@ -205,6 +205,10 @@ const Admin = () => {
             <Trophy className="h-3.5 w-3.5" />
             ROI & Manque à gagner
           </Button>
+          <Button variant={tab === "monthly-recap" ? "default" : "outline"} size="sm" onClick={() => setTab("monthly-recap")} className="gap-1.5">
+            <Trophy className="h-3.5 w-3.5" />
+            Récap mensuel
+          </Button>
           <Button variant="outline" size="sm" onClick={() => navigate("/groupement")} className="gap-1.5">
             <Network className="h-3.5 w-3.5" />
             Ouvrir dashboard groupement →
