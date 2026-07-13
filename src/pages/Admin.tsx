@@ -29,6 +29,7 @@ const AcceptedPcsTab = lazy(() => import("@/components/admin/AcceptedPcsTab"));
 const RemoteScannerDiagnosticTab = lazy(() => import("@/components/admin/RemoteScannerDiagnosticTab"));
 const MedicamentsManquantsTab = lazy(() => import("@/components/admin/MedicamentsManquantsTab"));
 const RoiManqueAGagnerTab = lazy(() => import("@/components/admin/RoiManqueAGagnerTab"));
+const MonthlyRecapTab = lazy(() => import("@/components/admin/MonthlyRecapTab"));
 
 
 interface AccessRequest {
@@ -64,7 +65,7 @@ const Admin = () => {
   const [requests, setRequests] = useState<AccessRequest[]>([]);
   const [pharmacies, setPharmacies] = useState<PharmacyWithLGO[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<"requests" | "pharmacies" | "kpis" | "investor" | "coverage" | "perf" | "benchmark" | "demo-sessions" | "demo-leads" | "tracking-links" | "groupements" | "tracabilite" | "conformite" | "rgpd" | "signalements" | "audit-pc" | "accepted-pcs" | "remote-diag" | "medicaments-manquants" | "asclion-base" | "roi-manque-a-gagner">("kpis");
+  const [tab, setTab] = useState<"requests" | "pharmacies" | "kpis" | "investor" | "coverage" | "perf" | "benchmark" | "demo-sessions" | "demo-leads" | "tracking-links" | "groupements" | "tracabilite" | "conformite" | "rgpd" | "signalements" | "audit-pc" | "accepted-pcs" | "remote-diag" | "medicaments-manquants" | "asclion-base" | "roi-manque-a-gagner" | "monthly-recap">("kpis");
 
   useEffect(() => {
     loadData();
@@ -204,6 +205,10 @@ const Admin = () => {
             <Trophy className="h-3.5 w-3.5" />
             ROI & Manque à gagner
           </Button>
+          <Button variant={tab === "monthly-recap" ? "default" : "outline"} size="sm" onClick={() => setTab("monthly-recap")} className="gap-1.5">
+            <Trophy className="h-3.5 w-3.5" />
+            Récap mensuel
+          </Button>
           <Button variant="outline" size="sm" onClick={() => navigate("/groupement")} className="gap-1.5">
             <Network className="h-3.5 w-3.5" />
             Ouvrir dashboard groupement →
@@ -233,6 +238,7 @@ const Admin = () => {
           {tab === "medicaments-manquants" && <MedicamentsManquantsTab />}
           {tab === "asclion-base" && <AsclionBaseImportTab />}
           {tab === "roi-manque-a-gagner" && <RoiManqueAGagnerTab />}
+          {tab === "monthly-recap" && <MonthlyRecapTab />}
         </Suspense>
 
         
