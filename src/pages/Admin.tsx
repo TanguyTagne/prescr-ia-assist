@@ -29,6 +29,7 @@ const AcceptedPcsTab = lazy(() => import("@/components/admin/AcceptedPcsTab"));
 const RemoteScannerDiagnosticTab = lazy(() => import("@/components/admin/RemoteScannerDiagnosticTab"));
 const MedicamentsManquantsTab = lazy(() => import("@/components/admin/MedicamentsManquantsTab"));
 const RoiManqueAGagnerTab = lazy(() => import("@/components/admin/RoiManqueAGagnerTab"));
+const MonthlyRecapTab = lazy(() => import("@/components/admin/MonthlyRecapTab"));
 
 
 interface AccessRequest {
