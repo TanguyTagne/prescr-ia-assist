@@ -34,14 +34,16 @@ const WidgetDemo = ({ onClose }: WidgetDemoProps) => {
     return () => clearTimeout(tm);
   }, [phase, selected]);
 
-  // Le lead/CTA apparaît automatiquement 20 s après l'affichage des résultats
+  // Le lead/CTA apparaît automatiquement 10 s après l'affichage des résultats
   // pour laisser le temps de lire la démo, puis pousser vers la conversion.
+
   useEffect(() => {
     if (phase !== "result" || !selected) return;
     const tm = setTimeout(() => {
-      trackEvent("demo_lead_auto_shown", { ordonnance: selected.id, delay_s: 20 });
+      trackEvent("demo_lead_auto_shown", { ordonnance: selected.id, delay_s: 10 });
       setPhase("lead");
-    }, 20_000);
+    }, 10_000);
+
     return () => clearTimeout(tm);
   }, [phase, selected]);
 
