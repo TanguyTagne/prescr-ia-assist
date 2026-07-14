@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Sparkles, FileText, ArrowLeft } from "lucide-react";
+import { Sparkles, FileText, ArrowLeft, Send } from "lucide-react";
 import { getDemoPrescriptions } from "@/lib/demoPrescriptions";
 import AnalysisSkeleton from "@/components/AnalysisSkeleton";
 import AnalysisResults from "@/components/AnalysisResults";
@@ -12,7 +12,11 @@ import { useI18n } from "@/i18n/I18nProvider";
 
 type Phase = "list" | "preview" | "analyzing" | "result" | "lead";
 
-const WidgetDemo = () => {
+interface WidgetDemoProps {
+  onClose?: () => void;
+}
+
+const WidgetDemo = ({ onClose }: WidgetDemoProps) => {
   const { t, lang } = useI18n();
   const demos = useMemo(() => getDemoPrescriptions(lang), [lang]);
   const [phase, setPhase] = useState<Phase>("list");
@@ -68,6 +72,19 @@ const WidgetDemo = () => {
   }
 
   if (phase === "lead") {
+    const handleGoToForm = () => {
+      trackEvent("demo_cta_to_form_clicked", { source: "widget_lead" });
+      onClose?.();
+      setTimeout(() => {
+        const el = document.getElementById("demande-acces");
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "start" });
+        } else {
+          window.location.href = "#demande-acces";
+        }
+      }, 50);
+    };
+
     return (
       <div className="p-4 space-y-3 animate-fade-in">
         <div className="text-center space-y-1">
@@ -76,6 +93,21 @@ const WidgetDemo = () => {
             {t("demo.lead.intro")}
           </div>
           <p className="text-[11px] text-muted-foreground leading-snug">{t("demo.lead.desc")}</p>
+        </div>
+        <button
+          onClick={handleGoToForm}
+          className="w-full h-10 rounded-md pharmacy-gradient text-primary-foreground text-sm font-semibold flex items-center justify-center gap-2 hover:opacity-95 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        >
+          <Send className="h-3.5 w-3.5" />
+          {t("demo.lead.ctaForm")}
+        </button>
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-border" />
+          </div>
+          <div className="relative flex justify-center">
+            <span className="bg-background px-2 text-[10px] text-muted-foreground">{t("demo.lead.or")}</span>
+          </div>
         </div>
         <DemoLeadForm />
         <button
