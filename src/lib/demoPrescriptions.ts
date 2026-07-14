@@ -50,7 +50,7 @@ const FR: DemoPrescription[] = [
           conseil_associe: "Prendre toutes les 8 h, terminer la cure complète. Signaler tout signe d'allergie cutanée.",
           recommendations: [
             {
-              produit: "Ultra-Levure 200 mg / Lactibiane ATB",
+              produit: "Probiotique spécifique antibiothérapie",
               categorie: "Probiotique",
               priorite: 95,
               phrase_conseil: "Afin de protéger votre flore intestinale et éviter des gênes comme les ballonnements, je vous conseille de prendre un probiotique avec votre antibiotique.",
@@ -101,7 +101,7 @@ const FR: DemoPrescription[] = [
           classe: "Dispositif médical",
           conseil_associe: "Réfection du pansement selon prescription IDE. Garder la zone propre et sèche entre les passages.",
           recommendations: [
-            { produit: "Crème cicatrisante (Cicalfate / Cicabio)", categorie: "Cicatrisation", priorite: 90, phrase_conseil: "Pour une belle cicatrisation, cette crème favorisera la régénération de votre peau et atténuera l'aspect de la cicatrice au fil du temps." },
+            { produit: "Crème cicatrisante réparatrice", categorie: "Cicatrisation", priorite: 90, phrase_conseil: "Pour une belle cicatrisation, cette crème favorisera la régénération de votre peau et atténuera l'aspect de la cicatrice au fil du temps." },
             { produit: "Pansement hydrocolloïde de secours", categorie: "Dispositif médical", priorite: 80, phrase_conseil: "Si par hasard votre pansement se décolle, ce pansement de secours vous permet de protéger votre plaie en attendant le passage de l'infirmier." },
             { produit: "Solution antiseptique douce (chlorhexidine)", categorie: "Antiseptique", priorite: 75, phrase_conseil: "Pour nettoyer votre cicatrice en douceur si elle se salit, cette solution antiseptique douce est parfaite en attendant votre prochain soin." },
           ],
@@ -235,7 +235,7 @@ const EN: DemoPrescription[] = [
           classe: "Medical device",
           conseil_associe: "Re-dress per nurse's prescription. Keep the area clean and dry between visits.",
           recommendations: [
-            { produit: "Healing cream (Cicalfate / Cicabio)", categorie: "Wound healing", priorite: 90, phrase_conseil: "For optimal healing, this cream supports skin regeneration and reduces the appearance of the scar over time." },
+            { produit: "Repairing healing cream", categorie: "Wound healing", priorite: 90, phrase_conseil: "For optimal healing, this cream supports skin regeneration and reduces the appearance of the scar over time."
             { produit: "Backup hydrocolloid dressing", categorie: "Medical device", priorite: 80, phrase_conseil: "If your dressing comes loose, this backup dressing protects your wound until the nurse's next visit." },
             { produit: "Mild antiseptic solution (chlorhexidine)", categorie: "Antiseptic", priorite: 75, phrase_conseil: "To gently clean your wound if it gets dirty, this mild antiseptic is perfect until your next nursing visit." },
           ],
