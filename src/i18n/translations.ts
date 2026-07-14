@@ -127,7 +127,7 @@ export const translations = {
   "landing.stack.item2.value": { fr: "valeur ~ 490 €", en: "value ~ €490" },
   "landing.stack.item3.title": { fr: "Formation de votre équipe (visio 30 min)", en: "Team training (30-min video session)" },
   "landing.stack.item3.value": { fr: "valeur ~ 190 €", en: "value ~ €190" },
-  "landing.stack.item4.title": { fr: "Base de 4 000+ correspondances médicaments → conseils", en: "4,000+ drug → advice mappings knowledge base" },
+  "landing.stack.item4.title": { fr: "Base de 28 000+ correspondances médicaments → conseils", en: "28,000+ drug → advice mappings knowledge base" },
   "landing.stack.item4.value": { fr: "inclus", en: "included" },
   "landing.stack.item5.title": { fr: "Support prioritaire (réponse < 4 h ouvrées)", en: "Priority support (reply within 4 business hours)" },
   "landing.stack.item5.value": { fr: "valeur ~ 90 €/mois", en: "value ~ €90/mo" },
