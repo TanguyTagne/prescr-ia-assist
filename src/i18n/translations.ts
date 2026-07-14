@@ -509,12 +509,12 @@ export const translations = {
 
   // ===== SEO META =====
   "seo.landing.title": {
-    fr: "Asclion — Copilote pharmacien intelligent au comptoir",
-    en: "Asclion — Smart pharmacist copilot at the counter",
+    fr: "Asclion — +800 à 2 000 €/mois de CA pour votre officine",
+    en: "Asclion — +€800 to €2,000/mo of extra revenue for your pharmacy",
   },
   "seo.landing.desc": {
-    fr: "Asclion booste le panier moyen en pharmacie : l'IA transforme chaque ordonnance en vente associée pertinente, avec la phrase conseil adaptée au patient.",
-    en: "Asclion grows pharmacy basket size: AI turns every prescription into a relevant cross-sell, with the right advice phrase for each patient.",
+    fr: "Copilote IA au comptoir : +880 € de CA additionnel dès le 1ᵉʳ mois chez notre pharmacie pilote. Compatible tous LGO. Garantie résultat ou remboursé.",
+    en: "AI counter copilot: +€880 additional revenue in month one at our pilot pharmacy. Works with any pharmacy software. Results-or-refund guarantee.",
   },
   "seo.vslgo.title": {
     fr: "Asclion vs LGO — Comparatif copilote IA pharmacie",
