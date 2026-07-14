@@ -63,7 +63,7 @@ const SiteDemoWidget = () => {
             <span className="text-[10px] font-medium text-primary-foreground/80 uppercase tracking-wider">{t("demo.headerTag")}</span>
           </div>
           <div className="overflow-y-auto max-h-[calc(100vh-6rem)]">
-            <WidgetDemo />
+            <WidgetDemo onClose={() => setOpen(false)} />
           </div>
         </div>
       )}
