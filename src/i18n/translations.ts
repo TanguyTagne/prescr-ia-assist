@@ -95,8 +95,8 @@ export const translations = {
   "landing.hero.title.amount": { fr: "+800 à +2 000 € de CA/mois", en: "+€800 to +€2,000/month" },
   "landing.hero.title.line2": { fr: "à votre officine. Sans embaucher, sans changer de LGO.", en: "to your pharmacy. No new hires, no software change." },
   "landing.hero.subtitle": {
-    fr: "Vos préparateurs délivrent le médicament, notre IA suggère en 2 secondes les 2 produits associé pertinents (déjà en stock). Résultat mesuré chez notre pilote : 1 client sur 3 repart avec le produit conseillé.",
-    en: "Your team dispenses the medication, our AI suggests 2 relevant associated products in 2 seconds (already in stock). Measured result at our pilot: 1 in 3 customers leaves with the recommended product.",
+    fr: "Vos préparateurs délivrent le médicament, notre IA suggère en 2 secondes les 2 produits associés pertinents (déjà en stock). Sur les clients à qui le produit est proposé, 2 sur 3 repartent avec.",
+    en: "Your team dispenses the medication, our AI suggests 2 relevant associated products in 2 seconds (already in stock). Of customers who are offered the product, 2 out of 3 leave with it.",
   },
   "landing.hero.cta.primary": { fr: "Réserver ma démo (15 min) →", en: "Book my demo (15 min) →" },
   "landing.hero.cta.secondary": { fr: "Voir la garantie", en: "See the guarantee" },
@@ -107,14 +107,14 @@ export const translations = {
   // ===== NEW: PROOF =====
   "landing.proof.badge": { fr: "Résultat mesuré", en: "Measured result" },
   "landing.proof.quote": {
-    fr: "« +880 € de chiffre d'affaires additionnel sur le 1ᵉʳ mois, avec 1 client sur 3 qui repart avec le produit conseillé. »",
-    en: '"+€880 in additional revenue in the first month, with 1 in 3 customers leaving with the recommended product."',
+    fr: "« +880 € de chiffre d'affaires additionnel sur le 1ᵉʳ mois. Quand le produit est proposé, 2 clients sur 3 repartent avec. »",
+    en: '"+€880 in additional revenue in the first month. When the product is offered, 2 out of 3 customers leave with it."',
   },
   "landing.proof.author": { fr: "— Pharmacie pilote, avril 2026", en: "— Pilot pharmacy, April 2026" },
   "landing.proof.kpi1.value": { fr: "+880 €", en: "+€880" },
   "landing.proof.kpi1.label": { fr: "CA additionnel · 1ᵉʳ mois", en: "Extra revenue · 1st month" },
-  "landing.proof.kpi2.value": { fr: "1 / 3", en: "1 / 3" },
-  "landing.proof.kpi2.label": { fr: "clients acceptent le conseil", en: "customers accept the advice" },
+  "landing.proof.kpi2.value": { fr: "2 / 3", en: "2 / 3" },
+  "landing.proof.kpi2.label": { fr: "proposé → accepté", en: "offered → accepted" },
   "landing.proof.kpi3.value": { fr: "< 2 s", en: "< 2 s" },
   "landing.proof.kpi3.label": { fr: "latence par ordonnance", en: "latency per prescription" },
 
