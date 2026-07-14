@@ -530,7 +530,6 @@ const Landing = () => {
                 <ul className="space-y-2.5">
                   {forWhomNo.filter(line => line.trim() !== "").map((line, i) => (
                     <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
-                      <XCircle className="h-4 w-4 shrink-0 mt-0.5" />
                       <span>{line}</span>
                     </li>
                   ))}
