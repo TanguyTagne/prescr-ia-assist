@@ -158,7 +158,7 @@ export const translations = {
   "landing.forwhom.yes.3": { fr: "Vous utilisez Winpharma, LGPI, Pharmagest, Smart Rx, LGO, Périphar…", en: "You use Winpharma, LGPI, Pharmagest, Smart Rx, LGO, Périphar…" },
   "landing.forwhom.no.title": { fr: "Ce n'est pas pour vous si :", en: "Not for you if:" },
   "landing.forwhom.no.1": { fr: "Vous cherchez uniquement à écouler du stock (Asclion ne recommande que ce qui est cliniquement pertinent)", en: "You only want to clear stock (Asclion only recommends what's clinically relevant)" },
-  "landing.forwhom.no.2": { fr: "Vous n'avez pas de scanner de médicaments au comptoir", en: "You don't have a barcode scanner at the counter" },
+  "landing.forwhom.no.2": { fr: "", en: "" },
 
   // ===== NEW: FAQ =====
   "landing.faq.title": { fr: "Les 4 questions qu'on nous pose toujours", en: "The 4 questions we always get" },
