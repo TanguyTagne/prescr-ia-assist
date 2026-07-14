@@ -453,6 +453,7 @@ export const translations = {
     en: "Asclion adapts to your pharmacy, software and catalog. Get a personalized demo — 15 minutes, no commitment.",
   },
   "demo.lead.ctaForm": { fr: "Réserver ma démo (15 min) →", en: "Book my demo (15 min) →" },
+  "demo.lead.or": { fr: "ou laisser un message rapide", en: "or leave a quick message" },
   "demo.lead.skip": { fr: "Passer cette étape, tester une autre ordonnance →", en: "Skip this step, try another prescription →" },
   "demo.lead.namePh": { fr: "Nom", en: "Full name" },
   "demo.lead.officinePh": { fr: "Officine", en: "Pharmacy" },
