@@ -1,20 +1,56 @@
 import { useState } from "react";
-import { X } from "lucide-react";
+import { X, Sparkles } from "lucide-react";
 import WidgetDemo from "@/components/WidgetDemo";
 import { useI18n } from "@/i18n/I18nProvider";
+import { trackEvent } from "@/hooks/useAnalytics";
 
 const SiteDemoWidget = () => {
   const [open, setOpen] = useState(true);
+  const [hasOpened, setHasOpened] = useState(false);
   const { t } = useI18n();
+
+  const handleToggle = () => {
+    const next = !open;
+    setOpen(next);
+    if (next && !hasOpened) {
+      setHasOpened(true);
+      try {
+        trackEvent("demo_widget_opened", { source: "launcher" });
+      } catch {}
+    }
+  };
 
   return (
     <>
+      {/* Launcher — pill button with label + soft pulse so it reads as "démo" and not "support chat" */}
       <button
-        onClick={() => setOpen(!open)}
+        onClick={handleToggle}
         aria-label={open ? t("demo.closeAria") : t("demo.openAria")}
-        className="fixed bottom-4 right-4 z-[9999] h-12 w-12 rounded-full pharmacy-gradient shadow-lg flex items-center justify-center hover:scale-105 transition-transform"
+        aria-expanded={open}
+        className="fixed bottom-4 right-4 z-[9999] group"
       >
-        {open ? <X className="h-5 w-5 text-primary-foreground" /> : <span className="text-xs font-bold text-primary-foreground">A</span>}
+        <span className="relative flex items-center">
+          {!open && (
+            <span
+              aria-hidden="true"
+              className="absolute inset-0 rounded-full pharmacy-gradient opacity-60 animate-ping"
+            />
+          )}
+          <span
+            className={`relative inline-flex items-center gap-1.5 rounded-full pharmacy-gradient shadow-lg text-primary-foreground font-semibold hover:scale-[1.03] transition-transform ${
+              open ? "h-12 w-12 justify-center" : "h-12 pl-3.5 pr-4 text-sm"
+            }`}
+          >
+            {open ? (
+              <X className="h-5 w-5" />
+            ) : (
+              <>
+                <Sparkles className="h-4 w-4" />
+                <span className="whitespace-nowrap">Tester le copilote</span>
+              </>
+            )}
+          </span>
+        </span>
       </button>
 
       {open && (
