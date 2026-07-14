@@ -207,7 +207,6 @@ const Landing = () => {
 
   const stackItems = [
     { title: t("landing.stack.item1.title"), value: t("landing.stack.item1.value") },
-    { title: t("landing.stack.item2.title"), value: t("landing.stack.item2.value") },
     { title: t("landing.stack.item3.title"), value: t("landing.stack.item3.value") },
     { title: t("landing.stack.item4.title"), value: t("landing.stack.item4.value") },
     { title: t("landing.stack.item5.title"), value: t("landing.stack.item5.value") },
