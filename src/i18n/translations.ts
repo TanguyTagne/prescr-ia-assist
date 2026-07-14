@@ -86,20 +86,124 @@ export const translations = {
   "landing.referral.cta": { fr: "Demander mon code de parrainage", en: "Request my referral code" },
 
 
+  // ===== NEW: HORMOZI HERO =====
+  "landing.hero.badge": {
+    fr: "⚡ Pharmacie pilote · +880 € de CA additionnel dès le 1ᵉʳ mois",
+    en: "⚡ Pilot pharmacy · +€880 additional revenue in the first month",
+  },
+  "landing.hero.title.line1": { fr: "Ajoutez", en: "Add" },
+  "landing.hero.title.amount": { fr: "+800 à +2 000 € de CA/mois", en: "+€800 to +€2,000/month" },
+  "landing.hero.title.line2": { fr: "à votre officine — sans embaucher, sans changer de LGO.", en: "to your pharmacy — no new hires, no software change." },
+  "landing.hero.subtitle": {
+    fr: "Vos préparateurs délivrent l'ordonnance, notre IA suggère en 2 secondes le produit associé pertinent (déjà en stock). Résultat mesuré chez notre pilote : 1 patient sur 5 repart avec le produit conseillé.",
+    en: "Your team dispenses the prescription, our AI suggests the right associated product in 2 seconds (already in stock). Measured result at our pilot: 1 in 5 patients leaves with the recommended product.",
+  },
+  "landing.hero.cta.primary": { fr: "Réserver ma démo (15 min) →", en: "Book my demo (15 min) →" },
+  "landing.hero.cta.secondary": { fr: "Voir la garantie", en: "See the guarantee" },
+  "landing.hero.trust1": { fr: "Compatible Winpharma, LGPI, Pharmagest", en: "Works with Winpharma, LGPI, Pharmagest" },
+  "landing.hero.trust2": { fr: "Installation en 24 h", en: "Setup in 24 h" },
+  "landing.hero.trust3": { fr: "RGPD & données hébergées en UE", en: "GDPR & EU-hosted data" },
 
-  "landing.access.title": { fr: "Demande de renseignements", en: "Request information" },
+  // ===== NEW: PROOF =====
+  "landing.proof.badge": { fr: "Résultat mesuré", en: "Measured result" },
+  "landing.proof.quote": {
+    fr: "« +880 € de chiffre d'affaires additionnel sur le 1ᵉʳ mois, avec 1 patient sur 5 qui repart avec le produit conseillé. »",
+    en: '"+€880 in additional revenue in the first month, with 1 in 5 patients leaving with the recommended product."',
+  },
+  "landing.proof.author": { fr: "— Pharmacie pilote, avril 2026", en: "— Pilot pharmacy, April 2026" },
+  "landing.proof.kpi1.value": { fr: "+880 €", en: "+€880" },
+  "landing.proof.kpi1.label": { fr: "CA additionnel · 1ᵉʳ mois", en: "Extra revenue · 1st month" },
+  "landing.proof.kpi2.value": { fr: "1 / 5", en: "1 / 5" },
+  "landing.proof.kpi2.label": { fr: "patients acceptent le conseil", en: "patients accept the advice" },
+  "landing.proof.kpi3.value": { fr: "< 2 s", en: "< 2 s" },
+  "landing.proof.kpi3.label": { fr: "latence par ordonnance", en: "latency per prescription" },
+
+  // ===== NEW: VALUE STACK =====
+  "landing.stack.title": { fr: "Ce que vous obtenez en rejoignant Asclion", en: "What you get when you join Asclion" },
+  "landing.stack.subtitle": { fr: "Tout est inclus. Aucune option cachée.", en: "Everything included. No hidden add-ons." },
+  "landing.stack.item1.title": { fr: "Copilote IA Asclion (licence illimitée, tous postes)", en: "Asclion AI copilot (unlimited license, all workstations)" },
+  "landing.stack.item1.value": { fr: "valeur ~ 199 €/mois", en: "value ~ €199/mo" },
+  "landing.stack.item2.title": { fr: "Installation & connexion à votre LGO par nos équipes", en: "Setup & pharmacy-software integration by our team" },
+  "landing.stack.item2.value": { fr: "valeur ~ 490 €", en: "value ~ €490" },
+  "landing.stack.item3.title": { fr: "Formation de votre équipe (visio 30 min)", en: "Team training (30-min video session)" },
+  "landing.stack.item3.value": { fr: "valeur ~ 190 €", en: "value ~ €190" },
+  "landing.stack.item4.title": { fr: "Base de 4 000+ correspondances médicaments → conseils", en: "4,000+ drug → advice mappings knowledge base" },
+  "landing.stack.item4.value": { fr: "inclus", en: "included" },
+  "landing.stack.item5.title": { fr: "Support prioritaire (réponse < 4 h ouvrées)", en: "Priority support (reply within 4 business hours)" },
+  "landing.stack.item5.value": { fr: "valeur ~ 90 €/mois", en: "value ~ €90/mo" },
+  "landing.stack.item6.title": { fr: "Mises à jour cliniques mensuelles", en: "Monthly clinical updates" },
+  "landing.stack.item6.value": { fr: "inclus", en: "included" },
+  "landing.stack.total.label": { fr: "Valeur totale", en: "Total value" },
+  "landing.stack.total.value": { fr: "~ 970 € + 289 €/mois", en: "~ €970 + €289/mo" },
+  "landing.stack.price.label": { fr: "Votre tarif pilote", en: "Your pilot pricing" },
+  "landing.stack.price.value": { fr: "sur devis, transparent, sans surprise", en: "on request, transparent, no surprises" },
+
+  // ===== NEW: GUARANTEE =====
+  "landing.guarantee.badge": { fr: "Garantie", en: "Guarantee" },
+  "landing.guarantee.title": { fr: "Résultat ou remboursé — sans discussion.", en: "Results or refunded — no questions asked." },
+  "landing.guarantee.body": {
+    fr: "Si Asclion ne vous génère pas au moins l'équivalent de son coût en CA additionnel dès le 2ᵉ mois, on vous rembourse intégralement.",
+    en: "If Asclion doesn't generate at least its own cost in additional revenue from month 2, we refund you in full.",
+  },
+  "landing.guarantee.footnote": {
+    fr: "On peut se le permettre : nos pharmacies pilotes font en moyenne +800 €/mois dès le premier mois.",
+    en: "We can afford it: our pilot pharmacies average +€800/month from month one.",
+  },
+
+  // ===== NEW: FOR WHOM =====
+  "landing.forwhom.title": { fr: "Pour qui est fait Asclion ?", en: "Who is Asclion for?" },
+  "landing.forwhom.yes.title": { fr: "Fait pour vous si :", en: "Made for you if:" },
+  "landing.forwhom.yes.1": { fr: "Vous êtes titulaire d'officine (indépendant ou groupement)", en: "You own or run a pharmacy (independent or group)" },
+  "landing.forwhom.yes.2": { fr: "Vous voulez augmenter votre CA sans sacrifier le conseil", en: "You want to grow revenue without compromising advice quality" },
+  "landing.forwhom.yes.3": { fr: "Vous utilisez Winpharma, LGPI, Pharmagest, Smart Rx, LGO, Périphar…", en: "You use Winpharma, LGPI, Pharmagest, Smart Rx, LGO, Périphar…" },
+  "landing.forwhom.no.title": { fr: "Ce n'est pas pour vous si :", en: "Not for you if:" },
+  "landing.forwhom.no.1": { fr: "Vous cherchez uniquement à écouler du stock (Asclion ne recommande que ce qui est cliniquement pertinent)", en: "You only want to clear stock (Asclion only recommends what's clinically relevant)" },
+  "landing.forwhom.no.2": { fr: "Vous n'avez pas de scanner de médicaments au comptoir", en: "You don't have a barcode scanner at the counter" },
+
+  // ===== NEW: FAQ =====
+  "landing.faq.title": { fr: "Les 4 questions qu'on nous pose toujours", en: "The 4 questions we always get" },
+  "landing.faq.q1": { fr: "Combien ça coûte, vraiment ?", en: "How much does it really cost?" },
+  "landing.faq.a1": {
+    fr: "Un abonnement mensuel unique, sans frais cachés, sans engagement long. Prix communiqué en démo (adapté à la taille de l'officine). Rappel : garantie « résultat ou remboursé » dès le 2ᵉ mois.",
+    en: "A single monthly subscription, no hidden fees, no long lock-in. Price shared during the demo (adapted to pharmacy size). Reminder: results-or-refund guarantee from month 2.",
+  },
+  "landing.faq.q2": { fr: "Combien de temps pour installer ?", en: "How long does setup take?" },
+  "landing.faq.a2": {
+    fr: "24 h ouvrées. Nous connectons Asclion à votre LGO et formons votre équipe en visio de 30 minutes. Aucune interruption au comptoir.",
+    en: "24 business hours. We connect Asclion to your pharmacy software and train your team in a 30-min video call. Zero counter downtime.",
+  },
+  "landing.faq.q3": { fr: "Est-ce compatible avec mon LGO ?", en: "Is it compatible with my pharmacy software?" },
+  "landing.faq.a3": {
+    fr: "Oui. Asclion fonctionne en surcouche non intrusive au-dessus de Winpharma, LGPI, Pharmagest, Smart Rx, LGO et Périphar. Aucune modification de votre logiciel.",
+    en: "Yes. Asclion runs as a non-intrusive overlay above Winpharma, LGPI, Pharmagest, Smart Rx, LGO and Périphar. Zero changes to your software.",
+  },
+  "landing.faq.q4": { fr: "Et les données patients ?", en: "What about patient data?" },
+  "landing.faq.a4": {
+    fr: "Aucune donnée identifiante n'est stockée. Les noms sont hachés (SHA-256) avant tout enregistrement. Hébergement UE, conforme RGPD, PIA disponible sur demande.",
+    en: "No identifying data is stored. Names are hashed (SHA-256) before any recording. EU hosting, GDPR-compliant, PIA available on request.",
+  },
+
+  // ===== NEW: URGENCY =====
+  "landing.urgency.text": {
+    fr: "⏱ Places pilotes limitées — nous accompagnons personnellement chaque pharmacie sur ses 30 premiers jours. Nous acceptons 3 nouvelles pharmacies par mois pour garantir la qualité de l'onboarding.",
+    en: "⏱ Limited pilot slots — we personally accompany each pharmacy through its first 30 days. We accept 3 new pharmacies per month to guarantee onboarding quality.",
+  },
+
+  "landing.access.title": { fr: "Réservez votre démo (15 min)", en: "Book your demo (15 min)" },
   "landing.access.desc": {
-    fr: "Remplissez le formulaire ci-dessous, notre équipe vous recontactera dans les plus brefs délais.",
-    en: "Fill in the form below, our team will get back to you shortly.",
+    fr: "Trois champs suffisent. On revient vers vous sous 24 h ouvrées avec un créneau adapté.",
+    en: "Three fields, that's it. We get back to you within 24 business hours with a slot that fits.",
   },
 
   // ===== ACCESS FORM =====
   "form.pharmacy_name": { fr: "Nom de la pharmacie *", en: "Pharmacy name *" },
-  "form.contact_name": { fr: "Nom du contact *", en: "Contact name *" },
-  "form.email": { fr: "Email *", en: "Email *" },
-  "form.phone": { fr: "Téléphone", en: "Phone" },
+  "form.contact_name": { fr: "Nom du contact", en: "Contact name" },
+  "form.email": { fr: "Email professionnel *", en: "Work email *" },
+  "form.phone": { fr: "Téléphone (recommandé — rappel sous 24 h)", en: "Phone (recommended — callback within 24 h)" },
   "form.city": { fr: "Ville", en: "City" },
   "form.lgo": { fr: "LGO utilisé (ex: Winpharma, LGPI...)", en: "Pharmacy software (e.g. Winpharma, LGPI...)" },
+  "form.more": { fr: "Ajouter des infos (optionnel)", en: "Add more info (optional)" },
+  "form.microcopy": { fr: "Réponse sous 24 h ouvrées · Aucune CB requise · Aucun engagement", en: "Reply within 24 business hours · No credit card · No commitment" },
   "form.consent": {
     fr: "J'accepte que mes données soient traitées pour répondre à ma demande, conformément à la",
     en: "I agree that my data may be processed to respond to my request, in accordance with the",
@@ -107,9 +211,9 @@ export const translations = {
   "form.privacy": { fr: "politique de confidentialité", en: "privacy policy" },
   "form.and": { fr: "et aux", en: "and the" },
   "form.terms": { fr: "CGU", en: "Terms of Use" },
-  "form.submit": { fr: "Envoyer ma demande d'accès", en: "Send my access request" },
+  "form.submit": { fr: "Réserver ma démo gratuite →", en: "Book my free demo →" },
   "form.submitted.title": { fr: "Demande envoyée !", en: "Request sent!" },
-  "form.submitted.desc": { fr: "Nous vous contacterons pour créer votre accès.", en: "We will contact you to create your account." },
+  "form.submitted.desc": { fr: "Nous vous contactons sous 24 h ouvrées avec un créneau adapté.", en: "We'll contact you within 24 business hours with a slot that fits." },
   "form.error.consent": { fr: "Veuillez accepter la politique de confidentialité.", en: "Please accept the privacy policy." },
   "form.success.toast": { fr: "Demande envoyée ! Nous reviendrons vers vous rapidement.", en: "Request sent! We'll get back to you soon." },
   "form.error.toast": { fr: "Erreur lors de l'envoi", en: "Error sending request" },
@@ -405,12 +509,12 @@ export const translations = {
 
   // ===== SEO META =====
   "seo.landing.title": {
-    fr: "Asclion — Copilote pharmacien intelligent au comptoir",
-    en: "Asclion — Smart pharmacist copilot at the counter",
+    fr: "Asclion — +800 à 2 000 €/mois de CA pour votre officine",
+    en: "Asclion — +€800 to €2,000/mo of extra revenue for your pharmacy",
   },
   "seo.landing.desc": {
-    fr: "Asclion booste le panier moyen en pharmacie : l'IA transforme chaque ordonnance en vente associée pertinente, avec la phrase conseil adaptée au patient.",
-    en: "Asclion grows pharmacy basket size: AI turns every prescription into a relevant cross-sell, with the right advice phrase for each patient.",
+    fr: "Copilote IA au comptoir : +880 € de CA additionnel dès le 1ᵉʳ mois chez notre pharmacie pilote. Compatible tous LGO. Garantie résultat ou remboursé.",
+    en: "AI counter copilot: +€880 additional revenue in month one at our pilot pharmacy. Works with any pharmacy software. Results-or-refund guarantee.",
   },
   "seo.vslgo.title": {
     fr: "Asclion vs LGO — Comparatif copilote IA pharmacie",

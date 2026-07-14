@@ -1,80 +1,141 @@
-# Garantir la lecture des ordres LGO → robot
 
-Aucune méthode unique ne couvre 100 % du parc. La seule façon d'**assurer** qu'on lit le message, c'est d'empiler plusieurs voies d'interception, classées par fiabilité, et de basculer automatiquement sur la suivante quand la précédente ne voit rien pendant une vraie délivrance. C'est exactement la logique de l'assistant actuel, mais incomplète sur 3 points.
+# Refonte de la landing "Grand Slam Offer" façon Hormozi
 
-## Hiérarchie des canaux à supporter (du plus fiable au plus universel)
+## Diagnostic actuel (pourquoi ça ne convertit pas)
+
+- **Promesse floue** : "Augmentez votre panier moyen, sans sacrifier le conseil" → aucun chiffre, aucun délai, aucune preuve. Le cerveau du titulaire ne visualise rien.
+- **Aucun risque retiré** : rien ne rassure le visiteur. Pas de garantie, pas d'essai, pas de "sans CB".
+- **Aucune preuve sociale visible above the fold** : ton meilleur asset (+880€ le 1er mois avec 1 client sur 5) n'apparaît nulle part.
+- **CTA générique** : "Demander une démo" — verbe faible, aucun bénéfice.
+- **Formulaire lourd** : 6 champs (pharmacie, contact, email, tel, ville, LGO) + case consentement. Sur mobile c'est un mur. Hormozi : chaque champ = -10% de conversion.
+- **Section "referral"** avant le formulaire = distraction.
+- **Zéro urgence / scarcity** : rien ne pousse à agir maintenant.
+
+## L'équation de valeur (Hormozi)
+
+Valeur perçue = (Rêve × Probabilité de réussite) ÷ (Temps × Effort)
+
+On va **maximiser les 2 du haut** (résultat chiffré + preuve) et **minimiser les 2 du bas** (installation en X min, zéro effort équipe).
+
+## Ce qui change concrètement sur `src/pages/Landing.tsx`
+
+### 1. Hero réécrit — promesse chiffrée + preuve immédiate
+
+- **Nouveau badge** : `⚡ 1 pharmacie testée · +880 € de CA en 30 jours`
+- **Nouveau H1** :
+  > "Ajoutez **+800 à +2 000 € de CA/mois** à votre officine — sans embaucher, sans changer de LGO, sans effort supplémentaire au comptoir."
+- **Sous-titre** orienté douleur → solution :
+  > "Vos préparateurs délivrent l'ordonnance, notre IA suggère en 2 secondes le produit associé pertinent (déjà en stock). Résultat : +1 vente sur 5 patients, panier moyen qui décolle."
+- **CTA principal** : `Réserver ma démo (15 min) →`
+- **CTA secondaire** : `Voir la garantie` (scroll ancre)
+- **Trust bar sous le CTA** : `✓ Compatible Winpharma, LGPI, Pharmagest   ✓ Installation en 24 h   ✓ RGPD & HDS`
+- Le `GainSimulator` reste à droite (déjà excellent — c'est notre "démonstration de valeur").
+
+### 2. Nouvelle section "Preuve" (juste après le hero)
+
+Une carte plein cadre :
+> **« +880 € de chiffre d'affaires additionnel sur le 1er mois, avec 1 patient sur 5 qui repart avec le produit conseillé. »**
+> — Pharmacie pilote, avril 2026
+
+Avec 3 KPI en dessous :
+- `+880 €` CA additionnel · 1er mois
+- `1/5` patients acceptent le conseil
+- `< 2 sec` latence par ordonnance
+
+### 3. Nouvelle section "Offre" (le cœur Hormozi — "Stack de valeur")
+
+Titre : **"Ce que vous obtenez en rejoignant Asclion aujourd'hui"**
+
+Liste visuelle avec valeur perçue chiffrée en face de chaque item (barrée puis "inclus") :
 
 ```text
-1. API/webhook officielle du LGO       ← 100 % fiable, 0 % invasif
-2. Hook fichier / dossier "ordres"     ← très fiable (LGPI, certaines LEO)
-3. Capture TCP WWKS2 (LAN, pas loopback) ← le cas "manuel" Omnicell/Rowa direct
-4. Capture loopback LGO ↔ middleware    ← cas LEO/LMS, le bloquant actuel
-5. Interception port série (com0com)    ← robots RS232
-6. Lecture log applicatif du middleware ← dernier recours, déjà écrit sur disque
+✓ Copilote IA Asclion (licence illimitée, tous postes)      ~ 199 €/mois
+✓ Installation & connexion à votre LGO par nos équipes       ~ 490 €
+✓ Formation de votre équipe (visio 30 min)                   ~ 190 €
+✓ Base de 4 000+ correspondances médicaments → conseils      ~ inclus
+✓ Support prioritaire (réponse < 4h ouvrées)                 ~ 90 €/mois
+✓ Mises à jour cliniques mensuelles                          ~ inclus
+─────────────────────────────────────────────────────────────
+Valeur totale : ~ 970 € + 289 €/mois
+Votre tarif pilote : sur devis (transparent, pas de surprise)
 ```
 
-## Pourquoi le canal 4 (loopback LMS) est le point qui débloque LEO
+### 4. Nouvelle section "Garantie" — le levier n°1
 
-WinDivert ne voit pas le loopback Windows en SNIFF classique. Trois moyens fiables existent :
+Encadré très visible, badge "Garantie" :
 
-- **`WINDIVERT_LAYER_REFLECT` + filtre `loopback`** (WinDivert 2.2 supporte la couche loopback depuis 2021), au lieu du layer NETWORK actuel
-- **ETW provider `Microsoft-Windows-TCPIP`** (Event Tracing for Windows) — capte les écritures TCP locales sans driver
-- **RawCap.exe** (Netresec, gratuit, signé) — capture loopback sans installation
+> ### Notre garantie "Résultat ou remboursé"
+> Si Asclion ne vous génère pas **au moins l'équivalent de son coût en CA additionnel dès le 2ᵉ mois**, on vous rembourse intégralement. Sans discussion.
+>
+> *On peut se le permettre : nos pharmacies pilotes font en moyenne +800 €/mois dès le premier mois.*
 
-Une fois le port LMS identifié (Get-NetTCPConnection le voit déjà côté processus LMS), on lance la capture sur ce port et on log en mode diagnostic pour déterminer :
-- WWKS2 lisible → adaptateur Rowa s'applique direct
-- Binaire propriétaire LEO → reverse de 5–10 trames suffit (toujours du CIP 13 chiffres)
-- TLS → canal 4 condamné, on bascule sur 1, 2 ou 6
+(Le montant exact du seuil sera ajustable — je te propose de commencer par "au moins l'équivalent de son coût". On pourra passer à "+500€/mois ou remboursé" plus tard quand tu auras 5 pharmas actives.)
 
-## Ce qu'il faut ajouter à Asclion
+### 5. Nouvelle section "À qui c'est destiné" (qualification)
 
-### A. Mode capture loopback
-- `electron/native/windivert/windivert-capture.ps1` : ajouter flag `-Loopback` qui ouvre WinDivert avec filtre `loopback and tcp.DstPort == <port>`
-- Fallback ETW via `logman start` + `Microsoft-Windows-TCPIP` quand WinDivert loopback échoue
-- Bundle `RawCap.exe` (200 Ko, gratuit) en dernier recours
+> **Asclion est fait pour vous si :**
+> ✓ Vous êtes titulaire d'une officine (indépendante ou groupement)
+> ✓ Vous voulez augmenter votre CA sans sacrifier la qualité du conseil
+> ✓ Vous êtes équipé Winpharma, LGPI, Pharmagest, Smart Rx, LGO, Périphar…
+>
+> **Ce n'est PAS pour vous si :**
+> ✗ Vous cherchez uniquement à écouler du stock (Asclion ne recommande QUE ce qui est cliniquement pertinent)
+> ✗ Vous n'avez pas de scanner de médicaments au comptoir
 
-### B. Auto-scan des ports middleware
-Dans l'assistant robot, quand `discover-port` ne remonte que du `127.0.0.1`, lancer automatiquement :
-1. Liste des PID/ports en LISTEN sur loopback (`Get-NetTCPConnection -State Listen`)
-2. Filtre sur processus connus middleware : `LMS*.exe`, `RowaService*`, `Pharmathek*`, `OmnicellAgent*`
-3. Capture loopback 60 s sur chaque candidat pendant délivrance test
-4. Adaptateur Diagnostic → dump base64 pour inspection à distance
+Ce paragraphe augmente paradoxalement la conversion : il crée l'auto-sélection et renforce la crédibilité.
 
-### C. Adaptateur LEO/LMS dédié
-Une fois 5–10 trames LMS récoltées en pharmacie test, écrire `adapters.js` → `leoLms` avec la regex/parseur du format. À ajouter dans la chaîne d'adaptateurs.
+### 6. Urgence / scarcity honnête
 
-### D. Canal 1 prêt à recevoir
-Edge function `lgo-delivery-webhook` (publique, HMAC signée) prête à brancher dès que LEO/Winpharma répond. Zéro code côté Electron nécessaire pour ce canal.
+Bandeau juste au-dessus du formulaire :
+> ⏱ **Places pilotes limitées** — nous accompagnons personnellement chaque pharmacie sur les 30 premiers jours. Nous acceptons **3 nouvelles pharmacies par mois** pour garantir la qualité de l'onboarding.
 
-### E. Canal 6 (log applicatif) en filet
-Reprendre le `useFolderWatcher` existant et le pointer sur les répertoires log connus (`C:\ProgramData\LEO\LMS\logs\*.log`, équivalents Rowa/Pharmathek). Tail incrémental + regex CIP. Marche même quand tout le reste échoue, latence 1-2 s.
+### 7. Formulaire réduit — friction divisée
 
-### F. Télémétrie "canal qui a fonctionné"
-Chaque scan robot capté envoie `{ pharmacy_id, channel: 'wwks2'|'loopback'|'serial'|'webhook'|'log' }` à `analytics_events`. Au bout de 20 pharmacies on saura quel canal couvre quel LGO, et l'assistant proposera direct le bon.
+Passe de **6 champs → 3 champs** au premier écran :
+- Nom de la pharmacie
+- Email
+- Téléphone (optionnel affiché "recommandé — rappel sous 24 h")
 
-## Plan d'implémentation proposé (ordre)
+Les champs contact_name / city / lgo_type deviennent facultatifs, révélés après clic dans un `<details>` "Ajouter des infos (optionnel)". Insertion DB inchangée (ces colonnes restent nullable en base).
 
-1. **Ajouter le mode loopback à WinDivert + fallback ETW + RawCap** (canal 4)
-2. **Auto-scan ports middleware dans l'assistant robot** (UX du canal 4)
-3. **Bundler `cap-loopback-diag.ps1`** : un script "1 clic" qui capture 60 s sur tous les ports loopback du LMS et zippe le résultat pour analyse → débloque le diagnostic LEO sans attendre LEO
-4. **Edge function `lgo-delivery-webhook`** prête + doc côté admin (canal 1)
-5. **Watcher de logs middleware** comme filet (canal 6)
-6. **Adaptateur LEO/LMS** dès qu'on a les trames
-7. **Télémétrie canal**
+CTA du form : `Réserver ma démo gratuite →` (au lieu de "Envoyer").
+
+Micro-copy sous le bouton : `Réponse sous 24 h ouvrées · Aucune CB requise · Aucun engagement`
+
+### 8. Réorganisation des sections
+
+Nouvel ordre (celui qui convertit) :
+
+```text
+1. Hero (promesse chiffrée + simulateur + CTA)
+2. Preuve sociale (880€ / 1 sur 5)
+3. Comment ça marche (les 3 étapes actuelles, gardées)
+4. Ce que vous obtenez (stack de valeur)
+5. Garantie résultat
+6. Pour qui / pas pour qui
+7. FAQ courte (4 objections top : prix, temps d'install, LGO, RGPD)
+8. Formulaire (urgence + form 3 champs)
+9. Referral (déplacé après le form, en bonus, pas en distraction)
+```
 
 ## Détails techniques
 
-- **WinDivert loopback** : disponible depuis 2.2.0, filtre `loopback` officiel, mais nécessite `WINDIVERT_FLAG_SNIFF | WINDIVERT_FLAG_RECV_ONLY` exactement comme aujourd'hui — pas de risque de coupure
-- **ETW** : `logman create trace asclion -p Microsoft-Windows-TCPIP -o trace.etl`, parser le .etl avec `tracerpt` → XML. Pas de driver, pas d'admin sur W10+
-- **RawCap** : `RawCap.exe -f 127.0.0.1 dump.pcap`, lecture du pcap en streaming Node via `pcap-parser` (pur JS)
-- **Sécurité** : tous les canaux restent passifs (sniff/lecture seule), aucun n'injecte de paquet dans la chaîne LGO→robot
+- **Fichier principal modifié** : `src/pages/Landing.tsx` (réécriture des sections + réordonnancement).
+- **i18n** : ajout des nouvelles clés FR/EN dans `src/i18n/translations.ts` (namespaces `landing.hero.*`, `landing.proof.*`, `landing.stack.*`, `landing.guarantee.*`, `landing.forwhom.*`, `landing.faq.*`, `landing.urgency.*`, `form.short.*`). Toutes les nouvelles chaînes localisées.
+- **Formulaire** : `AccessRequestForm` refactoré — 3 champs visibles + `<details>` optionnel. Aucun changement de schéma DB, aucune migration.
+- **SEO** : le `<Seo>` reste, mais on met à jour `seo.landing.title` / `desc` pour matcher la nouvelle promesse chiffrée (bon pour CTR Google).
+- **Aucun changement backend** : pas de nouvelles Edge Functions, pas de nouvelle table, pas de migration.
+- **Design tokens** : uniquement classes shadcn/Tailwind existantes (`pharmacy-gradient`, `glass-card`, `bg-accent`…). Aucune couleur en dur.
+- **Composants réutilisés** : `Button`, `Input`, `Checkbox`, `Card` shadcn. Nouvelles icônes Lucide (`ShieldCheck`, `TrendingUp`, `Clock`, `CheckCircle2`, `XCircle`).
+- **Aucun impact** sur `/dashboard`, `/admin`, ni sur la logique métier (analyse ordonnance, LGO, etc.).
 
-## Hors scope
+## Ce que je ne fais PAS dans ce plan (à valider si tu les veux plus tard)
 
-- Pas de changement côté UI marketing/landing
-- Pas de modification de la chaîne scan douchette (déjà OK)
-- Pas de signature code Windows (sujet séparé)
+- Ajouter des logos "ils nous font confiance" (tu n'en as qu'un pilote — pas assez pour être crédible)
+- Ajouter une vidéo témoignage (à faire quand tu auras filmé ton titulaire pilote)
+- Créer une page /demo dédiée avec Calendly embed (peut venir en v2 si le form 3 champs sature)
+- A/B tester deux variantes de hero (Lovable ne fait pas d'A/B natif — à instrumenter via analytics existante)
 
-## Question à trancher avant d'implémenter
+## Livrable
 
-Veux-tu que je commence par **(3) le script "1 clic" de diagnostic loopback** — qui te permettrait dès demain de récolter des trames LMS dans la pharmacie pilote et de débloquer LEO sans dépendre d'eux — ou par **(1+2) le mode loopback intégré à l'assistant** directement ?
+Une landing qui suit la logique Hormozi de bout en bout : **promesse chiffrée → preuve → mécanisme → offre stackée → garantie qui retire le risque → urgence → formulaire ultra-court**. Objectif réaliste : passer d'un taux de conversion visiteur→lead très faible actuel à **2 à 5 %** sur les mêmes 200 visiteurs/semaine.
