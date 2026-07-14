@@ -56,7 +56,7 @@ export type Database = {
       access_requests: {
         Row: {
           city: string | null
-          contact_name: string
+          contact_name: string | null
           created_at: string
           email: string
           id: string
@@ -68,7 +68,7 @@ export type Database = {
         }
         Insert: {
           city?: string | null
-          contact_name: string
+          contact_name?: string | null
           created_at?: string
           email: string
           id?: string
@@ -80,7 +80,7 @@ export type Database = {
         }
         Update: {
           city?: string | null
-          contact_name?: string
+          contact_name?: string | null
           created_at?: string
           email?: string
           id?: string
