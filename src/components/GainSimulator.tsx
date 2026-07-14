@@ -24,8 +24,9 @@ const GainSimulator = () => {
     // Hypothèse : ~300 jours ouvrés/an, panier moyen 42€
     const transactionsParJour = ca / 42 / 300;
     const monthlyTransactions = transactionsParJour * 25;
-    const basse = monthlyTransactions * 0.05 * 7 * 0.3;
-    const haute = monthlyTransactions * 0.12 * 8 * 0.3;
+    // Marge additionnelle : 5–11 % de conseils aboutis, panier associé ~7–8 €, marge nette 45 %
+    const basse = monthlyTransactions * 0.05 * 7 * 0.45;
+    const haute = monthlyTransactions * 0.11 * 8 * 0.45;
     return { basse, haute, tpj: Math.round(transactionsParJour) };
   }, [caM]);
 
