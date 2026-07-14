@@ -100,7 +100,7 @@ export const translations = {
   },
   "landing.hero.cta.primary": { fr: "Réserver ma démo (15 min) →", en: "Book my demo (15 min) →" },
   "landing.hero.cta.secondary": { fr: "Voir la garantie", en: "See the guarantee" },
-  "landing.hero.trust1": { fr: "Compatible Winpharma, LGPI, Pharmagest", en: "Works with Winpharma, LGPI, Pharmagest" },
+  "landing.hero.trust1": { fr: "Compatible Winpharma, LGPI, Pharmagest, Léo, etc...", en: "Works with Winpharma, LGPI, Pharmagest, Léo, etc..." },
   "landing.hero.trust2": { fr: "Installation en 24 h", en: "Setup in 24 h" },
   "landing.hero.trust3": { fr: "RGPD & données hébergées en UE", en: "GDPR & EU-hosted data" },
 
