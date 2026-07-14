@@ -185,8 +185,8 @@ export const translations = {
 
   // ===== NEW: URGENCY =====
   "landing.urgency.text": {
-    fr: "⏱ Places pilotes limitées — nous accompagnons personnellement chaque pharmacie sur ses 30 premiers jours. Nous acceptons 3 nouvelles pharmacies par mois pour garantir la qualité de l'onboarding.",
-    en: "⏱ Limited pilot slots — we personally accompany each pharmacy through its first 30 days. We accept 3 new pharmacies per month to guarantee onboarding quality.",
+    fr: "⏱ Places pilotes limitées — nous accompagnons personnellement chaque pharmacie sur ses 30 premiers jours. Nous n'accepterons plus que 10 nouvelles pharmacies par mois pour garantir la qualité de l'onboarding.",
+    en: "⏱ Limited pilot slots — we personally accompany each pharmacy through its first 30 days. We will no longer accept more than 10 new pharmacies per month to guarantee onboarding quality.",
   },
 
   "landing.access.title": { fr: "Réservez votre démo (15 min)", en: "Book your demo (15 min)" },
