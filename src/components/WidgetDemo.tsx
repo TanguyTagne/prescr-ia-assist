@@ -40,9 +40,9 @@ const WidgetDemo = ({ onClose }: WidgetDemoProps) => {
   useEffect(() => {
     if (phase !== "result" || !selected) return;
     const tm = setTimeout(() => {
-      trackEvent("demo_lead_auto_shown", { ordonnance: selected.id, delay_s: 10 });
+      trackEvent("demo_lead_auto_shown", { ordonnance: selected.id, delay_s: 20 });
       setPhase("lead");
-    }, 10_000);
+    }, 20_000);
 
     return () => clearTimeout(tm);
   }, [phase, selected]);
