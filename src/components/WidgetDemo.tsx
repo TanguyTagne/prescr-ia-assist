@@ -34,7 +34,7 @@ const WidgetDemo = ({ onClose }: WidgetDemoProps) => {
     return () => clearTimeout(tm);
   }, [phase, selected]);
 
-  // Le lead/CTA apparaît automatiquement 10 s après l'affichage des résultats
+  // Le lead/CTA apparaît automatiquement 20 s après l'affichage des résultats
   // pour laisser le temps de lire la démo, puis pousser vers la conversion.
 
   useEffect(() => {
