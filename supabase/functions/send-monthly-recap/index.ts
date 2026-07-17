@@ -17,7 +17,7 @@ const corsHeaders = {
 };
 
 const PRIX_MOYEN_PC_EUR = 10;
-const FROM_EMAIL = "Asclion <recap@asclion.com>";
+const FROM_EMAIL = "Asclion <onboarding@resend.dev>";
 const ADMIN_BCC = "tanguytagne12@gmail.com";
 
 // Asclion brand palette (aligned with src/index.css : --primary 173 58% 32%)
