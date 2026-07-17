@@ -17,7 +17,7 @@ const corsHeaders = {
 };
 
 const PRIX_MOYEN_PC_EUR = 10;
-const FROM_EMAIL = "Asclion <recap@asclion.com>";
+const FROM_EMAIL = "Asclion <onboarding@resend.dev>";
 const ADMIN_BCC = "tanguytagne12@gmail.com";
 
 // Asclion brand palette (aligned with src/index.css : --primary 173 58% 32%)
@@ -281,7 +281,7 @@ serve(async (req) => {
     );
 
     const body = req.method === "POST" ? await req.json().catch(() => ({})) : {};
-    const { pharmacy_id, month, dry_run, preview } = body ?? {};
+    const { pharmacy_id, month, dry_run, preview, send_to } = body ?? {};
 
     let target: Date;
     if (month) {
@@ -295,14 +295,36 @@ serve(async (req) => {
 
     const ranking = await computeNetworkRanking(supabase, monthStart, monthEnd);
 
-    // Preview: single pharmacy, no send
-    if (preview && pharmacy_id) {
-      const { data: pharm } = await supabase.from("pharmacies").select("id, name").eq("id", pharmacy_id).maybeSingle();
+    // Preview / send_to override: single pharmacy (or best pharmacy with activity if none passed)
+    if (preview || send_to) {
+      let pharm: any = null;
+      if (pharmacy_id) {
+        const { data } = await supabase.from("pharmacies").select("id, name").eq("id", pharmacy_id).maybeSingle();
+        pharm = data;
+      } else {
+        // pick the pharmacy with most activity this month for a meaningful sample
+        const topId = [...ranking.entries()].sort((a, b) => a[1].position - b[1].position)[0]?.[0];
+        if (topId) {
+          const { data } = await supabase.from("pharmacies").select("id, name").eq("id", topId).maybeSingle();
+          pharm = data;
+        }
+        if (!pharm) {
+          const { data } = await supabase.from("pharmacies").select("id, name").limit(1).maybeSingle();
+          pharm = data;
+        }
+      }
       if (!pharm) return new Response(JSON.stringify({ error: "Pharmacy not found" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      const stats = await computeStats(supabase, (pharm as any).id, (pharm as any).name, monthStart, monthEnd);
-      stats.rank = ranking.get((pharm as any).id) ?? null;
+      const stats = await computeStats(supabase, pharm.id, pharm.name, monthStart, monthEnd);
+      stats.rank = ranking.get(pharm.id) ?? null;
       const html = renderHtml(stats);
-      return new Response(JSON.stringify({ ok: true, stats, html, subject: `Votre récap Asclion — ${stats.monthLabel}` }), {
+      const subject = `Votre récap Asclion — ${stats.monthLabel}`;
+
+      let sent: any = null;
+      if (send_to) {
+        sent = await sendResend([send_to], subject, html);
+      }
+
+      return new Response(JSON.stringify({ ok: true, stats, html, subject, sent, sent_to: send_to ?? null, pharmacy: { id: pharm.id, name: pharm.name } }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
