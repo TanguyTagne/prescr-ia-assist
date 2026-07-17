@@ -5,9 +5,7 @@
 // - dry_run=true : compute + return summary but no email sent
 //
 // CA estimate: nb PC acceptés × PRIX_MOYEN_PARAPHARMACIE.
-// Panier moyen parapharmacie France ~15€, mais un PC = 1 unité (pas le panier complet).
 // Calibrage 2026-07 : 10€ (fourchette observée : cosmétique 15€, vitamine 8€, antalgique OTC 6€, DM 20€).
-// À raffiner avec pc_pricing quand la couverture prix sera >70%.
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
@@ -19,8 +17,21 @@ const corsHeaders = {
 };
 
 const PRIX_MOYEN_PC_EUR = 10;
-const FROM_EMAIL = "Asclion <recap@asclion.com>"; // /!\ nécessite domaine asclion.com vérifié dans Resend
+const FROM_EMAIL = "Asclion <recap@asclion.com>";
 const ADMIN_BCC = "tanguytagne12@gmail.com";
+
+// Asclion brand palette (aligned with src/index.css : --primary 173 58% 32%)
+const BRAND = {
+  primary: "#227a71",       // hsl(173 58% 32%)
+  primaryDark: "#1a5f57",
+  primaryLight: "#e0f2ef",  // hsl(173 40% 92%)
+  teal: "#339999",          // hsl(180 50% 40%)
+  warm: "#e89547",          // hsl(30 80% 55%)
+  ink: "#1e2b30",           // hsl(200 25% 14%)
+  muted: "#5b6e76",         // hsl(200 12% 40%)
+  border: "#dbe4e0",        // hsl(150 15% 88%)
+  bg: "#f5faf7",            // hsl(150 20% 98%)
+};
 
 function esc(s: unknown): string {
   return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
@@ -28,6 +39,10 @@ function esc(s: unknown): string {
 
 function frMonth(d: Date): string {
   return d.toLocaleDateString("fr-FR", { month: "long", year: "numeric", timeZone: "UTC" });
+}
+
+function frDate(d: Date): string {
+  return d.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
 }
 
 function fmtEur(n: number): string {
@@ -43,82 +58,112 @@ interface RecapStats {
   monthLabel: string;
   analyses: number;
   pcAcceptes: number;
-  ventesTrackees: number;
   caEstime: number;
-  topProducts: { name: string; score: number; accepted: number; sold: number }[];
+  topProducts: { name: string; accepted: number }[];
+  bestDay: { date: string; count: number } | null;
+  rank: { position: number; total: number; topPercent: number } | null;
 }
 
 function renderHtml(s: RecapStats): string {
   const topRows = s.topProducts.length === 0
-    ? `<tr><td colspan="3" style="padding:16px;text-align:center;color:#94a3b8;font-size:14px">Pas encore de best-sellers ce mois-ci</td></tr>`
+    ? `<tr><td colspan="2" style="padding:18px;text-align:center;color:${BRAND.muted};font-size:14px">Pas encore de best-sellers ce mois-ci</td></tr>`
     : s.topProducts.map((p, i) => `
         <tr>
-          <td style="padding:14px 16px;border-bottom:1px solid #f1f5f9;color:#0f172a;font-weight:600">
-            <span style="display:inline-block;width:22px;height:22px;line-height:22px;text-align:center;background:#0f172a;color:#fff;border-radius:50%;font-size:11px;margin-right:10px">${i + 1}</span>${esc(p.name)}
+          <td style="padding:14px 20px;border-bottom:1px solid ${BRAND.border};color:${BRAND.ink};font-weight:600;font-size:14px">
+            <span style="display:inline-block;width:24px;height:24px;line-height:24px;text-align:center;background:${BRAND.primaryLight};color:${BRAND.primary};border-radius:50%;font-size:12px;font-weight:700;margin-right:12px">${i + 1}</span>${esc(p.name)}
           </td>
-          <td style="padding:14px 16px;border-bottom:1px solid #f1f5f9;text-align:right;color:#475569;font-size:14px">${p.accepted} acceptés</td>
-          <td style="padding:14px 16px;border-bottom:1px solid #f1f5f9;text-align:right;color:#475569;font-size:14px">${p.sold} vendus</td>
+          <td style="padding:14px 20px;border-bottom:1px solid ${BRAND.border};text-align:right;color:${BRAND.muted};font-size:13px;white-space:nowrap">${p.accepted} accepté${p.accepted > 1 ? "s" : ""}</td>
         </tr>`).join("");
+
+  // Ranking block
+  const rankBlock = (() => {
+    if (!s.rank || s.rank.total < 2) return "";
+    const { position, total, topPercent } = s.rank;
+    const isTop = topPercent <= 50;
+    if (isTop) {
+      return `
+      <div style="background:linear-gradient(135deg,${BRAND.primary} 0%,${BRAND.teal} 100%);border-radius:16px;padding:28px;text-align:center;margin-bottom:24px;color:#ffffff">
+        <div style="font-size:32px;margin-bottom:8px">🏆</div>
+        <div style="font-size:13px;color:#d7f0ec;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px">Classement du réseau</div>
+        <div style="font-size:22px;font-weight:700;line-height:1.3;margin-bottom:6px">Vous êtes dans le top ${topPercent}%<br/>des meilleurs utilisateurs Asclion&nbsp;!</div>
+        <div style="font-size:14px;color:#d7f0ec">Félicitations 🎉 — position ${position} sur ${total} pharmacies actives</div>
+      </div>`;
+    }
+    return `
+      <div style="background:#ffffff;border:1px solid ${BRAND.border};border-radius:16px;padding:22px;text-align:center;margin-bottom:24px">
+        <div style="font-size:12px;color:${BRAND.muted};text-transform:uppercase;letter-spacing:1.2px;margin-bottom:6px">Classement</div>
+        <div style="font-size:18px;font-weight:700;color:${BRAND.ink}">Top ${topPercent}% du réseau Asclion</div>
+        <div style="font-size:13px;color:${BRAND.muted};margin-top:4px">Position ${position} sur ${total} pharmacies actives</div>
+      </div>`;
+  })();
+
+  const bestDayBlock = s.bestDay
+    ? `
+      <div style="background:#ffffff;border:1px solid ${BRAND.border};border-radius:16px;padding:22px;margin-bottom:24px;display:block">
+        <div style="font-size:12px;color:${BRAND.muted};text-transform:uppercase;letter-spacing:1.2px;margin-bottom:6px">Votre meilleur jour</div>
+        <div style="font-size:20px;font-weight:700;color:${BRAND.ink};text-transform:capitalize">${esc(s.bestDay.date)}</div>
+        <div style="font-size:14px;color:${BRAND.primary};font-weight:600;margin-top:4px">${s.bestDay.count} PC accepté${s.bestDay.count > 1 ? "s" : ""} sur la journée</div>
+      </div>`
+    : "";
 
   return `<!DOCTYPE html>
 <html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Récap Asclion</title></head>
-<body style="margin:0;padding:0;background:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#0f172a">
+<body style="margin:0;padding:0;background:${BRAND.bg};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:${BRAND.ink}">
   <div style="max-width:600px;margin:0 auto;padding:40px 20px">
 
     <div style="text-align:center;margin-bottom:32px">
-      <div style="font-size:14px;letter-spacing:2px;color:#64748b;text-transform:uppercase;margin-bottom:8px">Récap mensuel</div>
-      <div style="font-size:32px;font-weight:700;color:#0f172a;letter-spacing:-0.5px">Asclion</div>
+      <div style="font-size:12px;letter-spacing:2px;color:${BRAND.primary};text-transform:uppercase;margin-bottom:8px;font-weight:600">Récap mensuel</div>
+      <div style="font-size:34px;font-weight:700;color:${BRAND.primary};letter-spacing:-0.5px">Asclion</div>
     </div>
 
-    <div style="background:#fff;border-radius:16px;padding:32px;box-shadow:0 1px 3px rgba(15,23,42,0.06),0 20px 40px -20px rgba(15,23,42,0.1);margin-bottom:24px">
-      <div style="font-size:13px;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">${esc(s.monthLabel)}</div>
-      <h1 style="margin:0 0 8px;font-size:24px;font-weight:700;color:#0f172a;letter-spacing:-0.3px">${esc(s.pharmacyName)}</h1>
-      <p style="margin:0;color:#475569;font-size:15px;line-height:1.5">Voici votre performance Asclion sur le mois écoulé.</p>
+    <div style="background:#ffffff;border-radius:16px;padding:28px;box-shadow:0 1px 3px rgba(30,43,48,0.05);margin-bottom:24px;border:1px solid ${BRAND.border}">
+      <div style="font-size:12px;color:${BRAND.muted};text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">${esc(s.monthLabel)}</div>
+      <h1 style="margin:0 0 8px;font-size:24px;font-weight:700;color:${BRAND.ink};letter-spacing:-0.3px">${esc(s.pharmacyName)}</h1>
+      <p style="margin:0;color:${BRAND.muted};font-size:15px;line-height:1.5">Voici votre performance Asclion sur le mois écoulé.</p>
     </div>
 
-    <div style="background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);border-radius:16px;padding:32px;text-align:center;margin-bottom:24px;color:#fff">
-      <div style="font-size:13px;color:#94a3b8;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px">CA additionnel estimé</div>
+    <div style="background:linear-gradient(135deg,${BRAND.primary} 0%,${BRAND.teal} 100%);border-radius:16px;padding:32px;text-align:center;margin-bottom:24px;color:#ffffff;box-shadow:0 10px 30px -12px rgba(34,122,113,0.4)">
+      <div style="font-size:13px;color:#d7f0ec;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px">CA additionnel estimé</div>
       <div style="font-size:48px;font-weight:700;letter-spacing:-1px;line-height:1">${fmtEur(s.caEstime)}</div>
-      <div style="font-size:13px;color:#94a3b8;margin-top:12px">généré grâce aux recommandations Asclion</div>
+      <div style="font-size:13px;color:#d7f0ec;margin-top:12px">généré grâce aux recommandations Asclion</div>
     </div>
+
+    ${rankBlock}
 
     <table role="presentation" style="width:100%;border-collapse:separate;border-spacing:12px 0;margin-bottom:24px">
       <tr>
-        <td style="width:33.33%;background:#fff;border-radius:12px;padding:20px;text-align:center;vertical-align:top">
-          <div style="font-size:28px;font-weight:700;color:#0f172a">${fmtInt(s.analyses)}</div>
-          <div style="font-size:12px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-top:4px">Analyses</div>
+        <td style="width:50%;background:#ffffff;border:1px solid ${BRAND.border};border-radius:12px;padding:20px;text-align:center;vertical-align:top">
+          <div style="font-size:28px;font-weight:700;color:${BRAND.primary}">${fmtInt(s.analyses)}</div>
+          <div style="font-size:12px;color:${BRAND.muted};text-transform:uppercase;letter-spacing:0.5px;margin-top:4px">Analyses</div>
         </td>
-        <td style="width:33.33%;background:#fff;border-radius:12px;padding:20px;text-align:center;vertical-align:top">
-          <div style="font-size:28px;font-weight:700;color:#0f172a">${fmtInt(s.pcAcceptes)}</div>
-          <div style="font-size:12px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-top:4px">PC acceptés</div>
-        </td>
-        <td style="width:33.33%;background:#fff;border-radius:12px;padding:20px;text-align:center;vertical-align:top">
-          <div style="font-size:28px;font-weight:700;color:#0f172a">${fmtInt(s.ventesTrackees)}</div>
-          <div style="font-size:12px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-top:4px">Ventes tracées</div>
+        <td style="width:50%;background:#ffffff;border:1px solid ${BRAND.border};border-radius:12px;padding:20px;text-align:center;vertical-align:top">
+          <div style="font-size:28px;font-weight:700;color:${BRAND.primary}">${fmtInt(s.pcAcceptes)}</div>
+          <div style="font-size:12px;color:${BRAND.muted};text-transform:uppercase;letter-spacing:0.5px;margin-top:4px">PC acceptés</div>
         </td>
       </tr>
     </table>
 
-    <div style="background:#fff;border-radius:16px;padding:8px 0;margin-bottom:24px;box-shadow:0 1px 3px rgba(15,23,42,0.06)">
+    ${bestDayBlock}
+
+    <div style="background:#ffffff;border:1px solid ${BRAND.border};border-radius:16px;padding:8px 0;margin-bottom:24px">
       <div style="padding:20px 24px 12px">
-        <h2 style="margin:0;font-size:16px;font-weight:700;color:#0f172a">Vos best-sellers</h2>
-        <p style="margin:4px 0 0;font-size:13px;color:#64748b">Top 5 produits complémentaires du mois</p>
+        <h2 style="margin:0;font-size:16px;font-weight:700;color:${BRAND.ink}">Vos best-sellers</h2>
+        <p style="margin:4px 0 0;font-size:13px;color:${BRAND.muted}">Top 5 produits complémentaires du mois</p>
       </div>
       <table style="width:100%;border-collapse:collapse">${topRows}</table>
     </div>
 
-    <div style="background:#f1f5f9;border-radius:12px;padding:16px 20px;margin-bottom:32px">
-      <p style="margin:0;font-size:12px;color:#64748b;line-height:1.6">
-        <strong style="color:#334155">Méthode</strong> — CA estimé sur base d'un prix moyen parapharmacie de ${PRIX_MOYEN_PC_EUR}€ par PC accepté.
-        Best-sellers classés par score mixte (acceptations + ventes réelles).
-        Les ventes tracées proviennent de vos remontées LGO.
+    <div style="background:${BRAND.primaryLight};border-radius:12px;padding:16px 20px;margin-bottom:32px">
+      <p style="margin:0;font-size:12px;color:${BRAND.primaryDark};line-height:1.6">
+        <strong>Méthode</strong> — CA estimé sur base d'un prix moyen parapharmacie de ${PRIX_MOYEN_PC_EUR}€ par PC accepté.
+        Classement calculé sur le nombre de PC acceptés parmi les pharmacies actives du réseau.
       </p>
     </div>
 
-    <div style="text-align:center;padding:24px 0;border-top:1px solid #e2e8f0">
-      <div style="font-size:13px;color:#64748b;margin-bottom:4px">Asclion — copilote parapharmacie</div>
-      <div style="font-size:12px;color:#94a3b8">
-        <a href="https://asclion.com" style="color:#64748b;text-decoration:none">asclion.com</a>
+    <div style="text-align:center;padding:24px 0;border-top:1px solid ${BRAND.border}">
+      <div style="font-size:13px;color:${BRAND.muted};margin-bottom:4px">Asclion — copilote parapharmacie</div>
+      <div style="font-size:12px;color:${BRAND.muted}">
+        <a href="https://asclion.com" style="color:${BRAND.primary};text-decoration:none;font-weight:600">asclion.com</a>
       </div>
     </div>
 
@@ -133,68 +178,83 @@ async function computeStats(
   monthStart: Date,
   monthEnd: Date,
 ): Promise<RecapStats> {
-  const [{ data: analyses }, { data: feedback }, { data: sales }] = await Promise.all([
-    supabase.from("analysis_history").select("id", { count: "exact", head: true })
+  const [{ data: feedback }, { count: analysesCount }] = await Promise.all([
+    supabase.from("pc_feedback").select("pc_nom, action, created_at")
       .eq("pharmacy_id", pharmacyId)
       .gte("created_at", monthStart.toISOString())
       .lt("created_at", monthEnd.toISOString()),
-    supabase.from("pc_feedback").select("pc_nom, action")
-      .eq("pharmacy_id", pharmacyId)
-      .gte("created_at", monthStart.toISOString())
-      .lt("created_at", monthEnd.toISOString()),
-    supabase.from("sales_transactions").select("items")
+    supabase.from("analysis_history").select("*", { count: "exact", head: true })
       .eq("pharmacy_id", pharmacyId)
       .gte("created_at", monthStart.toISOString())
       .lt("created_at", monthEnd.toISOString()),
   ]);
 
-  const analysesCount = (analyses as any)?.length ?? 0; // fallback if count not returned as expected
-  // Re-query count properly
-  const { count: analysesCountReal } = await supabase.from("analysis_history").select("*", { count: "exact", head: true })
-    .eq("pharmacy_id", pharmacyId)
-    .gte("created_at", monthStart.toISOString())
-    .lt("created_at", monthEnd.toISOString());
-
   const acceptedList = (feedback ?? []).filter((f: any) => f.action === "accepted");
   const pcAcceptes = acceptedList.length;
 
-  // Ventes trackées : nombre d'items vendus dans sales_transactions
-  let ventesTrackees = 0;
-  const soldByName = new Map<string, number>();
-  for (const s of (sales ?? [])) {
-    const items = Array.isArray((s as any).items) ? (s as any).items : [];
-    for (const it of items) {
-      ventesTrackees++;
-      const name = String(it?.name ?? it?.nom ?? it?.pc_nom ?? "").trim();
-      if (name) soldByName.set(name, (soldByName.get(name) ?? 0) + 1);
-    }
-  }
-
-  // Acceptés par PC
   const acceptedByName = new Map<string, number>();
+  const acceptedByDay = new Map<string, number>();
   for (const f of acceptedList) {
     const name = String((f as any).pc_nom ?? "").trim();
-    if (!name) continue;
-    acceptedByName.set(name, (acceptedByName.get(name) ?? 0) + 1);
+    if (name) acceptedByName.set(name, (acceptedByName.get(name) ?? 0) + 1);
+    const dayKey = String((f as any).created_at ?? "").slice(0, 10);
+    if (dayKey) acceptedByDay.set(dayKey, (acceptedByDay.get(dayKey) ?? 0) + 1);
   }
 
-  // Score mixé : accepted*1 + sold*2 (les ventes réelles pèsent plus)
-  const allNames = new Set([...acceptedByName.keys(), ...soldByName.keys()]);
-  const topProducts = [...allNames].map((name) => {
-    const accepted = acceptedByName.get(name) ?? 0;
-    const sold = soldByName.get(name) ?? 0;
-    return { name, accepted, sold, score: accepted + sold * 2 };
-  }).sort((a, b) => b.score - a.score).slice(0, 5);
+  const topProducts = [...acceptedByName.entries()]
+    .map(([name, accepted]) => ({ name, accepted }))
+    .sort((a, b) => b.accepted - a.accepted)
+    .slice(0, 5);
+
+  let bestDay: RecapStats["bestDay"] = null;
+  if (acceptedByDay.size > 0) {
+    const [dayKey, count] = [...acceptedByDay.entries()].sort((a, b) => b[1] - a[1])[0];
+    bestDay = { date: frDate(new Date(dayKey + "T00:00:00Z")), count };
+  }
 
   return {
     pharmacyName,
     monthLabel: frMonth(monthStart),
-    analyses: analysesCountReal ?? analysesCount ?? 0,
+    analyses: analysesCount ?? 0,
     pcAcceptes,
-    ventesTrackees,
     caEstime: pcAcceptes * PRIX_MOYEN_PC_EUR,
     topProducts,
+    bestDay,
+    rank: null, // filled by caller
   };
+}
+
+/**
+ * Returns a Map<pharmacy_id, {position, total, topPercent}> ranking active
+ * pharmacies by number of PC accepted on the given month.
+ */
+async function computeNetworkRanking(
+  supabase: ReturnType<typeof createClient>,
+  monthStart: Date,
+  monthEnd: Date,
+): Promise<Map<string, { position: number; total: number; topPercent: number }>> {
+  const { data } = await supabase.from("pc_feedback")
+    .select("pharmacy_id, action")
+    .eq("action", "accepted")
+    .gte("created_at", monthStart.toISOString())
+    .lt("created_at", monthEnd.toISOString());
+
+  const counts = new Map<string, number>();
+  for (const row of (data ?? []) as any[]) {
+    const pid = row.pharmacy_id;
+    if (!pid) continue;
+    counts.set(pid, (counts.get(pid) ?? 0) + 1);
+  }
+
+  const sorted = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+  const total = sorted.length;
+  const out = new Map<string, { position: number; total: number; topPercent: number }>();
+  sorted.forEach(([pid, _], idx) => {
+    const position = idx + 1;
+    const topPercent = Math.max(1, Math.round((position / total) * 100));
+    out.set(pid, { position, total, topPercent });
+  });
+  return out;
 }
 
 async function sendResend(to: string[], subject: string, html: string, bcc?: string) {
@@ -234,11 +294,14 @@ serve(async (req) => {
     const monthStart = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth(), 1));
     const monthEnd = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 1));
 
+    const ranking = await computeNetworkRanking(supabase, monthStart, monthEnd);
+
     // Preview: single pharmacy, no send
     if (preview && pharmacy_id) {
       const { data: pharm } = await supabase.from("pharmacies").select("id, name").eq("id", pharmacy_id).maybeSingle();
       if (!pharm) return new Response(JSON.stringify({ error: "Pharmacy not found" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       const stats = await computeStats(supabase, (pharm as any).id, (pharm as any).name, monthStart, monthEnd);
+      stats.rank = ranking.get((pharm as any).id) ?? null;
       const html = renderHtml(stats);
       return new Response(JSON.stringify({ ok: true, stats, html, subject: `Votre récap Asclion — ${stats.monthLabel}` }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -256,14 +319,14 @@ serve(async (req) => {
     for (const p of (pharmacies ?? []) as any[]) {
       try {
         const stats = await computeStats(supabase, p.id, p.name, monthStart, monthEnd);
+        stats.rank = ranking.get(p.id) ?? null;
 
         // Ne rien envoyer si aucune activité
-        if (stats.analyses === 0 && stats.pcAcceptes === 0 && stats.ventesTrackees === 0) {
+        if (stats.analyses === 0 && stats.pcAcceptes === 0) {
           results.push({ pharmacy_id: p.id, skipped: "no_activity" });
           continue;
         }
 
-        // Emails des profils rattachés
         const { data: profiles } = await supabase.from("profiles").select("email").eq("pharmacy_id", p.id);
         const emails = [...new Set((profiles ?? []).map((x: any) => x.email).filter(Boolean))];
 
