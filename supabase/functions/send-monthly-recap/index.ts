@@ -86,7 +86,7 @@ function renderHtml(s: RecapStats): string {
         <div style="font-size:32px;margin-bottom:8px">🏆</div>
         <div style="font-size:13px;color:#d7f0ec;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px">Classement du réseau</div>
         <div style="font-size:22px;font-weight:700;line-height:1.3;margin-bottom:6px">Vous êtes dans le top ${topPercent}%<br/>des meilleurs utilisateurs Asclion&nbsp;!</div>
-        <div style="font-size:14px;color:#d7f0ec">Félicitations 🎉 — position ${position} sur ${total} pharmacies actives</div>
+        <div style="font-size:14px;color:#d7f0ec">Félicitations 🎉</div>
       </div>`;
     }
     return `
