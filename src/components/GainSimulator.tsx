@@ -60,7 +60,7 @@ const GainSimulator = () => {
           <Slider
             value={[caM]}
             min={0.8}
-            max={6}
+            max={12}
             step={0.1}
             onValueChange={(v) => setCaM(v[0])}
             aria-label={t("landing.sim.ca")}
