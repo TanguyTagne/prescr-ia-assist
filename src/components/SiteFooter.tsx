@@ -9,6 +9,7 @@ const SiteFooter = () => {
       <div className="container max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-muted-foreground">
         <span>© {new Date().getFullYear()} {t("footer.disclaimer")}</span>
         <nav className="flex items-center gap-4 flex-wrap justify-center">
+          <Link to={lp("/blog")} className="hover:text-foreground transition-colors">Blog</Link>
           <Link to={lp("/aide")} className="hover:text-foreground transition-colors">{t("footer.help")}</Link>
           <Link to={lp("/mentions-legales")} className="hover:text-foreground transition-colors">{t("footer.legal")}</Link>
           <Link to={lp("/confidentialite")} className="hover:text-foreground transition-colors">{t("footer.privacy")}</Link>
