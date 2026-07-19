@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.send-monthly-recap]
 verify_jwt = false
+
+[functions._oneshot-clear-mfa]
+verify_jwt = false
