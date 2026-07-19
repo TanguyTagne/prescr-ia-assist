@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Blog Asclion</title>
+    <link>https://www.asclion.com/blog</link>
+    <description>Conseil associé, panier moyen et développement du CA en officine.</description>
+    <language>fr-FR</language>
+    <atom:link href="https://www.asclion.com/blog/rss.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Choisir son logiciel d'officine en 2026 : LGO, copilote IA, ou les deux ?</title>
+      <link>https://www.asclion.com/blog/choisir-logiciel-officine</link>
+      <guid>https://www.asclion.com/blog/choisir-logiciel-officine</guid>
+      <pubDate>Wed, 15 Jul 2026 09:00:00 GMT</pubDate>
+      <description>Winpharma, LGPI, Pharmagest, Léo : comment choisir le bon outil et où positionner un copilote IA comme Asclion dans votre stack.</description>
+    </item>
+    <item>
+      <title>Conseil associé sur une ordonnance d'antibiotique : le réflexe probiotique</title>
+      <link>https://www.asclion.com/blog/conseil-associe-antibiotique</link>
+      <guid>https://www.asclion.com/blog/conseil-associe-antibiotique</guid>
+      <pubDate>Fri, 10 Jul 2026 09:00:00 GMT</pubDate>
+      <description>Antibiotique = flore perturbée. Voici comment structurer le conseil probiotique + hydratation + reprise alimentaire au comptoir.</description>
+    </item>
+    <item>
+      <title>Augmenter le panier moyen en officine : 5 leviers concrets</title>
+      <link>https://www.asclion.com/blog/augmenter-panier-moyen-officine</link>
+      <guid>https://www.asclion.com/blog/augmenter-panier-moyen-officine</guid>
+      <pubDate>Sun, 05 Jul 2026 09:00:00 GMT</pubDate>
+      <description>Panier moyen en berne ? Voici 5 leviers activables dès demain au comptoir pour développer votre CA sans dégrader le conseil.</description>
+    </item>
+  </channel>
+</rss>

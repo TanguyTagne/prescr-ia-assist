@@ -50,6 +50,8 @@ const ResetPassword = lazyWithRetry(() => import("./pages/ResetPassword"));
 const VsLgo = lazyWithRetry(() => import("./pages/VsLgo"));
 const Aide = lazyWithRetry(() => import("./pages/Aide"));
 const Fonctionnalites = lazyWithRetry(() => import("./pages/Fonctionnalites"));
+const Blog = lazyWithRetry(() => import("./pages/Blog"));
+const BlogPost = lazyWithRetry(() => import("./pages/BlogPost"));
 
 const Widget = lazyWithRetry(() => import("./components/Widget"));
 const SiteDemoWidget = lazyWithRetry(() => import("./components/SiteDemoWidget"));
@@ -219,6 +221,8 @@ const App = () => {
                   <Route path="/reset-password" element={<ResetPassword />} />
                   <Route path="/vs-lgo" element={<VsLgo />} />
                   <Route path="/aide" element={<Aide />} />
+                  <Route path="/blog" element={<Blog />} />
+                  <Route path="/blog/:slug" element={<BlogPost />} />
                   <Route path="/fonctionnalites" element={<ProtectedRoute><Fonctionnalites /></ProtectedRoute>} />
                   <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
                   <Route path="/groupement" element={<GroupRoute><Groupement /></GroupRoute>} />
@@ -237,6 +241,8 @@ const App = () => {
                   <Route path="/en/reset-password" element={<ResetPassword />} />
                   <Route path="/en/vs-lgo" element={<VsLgo />} />
                   <Route path="/en/aide" element={<Aide />} />
+                  <Route path="/en/blog" element={<Blog />} />
+                  <Route path="/en/blog/:slug" element={<BlogPost />} />
                   <Route path="/en/fonctionnalites" element={<ProtectedRoute><Fonctionnalites /></ProtectedRoute>} />
                   <Route path="/en/admin" element={<AdminRoute><Admin /></AdminRoute>} />
                   <Route path="/en/groupement" element={<GroupRoute><Groupement /></GroupRoute>} />
