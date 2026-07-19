@@ -1,4 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Sitemap Asclion.
+  Les futures pages /blog/* seront ajoutées automatiquement ici lors de leur publication
+  (voir scripts/generate-sitemap.ts si présent). Les routes techniques (/auth, /admin,
+  /dashboard, /quiz, /groupement, /reset-password) sont volontairement exclues.
+-->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
@@ -48,11 +54,6 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://www.asclion.com/auth</loc>
-    <changefreq>yearly</changefreq>
-    <priority>0.4</priority>
-  </url>
-  <url>
     <loc>https://www.asclion.com/cgu</loc>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
@@ -82,4 +83,6 @@
     <changefreq>yearly</changefreq>
     <priority>0.2</priority>
   </url>
+  <!-- FUTURS ARTICLES DE BLOG : à insérer ici lors de la publication -->
+  <!-- <url><loc>https://www.asclion.com/blog/{slug}</loc><changefreq>monthly</changefreq><priority>0.6</priority></url> -->
 </urlset>

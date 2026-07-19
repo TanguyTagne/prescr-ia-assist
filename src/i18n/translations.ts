@@ -511,28 +511,28 @@ export const translations = {
 
   // ===== SEO META =====
   "seo.landing.title": {
-    fr: "Asclion — +800 à 2 000 €/mois de CA pour votre officine",
-    en: "Asclion — +€800 to €2,000/mo of extra revenue for your pharmacy",
+    fr: "Asclion — Logiciel IA de conseil associé pour pharmacie | +Panier moyen",
+    en: "Asclion — AI cross-sell software for pharmacies | Higher basket",
   },
   "seo.landing.desc": {
-    fr: "Copilote IA au comptoir : +880 € de CA additionnel dès le 1ᵉʳ mois chez notre pharmacie pilote. Compatible tous LGO. Garantie résultat ou remboursé.",
-    en: "AI counter copilot: +€880 additional revenue in month one at our pilot pharmacy. Works with any pharmacy software. Results-or-refund guarantee.",
+    fr: "Asclion transforme chaque produit scanné au comptoir en vente associée pertinente. Copilote IA pour pharmaciens : +5 à 10% de CA, meilleur conseil patient, compatible Winpharma, LGPI, Pharmagest.",
+    en: "Asclion turns every scanned product at the counter into a relevant cross-sell. AI copilot for pharmacists: +5–10% revenue, better patient advice, works with Winpharma, LGPI, Pharmagest.",
   },
   "seo.vslgo.title": {
-    fr: "Asclion vs LGO — Comparatif copilote IA pharmacie",
-    en: "Asclion vs PMS — AI pharmacy copilot comparison",
+    fr: "Asclion vs LGO : quelle différence avec Winpharma, LGPI, Pharmagest ?",
+    en: "Asclion vs PMS: how it differs from Winpharma, LGPI, Pharmagest",
   },
   "seo.vslgo.desc": {
-    fr: "Asclion vs Winpharma, LGPI, Pharmagest : pourquoi un copilote IA dédié au conseil associé surpasse les modules cross-sell des LGO.",
-    en: "Asclion vs Winpharma, LGPI, Pharmagest: why a dedicated AI copilot outperforms the cross-sell modules of traditional pharmacy systems.",
+    fr: "Asclion ne remplace pas votre LGO, il le complète. Comparaison détaillée entre Asclion et les logiciels de gestion d'officine sur le conseil associé et la vente complémentaire.",
+    en: "Asclion doesn't replace your pharmacy management software, it complements it. Detailed comparison between Asclion and traditional PMS on associated advice and cross-selling.",
   },
   "seo.aide.title": {
-    fr: "Aide — FAQ Asclion pour pharmaciens",
-    en: "Help — Asclion FAQ for pharmacists",
+    fr: "Aide & FAQ — Installation, scanner, confidentialité | Asclion",
+    en: "Help & FAQ — Installation, scanner, privacy | Asclion",
   },
   "seo.aide.desc": {
-    fr: "Réponses aux questions fréquentes sur Asclion : installation, scanner, surveillance dossier, confidentialité des données patient.",
-    en: "Frequently asked questions about Asclion: installation, scanner, folder watching, patient data privacy.",
+    fr: "Questions fréquentes sur Asclion : installation sur poste comptoir, connexion douchette et LGO, protection des données de santé, tarifs.",
+    en: "Frequently asked questions about Asclion: install on counter workstation, barcode and PMS integration, health data protection, pricing.",
   },
   "seo.auth.title": {
     fr: "Connexion — Asclion",
@@ -543,13 +543,14 @@ export const translations = {
     en: "Sign in to your Asclion workspace to access your pharmacy's AI copilot.",
   },
   "seo.features.title": {
-    fr: "Fonctionnalités Asclion — Toutes les capacités du copilote",
-    en: "Asclion Features — Every copilot capability",
+    fr: "Fonctionnalités — Analyse d'ordonnance IA, interactions, conseil associé | Asclion",
+    en: "Features — AI prescription analysis, interactions, cross-sell | Asclion",
   },
   "seo.features.desc": {
-    fr: "Découvrez toutes les fonctionnalités d'Asclion : scan douchette, analyse clinique IA, recommandations personnalisées, intégration LGO, dashboard KPI.",
-    en: "Discover every Asclion feature: barcode scan, AI clinical analysis, tailored recommendations, PMS integration, KPI dashboard.",
+    fr: "Analyse d'ordonnance en 3 secondes, détection d'interactions médicamenteuses, suggestions de produits complémentaires, quiz de formation, dashboard KPI. Découvrez toutes les fonctionnalités d'Asclion.",
+    en: "Prescription analysis in 3 seconds, drug interaction detection, complementary product suggestions, training quiz, KPI dashboard. Discover every Asclion feature.",
   },
+
   "seo.legal.mentions.title": {
     fr: "Mentions légales — Asclion",
     en: "Legal notice — Asclion",
