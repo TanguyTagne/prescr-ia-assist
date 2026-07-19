@@ -1,39 +1,96 @@
-# Le widget démo "?" est-il pertinent pour convertir ?
+## Blog SEO-first sur /blog
 
-## Réponse courte
-**Oui, à garder — mais en l'ajustant.** C'est ton meilleur outil de conversion "montre, ne dis pas". Le supprimer serait une erreur ; en revanche, dans sa forme actuelle il sous-performe.
+### 1. Stockage des articles
 
-## Pourquoi le garder
+Markdown avec frontmatter, importés statiquement via Vite (`import.meta.glob`) — pas de backend, pas de latence, build-time SEO garanti.
 
-- **C'est ta démo instantanée.** Un visiteur pharmacien qui voit le copilote fonctionner en 10 secondes est infiniment plus convaincu que par un texte, même excellent. C'est exactement le principe "product-led landing".
-- **Il alimente déjà le lead form** (`submit-demo-lead` + `track-demo-session`) — donc la conversion widget → lead est déjà instrumentée.
-- **Le tour "?"** guide vers les 3 ordonnances de démo (Médecine générale, Soins infirmiers, Cardio) : sans lui, la majorité des visiteurs ne comprendrait pas quoi faire du widget flottant.
+```
+src/content/blog/
+  2026-07-15-augmenter-panier-moyen-officine.md
+  2026-07-20-conseil-associe-antibiotique.md
+  ...
+```
 
-## Pourquoi il ne convertit pas assez aujourd'hui (hypothèses à valider)
+Frontmatter type :
+```yaml
+---
+title: "Comment augmenter son panier moyen en officine"
+slug: "augmenter-panier-moyen-officine"
+description: "3 leviers concrets..."
+date: 2026-07-15
+updated: 2026-07-18
+category: "Développer son CA"
+author: "Tanguy Tubert"
+image: "/blog/panier-moyen.webp"
+readingTime: 6
+faq:
+  - q: "Quel est le panier moyen en officine ?"
+    a: "Environ 18-22€..."
+relatedLinks:
+  - { label: "Voir les fonctionnalités", href: "/fonctionnalites" }
+  - { label: "Asclion vs LGO", href: "/vs-lgo" }
+relatedPosts: ["conseil-associe-antibiotique"]
+---
+```
 
-1. **Trop discret** — en bas à droite, il ressemble à un chatbot de support (aveuglement banner).
-2. **Le tour ne se déclenche qu'au clic** sur "?" → 90 % des visiteurs ne le voient jamais.
-3. **Pas d'ancrage narratif** — le visiteur ne sait pas "pourquoi" tester avant d'avoir lu la page.
-4. **Aucun CTA de sortie clair** après la démo (une fois qu'il a vu la magie, on ne lui redemande pas la démo commerciale immédiatement).
+### 2. Dépendances
 
-## Recommandation
+- `react-markdown` + `remark-gfm` + `rehype-slug` + `rehype-autolink-headings` (rendu + ancres H2/H3 pour la TOC)
+- `gray-matter` (parsing frontmatter)
 
-Garder le widget, mais faire 3 ajustements ciblés (par ordre d'impact conversion) :
+### 3. Nouveaux fichiers
 
-1. **Auto-tour au 1ᵉʳ scroll** (ou après 8 s sur la page) — un pulse discret sur le widget + une bulle "Testez le copilote en 10 s" qui disparaît au clic ou après 5 s. Objectif : passer de ~5 % à ~40 % d'interactions.
-2. **CTA sortie de démo** — dès qu'une ordonnance de démo a été analysée, afficher dans le widget une bande "Vous voulez ça dans votre officine ? → Réserver ma démo (15 min)" qui scrolle vers `#demande-acces` et pré-remplit un champ "vu la démo".
-3. **Renommer le trigger "?"** en un vrai bouton libellé (ex. "▶ Tester le copilote") avec un léger halo — plus lisible qu'un point d'interrogation qui évoque de l'aide, pas une démo.
+- `src/lib/blog.ts` : charge tous les `.md` via `import.meta.glob('...', { as: 'raw', eager: true })`, parse le frontmatter, expose `getAllPosts()`, `getPostBySlug()`, `getCategories()`.
+- `src/pages/Blog.tsx` : route `/blog`, liste des articles (cartes avec image WebP `loading="lazy"` + `width/height`, titre H2, extrait, date, temps de lecture, badge catégorie). Filtres par catégorie.
+- `src/pages/BlogPost.tsx` : route `/blog/:slug`, template article complet (voir section 4).
+- `src/components/blog/PostCard.tsx`
+- `src/components/blog/TableOfContents.tsx` (extrait les H2 du markdown, ancres cliquables)
+- `src/components/blog/EssentialBox.tsx` (encadré "L'essentiel" — puces générées depuis frontmatter `essential: string[]`)
+- `src/components/blog/AuthorBio.tsx` (Tanguy, fondateur d'Asclion)
+- `src/components/blog/BlogFAQ.tsx` (rendu FAQ + JSON-LD)
+- `src/components/blog/ShareButtons.tsx` (LinkedIn + copie de lien)
+- `src/components/blog/BlogCTA.tsx` (bandeau discret vers /fonctionnalites)
+- `scripts/generate-blog-sitemap.ts` : régénère `public/sitemap.xml` avec les articles + met à jour la section `## Blog` de `public/llms.txt`. Hook `predev`/`prebuild` dans `package.json`.
+- `scripts/generate-rss.ts` : produit `public/blog/rss.xml`, hook identique.
+- 3 articles seed pour éviter une page /blog vide.
 
-Bonus optionnel : tracker `widget_opened`, `demo_prescription_analyzed`, `demo_to_lead_click` dans `track-demo-session` pour mesurer réellement chaque étape du funnel.
+### 4. Template article (SEO/E-E-A-T)
 
-## Ce que je ferai en mode build
+Chaque `/blog/:slug` rend :
 
-- Ajouter le déclenchement automatique du tour (au scroll ou timer, un seul affichage par session — clé localStorage déjà en place).
-- Injecter un CTA "Réserver ma démo" dans `WidgetDemoTour` / le widget une fois une démo terminée.
-- Remplacer le label du bouton d'ouverture par "▶ Tester le copilote" + petit halo animé.
-- Ajouter 3 events analytiques dans le flow démo pour piloter les prochaines itérations.
+1. `<Seo>` : title = `${post.title} | Asclion`, description = frontmatter, canonical propre via le composant existant, `ogType="article"`, `ogImage` si fourni, JSON-LD `Article` (headline, datePublished, dateModified, author, publisher Organization, image).
+2. H1 unique = `post.title`, hiérarchie H2/H3 issue du markdown (aucun autre H1 dans la page).
+3. Métadonnées visibles : catégorie, date publiée, "Mis à jour le …", temps de lecture, auteur.
+4. **Encart "L'essentiel"** en haut (3-4 puces depuis `essential` frontmatter).
+5. **Table des matières** générée depuis les H2 (via `rehype-slug`) avec liens d'ancre.
+6. Corps markdown rendu par `react-markdown` (styles Tailwind `prose` cohérents avec le design).
+7. **CTA milieu** (injecté après ~50% des H2) + **CTA fin** vers `/fonctionnalites`.
+8. **Liens internes** : bloc "À lire aussi" (`relatedPosts` + `relatedLinks`).
+9. **Encart auteur** en fin (Tanguy, fondateur — expertise pharmacie/IA).
+10. **FAQ** si présente, avec JSON-LD `FAQPage`.
+11. **Partage** : LinkedIn + copier le lien.
 
-Détails techniques : `src/components/WidgetDemoTour.tsx` (auto-trigger + libellé), le composant du widget flottant (CTA post-démo), `supabase/functions/track-demo-session/index.ts` (nouveaux events).
+### 5. Intégration site
 
-## Note sur "adapter grâce au livre"
-Je n'ai pas trouvé de "livre" dans le projet — je suppose une faute de frappe (libre ? l'IA ?). Si tu voulais dire autre chose (base de connaissances, contenu éditorial, etc.), dis-le moi et j'ajuste le plan.
+- `src/App.tsx` : routes `/blog` et `/blog/:slug` (+ variantes `/en/blog` cohérentes avec le pattern i18n existant, contenu FR pour l'instant).
+- Navigation : ajout de "Blog" dans le header (via `NavLink`) et dans `SiteFooter.tsx`.
+- `public/sitemap.xml` : entrées générées automatiquement (changefreq `monthly`, priority `0.7`).
+- `public/llms.txt` : section `## Blog` régénérée avec la liste des articles.
+- `public/blog/rss.xml` : flux RSS 2.0 (titre, lien, description, pubDate).
+
+### 6. Page index /blog
+
+- `<Seo>` title = "Blog Asclion — Conseil associé, panier moyen et CA de votre officine"
+- H1 = même wording
+- Grille responsive de `PostCard`, filtres par catégorie (4 catégories fournies)
+- Lien vers `/blog/rss.xml`
+
+### 7. Performance
+
+- Images en WebP dans `public/blog/`, `loading="lazy"`, `decoding="async"`, `width`/`height` explicites → zéro CLS.
+- Cartes préchargent l'image du premier article en `fetchpriority="high"`.
+- Markdown parsé au build (frontmatter) via `gray-matter` en top-level, rendu au runtime — pas d'appel réseau.
+
+### Résumé technique
+
+Blog 100 % statique (markdown + Vite glob), rendu React côté client avec metadata dynamique via le composant `<Seo>` existant, sitemap/llms.txt/RSS régénérés à chaque build. Ne modifie ni le design system, ni les composants existants hors nav/footer.
