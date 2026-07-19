@@ -258,6 +258,9 @@ const Landing = () => {
             <span className="font-bold text-lg tracking-tight">Asclion</span>
           </div>
           <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={() => navigate(lp("/blog"))} className="gap-1.5 text-xs hidden sm:inline-flex">
+              Blog
+            </Button>
             {user ? (
               <>
                 {isAdmin && (
