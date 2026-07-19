@@ -87,10 +87,12 @@ Disallow: /dashboard
 Disallow: /groupement
 Disallow: /quiz
 Disallow: /settings/
+Disallow: /auth
 Disallow: /reset-password
 Disallow: /en/admin
 Disallow: /en/dashboard
 Disallow: /en/groupement
 Disallow: /en/quiz
+Disallow: /en/auth
 
 Sitemap: https://www.asclion.com/sitemap.xml

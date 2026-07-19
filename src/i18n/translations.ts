@@ -511,12 +511,12 @@ export const translations = {
 
   // ===== SEO META =====
   "seo.landing.title": {
-    fr: "Asclion — Logiciel IA de conseil associé pour pharmacie | +Panier moyen",
-    en: "Asclion — AI cross-sell software for pharmacies | Higher basket",
+    fr: "Asclion — IA de conseil associé pour pharmacie",
+    en: "Asclion — AI cross-sell copilot for pharmacies",
   },
   "seo.landing.desc": {
-    fr: "Asclion transforme chaque produit scanné au comptoir en vente associée pertinente. Copilote IA pour pharmaciens : +5 à 10% de CA, meilleur conseil patient, compatible Winpharma, LGPI, Pharmagest.",
-    en: "Asclion turns every scanned product at the counter into a relevant cross-sell. AI copilot for pharmacists: +5–10% revenue, better patient advice, works with Winpharma, LGPI, Pharmagest.",
+    fr: "Copilote IA au comptoir : +5 à 10% de CA, meilleur conseil patient, compatible Winpharma, LGPI et Pharmagest.",
+    en: "AI counter copilot: +5–10% revenue, better patient advice, works with Winpharma, LGPI and Pharmagest.",
   },
   "seo.vslgo.title": {
     fr: "Asclion vs LGO : quelle différence avec Winpharma, LGPI, Pharmagest ?",
