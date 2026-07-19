@@ -1,3 +1,7 @@
+import { Buffer } from "buffer";
+if (typeof globalThis !== "undefined" && !(globalThis as any).Buffer) {
+  (globalThis as any).Buffer = Buffer;
+}
 import matter from "gray-matter";
 
 export interface BlogFAQItem { q: string; a: string }
