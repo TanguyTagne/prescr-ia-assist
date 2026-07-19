@@ -5,6 +5,7 @@ description: "Panier moyen, conseil associé, nouvelles missions, OTC, IA au com
 date: 2026-07-21
 category: "Développer son CA"
 author: "Tanguy, fondateur d'Asclion"
+image: "/blog/images/augmenter-chiffre-affaires-pharmacie.jpg"
 readingTime: 8
 essential:
   - "Le CA prescription stagne (génériques, biosimilaires, maîtrise des dépenses) : la croissance vient de l'OTC, de la parapharmacie, des services et du conseil."
