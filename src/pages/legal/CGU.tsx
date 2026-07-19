@@ -7,7 +7,7 @@ const CGU = () => {
   const { t } = useI18n();
   return (
   <div className="min-h-screen bg-background">
-    <Seo title={t("seo.legal.terms.title")} description={t("seo.legal.terms.desc")} path="/cgu" />
+    <Seo title={t("seo.legal.terms.title")} description={t("seo.legal.terms.desc")} path="/cgu" noindex />
     <div className="container max-w-3xl mx-auto px-4 py-10">
       <Link to="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-6">
         <ArrowLeft className="h-4 w-4" /> Retour
