@@ -52,5 +52,10 @@ Application web progressive (PWA) + logiciel desktop. Analyse propulsée par not
 ## Accès
 
 Site : https://www.asclion.com
-Contact : tanguytubert@gmail.com (demande d'accès via le formulaire sur le site)
+Contact : tanguytagne12@gmail.com (demande d'accès via le formulaire sur le site)
 
+
+## Blog
+
+Aucun article publié pour le moment. Les articles à venir seront listés ici sous la forme :
+- [Titre de l'article](/blog/slug): description en une ligne.
