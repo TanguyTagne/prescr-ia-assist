@@ -20,7 +20,7 @@ const DPA = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <Seo title={t("seo.legal.dpa.title")} description={t("seo.legal.dpa.desc")} path="/legal/dpa" />
+      <Seo title={t("seo.legal.dpa.title")} description={t("seo.legal.dpa.desc")} path="/legal/dpa" noindex />
       <header className="border-b border-border px-6 py-4">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <Link to="/" className="text-lg font-semibold">Asclion</Link>

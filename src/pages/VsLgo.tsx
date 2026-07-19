@@ -41,7 +41,16 @@ export default function VsLgo() {
         title={t("seo.vslgo.title")}
         description={t("seo.vslgo.desc")}
         path="/vs-lgo"
+        jsonLd={{
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          itemListElement: [
+            { "@type": "ListItem", position: 1, name: "Accueil", item: "https://www.asclion.com/" },
+            { "@type": "ListItem", position: 2, name: "Asclion vs LGO", item: "https://www.asclion.com/vs-lgo" },
+          ],
+        }}
       />
+
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute -top-40 -right-40 h-[600px] w-[600px] rounded-full bg-primary/25 blur-3xl animate-pulse" style={{ animationDuration: "8s" }} />
         <div className="absolute top-[35%] -left-40 h-[500px] w-[500px] rounded-full bg-pharmacy-teal/25 blur-3xl animate-pulse" style={{ animationDuration: "10s" }} />
