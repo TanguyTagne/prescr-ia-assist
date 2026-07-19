@@ -57,5 +57,6 @@ Contact : tanguytagne12@gmail.com (demande d'accès via le formulaire sur le sit
 
 ## Blog
 
-Aucun article publié pour le moment. Les articles à venir seront listés ici sous la forme :
-- [Titre de l'article](/blog/slug): description en une ligne.
+- [Augmenter le panier moyen en officine : 5 leviers concrets](/blog/augmenter-panier-moyen-officine): 5 leviers activables au comptoir pour développer son CA sans dégrader le conseil.
+- [Conseil associé sur une ordonnance d'antibiotique : le réflexe probiotique](/blog/conseil-associe-antibiotique): Structurer le conseil probiotique + hydratation au comptoir.
+- [Choisir son logiciel d'officine en 2026 : LGO, copilote IA, ou les deux ?](/blog/choisir-logiciel-officine): Winpharma, LGPI, Pharmagest, Léo et le positionnement d'un copilote IA.
