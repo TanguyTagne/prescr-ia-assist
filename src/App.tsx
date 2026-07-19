@@ -50,6 +50,8 @@ const ResetPassword = lazyWithRetry(() => import("./pages/ResetPassword"));
 const VsLgo = lazyWithRetry(() => import("./pages/VsLgo"));
 const Aide = lazyWithRetry(() => import("./pages/Aide"));
 const Fonctionnalites = lazyWithRetry(() => import("./pages/Fonctionnalites"));
+const Blog = lazyWithRetry(() => import("./pages/Blog"));
+const BlogPost = lazyWithRetry(() => import("./pages/BlogPost"));
 
 const Widget = lazyWithRetry(() => import("./components/Widget"));
 const SiteDemoWidget = lazyWithRetry(() => import("./components/SiteDemoWidget"));
