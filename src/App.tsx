@@ -242,7 +242,7 @@ const App = () => {
                   <Route path="/en/vs-lgo" element={<VsLgo />} />
                   <Route path="/en/aide" element={<Aide />} />
                   <Route path="/en/blog" element={<Blog />} />
-                  <Route path="/en/blog/:slug" element={<BlogPost />
+                  <Route path="/en/blog/:slug" element={<BlogPost />} />
                   <Route path="/en/fonctionnalites" element={<ProtectedRoute><Fonctionnalites /></ProtectedRoute>} />
                   <Route path="/en/admin" element={<AdminRoute><Admin /></AdminRoute>} />
                   <Route path="/en/groupement" element={<GroupRoute><Groupement /></GroupRoute>} />
