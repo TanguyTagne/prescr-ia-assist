@@ -229,7 +229,7 @@ const TrackingLinksTab = () => {
         <DialogContent>
           <DialogHeader><DialogTitle>QR Code – {qrLink?.label}</DialogTitle></DialogHeader>
           <div className="flex flex-col items-center gap-3 py-2">
-            {qrDataUrl && <img src={qrDataUrl} alt="QR code" className="border rounded" />}
+            {qrDataUrl && <img src={qrDataUrl} alt={`QR code du lien de suivi Asclion — ${qrLink?.label ?? ""}`} className="border rounded" />}
             <code className="text-xs bg-muted px-2 py-1 rounded">{SITE_BASE}/?r={qrLink?.slug}</code>
             <div className="flex gap-2">
               <Button size="sm" variant="outline" onClick={() => qrLink && copyLink(qrLink.slug)}>
