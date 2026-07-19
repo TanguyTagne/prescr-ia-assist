@@ -5,6 +5,7 @@ description: "Comment calculer le panier moyen de votre officine, à quoi le com
 date: 2026-07-28
 category: "Développer son CA"
 author: "Tanguy, fondateur d'Asclion"
+image: "/blog/images/panier-moyen-pharmacie.jpg"
 readingTime: 7
 essential:
   - "Panier moyen = CA ÷ nombre de tickets. Suivez surtout le panier hors remboursable, c'est lui qui pilote votre marge."

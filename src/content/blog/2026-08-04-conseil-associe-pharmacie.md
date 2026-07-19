@@ -5,6 +5,7 @@ description: "La méthode du conseil associé en officine : les 3 types d'associ
 date: 2026-08-04
 category: "Conseil associé"
 author: "Tanguy, fondateur d'Asclion"
+image: "/blog/images/conseil-associe-pharmacie.jpg"
 readingTime: 8
 essential:
   - "Un conseil associé pertinent repose sur 3 logiques : la zone anatomique traitée, un effet secondaire fréquent à prévenir, ou l'accompagnement du traitement."
