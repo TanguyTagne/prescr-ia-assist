@@ -1,25 +1,22 @@
 import { useMemo } from "react";
+import GithubSlugger from "github-slugger";
 
 interface Heading { id: string; text: string }
 
-function slugify(s: string) {
-  return s
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9\s-]/g, "")
-    .trim()
-    .replace(/\s+/g, "-");
-}
-
 const TableOfContents = ({ markdown }: { markdown: string }) => {
   const headings = useMemo<Heading[]>(() => {
+    // Use the same slugger as rehype-slug so anchors match heading ids
+    // (github-slugger preserves accented Latin letters: é, è, à, ê…).
+    const slugger = new GithubSlugger();
     const out: Heading[] = [];
+    let inFence = false;
     for (const line of markdown.split("\n")) {
+      if (/^```/.test(line)) { inFence = !inFence; continue; }
+      if (inFence) continue;
       const m = /^##\s+(.+?)\s*$/.exec(line);
       if (m) {
         const text = m[1].trim();
-        out.push({ id: slugify(text), text });
+        out.push({ id: slugger.slug(text), text });
       }
     }
     return out;
