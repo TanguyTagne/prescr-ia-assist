@@ -440,6 +440,17 @@ export const translations = {
   "legal.mentions.links": { fr: "Liens utiles", en: "Useful links" },
 
   // ===== DEMO WIDGET =====
+  "landing.people.title": { fr: "Pensé avec des pharmaciens, pour le comptoir", en: "Built with pharmacists, for the counter" },
+  "landing.people.desc": {
+    fr: "Asclion est né des retours d'équipes officinales : chaque conseil proposé doit être dicible en 5 secondes au comptoir.",
+    en: "Asclion was shaped by pharmacy teams: every suggested advice must be sayable in 5 seconds at the counter.",
+  },
+  "landing.people.alt1": { fr: "Pharmacienne conseillant une patiente au comptoir d'officine", en: "Pharmacist advising a patient at the pharmacy counter" },
+  "landing.people.cap1": { fr: "Le bon conseil, au bon moment, sans ralentir la délivrance.", en: "The right advice, at the right time, without slowing dispensing." },
+  "landing.people.alt2": { fr: "Deux pharmaciens consultant Asclion sur un écran d'officine", en: "Two pharmacists using Asclion on a pharmacy screen" },
+  "landing.people.cap2": { fr: "Intégré à votre LGO : aucune saisie supplémentaire.", en: "Integrated with your pharmacy software: no extra data entry." },
+  "landing.people.alt3": { fr: "Portrait d'une pharmacienne titulaire dans son officine", en: "Portrait of a pharmacist in her pharmacy" },
+  "landing.people.cap3": { fr: "Toute l'équipe conseille au même niveau, dès le premier jour.", en: "The whole team advises at the same level, from day one." },
   "demo.headerTag": { fr: "Démo", en: "Demo" },
   "demo.closeAria": { fr: "Fermer la démo Asclion", en: "Close Asclion demo" },
   "demo.openAria": { fr: "Ouvrir la démo Asclion", en: "Open Asclion demo" },

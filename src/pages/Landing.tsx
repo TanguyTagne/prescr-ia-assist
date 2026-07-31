@@ -21,6 +21,9 @@ import {
   Sparkles,
 } from "lucide-react";
 import GainSimulator from "@/components/GainSimulator";
+import pharmacistCounter from "@/assets/pharmacist-counter.jpg";
+import pharmacistTeam from "@/assets/pharmacist-team.jpg";
+import pharmacistPortrait from "@/assets/pharmacist-portrait.jpg";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
