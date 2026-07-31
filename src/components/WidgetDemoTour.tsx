@@ -11,13 +11,13 @@ const STEPS = [
     cta: "Démarrer la visite",
   },
   {
-    title: "1. Choisissez une ordonnance type",
-    body: "Le widget en bas à droite est l'interface réelle. Sélectionnez une ordonnance de démonstration (Médecine générale, Soins infirmiers ou Cardiologie) pour voir Asclion en action.",
+    title: "1. Tapez le médicament de votre choix",
+    body: "Le widget en bas à droite est l'interface réelle. Saisissez n'importe quel médicament (Doliprane, Ventoline, Levothyrox…) ou choisissez un exemple.",
     cta: "Suivant",
   },
   {
     title: "2. Lancez l'analyse IA",
-    body: "Cliquez sur « Analyser cette ordonnance ». L'IA détecte les médicaments, les pathologies associées et les besoins du patient en moins de 3 secondes.",
+    body: "Cliquez sur « Analyser ce médicament ». Asclion identifie la classe, les besoins associés et les produits complémentaires en moins de 3 secondes.",
     cta: "Suivant",
   },
   {
