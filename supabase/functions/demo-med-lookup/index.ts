@@ -112,15 +112,52 @@ Deno.serve(async (req) => {
 
     // ── Complementary products ──
     let produits: any[] = [];
+
+    // 1) Curated PCs (highest priority source)
     if (medicament?.id) {
+      const { data: curated } = await supabase
+        .from("medicament_curated_pcs")
+        .select("pc_1, pc_2, pertinence_pc1, pertinence_pc2, phrase_conseil_pc1, phrase_conseil_pc2")
+        .eq("medicament_id", medicament.id)
+        .maybeSingle();
+      if (curated) {
+        const pairs = [
+          { name: curated.pc_1, phrase: curated.phrase_conseil_pc1, pertinence: curated.pertinence_pc1 },
+          { name: curated.pc_2, phrase: curated.phrase_conseil_pc2, pertinence: curated.pertinence_pc2 },
+        ].filter((p) => p.name && String(p.name).trim());
+        produits = pairs.map((p, i) => ({
+          produit: String(p.name).trim(),
+          categorie: "Conseil associé",
+          priorite: 100 - i,
+          phrase_conseil: (p.phrase || "").trim() || undefined,
+          description: (p.pertinence || "").trim() || undefined,
+        }));
+      }
+
+      // 2) Validated PCs bound to the medication
+      const { data: mpv } = await supabase
+        .from("medicament_pc_valide")
+        .select("score, pc:produits_complementaires(produit, categorie, description, phrase_conseil, pathologies(nom_pathologie))")
+        .eq("medicament_id", medicament.id)
+        .order("score", { ascending: false })
+        .limit(10);
+      produits = [
+        ...produits,
+        ...(mpv || [])
+          .filter((r: any) => r.pc)
+          .map((r: any) => ({ ...r.pc, priorite: Math.max(r.score || 0, 90) })),
+      ];
+
       const { data } = await supabase
         .from("produits_complementaires")
         .select("produit, categorie, description, priorite, phrase_conseil, pathologies(nom_pathologie)")
         .eq("medicament_id", medicament.id)
         .order("priorite", { ascending: false })
         .limit(10);
-      produits = (data || []).map((p: any) => ({ ...p, priorite: Math.max(p.priorite || 0, 85) }));
+      produits = [...produits, ...(data || []).map((p: any) => ({ ...p, priorite: Math.max(p.priorite || 0, 85) }))];
     }
+
+    // 3) Pathology-based PCs
     if (pathologieIds.size > 0) {
       const { data } = await supabase
         .from("produits_complementaires")
@@ -130,6 +167,33 @@ Deno.serve(async (req) => {
         .limit(20);
       produits = [...produits, ...(data || [])];
     }
+
+    // 4) ATC-class fallback — other medications sharing the same ATC code
+    if (produits.length === 0 && atcCode) {
+      const { data: siblings } = await supabase
+        .from("medicaments")
+        .select("id")
+        .eq("atc_code", atcCode)
+        .limit(20);
+      const ids = (siblings || []).map((s: any) => s.id).filter((id: string) => id !== medicament.id);
+      if (ids.length > 0) {
+        const { data: curatedSib } = await supabase
+          .from("medicament_curated_pcs")
+          .select("pc_1, phrase_conseil_pc1, pertinence_pc1")
+          .in("medicament_id", ids)
+          .limit(5);
+        produits = (curatedSib || [])
+          .filter((c: any) => c.pc_1)
+          .map((c: any, i: number) => ({
+            produit: String(c.pc_1).trim(),
+            categorie: "Conseil associé",
+            priorite: 90 - i,
+            phrase_conseil: (c.phrase_conseil_pc1 || "").trim() || undefined,
+            description: (c.pertinence_pc1 || "").trim() || undefined,
+          }));
+      }
+    }
+
 
     const seen = new Set<string>();
     const recommendations = produits
