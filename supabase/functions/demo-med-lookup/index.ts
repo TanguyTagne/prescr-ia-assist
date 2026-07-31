@@ -226,11 +226,22 @@ Deno.serve(async (req) => {
       if (c) conseil = [c.conseil, c.description].filter(Boolean).join(" — ");
     }
 
+    // ── Therapeutic class label ──
+    let classe = molecule?.classe_therapeutique || "";
+    if (!classe && atcCode) {
+      const { data: cls } = await supabase
+        .from("classe_atc")
+        .select("nom_classe")
+        .eq("atc_code", atcCode)
+        .maybeSingle();
+      classe = cls?.nom_classe || "";
+    }
+
     return json({
       found: true,
       medicament: {
         nom: medicament.nom_commercial,
-        classe: molecule?.classe_therapeutique || "—",
+        classe: classe || "Classe non renseignée",
         molecule: molecule?.nom_molecule || undefined,
         code_atc: atcCode || undefined,
         conseil_associe: conseil || undefined,
