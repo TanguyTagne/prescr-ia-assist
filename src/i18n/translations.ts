@@ -440,6 +440,17 @@ export const translations = {
   "legal.mentions.links": { fr: "Liens utiles", en: "Useful links" },
 
   // ===== DEMO WIDGET =====
+  "landing.people.title": { fr: "Pensé avec des pharmaciens, pour le comptoir", en: "Built with pharmacists, for the counter" },
+  "landing.people.desc": {
+    fr: "Asclion est né des retours d'équipes officinales : chaque conseil proposé doit être dicible en 5 secondes au comptoir.",
+    en: "Asclion was shaped by pharmacy teams: every suggested advice must be sayable in 5 seconds at the counter.",
+  },
+  "landing.people.alt1": { fr: "Pharmacienne conseillant une patiente au comptoir d'officine", en: "Pharmacist advising a patient at the pharmacy counter" },
+  "landing.people.cap1": { fr: "Le bon conseil, au bon moment, sans ralentir la délivrance.", en: "The right advice, at the right time, without slowing dispensing." },
+  "landing.people.alt2": { fr: "Deux pharmaciens consultant Asclion sur un écran d'officine", en: "Two pharmacists using Asclion on a pharmacy screen" },
+  "landing.people.cap2": { fr: "Intégré à votre LGO : aucune saisie supplémentaire.", en: "Integrated with your pharmacy software: no extra data entry." },
+  "landing.people.alt3": { fr: "Portrait d'une pharmacienne titulaire dans son officine", en: "Portrait of a pharmacist in her pharmacy" },
+  "landing.people.cap3": { fr: "Toute l'équipe conseille au même niveau, dès le premier jour.", en: "The whole team advises at the same level, from day one." },
   "demo.headerTag": { fr: "Démo", en: "Demo" },
   "demo.closeAria": { fr: "Fermer la démo Asclion", en: "Close Asclion demo" },
   "demo.openAria": { fr: "Ouvrir la démo Asclion", en: "Open Asclion demo" },
@@ -447,6 +458,24 @@ export const translations = {
   "demo.list.subtitle": { fr: "— choisissez une ordonnance à analyser\n", en: "— pick a sample prescription" },
   "demo.preview.back": { fr: "Retour", en: "Back" },
   "demo.preview.analyze": { fr: "Analyser cette ordonnance", en: "Analyze this prescription" },
+  "demo.search.subtitle": { fr: "— testez un médicament", en: "— try any medication" },
+  "demo.search.placeholder": { fr: "Tapez un médicament (ex : Amoxicilline)", en: "Type a medication (e.g. Amoxicillin)" },
+  "demo.search.analyze": { fr: "Analyser ce médicament", en: "Analyze this medication" },
+  "demo.search.examples": { fr: "Exemples :", en: "Examples:" },
+  "demo.search.notFound": {
+    fr: "Médicament introuvable dans la base clinique. Essayez une autre orthographe ou un nom de marque.",
+    en: "Medication not found in the clinical database. Try another spelling or a brand name.",
+  },
+  "demo.search.tryAnother": { fr: "Tester un autre médicament →", en: "Try another medication →" },
+  "demo.gate.title": { fr: "Encore un test ?", en: "One more test?" },
+  "demo.gate.desc": {
+    fr: "Laissez votre email professionnel pour continuer à tester Asclion sans limite.",
+    en: "Leave your work email to keep testing Asclion without limits.",
+  },
+  "demo.gate.submit": { fr: "Continuer la démo", en: "Continue the demo" },
+  "demo.gate.error": { fr: "Email invalide ou envoi impossible. Réessayez.", en: "Invalid email or sending failed. Please try again." },
+  "demo.gate.leadName": { fr: "Visiteur démo", en: "Demo visitor" },
+  "demo.gate.leadOfficine": { fr: "Non renseignée", en: "Not provided" },
   "demo.lead.intro": { fr: "Cette démo vous parle ?", en: "Liked the demo?" },
   "demo.lead.desc": {
     fr: "Asclion s'adapte à votre officine, votre LGO et votre catalogue. Recevez une démo personnalisée — 15 minutes, sans engagement.",

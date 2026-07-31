@@ -21,6 +21,9 @@ import {
   Sparkles,
 } from "lucide-react";
 import GainSimulator from "@/components/GainSimulator";
+import pharmacistCounter from "@/assets/pharmacist-counter.jpg";
+import pharmacistTeam from "@/assets/pharmacist-team.jpg";
+import pharmacistPortrait from "@/assets/pharmacist-portrait.jpg";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -417,6 +420,37 @@ const Landing = () => {
             </div>
           </div>
         </section>
+
+        {/* ===== PHARMACISTS ===== */}
+        <section className="py-14 px-4">
+          <div className="container max-w-5xl mx-auto space-y-8">
+            <div className="text-center space-y-2">
+              <h2 className="text-2xl md:text-3xl font-bold tracking-tight">{t("landing.people.title")}</h2>
+              <p className="text-sm text-muted-foreground max-w-2xl mx-auto">{t("landing.people.desc")}</p>
+            </div>
+            <div className="grid sm:grid-cols-3 gap-4">
+              {[
+                { src: pharmacistCounter, alt: t("landing.people.alt1"), caption: t("landing.people.cap1") },
+                { src: pharmacistTeam, alt: t("landing.people.alt2"), caption: t("landing.people.cap2") },
+                { src: pharmacistPortrait, alt: t("landing.people.alt3"), caption: t("landing.people.cap3") },
+              ].map((img, i) => (
+                <figure key={i} className="rounded-xl overflow-hidden border border-border bg-card">
+                  <img
+                    src={img.src}
+                    alt={img.alt}
+                    loading="lazy"
+                    width={1024}
+                    height={768}
+                    className="w-full h-44 object-cover"
+                  />
+                  <figcaption className="p-3 text-xs text-muted-foreground leading-snug">{img.caption}</figcaption>
+                </figure>
+              ))}
+            </div>
+          </div>
+        </section>
+
+
 
         {/* ===== HOW IT WORKS ===== */}
         <section className="py-16 px-4 bg-secondary/50">
