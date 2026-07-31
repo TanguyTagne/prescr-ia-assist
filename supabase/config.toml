@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.send-monthly-recap]
 verify_jwt = false
+
+[functions.demo-med-lookup]
+verify_jwt = false
