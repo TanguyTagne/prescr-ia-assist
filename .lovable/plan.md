@@ -1,96 +1,59 @@
-## Blog SEO-first sur /blog
+# Landing page façon Acquisition.com : une offre, un CTA, une preuve
 
-### 1. Stockage des articles
+## Diagnostic
 
-Markdown avec frontmatter, importés statiquement via Vite (`import.meta.glob`) — pas de backend, pas de latence, build-time SEO garanti.
+La page actuelle a déjà les briques Hormozi (value stack, garantie, FAQ, urgence), mais elle échoue sur les trois règles qui font converser acquisition.com :
 
-```
-src/content/blog/
-  2026-07-15-augmenter-panier-moyen-officine.md
-  2026-07-20-conseil-associe-antibiotique.md
-  ...
-```
+1. **Trop de sorties.** Hero avec 2 CTA + widget démo flottant + formulaire d'accès + section parrainage : le visiteur a 4 actions possibles, donc aucune.
+2. **Pas de promesse chiffrée en haut.** Acquisition.com ouvre sur une question ("Do You Want to Scale Your Business?") suivie d'un chiffre de preuve ($250m+). Notre hero parle du produit, pas du résultat du titulaire.
+3. **Preuve enterrée.** Le seul chiffre réel (+1 200 € de CA en 1 mois sur la pharmacie pilote) n'est pas au-dessus de la ligne de flottaison.
 
-Frontmatter type :
-```yaml
----
-title: "Comment augmenter son panier moyen en officine"
-slug: "augmenter-panier-moyen-officine"
-description: "3 leviers concrets..."
-date: 2026-07-15
-updated: 2026-07-18
-category: "Développer son CA"
-author: "Tanguy Tubert"
-image: "/blog/panier-moyen.webp"
-readingTime: 6
-faq:
-  - q: "Quel est le panier moyen en officine ?"
-    a: "Environ 18-22€..."
-relatedLinks:
-  - { label: "Voir les fonctionnalités", href: "/fonctionnalites" }
-  - { label: "Asclion vs LGO", href: "/vs-lgo" }
-relatedPosts: ["conseil-associe-antibiotique"]
----
-```
+## Réponse à la question CTA
 
-### 2. Dépendances
+**Un seul CTA : "Tester le copilote"** (démo self-service), pas l'appel.
+Raison : le titulaire indépendant est occupé et sceptique — un appel coûte cher en friction et notre trafic est encore faible. La démo laisse le produit prouver la valeur en 30 secondes, l'email est la conversion, et l'appel devient l'étape 2 déclenchée après la démo (là où l'intention est maximale). Acquisition.com fait exactement ça : le "free training" self-service capture, la vente qualifiée vient ensuite.
 
-- `react-markdown` + `remark-gfm` + `rehype-slug` + `rehype-autolink-headings` (rendu + ancres H2/H3 pour la TOC)
-- `gray-matter` (parsing frontmatter)
+## Ce qu'on construit
 
-### 3. Nouveaux fichiers
+### 1. Hero réécrit (une promesse, un chiffre, un CTA)
+- Question d'accroche : "Votre officine laisse-t-elle du chiffre sur le comptoir ?"
+- Sous-titre preuve : "+1 200 € de CA en 1 mois sur notre pharmacie pilote — sans vendre plus fort, juste sans oublier le conseil associé."
+- Un seul bouton : **Tester le copilote (30 s, gratuit)** → ouvre la démo en grand.
+- Suppression du CTA secondaire du hero. Le simulateur de gain reste à droite mais son bouton pointe sur le même CTA.
 
-- `src/lib/blog.ts` : charge tous les `.md` via `import.meta.glob('...', { as: 'raw', eager: true })`, parse le frontmatter, expose `getAllPosts()`, `getPostBySlug()`, `getCategories()`.
-- `src/pages/Blog.tsx` : route `/blog`, liste des articles (cartes avec image WebP `loading="lazy"` + `width/height`, titre H2, extrait, date, temps de lecture, badge catégorie). Filtres par catégorie.
-- `src/pages/BlogPost.tsx` : route `/blog/:slug`, template article complet (voir section 4).
-- `src/components/blog/PostCard.tsx`
-- `src/components/blog/TableOfContents.tsx` (extrait les H2 du markdown, ancres cliquables)
-- `src/components/blog/EssentialBox.tsx` (encadré "L'essentiel" — puces générées depuis frontmatter `essential: string[]`)
-- `src/components/blog/AuthorBio.tsx` (Tanguy, fondateur d'Asclion)
-- `src/components/blog/BlogFAQ.tsx` (rendu FAQ + JSON-LD)
-- `src/components/blog/ShareButtons.tsx` (LinkedIn + copie de lien)
-- `src/components/blog/BlogCTA.tsx` (bandeau discret vers /fonctionnalites)
-- `scripts/generate-blog-sitemap.ts` : régénère `public/sitemap.xml` avec les articles + met à jour la section `## Blog` de `public/llms.txt`. Hook `predev`/`prebuild` dans `package.json`.
-- `scripts/generate-rss.ts` : produit `public/blog/rss.xml`, hook identique.
-- 3 articles seed pour éviter une page /blog vide.
+### 2. Démo mise au centre, plus détaillée
+- Nouveau composant plein écran (modale/section ancrée) au lieu du petit widget 320 px : saisie du médicament, suggestions, résultat PC avec phrases conseil, et **ligne de gain estimé** sous le résultat ("~X € de panier moyen sur cette ordonnance").
+- Le widget flottant reste, mais son clic ouvre la même vue détaillée.
+- Après le 1er test : bandeau "Testez-en un 2ᵉ" → email requis (mécanique déjà en place).
+- Après le résultat : CTA unique "Je veux Asclion dans mon officine" → formulaire court.
 
-### 4. Template article (SEO/E-E-A-T)
+### 3. Barre de preuve sous le hero
+Trois chiffres seulement, sourcés et honnêtes : `+1 200 € de CA / mois (pilote)` · `< 2,5 s par ordonnance` · `0 saisie, 0 config`. Le témoignage nommé existant reste juste dessous.
 
-Chaque `/blog/:slug` rend :
+### 4. Offre reformulée (Grand Slam)
+Bloc unique remplaçant le value stack actuel :
+- 1 mois d'essai **gratuit, sans engagement**
+- Installation offerte
+- Formation de l'équipe offerte
+- Aucune carte bancaire, résiliation en un email
+Titre : "Vous ne risquez rien, littéralement." Le tableau de valeurs est simplifié en 4 lignes lisibles.
 
-1. `<Seo>` : title = `${post.title} | Asclion`, description = frontmatter, canonical propre via le composant existant, `ogType="article"`, `ogImage` si fourni, JSON-LD `Article` (headline, datePublished, dateModified, author, publisher Organization, image).
-2. H1 unique = `post.title`, hiérarchie H2/H3 issue du markdown (aucun autre H1 dans la page).
-3. Métadonnées visibles : catégorie, date publiée, "Mis à jour le …", temps de lecture, auteur.
-4. **Encart "L'essentiel"** en haut (3-4 puces depuis `essential` frontmatter).
-5. **Table des matières** générée depuis les H2 (via `rehype-slug`) avec liens d'ancre.
-6. Corps markdown rendu par `react-markdown` (styles Tailwind `prose` cohérents avec le design).
-7. **CTA milieu** (injecté après ~50% des H2) + **CTA fin** vers `/fonctionnalites`.
-8. **Liens internes** : bloc "À lire aussi" (`relatedPosts` + `relatedLinks`).
-9. **Encart auteur** en fin (Tanguy, fondateur — expertise pharmacie/IA).
-10. **FAQ** si présente, avec JSON-LD `FAQPage`.
-11. **Partage** : LinkedIn + copier le lien.
+### 5. Formulaire réduit à 3 champs
+Nom de la pharmacie, email, téléphone. Ville / LGO / nom du contact passent en optionnels repliés. Le formulaire est répété 3 fois sur la page (après démo, après offre, en bas), toujours le même.
 
-### 5. Intégration site
+### 6. Ce qu'on enlève / déplace
+- Section parrainage : déplacée hors de la page principale (elle parle à des clients, pas à des prospects) — accessible depuis le footer.
+- CTA secondaires et liens sortants du hero.
+- "Pour qui / pas pour qui" est conservé (Hormozi l'utilise pour qualifier) mais raccourci à 3 lignes par colonne.
 
-- `src/App.tsx` : routes `/blog` et `/blog/:slug` (+ variantes `/en/blog` cohérentes avec le pattern i18n existant, contenu FR pour l'instant).
-- Navigation : ajout de "Blog" dans le header (via `NavLink`) et dans `SiteFooter.tsx`.
-- `public/sitemap.xml` : entrées générées automatiquement (changefreq `monthly`, priority `0.7`).
-- `public/llms.txt` : section `## Blog` régénérée avec la liste des articles.
-- `public/blog/rss.xml` : flux RSS 2.0 (titre, lien, description, pubDate).
+### Ordre final de la page
+Hero (question + chiffre + 1 CTA) → barre de preuve → démo détaillée → témoignage pilote → comment ça marche (3 étapes) → offre + garantie → pour qui / pas pour qui → FAQ → formulaire 3 champs → footer.
 
-### 6. Page index /blog
+## Détails techniques
 
-- `<Seo>` title = "Blog Asclion — Conseil associé, panier moyen et CA de votre officine"
-- H1 = même wording
-- Grille responsive de `PostCard`, filtres par catégorie (4 catégories fournies)
-- Lien vers `/blog/rss.xml`
-
-### 7. Performance
-
-- Images en WebP dans `public/blog/`, `loading="lazy"`, `decoding="async"`, `width`/`height` explicites → zéro CLS.
-- Cartes préchargent l'image du premier article en `fetchpriority="high"`.
-- Markdown parsé au build (frontmatter) via `gray-matter` en top-level, rendu au runtime — pas d'appel réseau.
-
-### Résumé technique
-
-Blog 100 % statique (markdown + Vite glob), rendu React côté client avec metadata dynamique via le composant `<Seo>` existant, sitemap/llms.txt/RSS régénérés à chaque build. Ne modifie ni le design system, ni les composants existants hors nav/footer.
+- `src/pages/Landing.tsx` : réordonnancement des sections, hero à un CTA, barre de preuve, offre simplifiée, formulaire réduit, retrait de la section parrainage.
+- Nouveau `src/components/DemoFullPanel.tsx` : réutilise la logique de `WidgetDemo.tsx` (recherche → `demo-med-lookup` → `AnalysisResults` → gate email) dans une mise en page large ; `WidgetDemo` reste pour le widget flottant et partage le même hook de state extrait dans `src/hooks/useDemoLookup.ts`.
+- `src/components/SiteDemoWidget.tsx` : le clic ouvre le panneau plein écran.
+- `src/i18n/translations.ts` : nouvelles clés FR/EN (`landing.hero.*`, `landing.proofbar.*`, `landing.offer.*`, `demo.gain.*`), suppression des clés devenues inutilisées.
+- `src/components/GainSimulator.tsx` : CTA aligné sur le CTA unique.
+- Aucun changement de schéma ni d'edge function ; le tracking existant (`trackEvent`, `submit-demo-lead`) est conservé, avec un event `demo_opened_hero` en plus.
