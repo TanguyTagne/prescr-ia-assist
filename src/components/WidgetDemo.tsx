@@ -110,6 +110,7 @@ const WidgetDemo = ({ onClose, size = "compact" }: WidgetDemoProps) => {
 
       const uses = Number(localStorage.getItem(USES_KEY) || "0") + 1;
       localStorage.setItem(USES_KEY, String(uses));
+      window.dispatchEvent(new Event("asclion:demo-tested"));
 
       setResult({
         medicaments: [res.medicament],
