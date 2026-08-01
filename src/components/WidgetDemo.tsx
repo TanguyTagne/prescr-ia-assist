@@ -21,9 +21,28 @@ const EXAMPLES = ["Amoxicilline", "Doliprane", "Ventoline", "Levothyrox", "Ibupr
 
 interface WidgetDemoProps {
   onClose?: () => void;
+  /** "compact" = floating widget (320px). "full" = in-page panel. */
+  size?: "compact" | "full";
 }
 
-const WidgetDemo = ({ onClose }: WidgetDemoProps) => {
+const WidgetDemo = ({ onClose, size = "compact" }: WidgetDemoProps) => {
+  const full = size === "full";
+  const c = {
+    wrap: full ? "p-5 md:p-7 space-y-4" : "p-4 space-y-3",
+    title: full ? "text-base md:text-lg font-bold" : "text-xs font-semibold",
+    sub: full ? "text-sm text-muted-foreground" : "text-[10px] text-muted-foreground",
+    input: full
+      ? "w-full h-12 pl-10 pr-3 text-base rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+      : "w-full h-9 pl-7 pr-2 text-xs rounded border border-input bg-background focus:outline-none focus:ring-1 focus:ring-primary",
+    icon: full ? "absolute left-3 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-muted-foreground" : "absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground",
+    sugg: full ? "w-full text-left px-3 py-2.5 text-sm hover:bg-accent transition-colors" : "w-full text-left px-2 py-1.5 text-[11px] hover:bg-accent transition-colors",
+    cta: full
+      ? "w-full h-12 rounded-lg pharmacy-gradient text-primary-foreground text-base font-semibold flex items-center justify-center gap-2 hover:opacity-95 transition-opacity disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+      : "w-full h-10 rounded-md pharmacy-gradient text-primary-foreground text-sm font-semibold flex items-center justify-center gap-2 hover:opacity-95 transition-opacity disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+    chip: full
+      ? "px-3 py-1.5 rounded-full border border-border bg-card text-sm hover:border-primary hover:bg-accent transition-colors"
+      : "px-2 py-1 rounded-full border border-border bg-card text-[10px] hover:border-primary hover:bg-accent transition-colors",
+  };
   const { t, lp } = useI18n();
   const [phase, setPhase] = useState<Phase>("search");
   const [query, setQuery] = useState("");
@@ -162,7 +181,7 @@ const WidgetDemo = ({ onClose }: WidgetDemoProps) => {
 
   if (phase === "analyzing") {
     return (
-      <div className="p-4">
+      <div className={full ? "p-5 md:p-7" : "p-4"}>
         <AnalysisSkeleton />
       </div>
     );
@@ -170,7 +189,7 @@ const WidgetDemo = ({ onClose }: WidgetDemoProps) => {
 
   if (phase === "result" && result) {
     return (
-      <div className="p-4">
+      <div className={full ? "p-5 md:p-7" : "p-4"}>
         <AnalysisResults result={result} demoMode onReset={handleReset} />
       </div>
     );
@@ -178,7 +197,7 @@ const WidgetDemo = ({ onClose }: WidgetDemoProps) => {
 
   if (phase === "gate") {
     return (
-      <div className="p-4 space-y-3 animate-fade-in">
+      <div className={`${c.wrap} animate-fade-in`}>
         <button
           onClick={() => setPhase("search")}
           className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
@@ -238,7 +257,7 @@ const WidgetDemo = ({ onClose }: WidgetDemoProps) => {
     };
 
     return (
-      <div className="p-4 space-y-3 animate-fade-in">
+      <div className={`${c.wrap} animate-fade-in`}>
         <div className="text-center space-y-1">
           <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary">
             <Sparkles className="h-3.5 w-3.5" />
@@ -265,11 +284,13 @@ const WidgetDemo = ({ onClose }: WidgetDemoProps) => {
 
   // ── Search phase ──
   return (
-    <div className="p-4 space-y-3">
-      <div className="flex items-center gap-1.5">
-        <Sparkles className="h-3.5 w-3.5 text-primary" />
-        <span className="text-xs font-semibold">{t("demo.list.title")}</span>
-        <span className="text-[10px] text-muted-foreground">{t("demo.search.subtitle")}</span>
+    <div className={c.wrap}>
+      <div className={full ? "space-y-1" : "flex items-center gap-1.5"}>
+        <span className={`inline-flex items-center gap-1.5 ${c.title}`}>
+          <Sparkles className={full ? "h-4 w-4 text-primary" : "h-3.5 w-3.5 text-primary"} />
+          {t("demo.list.title")}
+        </span>{" "}
+        <span className={c.sub}>{t("demo.search.subtitle")}</span>
       </div>
 
       <form
@@ -280,7 +301,7 @@ const WidgetDemo = ({ onClose }: WidgetDemoProps) => {
         className="space-y-1.5"
       >
         <div className="relative">
-          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <Search className={c.icon} />
           <input
             value={query}
             onChange={(e) => {
@@ -290,7 +311,7 @@ const WidgetDemo = ({ onClose }: WidgetDemoProps) => {
             placeholder={t("demo.search.placeholder")}
             maxLength={120}
             aria-label={t("demo.search.placeholder")}
-            className="w-full h-9 pl-7 pr-2 text-xs rounded border border-input bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+            className={c.input}
           />
         </div>
 
@@ -301,7 +322,7 @@ const WidgetDemo = ({ onClose }: WidgetDemoProps) => {
                 <button
                   type="button"
                   onClick={() => handleSubmitSearch(s)}
-                  className="w-full text-left px-2 py-1.5 text-[11px] hover:bg-accent transition-colors"
+                  className={c.sugg}
                 >
                   {s}
                 </button>
@@ -320,21 +341,21 @@ const WidgetDemo = ({ onClose }: WidgetDemoProps) => {
         <button
           type="submit"
           disabled={query.trim().length < 2}
-          className="w-full h-10 rounded-md pharmacy-gradient text-primary-foreground text-sm font-semibold flex items-center justify-center gap-2 hover:opacity-95 transition-opacity disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          className={c.cta}
         >
-          <Sparkles className="h-3.5 w-3.5" />
+          <Sparkles className={full ? "h-4 w-4" : "h-3.5 w-3.5"} />
           {t("demo.search.analyze")}
         </button>
       </form>
 
       <div className="space-y-1">
-        <div className="text-[10px] text-muted-foreground">{t("demo.search.examples")}</div>
+        <div className={c.sub}>{t("demo.search.examples")}</div>
         <div className="flex flex-wrap gap-1">
           {EXAMPLES.map((ex) => (
             <button
               key={ex}
               onClick={() => handleSubmitSearch(ex)}
-              className="px-2 py-1 rounded-full border border-border bg-card text-[10px] hover:border-primary hover:bg-accent transition-colors"
+              className={c.chip}
             >
               {ex}
             </button>
