@@ -86,6 +86,52 @@ export const translations = {
   "landing.referral.cta": { fr: "Demander mon code de parrainage", en: "Request my referral code" },
 
 
+  // ===== DEMO SECTION (primary CTA) =====
+  "landing.demo.badge": { fr: "Démo gratuite · 30 secondes", en: "Free demo · 30 seconds" },
+  "landing.demo.title": {
+    fr: "Tapez un médicament. Voyez ce que votre équipe oublie de proposer.",
+    en: "Type a medication. See what your team forgets to offer.",
+  },
+  "landing.demo.desc": {
+    fr: "C'est exactement ce que vos préparateurs verront au comptoir : les 2 produits associés pertinents et la phrase à dire, en moins de 2 secondes.",
+    en: "This is exactly what your team sees at the counter: the 2 relevant associated products and the sentence to say, in under 2 seconds.",
+  },
+  "landing.demo.footnote": {
+    fr: "Aucune inscription pour le premier test. Données de démonstration, aucune donnée patient.",
+    en: "No signup for the first test. Demo data only, no patient data.",
+  },
+
+  // ===== HERO (single CTA) =====
+  "landing.hero.question": {
+    fr: "Votre officine laisse-t-elle du chiffre sur le comptoir ?",
+    en: "Is your pharmacy leaving revenue on the counter?",
+  },
+  "landing.hero.proof": {
+    fr: "+1 200 € de CA en 1 mois sur notre pharmacie pilote — sans vendre plus fort, juste sans oublier le conseil associé.",
+    en: "+€1,200 in revenue in one month at our pilot pharmacy — not by pushing harder, just by never forgetting the associated advice.",
+  },
+  "landing.hero.cta.demo": { fr: "Tester le copilote (30 s, gratuit)", en: "Try the copilot (30 s, free)" },
+
+  // ===== PROOF BAR =====
+  "landing.proofbar.1.value": { fr: "+1 200 €", en: "+€1,200" },
+  "landing.proofbar.1.label": { fr: "de CA en 1 mois · pharmacie pilote", en: "revenue in 1 month · pilot pharmacy" },
+  "landing.proofbar.2.value": { fr: "< 2,5 s", en: "< 2.5 s" },
+  "landing.proofbar.2.label": { fr: "par ordonnance, au comptoir", en: "per prescription, at the counter" },
+  "landing.proofbar.3.value": { fr: "0", en: "0" },
+  "landing.proofbar.3.label": { fr: "saisie, 0 configuration, 0 changement de LGO", en: "typing, 0 setup, 0 software change" },
+
+  // ===== OFFER (grand slam) =====
+  "landing.offer.title": { fr: "Vous ne risquez rien, littéralement.", en: "You are risking nothing, literally." },
+  "landing.offer.subtitle": {
+    fr: "1 mois complet pour juger sur pièces. Si ça ne rapporte pas, vous arrêtez en un email.",
+    en: "A full month to judge on results. If it doesn't pay, you stop with one email.",
+  },
+  "landing.offer.item1": { fr: "1 mois d'essai gratuit, sans engagement", en: "1 free month, no commitment" },
+  "landing.offer.item2": { fr: "Installation et connexion à votre LGO offertes", en: "Setup and pharmacy-software integration included" },
+  "landing.offer.item3": { fr: "Formation de votre équipe offerte", en: "Team training included" },
+  "landing.offer.item4": { fr: "Aucune carte bancaire, résiliation en un email", en: "No credit card, cancel with one email" },
+  "landing.offer.cta": { fr: "Je veux Asclion dans mon officine", en: "I want Asclion in my pharmacy" },
+
   // ===== NEW: HORMOZI HERO =====
   "landing.hero.badge": {
     fr: "⚡ Pharmacie pilote · +880 € de CA additionnel dès le 1ᵉʳ mois",
