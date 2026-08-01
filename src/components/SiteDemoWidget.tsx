@@ -3,6 +3,7 @@ import { X, Sparkles } from "lucide-react";
 import WidgetDemo from "@/components/WidgetDemo";
 import { useI18n } from "@/i18n/I18nProvider";
 import { trackEvent } from "@/hooks/useAnalytics";
+import { cn } from "@/lib/utils";
 
 const SiteDemoWidget = () => {
   const [open, setOpen] = useState(true);
@@ -13,7 +14,23 @@ const SiteDemoWidget = () => {
     if (document.getElementById("demo")) setOpen(false);
   }, []);
   const [hasOpened, setHasOpened] = useState(false);
+  const [demoTested, setDemoTested] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return Number(localStorage.getItem("asclion_demo_uses") || "0") > 0;
+  });
   const { t } = useI18n();
+
+  useEffect(() => {
+    const check = () => setDemoTested(Number(localStorage.getItem("asclion_demo_uses") || "0") > 0);
+    const markTested = () => setDemoTested(true);
+    window.addEventListener("asclion:demo-tested", markTested);
+    window.addEventListener("storage", check);
+    check();
+    return () => {
+      window.removeEventListener("asclion:demo-tested", markTested);
+      window.removeEventListener("storage", check);
+    };
+  }, []);
 
   const handleToggle = () => {
     // On the landing page the in-page demo panel is the primary surface —
@@ -46,16 +63,12 @@ const SiteDemoWidget = () => {
         className="fixed bottom-4 right-4 z-[9999] group"
       >
         <span className="relative flex items-center">
-          {!open && (
-            <span
-              aria-hidden="true"
-              className="absolute inset-0 rounded-full pharmacy-gradient opacity-60 animate-ping"
-            />
-          )}
           <span
-            className={`relative inline-flex items-center gap-1.5 rounded-full pharmacy-gradient shadow-lg text-primary-foreground font-semibold hover:scale-[1.03] transition-transform ${
-              open ? "h-12 w-12 justify-center" : "h-12 pl-3.5 pr-4 text-sm"
-            }`}
+            className={cn(
+              "relative inline-flex items-center gap-1.5 rounded-full pharmacy-gradient shadow-lg text-primary-foreground font-semibold hover:scale-[1.03] transition-transform",
+              open ? "h-12 w-12 justify-center" : "h-12 pl-3.5 pr-4 text-sm",
+              !open && !demoTested && "cta-pulse"
+            )}
           >
             {open ? (
               <X className="h-5 w-5" />

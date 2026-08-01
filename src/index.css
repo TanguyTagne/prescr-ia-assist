@@ -112,18 +112,19 @@
   }
 
   .cta-pulse {
-    animation: cta-pulse-burst 15s infinite;
+    animation: cta-pulse-burst 21.2s infinite;
   }
 }
 
 @keyframes cta-pulse-burst {
-  0% { box-shadow: 0 0 0 0 hsl(var(--primary-foreground) / 0.9); }
-  1.5% { box-shadow: 0 0 0 18px hsl(var(--primary-foreground) / 0); }
-  3% { box-shadow: 0 0 0 0 hsl(var(--primary-foreground) / 0.9); }
-  4.5% { box-shadow: 0 0 0 18px hsl(var(--primary-foreground) / 0); }
-  6% { box-shadow: 0 0 0 0 hsl(var(--primary-foreground) / 0.9); }
-  7.5% { box-shadow: 0 0 0 18px hsl(var(--primary-foreground) / 0); }
-  7.5%, 100% { box-shadow: 0 0 0 0 hsl(var(--primary-foreground) / 0); }
+  0%, 100% { transform: scale(1); }
+  2% { transform: scale(1.08); }
+  4% { transform: scale(1); }
+  6% { transform: scale(1.08); }
+  8% { transform: scale(1); }
+  10% { transform: scale(1.08); }
+  12% { transform: scale(1); }
+  12%, 100% { transform: scale(1); }
 }
 
 @media (prefers-reduced-motion: reduce) {
