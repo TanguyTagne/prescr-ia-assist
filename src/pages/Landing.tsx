@@ -36,6 +36,7 @@ import { toast } from "sonner";
 import SiteFooter from "@/components/SiteFooter";
 import Seo from "@/components/Seo";
 import { useI18n } from "@/i18n/I18nProvider";
+import { trackEvent } from "@/hooks/useAnalytics";
 import LanguageToggle from "@/i18n/LanguageToggle";
 
 // Hardcoded fallback to the public Supabase project URL — VITE_SUPABASE_URL
@@ -206,14 +207,6 @@ const Landing = () => {
     { icon: ShieldCheck, title: t("landing.how.step3.title"), desc: t("landing.how.step3.desc") },
   ];
 
-  const stackItems = [
-    { title: t("landing.stack.item1.title"), value: t("landing.stack.item1.value") },
-    { title: t("landing.stack.item3.title"), value: t("landing.stack.item3.value") },
-    { title: t("landing.stack.item4.title"), value: t("landing.stack.item4.value") },
-    { title: t("landing.stack.item5.title"), value: t("landing.stack.item5.value") },
-    { title: t("landing.stack.item6.title"), value: t("landing.stack.item6.value") },
-  ];
-
   const forWhomYes = [
     t("landing.forwhom.yes.1"),
     t("landing.forwhom.yes.2"),
@@ -347,7 +340,7 @@ const Landing = () => {
                   asChild
                   className="h-12 px-8 text-base font-semibold pharmacy-gradient border-0 gap-2"
                 >
-                  <a href="#demo">
+                  <a href="#demo" onClick={() => trackEvent("demo_opened_hero", {})}>
                     <Sparkles className="h-5 w-5" />
                     {t("landing.hero.cta.demo")}
                   </a>

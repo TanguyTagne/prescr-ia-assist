@@ -10,6 +10,16 @@ const SiteDemoWidget = () => {
   const { t } = useI18n();
 
   const handleToggle = () => {
+    // On the landing page the in-page demo panel is the primary surface —
+    // the floating launcher scrolls there instead of opening the small popup.
+    const inPage = typeof document !== "undefined" && document.getElementById("demo");
+    if (inPage && !open) {
+      try {
+        trackEvent("demo_widget_opened", { source: "launcher_scroll" });
+      } catch {}
+      inPage.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
     const next = !open;
     setOpen(next);
     if (next && !hasOpened) {

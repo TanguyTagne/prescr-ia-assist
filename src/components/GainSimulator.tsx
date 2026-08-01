@@ -31,7 +31,7 @@ const GainSimulator = () => {
   }, [caM]);
 
   const scrollToForm = () => {
-    document.getElementById("demande-acces")?.scrollIntoView({ behavior: "smooth" });
+    document.getElementById("demo")?.scrollIntoView({ behavior: "smooth" });
   };
 
   const hint = t("landing.sim.result.hint").replace("{n}", String(tpj));
