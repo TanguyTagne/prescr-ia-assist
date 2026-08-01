@@ -202,6 +202,22 @@ const Landing = () => {
   const navigate = useNavigate();
   const { t, lp } = useI18n();
 
+  const [demoTested, setDemoTested] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return Number(localStorage.getItem("asclion_demo_uses") || "0") > 0;
+  });
+
+  useEffect(() => {
+    const check = () => setDemoTested(Number(localStorage.getItem("asclion_demo_uses") || "0") > 0);
+    window.addEventListener("asclion:demo-tested", check);
+    window.addEventListener("storage", check);
+    check();
+    return () => {
+      window.removeEventListener("asclion:demo-tested", check);
+      window.removeEventListener("storage", check);
+    };
+  }, []);
+
   const features = [
     { icon: FolderSearch, title: t("landing.how.step1.title"), desc: t("landing.how.step1.desc") },
     { icon: Zap, title: t("landing.how.step2.title"), desc: t("landing.how.step2.desc") },
