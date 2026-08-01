@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -32,6 +32,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { supabase } from "@/integrations/supabase/client";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import SiteFooter from "@/components/SiteFooter";
 import Seo from "@/components/Seo";
@@ -201,6 +202,23 @@ const Landing = () => {
   const navigate = useNavigate();
   const { t, lp } = useI18n();
 
+  const [demoTested, setDemoTested] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return Number(localStorage.getItem("asclion_demo_uses") || "0") > 0;
+  });
+
+  useEffect(() => {
+    const check = () => setDemoTested(Number(localStorage.getItem("asclion_demo_uses") || "0") > 0);
+    const markTested = () => setDemoTested(true);
+    window.addEventListener("asclion:demo-tested", markTested);
+    window.addEventListener("storage", check);
+    check();
+    return () => {
+      window.removeEventListener("asclion:demo-tested", markTested);
+      window.removeEventListener("storage", check);
+    };
+  }, []);
+
   const features = [
     { icon: FolderSearch, title: t("landing.how.step1.title"), desc: t("landing.how.step1.desc") },
     { icon: Zap, title: t("landing.how.step2.title"), desc: t("landing.how.step2.desc") },
@@ -338,7 +356,10 @@ const Landing = () => {
                 <Button
                   size="lg"
                   asChild
-                  className="h-12 px-8 text-base font-semibold pharmacy-gradient border-0 gap-2"
+                  className={cn(
+                    "h-12 px-8 text-base font-semibold pharmacy-gradient border-0 gap-2",
+                    !demoTested && "cta-pulse"
+                  )}
                 >
                   <a href="#demo" onClick={() => trackEvent("demo_opened_hero", {})}>
                     <Sparkles className="h-5 w-5" />

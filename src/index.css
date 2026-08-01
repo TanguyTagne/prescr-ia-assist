@@ -110,6 +110,20 @@
   .glass-card {
     @apply bg-card/80 backdrop-blur-sm border border-border shadow-sm;
   }
+
+  .cta-pulse {
+    animation: cta-pulse-burst 15s infinite;
+  }
+}
+
+@keyframes cta-pulse-burst {
+  0% { box-shadow: 0 0 0 0 hsl(var(--primary-foreground) / 0.9); }
+  1.5% { box-shadow: 0 0 0 18px hsl(var(--primary-foreground) / 0); }
+  3% { box-shadow: 0 0 0 0 hsl(var(--primary-foreground) / 0.9); }
+  4.5% { box-shadow: 0 0 0 18px hsl(var(--primary-foreground) / 0); }
+  6% { box-shadow: 0 0 0 0 hsl(var(--primary-foreground) / 0.9); }
+  7.5% { box-shadow: 0 0 0 18px hsl(var(--primary-foreground) / 0); }
+  7.5%, 100% { box-shadow: 0 0 0 0 hsl(var(--primary-foreground) / 0); }
 }
 
 @media (prefers-reduced-motion: reduce) {
