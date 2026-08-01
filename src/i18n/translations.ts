@@ -93,12 +93,12 @@ export const translations = {
     en: "Type a medication. See what your team forgets to offer.",
   },
   "landing.demo.desc": {
-    fr: "C'est exactement ce que vos préparateurs verront au comptoir : les 2 produits associés pertinents et la phrase à dire, en moins de 2 secondes.",
-    en: "This is exactly what your team sees at the counter: the 2 relevant associated products and the sentence to say, in under 2 seconds.",
+    fr: "C'est exactement ce que vos préparateurs verront au comptoir : les 2 produits associés pertinents et la phrase à dire, en moins de 2 secondes. Sur le terrain, le médicament est détecté automatiquement dès le scan du CIP — ici vous le choisissez librement pour tester.",
+    en: "This is exactly what your team sees at the counter: the 2 relevant associated products and the sentence to say, in under 2 seconds. In real use, the medication is detected automatically as soon as the CIP is scanned — here you choose it freely to test.",
   },
   "landing.demo.footnote": {
-    fr: "Aucune inscription pour le premier test. Données de démonstration, aucune donnée patient.",
-    en: "No signup for the first test. Demo data only, no patient data.",
+    fr: "Aucune inscription pour le premier test. Données de démonstration, aucune donnée patient. En officine, le scan CIP déclenche l'analyse automatiquement.",
+    en: "No signup for the first test. Demo data only, no patient data. In pharmacy, the CIP scan triggers analysis automatically.",
   },
 
   // ===== HERO (single CTA) =====
