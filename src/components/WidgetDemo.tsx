@@ -34,7 +34,7 @@ const WidgetDemo = ({ onClose, size = "compact" }: WidgetDemoProps) => {
     input: full
       ? "w-full h-12 pl-10 pr-3 text-base rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-primary"
       : "w-full h-9 pl-7 pr-2 text-xs rounded border border-input bg-background focus:outline-none focus:ring-1 focus:ring-primary",
-    icon: full ? "absolute left-3 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-muted-foreground" : "absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground",
+    icon: full ? "absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" : "absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground",
     sugg: full ? "w-full text-left px-3 py-2.5 text-sm hover:bg-accent transition-colors" : "w-full text-left px-2 py-1.5 text-[11px] hover:bg-accent transition-colors",
     cta: full
       ? "w-full h-12 rounded-lg pharmacy-gradient text-primary-foreground text-base font-semibold flex items-center justify-center gap-2 hover:opacity-95 transition-opacity disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
