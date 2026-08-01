@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { X, Sparkles } from "lucide-react";
 import WidgetDemo from "@/components/WidgetDemo";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -6,10 +6,26 @@ import { trackEvent } from "@/hooks/useAnalytics";
 
 const SiteDemoWidget = () => {
   const [open, setOpen] = useState(true);
+
+  // When the page already embeds the full demo panel, keep the popup closed
+  // so the visitor has a single demo surface.
+  useEffect(() => {
+    if (document.getElementById("demo")) setOpen(false);
+  }, []);
   const [hasOpened, setHasOpened] = useState(false);
   const { t } = useI18n();
 
   const handleToggle = () => {
+    // On the landing page the in-page demo panel is the primary surface —
+    // the floating launcher scrolls there instead of opening the small popup.
+    const inPage = typeof document !== "undefined" && document.getElementById("demo");
+    if (inPage && !open) {
+      try {
+        trackEvent("demo_widget_opened", { source: "launcher_scroll" });
+      } catch {}
+      inPage.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
     const next = !open;
     setOpen(next);
     if (next && !hasOpened) {

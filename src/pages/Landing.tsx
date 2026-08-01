@@ -11,9 +11,6 @@ import {
   Settings,
   FolderSearch,
   ShieldCheck,
-  Gift,
-  Users,
-  Infinity as InfinityIcon,
   CheckCircle2,
   XCircle,
   Clock,
@@ -21,6 +18,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import GainSimulator from "@/components/GainSimulator";
+import DemoFullPanel from "@/components/DemoFullPanel";
 import pharmacistCounter from "@/assets/pharmacist-counter.jpg";
 import pharmacistTeam from "@/assets/pharmacist-team.jpg";
 import pharmacistPortrait from "@/assets/pharmacist-portrait.jpg";
@@ -38,6 +36,7 @@ import { toast } from "sonner";
 import SiteFooter from "@/components/SiteFooter";
 import Seo from "@/components/Seo";
 import { useI18n } from "@/i18n/I18nProvider";
+import { trackEvent } from "@/hooks/useAnalytics";
 import LanguageToggle from "@/i18n/LanguageToggle";
 
 // Hardcoded fallback to the public Supabase project URL — VITE_SUPABASE_URL
@@ -208,14 +207,6 @@ const Landing = () => {
     { icon: ShieldCheck, title: t("landing.how.step3.title"), desc: t("landing.how.step3.desc") },
   ];
 
-  const stackItems = [
-    { title: t("landing.stack.item1.title"), value: t("landing.stack.item1.value") },
-    { title: t("landing.stack.item3.title"), value: t("landing.stack.item3.value") },
-    { title: t("landing.stack.item4.title"), value: t("landing.stack.item4.value") },
-    { title: t("landing.stack.item5.title"), value: t("landing.stack.item5.value") },
-    { title: t("landing.stack.item6.title"), value: t("landing.stack.item6.value") },
-  ];
-
   const forWhomYes = [
     t("landing.forwhom.yes.1"),
     t("landing.forwhom.yes.2"),
@@ -338,28 +329,20 @@ const Landing = () => {
                 {t("landing.hero.badge")}
               </div>
               <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight leading-tight">
-                {t("landing.hero.title.line1")}{" "}
-                <span className="text-primary">{t("landing.hero.title.amount")}</span>{" "}
-                {t("landing.hero.title.line2")}
+                {t("landing.hero.question")}
               </h1>
               <p className="text-lg text-muted-foreground max-w-xl mx-auto lg:mx-0 leading-relaxed">
-                {t("landing.hero.subtitle")}
+                {t("landing.hero.proof")}
               </p>
-              <div className="flex flex-col sm:flex-row items-center lg:items-start justify-center lg:justify-start gap-3 pt-2">
+              <div className="flex justify-center lg:justify-start pt-2">
                 <Button
                   size="lg"
                   asChild
                   className="h-12 px-8 text-base font-semibold pharmacy-gradient border-0 gap-2"
                 >
-                  <a href="#demande-acces">
-                    <Send className="h-5 w-5" />
-                    {t("landing.hero.cta.primary")}
-                  </a>
-                </Button>
-                <Button size="lg" variant="outline" asChild className="h-12 px-6 text-base gap-2">
-                  <a href="#garantie">
-                    <ShieldCheck className="h-5 w-5" />
-                    {t("landing.hero.cta.secondary")}
+                  <a href="#demo" onClick={() => trackEvent("demo_opened_hero", {})}>
+                    <Sparkles className="h-5 w-5" />
+                    {t("landing.hero.cta.demo")}
                   </a>
                 </Button>
               </div>
@@ -383,6 +366,25 @@ const Landing = () => {
             </div>
           </div>
         </section>
+
+        {/* ===== PROOF BAR ===== */}
+        <section className="px-4 pb-4">
+          <div className="container max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {[
+              { v: t("landing.proofbar.1.value"), l: t("landing.proofbar.1.label") },
+              { v: t("landing.proofbar.2.value"), l: t("landing.proofbar.2.label") },
+              { v: t("landing.proofbar.3.value"), l: t("landing.proofbar.3.label") },
+            ].map((k, i) => (
+              <div key={i} className="rounded-xl border border-border bg-card p-4 text-center space-y-1">
+                <div className="text-2xl font-extrabold text-primary tracking-tight">{k.v}</div>
+                <div className="text-xs text-muted-foreground leading-snug">{k.l}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ===== DEMO (primary CTA target) ===== */}
+        <DemoFullPanel />
 
         {/* ===== PROOF ===== */}
         <section className="py-14 px-4">
@@ -472,43 +474,41 @@ const Landing = () => {
           </div>
         </section>
 
-        {/* ===== VALUE STACK ===== */}
+        {/* ===== OFFER ===== */}
         <section className="py-16 px-4">
           <div className="container max-w-3xl mx-auto space-y-8">
             <div className="text-center space-y-3">
               <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
-                {t("landing.stack.title")}
+                {t("landing.offer.title")}
               </h2>
-              <p className="text-muted-foreground">{t("landing.stack.subtitle")}</p>
+              <p className="text-muted-foreground">{t("landing.offer.subtitle")}</p>
             </div>
             <div className="rounded-2xl border border-border bg-card overflow-hidden">
               <ul className="divide-y divide-border">
-                {stackItems.map((it, i) => (
+                {[
+                  t("landing.offer.item1"),
+                  t("landing.offer.item2"),
+                  t("landing.offer.item3"),
+                  t("landing.offer.item4"),
+                ].map((line, i) => (
                   <li key={i} className="flex items-start gap-3 p-4 md:px-6">
                     <CheckCircle2 className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-                    <div className="flex-1 flex flex-col md:flex-row md:items-center md:justify-between gap-1">
-                      <span className="text-sm md:text-[15px] font-medium">{it.title}</span>
-                      <span className="text-xs text-muted-foreground md:text-right whitespace-nowrap">
-                        {it.value}
-                      </span>
-                    </div>
+                    <span className="text-sm md:text-[15px] font-medium">{line}</span>
                   </li>
                 ))}
               </ul>
-              <div className="p-5 md:px-6 bg-secondary/60 border-t border-border space-y-1.5">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">{t("landing.stack.total.label")}</span>
-                  <span className="font-semibold line-through decoration-muted-foreground/60">
-                    {t("landing.stack.total.value")}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold">{t("landing.stack.price.label")}</span>
-                  <span className="text-base md:text-lg font-bold text-primary text-right">
-                    {t("landing.stack.price.value")}
-                  </span>
-                </div>
-              </div>
+            </div>
+            <div className="flex justify-center">
+              <Button
+                size="lg"
+                asChild
+                className="h-12 px-8 text-base font-semibold pharmacy-gradient border-0 gap-2"
+              >
+                <a href="#demande-acces">
+                  <Send className="h-5 w-5" />
+                  {t("landing.offer.cta")}
+                </a>
+              </Button>
             </div>
           </div>
         </section>
@@ -621,47 +621,6 @@ const Landing = () => {
           </div>
         </section>
 
-        {/* ===== REFERRAL (moved after form, as bonus) ===== */}
-        <section className="py-16 px-4">
-          <div className="container max-w-5xl mx-auto">
-            <div className="rounded-2xl border border-border bg-card p-8 md:p-10 space-y-8">
-              <div className="text-center space-y-3 max-w-2xl mx-auto">
-                <div className="h-12 w-12 rounded-2xl bg-accent flex items-center justify-center mx-auto">
-                  <Gift className="h-6 w-6 text-accent-foreground" />
-                </div>
-                <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
-                  {t("landing.referral.title")}
-                </h2>
-                <p className="text-muted-foreground leading-relaxed">
-                  {t("landing.referral.subtitle")}
-                </p>
-              </div>
-              <div className="grid md:grid-cols-3 gap-4">
-                {[
-                  { icon: Gift, title: t("landing.referral.card1.title"), desc: t("landing.referral.card1.desc") },
-                  { icon: Users, title: t("landing.referral.card2.title"), desc: t("landing.referral.card2.desc") },
-                  { icon: InfinityIcon, title: t("landing.referral.card3.title"), desc: t("landing.referral.card3.desc") },
-                ].map((c, i) => (
-                  <div key={i} className="glass-card rounded-xl p-5 space-y-2">
-                    <div className="h-9 w-9 rounded-lg bg-accent flex items-center justify-center">
-                      <c.icon className="h-4 w-4 text-accent-foreground" />
-                    </div>
-                    <h3 className="font-semibold text-sm">{c.title}</h3>
-                    <p className="text-xs text-muted-foreground leading-relaxed">{c.desc}</p>
-                  </div>
-                ))}
-              </div>
-              <div className="flex justify-center">
-                <Button variant="outline" asChild className="gap-2">
-                  <a href="#demande-acces">
-                    <Gift className="h-4 w-4" />
-                    {t("landing.referral.cta")}
-                  </a>
-                </Button>
-              </div>
-            </div>
-          </div>
-        </section>
       </main>
       <SiteFooter />
     </div>
