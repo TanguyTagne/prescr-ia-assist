@@ -117,13 +117,13 @@
 }
 
 @keyframes cta-pulse-burst {
-  0% { box-shadow: 0 0 0 6px hsl(var(--primary-foreground) / 0.8); }
-  2% { box-shadow: 0 0 0 14px hsl(var(--primary-foreground) / 0); }
-  4% { box-shadow: 0 0 0 6px hsl(var(--primary-foreground) / 0.8); }
-  6% { box-shadow: 0 0 0 14px hsl(var(--primary-foreground) / 0); }
-  8% { box-shadow: 0 0 0 6px hsl(var(--primary-foreground) / 0.8); }
-  10% { box-shadow: 0 0 0 14px hsl(var(--primary-foreground) / 0); }
-  12%, 100% { box-shadow: 0 0 0 0 hsl(var(--primary-foreground) / 0); }
+  0% { box-shadow: 0 0 0 0 hsl(var(--primary-foreground) / 0.9); }
+  1.5% { box-shadow: 0 0 0 18px hsl(var(--primary-foreground) / 0); }
+  3% { box-shadow: 0 0 0 0 hsl(var(--primary-foreground) / 0.9); }
+  4.5% { box-shadow: 0 0 0 18px hsl(var(--primary-foreground) / 0); }
+  6% { box-shadow: 0 0 0 0 hsl(var(--primary-foreground) / 0.9); }
+  7.5% { box-shadow: 0 0 0 18px hsl(var(--primary-foreground) / 0); }
+  7.5%, 100% { box-shadow: 0 0 0 0 hsl(var(--primary-foreground) / 0); }
 }
 
 @media (prefers-reduced-motion: reduce) {
