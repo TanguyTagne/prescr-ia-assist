@@ -209,11 +209,12 @@ const Landing = () => {
 
   useEffect(() => {
     const check = () => setDemoTested(Number(localStorage.getItem("asclion_demo_uses") || "0") > 0);
-    window.addEventListener("asclion:demo-tested", check);
+    const markTested = () => setDemoTested(true);
+    window.addEventListener("asclion:demo-tested", markTested);
     window.addEventListener("storage", check);
     check();
     return () => {
-      window.removeEventListener("asclion:demo-tested", check);
+      window.removeEventListener("asclion:demo-tested", markTested);
       window.removeEventListener("storage", check);
     };
   }, []);
