@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { X, Sparkles } from "lucide-react";
 import WidgetDemo from "@/components/WidgetDemo";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -6,6 +6,12 @@ import { trackEvent } from "@/hooks/useAnalytics";
 
 const SiteDemoWidget = () => {
   const [open, setOpen] = useState(true);
+
+  // When the page already embeds the full demo panel, keep the popup closed
+  // so the visitor has a single demo surface.
+  useEffect(() => {
+    if (document.getElementById("demo")) setOpen(false);
+  }, []);
   const [hasOpened, setHasOpened] = useState(false);
   const { t } = useI18n();
 

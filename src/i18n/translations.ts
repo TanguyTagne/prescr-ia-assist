@@ -134,8 +134,8 @@ export const translations = {
 
   // ===== NEW: HORMOZI HERO =====
   "landing.hero.badge": {
-    fr: "⚡ Pharmacie pilote · +880 € de CA additionnel dès le 1ᵉʳ mois",
-    en: "⚡ Pilot pharmacy · +€880 additional revenue in the first month",
+    fr: "⚡ Pharmacie pilote · +1 200 € de CA additionnel dès le 1ᵉʳ mois",
+    en: "⚡ Pilot pharmacy · +€1,200 additional revenue in the first month",
   },
   "landing.hero.title.line1": { fr: "Ajoutez", en: "Add" },
   "landing.hero.title.amount": { fr: "+800 à +2 000 € de CA/mois", en: "+€800 to +€2,000/month" },
@@ -153,11 +153,11 @@ export const translations = {
   // ===== NEW: PROOF =====
   "landing.proof.badge": { fr: "Résultat mesuré", en: "Measured result" },
   "landing.proof.quote": {
-    fr: "« +880 € de chiffre d'affaires additionnel sur le 1ᵉʳ mois. Quand le produit est proposé, 2 clients sur 3 repartent avec. »",
-    en: '"+€880 in additional revenue in the first month. When the product is offered, 2 out of 3 customers leave with it."',
+    fr: "« +1 200 € de chiffre d'affaires additionnel sur le 1ᵉʳ mois. Quand le produit est proposé, 2 clients sur 3 repartent avec. »",
+    en: '"+€1,200 in additional revenue in the first month. When the product is offered, 2 out of 3 customers leave with it."',
   },
   "landing.proof.author": { fr: "— Pharmacie pilote, avril 2026", en: "— Pilot pharmacy, April 2026" },
-  "landing.proof.kpi1.value": { fr: "+880 €", en: "+€880" },
+  "landing.proof.kpi1.value": { fr: "+1 200 €", en: "+€1,200" },
   "landing.proof.kpi1.label": { fr: "CA additionnel · 1ᵉʳ mois", en: "Extra revenue · 1st month" },
   "landing.proof.kpi2.value": { fr: "2 / 3", en: "2 / 3" },
   "landing.proof.kpi2.label": { fr: "proposé → accepté", en: "offered → accepted" },
