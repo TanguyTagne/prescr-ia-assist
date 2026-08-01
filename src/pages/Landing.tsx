@@ -355,7 +355,10 @@ const Landing = () => {
                 <Button
                   size="lg"
                   asChild
-                  className="h-12 px-8 text-base font-semibold pharmacy-gradient border-0 gap-2"
+                  className={cn(
+                    "h-12 px-8 text-base font-semibold pharmacy-gradient border-0 gap-2",
+                    !demoTested && "cta-pulse"
+                  )}
                 >
                   <a href="#demo" onClick={() => trackEvent("demo_opened_hero", {})}>
                     <Sparkles className="h-5 w-5" />
