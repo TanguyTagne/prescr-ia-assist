@@ -256,13 +256,34 @@ async function computeNetworkRanking(
   return out;
 }
 
+// Tant que le domaine d'envoi n'est pas vérifié chez Resend, tous les récaps
+// sont routés vers l'adresse admin (override possible via RECAP_OVERRIDE_TO).
+function recapOverrideTo(): string {
+  return Deno.env.get("RECAP_OVERRIDE_TO")
+    ?? Deno.env.get("RESEND_2FA_OVERRIDE_TO")
+    ?? ADMIN_BCC;
+}
+
 async function sendResend(to: string[], subject: string, html: string, bcc?: string) {
   const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
   if (!RESEND_API_KEY) throw new Error("RESEND_API_KEY missing");
+
+  const override = recapOverrideTo();
+  let finalTo = to;
+  let finalBcc = bcc;
+  let finalSubject = subject;
+  let finalHtml = html;
+  if (override) {
+    finalTo = [override];
+    finalBcc = undefined;
+    finalSubject = `[Récap → ${to.join(", ")}] ${subject}`;
+    finalHtml = `<div style="background:#fff7ed;border:1px solid #fdba74;border-radius:8px;padding:12px 16px;font:14px -apple-system,Segoe UI,Roboto,sans-serif;color:#7c2d12;max-width:600px;margin:16px auto">Destinataire réel prévu&nbsp;: <b>${esc(to.join(", "))}</b> (envoi redirigé vers l'admin).</div>${html}`;
+  }
+
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${RESEND_API_KEY}` },
-    body: JSON.stringify({ from: FROM_EMAIL, to, bcc, subject, html }),
+    body: JSON.stringify({ from: FROM_EMAIL, to: finalTo, bcc: finalBcc, subject: finalSubject, html: finalHtml }),
   });
   if (!res.ok) {
     const err = await res.text();
@@ -270,6 +291,7 @@ async function sendResend(to: string[], subject: string, html: string, bcc?: str
   }
   return await res.json();
 }
+
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
