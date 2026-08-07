@@ -371,12 +371,13 @@ serve(async (req) => {
         }
 
         const { data: profiles } = await supabase.from("profiles").select("email").eq("pharmacy_id", p.id);
-        const emails = [...new Set((profiles ?? []).map((x: any) => x.email).filter(Boolean))];
+        let emails = [...new Set((profiles ?? []).map((x: any) => x.email).filter(Boolean))];
 
         if (emails.length === 0) {
-          results.push({ pharmacy_id: p.id, skipped: "no_email" });
-          continue;
+          // Pas d'email pharmacie : on envoie quand même le récap à l'admin
+          emails = [recapOverrideTo()];
         }
+
 
         if (dry_run) {
           results.push({ pharmacy_id: p.id, name: p.name, would_send_to: emails, stats });
