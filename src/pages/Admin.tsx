@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -7,29 +7,31 @@ import { ArrowLeft, Loader2, Mail, Building2, BarChart3, RefreshCw, ShieldCheck,
 import AdminEmail2FAGate from "@/components/AdminEmail2FAGate";
 import { useNavigate } from "react-router-dom";
 import PharmacyKPIs from "@/components/admin/PharmacyKPIs";
+import { lazyWithRetry } from "@/lib/lazyWithRetry";
 
-const InvestorKpisTab = lazy(() => import("@/components/admin/InvestorKpisTab"));
-const RequestsTab = lazy(() => import("@/components/admin/RequestsTab"));
-const PharmaciesTab = lazy(() => import("@/components/admin/PharmaciesTab"));
-const CoverageTab = lazy(() => import("@/components/admin/CoverageTab"));
-const RecommendationMetrics = lazy(() => import("@/components/admin/RecommendationMetrics"));
-const BenchmarkTab = lazy(() => import("@/components/admin/BenchmarkTab"));
-const DemoSessionsTab = lazy(() => import("@/components/admin/DemoSessionsTab"));
-const DemoLeadsTab = lazy(() => import("@/components/admin/DemoLeadsTab"));
-const GroupementsTab = lazy(() => import("@/components/admin/GroupementsTab"));
-const TracabiliteTab = lazy(() => import("@/components/admin/TracabiliteTab"));
-const ConformiteTab = lazy(() => import("@/components/admin/ConformiteTab"));
-const RgpdTab = lazy(() => import("@/components/admin/RgpdTab"));
+const InvestorKpisTab = lazyWithRetry(() => import("@/components/admin/InvestorKpisTab"));
+const RequestsTab = lazyWithRetry(() => import("@/components/admin/RequestsTab"));
+const PharmaciesTab = lazyWithRetry(() => import("@/components/admin/PharmaciesTab"));
+const CoverageTab = lazyWithRetry(() => import("@/components/admin/CoverageTab"));
+const RecommendationMetrics = lazyWithRetry(() => import("@/components/admin/RecommendationMetrics"));
+const BenchmarkTab = lazyWithRetry(() => import("@/components/admin/BenchmarkTab"));
+const DemoSessionsTab = lazyWithRetry(() => import("@/components/admin/DemoSessionsTab"));
+const DemoLeadsTab = lazyWithRetry(() => import("@/components/admin/DemoLeadsTab"));
+const GroupementsTab = lazyWithRetry(() => import("@/components/admin/GroupementsTab"));
+const TracabiliteTab = lazyWithRetry(() => import("@/components/admin/TracabiliteTab"));
+const ConformiteTab = lazyWithRetry(() => import("@/components/admin/ConformiteTab"));
+const RgpdTab = lazyWithRetry(() => import("@/components/admin/RgpdTab"));
 
-const TrackingLinksTab = lazy(() => import("@/components/admin/TrackingLinksTab"));
-const SignalementsTab = lazy(() => import("@/components/admin/SignalementsTab"));
-const AuditPcTab = lazy(() => import("@/components/admin/AuditPcTab"));
-const AsclionBaseImportTab = lazy(() => import("@/components/admin/AsclionBaseImportTab"));
-const AcceptedPcsTab = lazy(() => import("@/components/admin/AcceptedPcsTab"));
-const RemoteScannerDiagnosticTab = lazy(() => import("@/components/admin/RemoteScannerDiagnosticTab"));
-const MedicamentsManquantsTab = lazy(() => import("@/components/admin/MedicamentsManquantsTab"));
-const RoiManqueAGagnerTab = lazy(() => import("@/components/admin/RoiManqueAGagnerTab"));
-const MonthlyRecapTab = lazy(() => import("@/components/admin/MonthlyRecapTab"));
+const TrackingLinksTab = lazyWithRetry(() => import("@/components/admin/TrackingLinksTab"));
+const SignalementsTab = lazyWithRetry(() => import("@/components/admin/SignalementsTab"));
+const AuditPcTab = lazyWithRetry(() => import("@/components/admin/AuditPcTab"));
+const AsclionBaseImportTab = lazyWithRetry(() => import("@/components/admin/AsclionBaseImportTab"));
+const AcceptedPcsTab = lazyWithRetry(() => import("@/components/admin/AcceptedPcsTab"));
+const RemoteScannerDiagnosticTab = lazyWithRetry(() => import("@/components/admin/RemoteScannerDiagnosticTab"));
+const MedicamentsManquantsTab = lazyWithRetry(() => import("@/components/admin/MedicamentsManquantsTab"));
+const RoiManqueAGagnerTab = lazyWithRetry(() => import("@/components/admin/RoiManqueAGagnerTab"));
+const MonthlyRecapTab = lazyWithRetry(() => import("@/components/admin/MonthlyRecapTab"));
+
 
 
 interface AccessRequest {
