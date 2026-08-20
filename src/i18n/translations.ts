@@ -53,8 +53,8 @@ export const translations = {
   "landing.sim.result.label": { fr: "Marge additionnelle estimée", en: "Estimated additional margin" },
   "landing.sim.result.unit": { fr: "€ / mois", en: "€ / month" },
   "landing.sim.result.hint": {
-    fr: "soit ~{n} passages/jour et 5 à 12 % de conseils aboutis en plus",
-    en: "i.e. ~{n} visits/day and 5 to 12% more successful advice",
+    fr: "soit ~{n} passages/jour et 2 à 4 % de conseils aboutis en plus (base : +500 € en moyenne)",
+    en: "i.e. ~{n} visits/day and 2 to 4% more successful advice (baseline: +€500 on average)",
   },
   "landing.sim.cta": { fr: "Recevoir mon diagnostic personnalisé", en: "Get my personalised diagnosis" },
   "landing.sim.disclaimer": {
