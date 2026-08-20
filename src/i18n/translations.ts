@@ -107,14 +107,14 @@ export const translations = {
     en: "Is your pharmacy leaving revenue on the counter?",
   },
   "landing.hero.proof": {
-    fr: "+1 200 € de CA en 1 mois sur notre pharmacie pilote — sans vendre plus fort, juste sans oublier le conseil associé.",
-    en: "+€1,200 in revenue in one month at our pilot pharmacy — not by pushing harder, just by never forgetting the associated advice.",
+    fr: "+500 € de CA en 1 mois en moyenne sur notre pharmacie pilote — sans vendre plus fort, juste sans oublier le conseil associé.",
+    en: "+€500 in revenue in one month on average at our pilot pharmacy — not by pushing harder, just by never forgetting the associated advice.",
   },
   "landing.hero.cta.demo": { fr: "Tester le copilote (30 s, gratuit)", en: "Try the copilot (30 s, free)" },
 
   // ===== PROOF BAR =====
-  "landing.proofbar.1.value": { fr: "+1 200 €", en: "+€1,200" },
-  "landing.proofbar.1.label": { fr: "de CA en 1 mois · pharmacie pilote", en: "revenue in 1 month · pilot pharmacy" },
+  "landing.proofbar.1.value": { fr: "+500 €", en: "+€500" },
+  "landing.proofbar.1.label": { fr: "de CA en 1 mois · pharmacie pilote (moyenne)", en: "revenue in 1 month · pilot pharmacy (avg)" },
   "landing.proofbar.2.value": { fr: "< 2,5 s", en: "< 2.5 s" },
   "landing.proofbar.2.label": { fr: "par ordonnance, au comptoir", en: "per prescription, at the counter" },
   "landing.proofbar.3.value": { fr: "0", en: "0" },
@@ -134,11 +134,11 @@ export const translations = {
 
   // ===== NEW: HORMOZI HERO =====
   "landing.hero.badge": {
-    fr: "⚡ Pharmacie pilote · +1 200 € de CA additionnel dès le 1ᵉʳ mois",
-    en: "⚡ Pilot pharmacy · +€1,200 additional revenue in the first month",
+    fr: "⚡ Pharmacie pilote · +500 € de CA additionnel dès le 1ᵉʳ mois (moyenne)",
+    en: "⚡ Pilot pharmacy · +€500 additional revenue in the first month (avg)",
   },
   "landing.hero.title.line1": { fr: "Ajoutez", en: "Add" },
-  "landing.hero.title.amount": { fr: "+800 à +2 000 € de CA/mois", en: "+€800 to +€2,000/month" },
+  "landing.hero.title.amount": { fr: "+500 € de CA/mois en moyenne", en: "+€500/month in revenue on average" },
   "landing.hero.title.line2": { fr: "à votre officine. Sans embaucher, sans changer de LGO.", en: "to your pharmacy. No new hires, no software change." },
   "landing.hero.subtitle": {
     fr: "Vos préparateurs délivrent le médicament, notre IA suggère en 2 secondes les 2 produits associés pertinents (déjà en stock). Sur les clients à qui le produit est proposé, 2 sur 3 repartent avec.",
@@ -153,11 +153,11 @@ export const translations = {
   // ===== NEW: PROOF =====
   "landing.proof.badge": { fr: "Résultat mesuré", en: "Measured result" },
   "landing.proof.quote": {
-    fr: "« +1 200 € de chiffre d'affaires additionnel sur le 1ᵉʳ mois. Quand le produit est proposé, 2 clients sur 3 repartent avec. »",
-    en: '"+€1,200 in additional revenue in the first month. When the product is offered, 2 out of 3 customers leave with it."',
+    fr: "« +500 € de chiffre d'affaires additionnel sur le 1ᵉʳ mois en moyenne. Quand le produit est proposé, 2 clients sur 3 repartent avec. »",
+    en: '"+€500 in additional revenue in the first month on average. When the product is offered, 2 out of 3 customers leave with it."',
   },
   "landing.proof.author": { fr: "— Pharmacie pilote, avril 2026", en: "— Pilot pharmacy, April 2026" },
-  "landing.proof.kpi1.value": { fr: "+1 200 €", en: "+€1,200" },
+  "landing.proof.kpi1.value": { fr: "+500 €", en: "+€500" },
   "landing.proof.kpi1.label": { fr: "CA additionnel · 1ᵉʳ mois", en: "Extra revenue · 1st month" },
   "landing.proof.kpi2.value": { fr: "2 / 3", en: "2 / 3" },
   "landing.proof.kpi2.label": { fr: "proposé → accepté", en: "offered → accepted" },
