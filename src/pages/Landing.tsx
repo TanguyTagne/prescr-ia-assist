@@ -614,7 +614,7 @@ const Landing = () => {
             <h2 className="text-2xl md:text-3xl font-bold text-center tracking-tight">
               {t("landing.forwhom.title")}
             </h2>
-            <div className="grid md:grid-cols-2 gap-5">
+            <div className="max-w-2xl mx-auto">
               <div className="rounded-xl border border-border bg-card p-6 space-y-4">
                 <h3 className="font-semibold text-primary flex items-center gap-2">
                   <CheckCircle2 className="h-5 w-5" />
@@ -624,19 +624,6 @@ const Landing = () => {
                   {forWhomYes.map((line, i) => (
                     <li key={i} className="flex items-start gap-2 text-sm">
                       <CheckCircle2 className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                      <span>{line}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div className="rounded-xl border border-border bg-card p-6 space-y-4">
-                <h3 className="font-semibold text-muted-foreground flex items-center gap-2">
-                  <XCircle className="h-5 w-5" />
-                  {t("landing.forwhom.no.title")}
-                </h3>
-                <ul className="space-y-2.5">
-                  {forWhomNo.filter(line => line.trim() !== "").map((line, i) => (
-                    <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
                       <span>{line}</span>
                     </li>
                   ))}
