@@ -42,10 +42,10 @@ const Blog = () => {
       <main className="container max-w-5xl mx-auto px-4 py-10 flex-1">
         <div className="mb-8 max-w-2xl">
           <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mb-3">
-            Blog Asclion — Conseil associé, panier moyen et CA de votre officine
+            Blog Asclion — Le conseil associé au comptoir
           </h1>
           <p className="text-muted-foreground">
-            Idées concrètes, retours de pilotes et méthodes éprouvées pour vendre plus au comptoir tout en améliorant l'accompagnement patient.
+            Méthodes, exemples par classe thérapeutique et outils d'aide au conseil : délivrer le bon conseil, au bon moment, sans ralentir le comptoir.
           </p>
         </div>
 
