@@ -46,7 +46,10 @@ const GainSimulator = () => {
         </div>
       </div>
 
-      <h3 className="text-xl font-bold tracking-tight">{t("landing.sim.title")}</h3>
+      <div className="space-y-1">
+        <h3 className="text-xl font-bold tracking-tight">{t("landing.sim.title")}</h3>
+        <p className="text-sm text-muted-foreground">{t("landing.sim.subtitle")}</p>
+      </div>
 
       <div className="space-y-4">
         <div>
