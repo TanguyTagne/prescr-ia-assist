@@ -173,7 +173,7 @@ export const translations = {
   "landing.offer.item2": { fr: "Installation et connexion à votre LGO offertes", en: "Setup and pharmacy-software integration included" },
   "landing.offer.item3": { fr: "Formation de votre équipe offerte", en: "Team training included" },
   "landing.offer.item4": { fr: "Aucune carte bancaire, résiliation en un email", en: "No credit card, cancel with one email" },
-  "landing.offer.cta": { fr: "Je veux Asclion dans mon officine", en: "I want Asclion in my pharmacy" },
+  "landing.offer.cta": { fr: "Voir Asclion dans mon officine", en: "See Asclion in my pharmacy" },
 
   // ===== NEW: HORMOZI HERO =====
   "landing.hero.badge": {
