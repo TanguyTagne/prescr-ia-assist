@@ -288,11 +288,11 @@ export const translations = {
   "form.pharmacy_name": { fr: "Nom de la pharmacie *", en: "Pharmacy name *" },
   "form.contact_name": { fr: "Nom du contact", en: "Contact name" },
   "form.email": { fr: "Email professionnel *", en: "Work email *" },
-  "form.phone": { fr: "Téléphone (recommandé — rappel sous 24 h)", en: "Phone (recommended — callback within 24 h)" },
+  "form.phone": { fr: "Téléphone (optionnel)", en: "Phone (optional)" },
   "form.city": { fr: "Ville", en: "City" },
   "form.lgo": { fr: "LGO utilisé (ex: Winpharma, LGPI...)", en: "Pharmacy software (e.g. Winpharma, LGPI...)" },
   "form.more": { fr: "Ajouter des infos (optionnel)", en: "Add more info (optional)" },
-  "form.microcopy": { fr: "Réponse sous 24 h ouvrées · Aucune CB requise · Aucun engagement", en: "Reply within 24 business hours · No credit card · No commitment" },
+  "form.microcopy": { fr: "Aucun engagement. Aucun changement de LGO. Aucun logiciel à apprendre pour votre équipe.", en: "No commitment. No software change. Nothing new for your team to learn." },
   "form.consent": {
     fr: "J'accepte que mes données soient traitées pour répondre à ma demande, conformément à la",
     en: "I agree that my data may be processed to respond to my request, in accordance with the",
