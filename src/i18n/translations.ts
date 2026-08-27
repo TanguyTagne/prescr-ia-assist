@@ -9,41 +9,87 @@ export const translations = {
   "nav.signout": { fr: "Déconnexion", en: "Sign out" },
 
   // ===== LANDING =====
-  "landing.badge": { fr: "Copilote IA — Plus de ventes associées, meilleur conseil", en: "AI copilot — More cross-sells, better advice" },
-  "landing.title.line1": { fr: "Augmentez votre panier moyen,", en: "Grow your average basket," },
-  "landing.title.line2": { fr: "sans sacrifier le conseil", en: "without compromising on advice" },
+  "landing.badge": { fr: "Assistant au conseil associé du pharmacien", en: "The pharmacist's associated-advice assistant" },
+  "landing.title.line1": { fr: "Le bon conseil, au bon moment,", en: "The right advice, at the right moment," },
+  "landing.title.line2": { fr: "sans changer vos habitudes", en: "without changing your habits" },
   "landing.subtitle": {
-    fr: "Asclion transforme chaque médicament scanné en opportunité de vente associée pertinente. Plus de produits complémentaires délivrés, un panier moyen qui décolle, et un patient mieux accompagné, sans effort supplémentaire pour l'équipe.",
-    en: "Asclion turns every scanned drug into a relevant cross-sell opportunity. More complementary products delivered, a higher average basket, and better patient care — with zero extra effort for your team.",
+    fr: "Asclion s'intègre à votre fonctionnement habituel et détecte automatiquement les conseils associés pertinents lors de vos délivrances. Votre équipe reste libre de les proposer — Asclion lui donne simplement le bon réflexe, au bon moment.",
+    en: "Asclion fits into the way you already work and automatically surfaces the relevant associated advice during dispensing. Your team stays free to offer it — Asclion simply provides the right reflex, at the right moment.",
   },
-  "landing.cta.access": { fr: "Booster mon chiffre — Demander une Demo", en: "Boost my revenue — Request a Demo" },
+  "landing.cta.access": { fr: "Voir Asclion dans mon officine", en: "See Asclion in my pharmacy" },
   "landing.cta.vsLgo": { fr: "Asclion vs LGO", en: "Asclion vs LGO" },
 
-  "landing.how.title": { fr: "Comment Asclion fait grimper votre panier moyen", en: "How Asclion grows your average basket" },
-  "landing.how.step1.title": { fr: "Scannez ", en: "Scan " },
+  "landing.how.title": { fr: "Un fonctionnement presque invisible", en: "An almost invisible way of working" },
+  "landing.how.subtitle": {
+    fr: "Comment Asclion s'intègre à votre quotidien.",
+    en: "How Asclion fits into your daily routine.",
+  },
+  "landing.how.step1.title": { fr: "01 — Vous délivrez", en: "01 — You dispense" },
   "landing.how.step1.desc": {
-    fr: "Scannez simplement votre produit comme d'habitude, l'IA s'occupe du reste. Chaque délivrance devient une opportunité commerciale identifiée en quelques secondes.",
-    en: "Simply scan your product as usual, the AI handles the rest. Every dispensation becomes a sales opportunity identified in seconds.",
+    fr: "Scannez le produit comme vous le faites aujourd'hui. Aucune saisie supplémentaire, aucun changement de workflow.",
+    en: "Scan the product exactly as you do today. No extra typing, no workflow change.",
   },
-  "landing.how.step2.title": { fr: "L'IA repère les ventes associées", en: "AI spots cross-sell opportunities" },
+  "landing.how.step2.title": { fr: "02 — Asclion analyse", en: "02 — Asclion analyses" },
   "landing.how.step2.desc": {
-    fr: "Interactions, effets secondaires, besoins latents : Asclion détecte tout ce qu'une équipe surchargée pourrait manquer et le traduit en produits à proposer.",
-    en: "Interactions, side effects, latent needs: Asclion catches what a busy team could miss — and turns it into products to offer.",
+    fr: "En quelques secondes, Asclion identifie automatiquement les conseils associés pertinents pour cette délivrance.",
+    en: "In a few seconds, Asclion automatically identifies the associated advice relevant to this dispensation.",
   },
-  "landing.how.step3.title": { fr: "Vendez plus, mieux, au comptoir", en: "Sell more, sell better, at the counter" },
+  "landing.how.step3.title": { fr: "03 — Vous conseillez", en: "03 — You advise" },
   "landing.how.step3.desc": {
-    fr: "Recevez les produits à conseiller dans votre stock, avec la phrase prête à dire. Le patient se sent mieux pris en charge, votre panier moyen progresse.",
-    en: "Get the right in-stock products to recommend with ready-to-say phrases. Patients feel better cared for, your average basket grows.",
+    fr: "Une suggestion claire apparaît, avec l'essentiel à savoir et une formulation simple à utiliser au comptoir. Rien de plus.",
+    en: "A clear suggestion appears, with the essentials and a simple wording to use at the counter. Nothing more.",
+  },
+  "landing.how.footnote": {
+    fr: "Pas de nouvelle saisie. Pas de recherche. Pas de changement de workflow.",
+    en: "No new data entry. No searching. No workflow change.",
   },
 
-  "landing.results.title": { fr: "Des résultats commerciaux concrets", en: "Concrete business results" },
-  "landing.results.basket": { fr: "Panier moyen", en: "Average basket" },
-  "landing.results.basket.desc": { fr: "Hausse moyenne observée sur les délivrances accompagnées d'Asclion", en: "Average uplift observed on dispensations supported by Asclion" },
-  "landing.results.crosssell": { fr: "Ventes associées", en: "Cross-sells" },
-  "landing.results.crosssell.desc": { fr: "Multiplication du nombre de produits complémentaires proposés au comptoir", en: "Multiplier on complementary products offered at the counter" },
-  "landing.results.speed": { fr: "Par ordonnance", en: "Per prescription" },
-  "landing.results.speed.desc": { fr: "Une opportunité commerciale identifiée sans ralentir l'équipe", en: "A sales opportunity surfaced without slowing the team down" },
-  "landing.results.disclaimer": { fr: "Indicateurs constatés sur nos pharmacies pilotes — variables selon assortiment et usage.", en: "Figures observed on our pilot pharmacies — vary by product mix and usage." },
+  // ===== PROMISE (you change nothing) =====
+  "landing.promise.title": { fr: "Vous ne changez rien.", en: "You change nothing." },
+  "landing.promise.desc": {
+    fr: "Votre LGO reste votre LGO. Votre équipe reste votre équipe. Votre façon de travailler reste la même. Asclion vient simplement ajouter une couche d'intelligence au moment où elle est utile.",
+    en: "Your pharmacy software stays your software. Your team stays your team. The way you work stays the same. Asclion simply adds a layer of intelligence at the moment it is useful.",
+  },
+  "landing.promise.before.title": { fr: "Avant Asclion", en: "Before Asclion" },
+  "landing.promise.before.flow": { fr: "Délivrance → réflexion → conseil", en: "Dispensing → thinking → advice" },
+  "landing.promise.after.title": { fr: "Avec Asclion", en: "With Asclion" },
+  "landing.promise.after.flow": { fr: "Délivrance → Asclion suggère → conseil", en: "Dispensing → Asclion suggests → advice" },
+  "landing.promise.footnote": {
+    fr: "Le pharmacien garde toujours le dernier mot.",
+    en: "The pharmacist always has the final word.",
+  },
+
+  // ===== LGO INTEGRATION =====
+  "landing.lgo.title": { fr: "Pas besoin de changer de logiciel.", en: "No need to change software." },
+  "landing.lgo.desc": {
+    fr: "Asclion fonctionne en complément de votre environnement actuel.",
+    en: "Asclion works alongside your current environment.",
+  },
+  "landing.lgo.list": { fr: "Winpharma · LGPI · Pharmagest · Léo · Smart Rx · Périphar · …", en: "Winpharma · LGPI · Pharmagest · Léo · Smart Rx · Périphar · …" },
+  "landing.lgo.footnote": {
+    fr: "Votre LGO reste le cœur de votre officine. Asclion vient simplement lui apporter une capacité supplémentaire : accompagner le conseil.",
+    en: "Your pharmacy software remains the heart of your pharmacy. Asclion simply adds one extra capability: supporting advice.",
+  },
+
+  // ===== TRUST (no forced selling) =====
+  "landing.trust.title": { fr: "Asclion n'est pas un outil de vente forcée", en: "Asclion is not a hard-selling tool" },
+  "landing.trust.desc": {
+    fr: "Asclion ne recommande pas un produit simplement parce qu'il est disponible en stock. Les suggestions sont basées sur la pertinence du conseil. Le pharmacien reste libre de les proposer — ou non.",
+    en: "Asclion does not recommend a product just because it is in stock. Suggestions are based on the relevance of the advice. The pharmacist stays free to offer them — or not.",
+  },
+
+  "landing.roi.desc": {
+    fr: "Asclion n'est pas conçu pour pousser des produits inutiles. Il identifie les conseils associés pertinents que l'équipe peut facilement oublier dans le rythme du comptoir. Le conseil gagne en systématicité — et votre potentiel de CA augmente.",
+    en: "Asclion is not built to push useless products. It surfaces the relevant associated advice a team can easily miss in the rhythm of the counter. Advice becomes more systematic — and your revenue potential grows.",
+  },
+  "landing.results.title": { fr: "Et concrètement ?", en: "And concretely?" },
+  "landing.results.basket": { fr: "Conseil associé", en: "Associated advice" },
+  "landing.results.basket.desc": { fr: "Des conseils pertinents identifiés automatiquement à chaque délivrance", en: "Relevant advice surfaced automatically at each dispensation" },
+  "landing.results.crosssell": { fr: "Équipe alignée", en: "Aligned team" },
+  "landing.results.crosssell.desc": { fr: "Toute l'équipe dispose du même réflexe de conseil au comptoir", en: "The whole team shares the same advice reflex at the counter" },
+  "landing.results.speed": { fr: "Par délivrance", en: "Per dispensation" },
+  "landing.results.speed.desc": { fr: "Une opportunité de conseil identifiée sans ralentir l'équipe", en: "An advice opportunity surfaced without slowing the team down" },
+  "landing.results.disclaimer": { fr: "Résultats variables selon l'officine, son activité et son équipe.", en: "Results vary by pharmacy, activity and team." },
 
   // ===== SIMULATOR =====
   "landing.sim.badge": { fr: "Simulateur gratuit", en: "Free simulator" },
@@ -89,36 +135,37 @@ export const translations = {
   // ===== DEMO SECTION (primary CTA) =====
   "landing.demo.badge": { fr: "Démo gratuite · 30 secondes", en: "Free demo · 30 seconds" },
   "landing.demo.title": {
-    fr: "Tapez un médicament. Voyez ce que votre équipe oublie de proposer.",
-    en: "Type a medication. See what your team forgets to offer.",
+    fr: "Voyez Asclion au comptoir",
+    en: "See Asclion at the counter",
   },
   "landing.demo.desc": {
-    fr: "C'est exactement ce que vos préparateurs verront au comptoir : les 2 produits associés pertinents et la phrase à dire, en moins de 2 secondes. Sur le terrain, le médicament est détecté automatiquement dès le scan du CIP — ici vous le choisissez librement pour tester.",
-    en: "This is exactly what your team sees at the counter: the 2 relevant associated products and the sentence to say, in under 2 seconds. In real use, the medication is detected automatically as soon as the CIP is scanned — here you choose it freely to test.",
+    fr: "Choisissez un médicament et découvrez le conseil qu'Asclion pourrait suggérer à votre équipe. Au comptoir, le médicament est détecté automatiquement dès le scan du CIP — ici vous le choisissez librement pour tester.",
+    en: "Pick a medication and see the advice Asclion could suggest to your team. At the counter, the medication is detected automatically as soon as the CIP is scanned — here you choose it freely to test.",
   },
   "landing.demo.footnote": {
-    fr: "Aucune inscription pour le premier test. Données de démonstration, aucune donnée patient. En officine, le scan CIP déclenche l'analyse automatiquement.",
-    en: "No signup for the first test. Demo data only, no patient data. In pharmacy, the CIP scan triggers analysis automatically.",
+    fr: "Imaginez maintenant que cela apparaisse automatiquement après chaque scan. Données de démonstration, aucune donnée patient.",
+    en: "Now imagine this appearing automatically after every scan. Demo data only, no patient data.",
   },
 
   // ===== HERO (single CTA) =====
   "landing.hero.question": {
-    fr: "Votre officine laisse-t-elle du chiffre sur le comptoir ?",
-    en: "Is your pharmacy leaving revenue on the counter?",
+    fr: "L'assistant au conseil associé du pharmacien.",
+    en: "The pharmacist's associated-advice assistant.",
   },
   "landing.hero.proof": {
-    fr: "+500 € de CA en 1 mois en moyenne sur notre pharmacie pilote — sans vendre plus fort, juste sans oublier le conseil associé.",
-    en: "+€500 in revenue in one month on average at our pilot pharmacy — not by pushing harder, just by never forgetting the associated advice.",
+    fr: "Asclion s'intègre à votre fonctionnement habituel et détecte automatiquement les conseils associés pertinents lors de vos délivrances. Votre équipe reste libre de les proposer — Asclion lui donne simplement le bon réflexe, au bon moment.",
+    en: "Asclion fits into the way you already work and automatically surfaces the relevant associated advice during dispensing. Your team stays free to offer it — Asclion simply provides the right reflex, at the right moment.",
   },
-  "landing.hero.cta.demo": { fr: "Tester le copilote (30 s, gratuit)", en: "Try the copilot (30 s, free)" },
+  "landing.hero.cta.demo": { fr: "Tester gratuitement (30 s)", en: "Try it free (30 s)" },
+  "landing.hero.cta.see": { fr: "Voir ce que ça donne au comptoir", en: "See what it looks like at the counter" },
 
   // ===== PROOF BAR =====
-  "landing.proofbar.1.value": { fr: "+500 €", en: "+€500" },
-  "landing.proofbar.1.label": { fr: "de CA en 1 mois · pharmacie pilote (moyenne)", en: "revenue in 1 month · pilot pharmacy (avg)" },
+  "landing.proofbar.1.value": { fr: "0", en: "0" },
+  "landing.proofbar.1.label": { fr: "changement d'habitude, 0 saisie supplémentaire", en: "habit change, 0 extra data entry" },
   "landing.proofbar.2.value": { fr: "< 2,5 s", en: "< 2.5 s" },
-  "landing.proofbar.2.label": { fr: "par ordonnance, au comptoir", en: "per prescription, at the counter" },
-  "landing.proofbar.3.value": { fr: "0", en: "0" },
-  "landing.proofbar.3.label": { fr: "saisie, 0 configuration, 0 changement de LGO", en: "typing, 0 setup, 0 software change" },
+  "landing.proofbar.2.label": { fr: "pour obtenir une suggestion, au comptoir", en: "to get a suggestion, at the counter" },
+  "landing.proofbar.3.value": { fr: "LGO", en: "LGO" },
+  "landing.proofbar.3.label": { fr: "compatible avec votre logiciel actuel", en: "compatible with your current software" },
 
   // ===== OFFER (grand slam) =====
   "landing.offer.title": { fr: "Vous ne risquez rien, littéralement.", en: "You are risking nothing, literally." },
@@ -130,39 +177,39 @@ export const translations = {
   "landing.offer.item2": { fr: "Installation et connexion à votre LGO offertes", en: "Setup and pharmacy-software integration included" },
   "landing.offer.item3": { fr: "Formation de votre équipe offerte", en: "Team training included" },
   "landing.offer.item4": { fr: "Aucune carte bancaire, résiliation en un email", en: "No credit card, cancel with one email" },
-  "landing.offer.cta": { fr: "Je veux Asclion dans mon officine", en: "I want Asclion in my pharmacy" },
+  "landing.offer.cta": { fr: "Voir Asclion dans mon officine", en: "See Asclion in my pharmacy" },
 
   // ===== NEW: HORMOZI HERO =====
   "landing.hero.badge": {
-    fr: "⚡ Pharmacie pilote · +500 € de CA additionnel dès le 1ᵉʳ mois (moyenne)",
-    en: "⚡ Pilot pharmacy · +€500 additional revenue in the first month (avg)",
+    fr: "ASCLION · Assistant au conseil associé du pharmacien",
+    en: "ASCLION · The pharmacist's associated-advice assistant",
   },
-  "landing.hero.title.line1": { fr: "Ajoutez", en: "Add" },
-  "landing.hero.title.amount": { fr: "+500 € de CA/mois en moyenne", en: "+€500/month in revenue on average" },
-  "landing.hero.title.line2": { fr: "à votre officine. Sans embaucher, sans changer de LGO.", en: "to your pharmacy. No new hires, no software change." },
+  "landing.hero.title.line1": { fr: "Le bon conseil,", en: "The right advice," },
+  "landing.hero.title.amount": { fr: "au bon moment", en: "at the right moment" },
+  "landing.hero.title.line2": { fr: "sans changer vos habitudes.", en: "without changing your habits." },
   "landing.hero.subtitle": {
-    fr: "Vos préparateurs délivrent le médicament, notre IA suggère en 2 secondes les 2 produits associés pertinents (déjà en stock). Sur les clients à qui le produit est proposé, 2 sur 3 repartent avec.",
-    en: "Your team dispenses the medication, our AI suggests 2 relevant associated products in 2 seconds (already in stock). Of customers who are offered the product, 2 out of 3 leave with it.",
+    fr: "Asclion détecte automatiquement les conseils associés pertinents lors de vos délivrances. Votre équipe reste libre de les proposer — Asclion lui donne simplement le bon réflexe.",
+    en: "Asclion automatically surfaces the relevant associated advice during dispensing. Your team stays free to offer it — Asclion simply gives the right reflex.",
   },
-  "landing.hero.cta.primary": { fr: "Réserver ma démo (15 min) →", en: "Book my demo (15 min) →" },
+  "landing.hero.cta.primary": { fr: "Demander une démo (15 min) →", en: "Request a demo (15 min) →" },
   "landing.hero.cta.secondary": { fr: "Voir la garantie", en: "See the guarantee" },
-  "landing.hero.trust1": { fr: "Compatible Winpharma, LGPI, Pharmagest, Léo, etc...", en: "Works with Winpharma, LGPI, Pharmagest, Léo, etc..." },
-  "landing.hero.trust2": { fr: "Installation en 24 h", en: "Setup in 24 h" },
-  "landing.hero.trust3": { fr: "RGPD & données hébergées en UE", en: "GDPR & EU-hosted data" },
+  "landing.hero.trust1": { fr: "Aucun changement d'habitude, aucune saisie supplémentaire", en: "No habit change, no extra data entry" },
+  "landing.hero.trust2": { fr: "Compatible avec votre LGO", en: "Works with your pharmacy software" },
+  "landing.hero.trust3": { fr: "Réponse en quelques secondes · RGPD, données UE", en: "Answer in seconds · GDPR, EU-hosted data" },
 
   // ===== NEW: PROOF =====
-  "landing.proof.badge": { fr: "Résultat mesuré", en: "Measured result" },
+  "landing.proof.badge": { fr: "Et concrètement ?", en: "And concretely?" },
   "landing.proof.quote": {
-    fr: "« +500 € de chiffre d'affaires additionnel sur le 1ᵉʳ mois en moyenne. Quand le produit est proposé, 2 clients sur 3 repartent avec. »",
-    en: '"+€500 in additional revenue in the first month on average. When the product is offered, 2 out of 3 customers leave with it."',
+    fr: "Le conseil gagne en systématicité. Le CA suit. Lors de notre pharmacie pilote, Asclion a généré en moyenne +500 € de CA additionnel dès le premier mois.",
+    en: "Advice becomes more systematic. Revenue follows. At our pilot pharmacy, Asclion generated on average +€500 of additional revenue in the first month.",
   },
-  "landing.proof.author": { fr: "— Pharmacie pilote, avril 2026", en: "— Pilot pharmacy, April 2026" },
+  "landing.proof.author": { fr: "— Pharmacie pilote, avril 2026 · Résultats variables selon l'officine, son activité et son équipe.", en: "— Pilot pharmacy, April 2026 · Results vary by pharmacy, activity and team." },
   "landing.proof.kpi1.value": { fr: "+500 €", en: "+€500" },
-  "landing.proof.kpi1.label": { fr: "CA additionnel · 1ᵉʳ mois", en: "Extra revenue · 1st month" },
+  "landing.proof.kpi1.label": { fr: "CA additionnel moyen lors de notre pilote", en: "Average additional revenue during our pilot" },
   "landing.proof.kpi2.value": { fr: "2 / 3", en: "2 / 3" },
-  "landing.proof.kpi2.label": { fr: "proposé → accepté", en: "offered → accepted" },
-  "landing.proof.kpi3.value": { fr: "< 2 s", en: "< 2 s" },
-  "landing.proof.kpi3.label": { fr: "latence par ordonnance", en: "latency per prescription" },
+  "landing.proof.kpi2.label": { fr: "des conseils proposés acceptés", en: "of offered advice accepted" },
+  "landing.proof.kpi3.value": { fr: "< 2,5 s", en: "< 2.5 s" },
+  "landing.proof.kpi3.label": { fr: "pour obtenir une suggestion", en: "to get a suggestion" },
 
   // ===== NEW: VALUE STACK =====
   "landing.stack.title": { fr: "Ce que vous obtenez en rejoignant Asclion", en: "What you get when you join Asclion" },
@@ -200,10 +247,10 @@ export const translations = {
   "landing.forwhom.title": { fr: "Pour qui est fait Asclion ?", en: "Who is Asclion for?" },
   "landing.forwhom.yes.title": { fr: "Fait pour vous si :", en: "Made for you if:" },
   "landing.forwhom.yes.1": { fr: "Vous êtes titulaire d'officine (indépendant ou groupement)", en: "You own or run a pharmacy (independent or group)" },
-  "landing.forwhom.yes.2": { fr: "Vous voulez augmenter votre CA sans sacrifier le conseil", en: "You want to grow revenue without compromising advice quality" },
-  "landing.forwhom.yes.3": { fr: "Vous utilisez Winpharma, LGPI, Pharmagest, Smart Rx, LGO, Périphar…", en: "You use Winpharma, LGPI, Pharmagest, Smart Rx, LGO, Périphar…" },
-  "landing.forwhom.no.title": { fr: "Ce n'est pas pour vous si :", en: "Not for you if:" },
-  "landing.forwhom.no.1": { fr: "Vous cherchez uniquement à écouler du stock (Asclion ne recommande que ce qui est cliniquement pertinent)", en: "You only want to clear stock (Asclion only recommends what's clinically relevant)" },
+  "landing.forwhom.yes.2": { fr: "Vous voulez que le conseil associé devienne systématique dans votre équipe", en: "You want associated advice to become systematic across your team" },
+  "landing.forwhom.yes.3": { fr: "Vous utilisez Winpharma, LGPI, Pharmagest, Smart Rx, Léo, Périphar…", en: "You use Winpharma, LGPI, Pharmagest, Smart Rx, Léo, Périphar…" },
+  "landing.forwhom.no.title": { fr: "Asclion n'est pas un outil de vente forcée", en: "Asclion is not a hard-selling tool" },
+  "landing.forwhom.no.1": { fr: "Asclion ne recommande pas un produit simplement parce qu'il est disponible en stock. Les suggestions reposent sur la pertinence du conseil, et le pharmacien reste libre de les proposer — ou non.", en: "Asclion does not recommend a product just because it is in stock. Suggestions are based on the relevance of the advice, and the pharmacist stays free to offer them — or not." },
   "landing.forwhom.no.2": { fr: "", en: "" },
 
   // ===== NEW: FAQ =====
@@ -235,21 +282,21 @@ export const translations = {
     en: "⏱ Limited pilot slots — we personally accompany each pharmacy through its first 30 days. We will no longer accept more than 10 new pharmacies per month to guarantee onboarding quality.",
   },
 
-  "landing.access.title": { fr: "Réservez votre démo (15 min)", en: "Book your demo (15 min)" },
+  "landing.access.title": { fr: "Parlons de votre officine", en: "Let's talk about your pharmacy" },
   "landing.access.desc": {
-    fr: "Trois champs suffisent. On revient vers vous sous 24 h ouvrées avec un créneau adapté.",
-    en: "Three fields, that's it. We get back to you within 24 business hours with a slot that fits.",
+    fr: "15 minutes pour vous montrer concrètement comment Asclion s'intègre à votre façon de travailler.",
+    en: "15 minutes to show you concretely how Asclion fits into the way you work.",
   },
 
   // ===== ACCESS FORM =====
   "form.pharmacy_name": { fr: "Nom de la pharmacie *", en: "Pharmacy name *" },
   "form.contact_name": { fr: "Nom du contact", en: "Contact name" },
   "form.email": { fr: "Email professionnel *", en: "Work email *" },
-  "form.phone": { fr: "Téléphone (recommandé — rappel sous 24 h)", en: "Phone (recommended — callback within 24 h)" },
+  "form.phone": { fr: "Téléphone (optionnel)", en: "Phone (optional)" },
   "form.city": { fr: "Ville", en: "City" },
   "form.lgo": { fr: "LGO utilisé (ex: Winpharma, LGPI...)", en: "Pharmacy software (e.g. Winpharma, LGPI...)" },
   "form.more": { fr: "Ajouter des infos (optionnel)", en: "Add more info (optional)" },
-  "form.microcopy": { fr: "Réponse sous 24 h ouvrées · Aucune CB requise · Aucun engagement", en: "Reply within 24 business hours · No credit card · No commitment" },
+  "form.microcopy": { fr: "Aucun engagement. Aucun changement de LGO. Aucun logiciel à apprendre pour votre équipe.", en: "No commitment. No software change. Nothing new for your team to learn." },
   "form.consent": {
     fr: "J'accepte que mes données soient traitées pour répondre à ma demande, conformément à la",
     en: "I agree that my data may be processed to respond to my request, in accordance with the",
@@ -257,7 +304,7 @@ export const translations = {
   "form.privacy": { fr: "politique de confidentialité", en: "privacy policy" },
   "form.and": { fr: "et aux", en: "and the" },
   "form.terms": { fr: "CGU", en: "Terms of Use" },
-  "form.submit": { fr: "Réserver ma démo gratuite →", en: "Book my free demo →" },
+  "form.submit": { fr: "Demander une démo de 15 min →", en: "Request a 15-min demo →" },
   "form.submitted.title": { fr: "Demande envoyée !", en: "Request sent!" },
   "form.submitted.desc": { fr: "Nous vous contactons sous 24 h ouvrées avec un créneau adapté.", en: "We'll contact you within 24 business hours with a slot that fits." },
   "form.error.consent": { fr: "Veuillez accepter la politique de confidentialité.", en: "Please accept the privacy policy." },
@@ -586,12 +633,12 @@ export const translations = {
 
   // ===== SEO META =====
   "seo.landing.title": {
-    fr: "Asclion — IA de conseil associé pour pharmacie",
-    en: "Asclion — AI cross-sell copilot for pharmacies",
+    fr: "Asclion — Assistant au conseil associé pour les pharmacies",
+    en: "Asclion — Associated-advice assistant for pharmacies",
   },
   "seo.landing.desc": {
-    fr: "Copilote IA au comptoir : +5 à 10% de CA, meilleur conseil patient, compatible Winpharma, LGPI et Pharmagest.",
-    en: "AI counter copilot: +5–10% revenue, better patient advice, works with Winpharma, LGPI and Pharmagest.",
+    fr: "Le bon conseil associé, au bon moment, sans changer vos habitudes. Assistant au conseil compatible Winpharma, LGPI, Pharmagest et Léo.",
+    en: "The right associated advice, at the right moment, without changing your habits. Advice assistant compatible with Winpharma, LGPI, Pharmagest and Léo.",
   },
   "seo.vslgo.title": {
     fr: "Asclion vs LGO : quelle différence avec Winpharma, LGPI, Pharmagest ?",

@@ -12,7 +12,6 @@ import {
   FolderSearch,
   ShieldCheck,
   CheckCircle2,
-  XCircle,
   Clock,
   TrendingUp,
   Sparkles,
@@ -214,7 +213,6 @@ const Landing = () => {
     t("landing.forwhom.yes.2"),
     t("landing.forwhom.yes.3"),
   ];
-  const forWhomNo = [t("landing.forwhom.no.1"), t("landing.forwhom.no.2")];
 
   const faqs = [
     { q: t("landing.faq.q1"), a: t("landing.faq.a1") },
@@ -314,8 +312,8 @@ const Landing = () => {
       </nav>
 
       <main>
-        {/* ===== HERO ===== */}
-        <section className="relative py-16 md:py-20 px-4 overflow-hidden">
+        {/* ===== 01 · HERO ===== */}
+        <section className="relative py-20 md:py-24 px-4 overflow-hidden">
           <div
             aria-hidden
             className="pointer-events-none absolute inset-0 -z-10"
@@ -324,48 +322,42 @@ const Landing = () => {
                 "radial-gradient(ellipse 60% 50% at 50% 20%, hsl(var(--pharmacy-green-light) / 0.55), transparent 70%)",
             }}
           />
-          <div className="container max-w-6xl mx-auto grid lg:grid-cols-2 gap-10 lg:gap-14 items-center">
-            <div className="space-y-6 text-center lg:text-left">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent text-accent-foreground text-xs font-medium">
-                <Sparkles className="h-3 w-3" />
-                {t("landing.hero.badge")}
-              </div>
-              <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight leading-tight">
-                {t("landing.hero.question")}
-              </h1>
-              <p className="text-lg text-muted-foreground max-w-xl mx-auto lg:mx-0 leading-relaxed">
-                {t("landing.hero.proof")}
-              </p>
-              <div className="flex justify-center lg:justify-start pt-2">
-                <Button
-                  size="lg"
-                  asChild
-                  className="h-12 px-8 text-base font-semibold pharmacy-gradient border-0 gap-2"
-                >
-                  <a href="#demo" onClick={() => trackEvent("demo_opened_hero", {})}>
-                    <Sparkles className="h-5 w-5" />
-                    {t("landing.hero.cta.demo")}
-                  </a>
-                </Button>
-              </div>
-              <ul className="flex flex-wrap items-center justify-center lg:justify-start gap-x-4 gap-y-1.5 text-xs text-muted-foreground pt-2">
-                <li className="inline-flex items-center gap-1.5">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
-                  {t("landing.hero.trust1")}
-                </li>
-                <li className="inline-flex items-center gap-1.5">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
-                  {t("landing.hero.trust2")}
-                </li>
-                <li className="inline-flex items-center gap-1.5">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
-                  {t("landing.hero.trust3")}
-                </li>
-              </ul>
+          <div className="container max-w-3xl mx-auto text-center space-y-6">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent text-accent-foreground text-xs font-medium tracking-wide">
+              <Sparkles className="h-3 w-3" />
+              {t("landing.hero.badge")}
             </div>
-            <div className="lg:pl-4">
-              <GainSimulator />
+            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight leading-tight">
+              {t("landing.hero.question")}
+              <br />
+              <span className="text-primary">{t("landing.title.line1")} {t("landing.hero.title.amount")}, {t("landing.hero.title.line2")}</span>
+            </h1>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+              {t("landing.hero.proof")}
+            </p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+              <Button
+                size="lg"
+                asChild
+                className="h-12 px-8 text-base font-semibold pharmacy-gradient border-0 gap-2"
+              >
+                <a href="#demo" onClick={() => trackEvent("demo_opened_hero", {})}>
+                  <Sparkles className="h-5 w-5" />
+                  {t("landing.hero.cta.demo")}
+                </a>
+              </Button>
+              <Button size="lg" variant="outline" asChild className="h-12 px-8 text-base font-semibold">
+                <a href="#comment">{t("landing.hero.cta.see")}</a>
+              </Button>
             </div>
+            <ul className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-xs text-muted-foreground pt-2">
+              {[t("landing.hero.trust1"), t("landing.hero.trust2"), t("landing.hero.trust3")].map((item, i) => (
+                <li key={i} className="inline-flex items-center gap-1.5">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
+                  {item}
+                </li>
+              ))}
+            </ul>
           </div>
         </section>
 
@@ -385,10 +377,61 @@ const Landing = () => {
           </div>
         </section>
 
-        {/* ===== DEMO (primary CTA target) ===== */}
+        {/* ===== 02 · DEMO (primary CTA target) ===== */}
         <DemoFullPanel />
 
-        {/* ===== PROOF ===== */}
+        {/* ===== 03 · PROMISE — you change nothing ===== */}
+        <section className="py-20 px-4 bg-secondary/50">
+          <div className="container max-w-3xl mx-auto text-center space-y-8">
+            <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight">
+              {t("landing.promise.title")}
+            </h2>
+            <p className="text-muted-foreground leading-relaxed max-w-2xl mx-auto">
+              {t("landing.promise.desc")}
+            </p>
+            <div className="grid sm:grid-cols-2 gap-4 text-left">
+              <div className="rounded-xl border border-border bg-card p-5 space-y-1.5">
+                <div className="text-xs uppercase tracking-wider text-muted-foreground">
+                  {t("landing.promise.before.title")}
+                </div>
+                <div className="text-sm font-medium">{t("landing.promise.before.flow")}</div>
+              </div>
+              <div className="rounded-xl border border-primary/30 bg-primary/5 p-5 space-y-1.5">
+                <div className="text-xs uppercase tracking-wider text-primary">
+                  {t("landing.promise.after.title")}
+                </div>
+                <div className="text-sm font-medium">{t("landing.promise.after.flow")}</div>
+              </div>
+            </div>
+            <p className="text-sm font-semibold">{t("landing.promise.footnote")}</p>
+          </div>
+        </section>
+
+        {/* ===== 04 · HOW IT WORKS ===== */}
+        <section id="comment" className="py-16 px-4 scroll-mt-16">
+          <div className="container max-w-4xl mx-auto">
+            <div className="text-center space-y-2 mb-10">
+              <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
+                {t("landing.how.title")}
+              </h2>
+              <p className="text-sm text-muted-foreground">{t("landing.how.subtitle")}</p>
+            </div>
+            <div className="grid md:grid-cols-3 gap-6">
+              {features.map((f, i) => (
+                <div key={i} className="glass-card rounded-xl p-6 space-y-3">
+                  <div className="h-10 w-10 rounded-lg bg-accent flex items-center justify-center">
+                    <f.icon className="h-5 w-5 text-accent-foreground" />
+                  </div>
+                  <h3 className="font-semibold">{f.title}</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
+                </div>
+              ))}
+            </div>
+            <p className="text-center text-sm text-muted-foreground mt-8">{t("landing.how.footnote")}</p>
+          </div>
+        </section>
+
+        {/* ===== 05 · PROOF ===== */}
         <section className="py-14 px-4">
           <div className="container max-w-4xl mx-auto">
             <div className="pharmacy-gradient rounded-2xl p-[1px]">
@@ -420,12 +463,29 @@ const Landing = () => {
                     </div>
                   ))}
                 </div>
+                <p className="text-xs text-center text-muted-foreground italic">
+                  {t("landing.results.disclaimer")}
+                </p>
               </div>
             </div>
           </div>
         </section>
 
-        {/* ===== PHARMACISTS ===== */}
+        {/* ===== 06 · LGO INTEGRATION ===== */}
+        <section className="py-16 px-4 bg-secondary/50">
+          <div className="container max-w-3xl mx-auto text-center space-y-4">
+            <h2 className="text-2xl md:text-3xl font-bold tracking-tight">{t("landing.lgo.title")}</h2>
+            <p className="text-muted-foreground">{t("landing.lgo.desc")}</p>
+            <p className="text-base md:text-lg font-semibold text-primary tracking-tight">
+              {t("landing.lgo.list")}
+            </p>
+            <p className="text-sm text-muted-foreground leading-relaxed max-w-2xl mx-auto">
+              {t("landing.lgo.footnote")}
+            </p>
+          </div>
+        </section>
+
+        {/* ===== 07 · TEAM ===== */}
         <section className="py-14 px-4">
           <div className="container max-w-5xl mx-auto space-y-8">
             <div className="text-center space-y-2">
@@ -454,25 +514,31 @@ const Landing = () => {
           </div>
         </section>
 
-
-
-        {/* ===== HOW IT WORKS ===== */}
-        <section className="py-16 px-4 bg-secondary/50">
-          <div className="container max-w-4xl mx-auto">
-            <h2 className="text-2xl md:text-3xl font-bold text-center mb-10 tracking-tight">
-              {t("landing.how.title")}
-            </h2>
-            <div className="grid md:grid-cols-3 gap-6">
-              {features.map((f, i) => (
-                <div key={i} className="glass-card rounded-xl p-6 space-y-3">
-                  <div className="h-10 w-10 rounded-lg bg-accent flex items-center justify-center">
-                    <f.icon className="h-5 w-5 text-accent-foreground" />
-                  </div>
-                  <h3 className="font-semibold">{f.title}</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
-                </div>
-              ))}
+        {/* ===== 08 · TRUST — no forced selling ===== */}
+        <section className="py-16 px-4">
+          <div className="container max-w-3xl mx-auto rounded-2xl border border-border bg-card p-8 md:p-10 text-center space-y-4">
+            <div className="h-12 w-12 rounded-xl bg-accent flex items-center justify-center mx-auto">
+              <ShieldCheck className="h-6 w-6 text-accent-foreground" />
             </div>
+            <h2 className="text-2xl md:text-3xl font-bold tracking-tight">{t("landing.trust.title")}</h2>
+            <p className="text-muted-foreground leading-relaxed max-w-2xl mx-auto">
+              {t("landing.trust.desc")}
+            </p>
+          </div>
+        </section>
+
+        {/* ===== 09 · ROI / SIMULATOR ===== */}
+        <section className="py-16 px-4 bg-secondary/50">
+          <div className="container max-w-3xl mx-auto space-y-6">
+            <div className="text-center space-y-2">
+              <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
+                {t("landing.results.title")}
+              </h2>
+              <p className="text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+                {t("landing.roi.desc")}
+              </p>
+            </div>
+            <GainSimulator />
           </div>
         </section>
 
@@ -546,7 +612,7 @@ const Landing = () => {
             <h2 className="text-2xl md:text-3xl font-bold text-center tracking-tight">
               {t("landing.forwhom.title")}
             </h2>
-            <div className="grid md:grid-cols-2 gap-5">
+            <div className="max-w-2xl mx-auto">
               <div className="rounded-xl border border-border bg-card p-6 space-y-4">
                 <h3 className="font-semibold text-primary flex items-center gap-2">
                   <CheckCircle2 className="h-5 w-5" />
@@ -556,19 +622,6 @@ const Landing = () => {
                   {forWhomYes.map((line, i) => (
                     <li key={i} className="flex items-start gap-2 text-sm">
                       <CheckCircle2 className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                      <span>{line}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div className="rounded-xl border border-border bg-card p-6 space-y-4">
-                <h3 className="font-semibold text-muted-foreground flex items-center gap-2">
-                  <XCircle className="h-5 w-5" />
-                  {t("landing.forwhom.no.title")}
-                </h3>
-                <ul className="space-y-2.5">
-                  {forWhomNo.filter(line => line.trim() !== "").map((line, i) => (
-                    <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
                       <span>{line}</span>
                     </li>
                   ))}
