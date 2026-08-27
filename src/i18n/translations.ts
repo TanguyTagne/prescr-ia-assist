@@ -54,6 +54,27 @@ export const translations = {
   "landing.promise.before.flow": { fr: "Délivrance → réflexion → conseil", en: "Dispensing → thinking → advice" },
   "landing.promise.after.title": { fr: "Avec Asclion", en: "With Asclion" },
   "landing.promise.after.flow": { fr: "Délivrance → Asclion suggère → conseil", en: "Dispensing → Asclion suggests → advice" },
+  // ===== TRAINING vs ASCLION =====
+  "landing.training.title": { fr: "Pourquoi Asclion plutôt qu'une formation ?", en: "Why Asclion rather than training?" },
+  "landing.training.subtitle": {
+    fr: "La formation apprend le conseil. Asclion aide à l'appliquer au bon moment.",
+    en: "Training teaches the advice. Asclion helps apply it at the right moment.",
+  },
+  "landing.training.a.title": { fr: "Une formation", en: "Training" },
+  "landing.training.a.desc": {
+    fr: "Vous apprenez des réflexes. Ils s'estompent avec le rythme du comptoir et les arrivées dans l'équipe.",
+    en: "You learn reflexes. They fade with the pace of the counter and team turnover.",
+  },
+  "landing.training.b.title": { fr: "Asclion", en: "Asclion" },
+  "landing.training.b.desc": {
+    fr: "Il vous les rappelle au moment précis où ils sont utiles, à chaque délivrance, pour toute l'équipe.",
+    en: "It reminds you of them at the exact moment they matter, on every dispensation, for the whole team.",
+  },
+  "landing.training.footnote": {
+    fr: "Les deux se complètent : Asclion rend le conseil appris réellement systématique au comptoir.",
+    en: "The two complement each other: Asclion makes learned advice truly systematic at the counter.",
+  },
+
   "landing.promise.footnote": {
     fr: "Le pharmacien garde toujours le dernier mot.",
     en: "The pharmacist always has the final word.",
@@ -92,20 +113,21 @@ export const translations = {
   "landing.results.disclaimer": { fr: "Résultats variables selon l'officine, son activité et son équipe.", en: "Results vary by pharmacy, activity and team." },
 
   // ===== SIMULATOR =====
-  "landing.sim.badge": { fr: "Simulateur gratuit", en: "Free simulator" },
-  "landing.sim.title": { fr: "Le potentiel de votre officine", en: "Your pharmacy's potential" },
+  "landing.sim.badge": { fr: "Estimation en 30 secondes", en: "30-second estimate" },
+  "landing.sim.title": { fr: "Quel potentiel pour votre officine ?", en: "What is your pharmacy's potential?" },
+  "landing.sim.subtitle": { fr: "Estimez le potentiel de conseil associé de votre pharmacie.", en: "Estimate your pharmacy's associated-advice potential." },
   "landing.sim.ca": { fr: "Chiffre d'affaires annuel", en: "Annual revenue" },
   "landing.sim.days": { fr: "Jours d'ouverture / semaine", en: "Opening days / week" },
-  "landing.sim.result.label": { fr: "Marge additionnelle estimée", en: "Estimated additional margin" },
+  "landing.sim.result.label": { fr: "Potentiel estimé", en: "Estimated potential" },
   "landing.sim.result.unit": { fr: "€ / mois", en: "€ / month" },
   "landing.sim.result.hint": {
-    fr: "soit ~{n} passages/jour, avec un objectif de +2 à 4 % de CA additionnel",
-    en: "i.e. ~{n} visits/day, with a target of +2 to 4% additional revenue",
+    fr: "soit ~{n} délivrances/jour, sur une hypothèse de +2 à 4 % de conseils aboutis supplémentaires",
+    en: "i.e. ~{n} dispensations/day, assuming +2 to 4% more advice accepted",
   },
-  "landing.sim.cta": { fr: "Recevoir mon diagnostic personnalisé", en: "Get my personalised diagnosis" },
+  "landing.sim.cta": { fr: "Recevoir mon estimation personnalisée", en: "Get my personalised estimate" },
   "landing.sim.disclaimer": {
-    fr: "Estimation basée sur les moyennes des officines françaises (panier moyen 42 €, données 2025). Résultats variables selon l'officine.",
-    en: "Estimate based on French pharmacy averages (avg basket €42, 2025 data). Results vary by pharmacy.",
+    fr: "Estimation indicative basée sur les hypothèses renseignées (panier moyen 42 €). Les résultats réels dépendent notamment du nombre de délivrances, de l'équipe et du taux d'acceptation.",
+    en: "Indicative estimate based on the assumptions entered (avg basket €42). Actual results depend on dispensation volume, team and acceptance rate.",
   },
 
   // ===== REFERRAL =====

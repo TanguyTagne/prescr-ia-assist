@@ -72,6 +72,7 @@ const BlogPost = () => {
         description={post.description}
         path={`/blog/${post.slug}`}
         ogType="article"
+        frenchOnly
         ogImage={post.image ? (post.image.startsWith("http") ? post.image : `${SITE}${post.image}`) : undefined}
         jsonLd={jsonLd}
       />
