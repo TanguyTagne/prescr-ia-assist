@@ -431,6 +431,29 @@ const Landing = () => {
           </div>
         </section>
 
+        {/* ===== 04b · TRAINING vs ASCLION ===== */}
+        <section className="py-16 px-4 bg-secondary/50">
+          <div className="container max-w-4xl mx-auto">
+            <div className="text-center space-y-2 mb-8">
+              <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
+                {t("landing.training.title")}
+              </h2>
+              <p className="text-sm text-muted-foreground">{t("landing.training.subtitle")}</p>
+            </div>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="rounded-xl border border-border bg-card p-6 space-y-2">
+                <h3 className="font-semibold text-muted-foreground">{t("landing.training.a.title")}</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">{t("landing.training.a.desc")}</p>
+              </div>
+              <div className="rounded-xl border border-primary/30 bg-card p-6 space-y-2">
+                <h3 className="font-semibold text-primary">{t("landing.training.b.title")}</h3>
+                <p className="text-sm leading-relaxed">{t("landing.training.b.desc")}</p>
+              </div>
+            </div>
+            <p className="text-center text-sm text-muted-foreground mt-6">{t("landing.training.footnote")}</p>
+          </div>
+        </section>
+
         {/* ===== 05 · PROOF ===== */}
         <section className="py-14 px-4">
           <div className="container max-w-4xl mx-auto">
