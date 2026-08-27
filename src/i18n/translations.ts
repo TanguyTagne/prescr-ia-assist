@@ -78,6 +78,10 @@ export const translations = {
     en: "Asclion does not recommend a product just because it is in stock. Suggestions are based on the relevance of the advice. The pharmacist stays free to offer them — or not.",
   },
 
+  "landing.roi.desc": {
+    fr: "Asclion n'est pas conçu pour pousser des produits inutiles. Il identifie les conseils associés pertinents que l'équipe peut facilement oublier dans le rythme du comptoir. Le conseil gagne en systématicité — et votre potentiel de CA augmente.",
+    en: "Asclion is not built to push useless products. It surfaces the relevant associated advice a team can easily miss in the rhythm of the counter. Advice becomes more systematic — and your revenue potential grows.",
+  },
   "landing.results.title": { fr: "Et concrètement ?", en: "And concretely?" },
   "landing.results.basket": { fr: "Conseil associé", en: "Associated advice" },
   "landing.results.basket.desc": { fr: "Des conseils pertinents identifiés automatiquement à chaque délivrance", en: "Relevant advice surfaced automatically at each dispensation" },

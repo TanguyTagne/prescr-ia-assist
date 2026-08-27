@@ -12,7 +12,6 @@ import {
   FolderSearch,
   ShieldCheck,
   CheckCircle2,
-  XCircle,
   Clock,
   TrendingUp,
   Sparkles,
@@ -214,7 +213,6 @@ const Landing = () => {
     t("landing.forwhom.yes.2"),
     t("landing.forwhom.yes.3"),
   ];
-  const forWhomNo = [t("landing.forwhom.no.1"), t("landing.forwhom.no.2")];
 
   const faqs = [
     { q: t("landing.faq.q1"), a: t("landing.faq.a1") },
@@ -537,7 +535,7 @@ const Landing = () => {
                 {t("landing.results.title")}
               </h2>
               <p className="text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-                {t("landing.subtitle")}
+                {t("landing.roi.desc")}
               </p>
             </div>
             <GainSimulator />
