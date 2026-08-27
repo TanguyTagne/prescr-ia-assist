@@ -17,7 +17,7 @@ type Phase = "search" | "gate" | "analyzing" | "result" | "lead";
 const USES_KEY = "asclion_demo_uses";
 const EMAIL_KEY = "asclion_demo_email";
 
-const EXAMPLES = ["Amoxicilline", "Doliprane", "Ventoline", "Levothyrox", "Ibuprofène"];
+
 
 interface WidgetDemoProps {
   onClose?: () => void;
@@ -348,21 +348,6 @@ const WidgetDemo = ({ onClose, size = "compact" }: WidgetDemoProps) => {
           {t("demo.search.analyze")}
         </button>
       </form>
-
-      <div className="space-y-1">
-        <div className={c.sub}>{t("demo.search.examples")}</div>
-        <div className="flex flex-wrap gap-1">
-          {EXAMPLES.map((ex) => (
-            <button
-              key={ex}
-              onClick={() => handleSubmitSearch(ex)}
-              className={c.chip}
-            >
-              {ex}
-            </button>
-          ))}
-        </div>
-      </div>
 
       <LegalDisclaimer />
     </div>
