@@ -9,41 +9,83 @@ export const translations = {
   "nav.signout": { fr: "Déconnexion", en: "Sign out" },
 
   // ===== LANDING =====
-  "landing.badge": { fr: "Copilote IA — Plus de ventes associées, meilleur conseil", en: "AI copilot — More cross-sells, better advice" },
-  "landing.title.line1": { fr: "Augmentez votre panier moyen,", en: "Grow your average basket," },
-  "landing.title.line2": { fr: "sans sacrifier le conseil", en: "without compromising on advice" },
+  "landing.badge": { fr: "Assistant au conseil associé du pharmacien", en: "The pharmacist's associated-advice assistant" },
+  "landing.title.line1": { fr: "Le bon conseil, au bon moment,", en: "The right advice, at the right moment," },
+  "landing.title.line2": { fr: "sans changer vos habitudes", en: "without changing your habits" },
   "landing.subtitle": {
-    fr: "Asclion transforme chaque médicament scanné en opportunité de vente associée pertinente. Plus de produits complémentaires délivrés, un panier moyen qui décolle, et un patient mieux accompagné, sans effort supplémentaire pour l'équipe.",
-    en: "Asclion turns every scanned drug into a relevant cross-sell opportunity. More complementary products delivered, a higher average basket, and better patient care — with zero extra effort for your team.",
+    fr: "Asclion s'intègre à votre fonctionnement habituel et détecte automatiquement les conseils associés pertinents lors de vos délivrances. Votre équipe reste libre de les proposer — Asclion lui donne simplement le bon réflexe, au bon moment.",
+    en: "Asclion fits into the way you already work and automatically surfaces the relevant associated advice during dispensing. Your team stays free to offer it — Asclion simply provides the right reflex, at the right moment.",
   },
-  "landing.cta.access": { fr: "Booster mon chiffre — Demander une Demo", en: "Boost my revenue — Request a Demo" },
+  "landing.cta.access": { fr: "Voir Asclion dans mon officine", en: "See Asclion in my pharmacy" },
   "landing.cta.vsLgo": { fr: "Asclion vs LGO", en: "Asclion vs LGO" },
 
-  "landing.how.title": { fr: "Comment Asclion fait grimper votre panier moyen", en: "How Asclion grows your average basket" },
-  "landing.how.step1.title": { fr: "Scannez ", en: "Scan " },
+  "landing.how.title": { fr: "Un fonctionnement presque invisible", en: "An almost invisible way of working" },
+  "landing.how.subtitle": {
+    fr: "Comment Asclion s'intègre à votre quotidien.",
+    en: "How Asclion fits into your daily routine.",
+  },
+  "landing.how.step1.title": { fr: "01 — Vous délivrez", en: "01 — You dispense" },
   "landing.how.step1.desc": {
-    fr: "Scannez simplement votre produit comme d'habitude, l'IA s'occupe du reste. Chaque délivrance devient une opportunité commerciale identifiée en quelques secondes.",
-    en: "Simply scan your product as usual, the AI handles the rest. Every dispensation becomes a sales opportunity identified in seconds.",
+    fr: "Scannez le produit comme vous le faites aujourd'hui. Aucune saisie supplémentaire, aucun changement de workflow.",
+    en: "Scan the product exactly as you do today. No extra typing, no workflow change.",
   },
-  "landing.how.step2.title": { fr: "L'IA repère les ventes associées", en: "AI spots cross-sell opportunities" },
+  "landing.how.step2.title": { fr: "02 — Asclion analyse", en: "02 — Asclion analyses" },
   "landing.how.step2.desc": {
-    fr: "Interactions, effets secondaires, besoins latents : Asclion détecte tout ce qu'une équipe surchargée pourrait manquer et le traduit en produits à proposer.",
-    en: "Interactions, side effects, latent needs: Asclion catches what a busy team could miss — and turns it into products to offer.",
+    fr: "En quelques secondes, Asclion identifie automatiquement les conseils associés pertinents pour cette délivrance.",
+    en: "In a few seconds, Asclion automatically identifies the associated advice relevant to this dispensation.",
   },
-  "landing.how.step3.title": { fr: "Vendez plus, mieux, au comptoir", en: "Sell more, sell better, at the counter" },
+  "landing.how.step3.title": { fr: "03 — Vous conseillez", en: "03 — You advise" },
   "landing.how.step3.desc": {
-    fr: "Recevez les produits à conseiller dans votre stock, avec la phrase prête à dire. Le patient se sent mieux pris en charge, votre panier moyen progresse.",
-    en: "Get the right in-stock products to recommend with ready-to-say phrases. Patients feel better cared for, your average basket grows.",
+    fr: "Une suggestion claire apparaît, avec l'essentiel à savoir et une formulation simple à utiliser au comptoir. Rien de plus.",
+    en: "A clear suggestion appears, with the essentials and a simple wording to use at the counter. Nothing more.",
+  },
+  "landing.how.footnote": {
+    fr: "Pas de nouvelle saisie. Pas de recherche. Pas de changement de workflow.",
+    en: "No new data entry. No searching. No workflow change.",
   },
 
-  "landing.results.title": { fr: "Des résultats commerciaux concrets", en: "Concrete business results" },
-  "landing.results.basket": { fr: "Panier moyen", en: "Average basket" },
-  "landing.results.basket.desc": { fr: "Hausse moyenne observée sur les délivrances accompagnées d'Asclion", en: "Average uplift observed on dispensations supported by Asclion" },
-  "landing.results.crosssell": { fr: "Ventes associées", en: "Cross-sells" },
-  "landing.results.crosssell.desc": { fr: "Multiplication du nombre de produits complémentaires proposés au comptoir", en: "Multiplier on complementary products offered at the counter" },
-  "landing.results.speed": { fr: "Par ordonnance", en: "Per prescription" },
-  "landing.results.speed.desc": { fr: "Une opportunité commerciale identifiée sans ralentir l'équipe", en: "A sales opportunity surfaced without slowing the team down" },
-  "landing.results.disclaimer": { fr: "Indicateurs constatés sur nos pharmacies pilotes — variables selon assortiment et usage.", en: "Figures observed on our pilot pharmacies — vary by product mix and usage." },
+  // ===== PROMISE (you change nothing) =====
+  "landing.promise.title": { fr: "Vous ne changez rien.", en: "You change nothing." },
+  "landing.promise.desc": {
+    fr: "Votre LGO reste votre LGO. Votre équipe reste votre équipe. Votre façon de travailler reste la même. Asclion vient simplement ajouter une couche d'intelligence au moment où elle est utile.",
+    en: "Your pharmacy software stays your software. Your team stays your team. The way you work stays the same. Asclion simply adds a layer of intelligence at the moment it is useful.",
+  },
+  "landing.promise.before.title": { fr: "Avant Asclion", en: "Before Asclion" },
+  "landing.promise.before.flow": { fr: "Délivrance → réflexion → conseil", en: "Dispensing → thinking → advice" },
+  "landing.promise.after.title": { fr: "Avec Asclion", en: "With Asclion" },
+  "landing.promise.after.flow": { fr: "Délivrance → Asclion suggère → conseil", en: "Dispensing → Asclion suggests → advice" },
+  "landing.promise.footnote": {
+    fr: "Le pharmacien garde toujours le dernier mot.",
+    en: "The pharmacist always has the final word.",
+  },
+
+  // ===== LGO INTEGRATION =====
+  "landing.lgo.title": { fr: "Pas besoin de changer de logiciel.", en: "No need to change software." },
+  "landing.lgo.desc": {
+    fr: "Asclion fonctionne en complément de votre environnement actuel.",
+    en: "Asclion works alongside your current environment.",
+  },
+  "landing.lgo.list": { fr: "Winpharma · LGPI · Pharmagest · Léo · Smart Rx · Périphar · …", en: "Winpharma · LGPI · Pharmagest · Léo · Smart Rx · Périphar · …" },
+  "landing.lgo.footnote": {
+    fr: "Votre LGO reste le cœur de votre officine. Asclion vient simplement lui apporter une capacité supplémentaire : accompagner le conseil.",
+    en: "Your pharmacy software remains the heart of your pharmacy. Asclion simply adds one extra capability: supporting advice.",
+  },
+
+  // ===== TRUST (no forced selling) =====
+  "landing.trust.title": { fr: "Asclion n'est pas un outil de vente forcée", en: "Asclion is not a hard-selling tool" },
+  "landing.trust.desc": {
+    fr: "Asclion ne recommande pas un produit simplement parce qu'il est disponible en stock. Les suggestions sont basées sur la pertinence du conseil. Le pharmacien reste libre de les proposer — ou non.",
+    en: "Asclion does not recommend a product just because it is in stock. Suggestions are based on the relevance of the advice. The pharmacist stays free to offer them — or not.",
+  },
+
+  "landing.results.title": { fr: "Et concrètement ?", en: "And concretely?" },
+  "landing.results.basket": { fr: "Conseil associé", en: "Associated advice" },
+  "landing.results.basket.desc": { fr: "Des conseils pertinents identifiés automatiquement à chaque délivrance", en: "Relevant advice surfaced automatically at each dispensation" },
+  "landing.results.crosssell": { fr: "Équipe alignée", en: "Aligned team" },
+  "landing.results.crosssell.desc": { fr: "Toute l'équipe dispose du même réflexe de conseil au comptoir", en: "The whole team shares the same advice reflex at the counter" },
+  "landing.results.speed": { fr: "Par délivrance", en: "Per dispensation" },
+  "landing.results.speed.desc": { fr: "Une opportunité de conseil identifiée sans ralentir l'équipe", en: "An advice opportunity surfaced without slowing the team down" },
+  "landing.results.disclaimer": { fr: "Résultats variables selon l'officine, son activité et son équipe.", en: "Results vary by pharmacy, activity and team." },
 
   // ===== SIMULATOR =====
   "landing.sim.badge": { fr: "Simulateur gratuit", en: "Free simulator" },
