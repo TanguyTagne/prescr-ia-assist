@@ -99,8 +99,8 @@ export const translations = {
   "landing.sim.result.label": { fr: "Marge additionnelle estimée", en: "Estimated additional margin" },
   "landing.sim.result.unit": { fr: "€ / mois", en: "€ / month" },
   "landing.sim.result.hint": {
-    fr: "soit ~{n} passages/jour et 2 à 4 % de conseils aboutis en plus (base : +500 € en moyenne)",
-    en: "i.e. ~{n} visits/day and 2 to 4% more successful advice (baseline: +€500 on average)",
+    fr: "soit ~{n} passages/jour, avec un objectif de +2 à 4 % de CA additionnel",
+    en: "i.e. ~{n} visits/day, with a target of +2 to 4% additional revenue",
   },
   "landing.sim.cta": { fr: "Recevoir mon diagnostic personnalisé", en: "Get my personalised diagnosis" },
   "landing.sim.disclaimer": {
@@ -200,12 +200,12 @@ export const translations = {
   // ===== NEW: PROOF =====
   "landing.proof.badge": { fr: "Et concrètement ?", en: "And concretely?" },
   "landing.proof.quote": {
-    fr: "Le conseil gagne en systématicité. Le CA suit. Lors de notre pharmacie pilote, Asclion a généré en moyenne +500 € de CA additionnel dès le premier mois.",
-    en: "Advice becomes more systematic. Revenue follows. At our pilot pharmacy, Asclion generated on average +€500 of additional revenue in the first month.",
+    fr: "Le conseil gagne en systématicité. Le CA suit. Lors de notre pharmacie pilote, Asclion a généré +2 à 4 % de CA additionnel dès le premier mois.",
+    en: "Advice becomes more systematic. Revenue follows. At our pilot pharmacy, Asclion generated +2 to 4% additional revenue in the first month.",
   },
   "landing.proof.author": { fr: "— Pharmacie pilote, avril 2026 · Résultats variables selon l'officine, son activité et son équipe.", en: "— Pilot pharmacy, April 2026 · Results vary by pharmacy, activity and team." },
-  "landing.proof.kpi1.value": { fr: "+500 €", en: "+€500" },
-  "landing.proof.kpi1.label": { fr: "CA additionnel moyen lors de notre pilote", en: "Average additional revenue during our pilot" },
+  "landing.proof.kpi1.value": { fr: "+2 à 4 %", en: "+2 to 4%" },
+  "landing.proof.kpi1.label": { fr: "de CA additionnel visé dès le 1er mois", en: "additional revenue targeted from month 1" },
   "landing.proof.kpi2.value": { fr: "2 / 3", en: "2 / 3" },
   "landing.proof.kpi2.label": { fr: "des conseils proposés acceptés", en: "of offered advice accepted" },
   "landing.proof.kpi3.value": { fr: "< 2,5 s", en: "< 2.5 s" },
