@@ -24,7 +24,7 @@ const GainSimulator = () => {
     // Hypothèse : ~300 jours ouvrés/an, panier moyen 42€
     const transactionsParJour = ca / 42 / 300;
     const monthlyTransactions = transactionsParJour * 25;
-    // Calibré sur la pharmacie pilote : +500 € de CA additionnel / mois en moyenne
+    // Calibré sur l'objectif pilote : +2 à 4 % de CA additionnel dès le 1er mois
     // (2–4 % de conseils aboutis, panier associé ~7–8 €, marge nette 45 %)
     const basse = monthlyTransactions * 0.02 * 7 * 0.45;
     const haute = monthlyTransactions * 0.04 * 8 * 0.45;
