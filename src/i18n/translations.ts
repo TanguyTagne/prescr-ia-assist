@@ -243,10 +243,10 @@ export const translations = {
   "landing.forwhom.title": { fr: "Pour qui est fait Asclion ?", en: "Who is Asclion for?" },
   "landing.forwhom.yes.title": { fr: "Fait pour vous si :", en: "Made for you if:" },
   "landing.forwhom.yes.1": { fr: "Vous êtes titulaire d'officine (indépendant ou groupement)", en: "You own or run a pharmacy (independent or group)" },
-  "landing.forwhom.yes.2": { fr: "Vous voulez augmenter votre CA sans sacrifier le conseil", en: "You want to grow revenue without compromising advice quality" },
-  "landing.forwhom.yes.3": { fr: "Vous utilisez Winpharma, LGPI, Pharmagest, Smart Rx, LGO, Périphar…", en: "You use Winpharma, LGPI, Pharmagest, Smart Rx, LGO, Périphar…" },
-  "landing.forwhom.no.title": { fr: "Ce n'est pas pour vous si :", en: "Not for you if:" },
-  "landing.forwhom.no.1": { fr: "Vous cherchez uniquement à écouler du stock (Asclion ne recommande que ce qui est cliniquement pertinent)", en: "You only want to clear stock (Asclion only recommends what's clinically relevant)" },
+  "landing.forwhom.yes.2": { fr: "Vous voulez que le conseil associé devienne systématique dans votre équipe", en: "You want associated advice to become systematic across your team" },
+  "landing.forwhom.yes.3": { fr: "Vous utilisez Winpharma, LGPI, Pharmagest, Smart Rx, Léo, Périphar…", en: "You use Winpharma, LGPI, Pharmagest, Smart Rx, Léo, Périphar…" },
+  "landing.forwhom.no.title": { fr: "Asclion n'est pas un outil de vente forcée", en: "Asclion is not a hard-selling tool" },
+  "landing.forwhom.no.1": { fr: "Asclion ne recommande pas un produit simplement parce qu'il est disponible en stock. Les suggestions reposent sur la pertinence du conseil, et le pharmacien reste libre de les proposer — ou non.", en: "Asclion does not recommend a product just because it is in stock. Suggestions are based on the relevance of the advice, and the pharmacist stays free to offer them — or not." },
   "landing.forwhom.no.2": { fr: "", en: "" },
 
   // ===== NEW: FAQ =====
