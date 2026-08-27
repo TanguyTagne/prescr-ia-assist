@@ -131,36 +131,37 @@ export const translations = {
   // ===== DEMO SECTION (primary CTA) =====
   "landing.demo.badge": { fr: "Démo gratuite · 30 secondes", en: "Free demo · 30 seconds" },
   "landing.demo.title": {
-    fr: "Tapez un médicament. Voyez ce que votre équipe oublie de proposer.",
-    en: "Type a medication. See what your team forgets to offer.",
+    fr: "Voyez Asclion au comptoir",
+    en: "See Asclion at the counter",
   },
   "landing.demo.desc": {
-    fr: "C'est exactement ce que vos préparateurs verront au comptoir : les 2 produits associés pertinents et la phrase à dire, en moins de 2 secondes. Sur le terrain, le médicament est détecté automatiquement dès le scan du CIP — ici vous le choisissez librement pour tester.",
-    en: "This is exactly what your team sees at the counter: the 2 relevant associated products and the sentence to say, in under 2 seconds. In real use, the medication is detected automatically as soon as the CIP is scanned — here you choose it freely to test.",
+    fr: "Choisissez un médicament et découvrez le conseil qu'Asclion pourrait suggérer à votre équipe. Au comptoir, le médicament est détecté automatiquement dès le scan du CIP — ici vous le choisissez librement pour tester.",
+    en: "Pick a medication and see the advice Asclion could suggest to your team. At the counter, the medication is detected automatically as soon as the CIP is scanned — here you choose it freely to test.",
   },
   "landing.demo.footnote": {
-    fr: "Aucune inscription pour le premier test. Données de démonstration, aucune donnée patient. En officine, le scan CIP déclenche l'analyse automatiquement.",
-    en: "No signup for the first test. Demo data only, no patient data. In pharmacy, the CIP scan triggers analysis automatically.",
+    fr: "Imaginez maintenant que cela apparaisse automatiquement après chaque scan. Données de démonstration, aucune donnée patient.",
+    en: "Now imagine this appearing automatically after every scan. Demo data only, no patient data.",
   },
 
   // ===== HERO (single CTA) =====
   "landing.hero.question": {
-    fr: "Votre officine laisse-t-elle du chiffre sur le comptoir ?",
-    en: "Is your pharmacy leaving revenue on the counter?",
+    fr: "L'assistant au conseil associé du pharmacien.",
+    en: "The pharmacist's associated-advice assistant.",
   },
   "landing.hero.proof": {
-    fr: "+500 € de CA en 1 mois en moyenne sur notre pharmacie pilote — sans vendre plus fort, juste sans oublier le conseil associé.",
-    en: "+€500 in revenue in one month on average at our pilot pharmacy — not by pushing harder, just by never forgetting the associated advice.",
+    fr: "Asclion s'intègre à votre fonctionnement habituel et détecte automatiquement les conseils associés pertinents lors de vos délivrances. Votre équipe reste libre de les proposer — Asclion lui donne simplement le bon réflexe, au bon moment.",
+    en: "Asclion fits into the way you already work and automatically surfaces the relevant associated advice during dispensing. Your team stays free to offer it — Asclion simply provides the right reflex, at the right moment.",
   },
-  "landing.hero.cta.demo": { fr: "Tester le copilote (30 s, gratuit)", en: "Try the copilot (30 s, free)" },
+  "landing.hero.cta.demo": { fr: "Tester gratuitement (30 s)", en: "Try it free (30 s)" },
+  "landing.hero.cta.see": { fr: "Voir ce que ça donne au comptoir", en: "See what it looks like at the counter" },
 
   // ===== PROOF BAR =====
-  "landing.proofbar.1.value": { fr: "+500 €", en: "+€500" },
-  "landing.proofbar.1.label": { fr: "de CA en 1 mois · pharmacie pilote (moyenne)", en: "revenue in 1 month · pilot pharmacy (avg)" },
+  "landing.proofbar.1.value": { fr: "0", en: "0" },
+  "landing.proofbar.1.label": { fr: "changement d'habitude, 0 saisie supplémentaire", en: "habit change, 0 extra data entry" },
   "landing.proofbar.2.value": { fr: "< 2,5 s", en: "< 2.5 s" },
-  "landing.proofbar.2.label": { fr: "par ordonnance, au comptoir", en: "per prescription, at the counter" },
-  "landing.proofbar.3.value": { fr: "0", en: "0" },
-  "landing.proofbar.3.label": { fr: "saisie, 0 configuration, 0 changement de LGO", en: "typing, 0 setup, 0 software change" },
+  "landing.proofbar.2.label": { fr: "pour obtenir une suggestion, au comptoir", en: "to get a suggestion, at the counter" },
+  "landing.proofbar.3.value": { fr: "LGO", en: "LGO" },
+  "landing.proofbar.3.label": { fr: "compatible avec votre logiciel actuel", en: "compatible with your current software" },
 
   // ===== OFFER (grand slam) =====
   "landing.offer.title": { fr: "Vous ne risquez rien, littéralement.", en: "You are risking nothing, literally." },
