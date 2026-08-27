@@ -379,10 +379,61 @@ const Landing = () => {
           </div>
         </section>
 
-        {/* ===== DEMO (primary CTA target) ===== */}
+        {/* ===== 02 · DEMO (primary CTA target) ===== */}
         <DemoFullPanel />
 
-        {/* ===== PROOF ===== */}
+        {/* ===== 03 · PROMISE — you change nothing ===== */}
+        <section className="py-20 px-4 bg-secondary/50">
+          <div className="container max-w-3xl mx-auto text-center space-y-8">
+            <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight">
+              {t("landing.promise.title")}
+            </h2>
+            <p className="text-muted-foreground leading-relaxed max-w-2xl mx-auto">
+              {t("landing.promise.desc")}
+            </p>
+            <div className="grid sm:grid-cols-2 gap-4 text-left">
+              <div className="rounded-xl border border-border bg-card p-5 space-y-1.5">
+                <div className="text-xs uppercase tracking-wider text-muted-foreground">
+                  {t("landing.promise.before.title")}
+                </div>
+                <div className="text-sm font-medium">{t("landing.promise.before.flow")}</div>
+              </div>
+              <div className="rounded-xl border border-primary/30 bg-primary/5 p-5 space-y-1.5">
+                <div className="text-xs uppercase tracking-wider text-primary">
+                  {t("landing.promise.after.title")}
+                </div>
+                <div className="text-sm font-medium">{t("landing.promise.after.flow")}</div>
+              </div>
+            </div>
+            <p className="text-sm font-semibold">{t("landing.promise.footnote")}</p>
+          </div>
+        </section>
+
+        {/* ===== 04 · HOW IT WORKS ===== */}
+        <section id="comment" className="py-16 px-4 scroll-mt-16">
+          <div className="container max-w-4xl mx-auto">
+            <div className="text-center space-y-2 mb-10">
+              <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
+                {t("landing.how.title")}
+              </h2>
+              <p className="text-sm text-muted-foreground">{t("landing.how.subtitle")}</p>
+            </div>
+            <div className="grid md:grid-cols-3 gap-6">
+              {features.map((f, i) => (
+                <div key={i} className="glass-card rounded-xl p-6 space-y-3">
+                  <div className="h-10 w-10 rounded-lg bg-accent flex items-center justify-center">
+                    <f.icon className="h-5 w-5 text-accent-foreground" />
+                  </div>
+                  <h3 className="font-semibold">{f.title}</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
+                </div>
+              ))}
+            </div>
+            <p className="text-center text-sm text-muted-foreground mt-8">{t("landing.how.footnote")}</p>
+          </div>
+        </section>
+
+        {/* ===== 05 · PROOF ===== */}
         <section className="py-14 px-4">
           <div className="container max-w-4xl mx-auto">
             <div className="pharmacy-gradient rounded-2xl p-[1px]">
@@ -414,12 +465,29 @@ const Landing = () => {
                     </div>
                   ))}
                 </div>
+                <p className="text-xs text-center text-muted-foreground italic">
+                  {t("landing.results.disclaimer")}
+                </p>
               </div>
             </div>
           </div>
         </section>
 
-        {/* ===== PHARMACISTS ===== */}
+        {/* ===== 06 · LGO INTEGRATION ===== */}
+        <section className="py-16 px-4 bg-secondary/50">
+          <div className="container max-w-3xl mx-auto text-center space-y-4">
+            <h2 className="text-2xl md:text-3xl font-bold tracking-tight">{t("landing.lgo.title")}</h2>
+            <p className="text-muted-foreground">{t("landing.lgo.desc")}</p>
+            <p className="text-base md:text-lg font-semibold text-primary tracking-tight">
+              {t("landing.lgo.list")}
+            </p>
+            <p className="text-sm text-muted-foreground leading-relaxed max-w-2xl mx-auto">
+              {t("landing.lgo.footnote")}
+            </p>
+          </div>
+        </section>
+
+        {/* ===== 07 · TEAM ===== */}
         <section className="py-14 px-4">
           <div className="container max-w-5xl mx-auto space-y-8">
             <div className="text-center space-y-2">
@@ -448,25 +516,31 @@ const Landing = () => {
           </div>
         </section>
 
-
-
-        {/* ===== HOW IT WORKS ===== */}
-        <section className="py-16 px-4 bg-secondary/50">
-          <div className="container max-w-4xl mx-auto">
-            <h2 className="text-2xl md:text-3xl font-bold text-center mb-10 tracking-tight">
-              {t("landing.how.title")}
-            </h2>
-            <div className="grid md:grid-cols-3 gap-6">
-              {features.map((f, i) => (
-                <div key={i} className="glass-card rounded-xl p-6 space-y-3">
-                  <div className="h-10 w-10 rounded-lg bg-accent flex items-center justify-center">
-                    <f.icon className="h-5 w-5 text-accent-foreground" />
-                  </div>
-                  <h3 className="font-semibold">{f.title}</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
-                </div>
-              ))}
+        {/* ===== 08 · TRUST — no forced selling ===== */}
+        <section className="py-16 px-4">
+          <div className="container max-w-3xl mx-auto rounded-2xl border border-border bg-card p-8 md:p-10 text-center space-y-4">
+            <div className="h-12 w-12 rounded-xl bg-accent flex items-center justify-center mx-auto">
+              <ShieldCheck className="h-6 w-6 text-accent-foreground" />
             </div>
+            <h2 className="text-2xl md:text-3xl font-bold tracking-tight">{t("landing.trust.title")}</h2>
+            <p className="text-muted-foreground leading-relaxed max-w-2xl mx-auto">
+              {t("landing.trust.desc")}
+            </p>
+          </div>
+        </section>
+
+        {/* ===== 09 · ROI / SIMULATOR ===== */}
+        <section className="py-16 px-4 bg-secondary/50">
+          <div className="container max-w-3xl mx-auto space-y-6">
+            <div className="text-center space-y-2">
+              <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
+                {t("landing.results.title")}
+              </h2>
+              <p className="text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+                {t("landing.subtitle")}
+              </p>
+            </div>
+            <GainSimulator />
           </div>
         </section>
 
