@@ -10,7 +10,7 @@ readingTime: 5
 essential:
   - "Une antibiothérapie perturbe la flore intestinale dans 30 % des cas."
   - "Le probiotique doit être pris à distance de l'antibiotique (2h)."
-  - "Un conseil bien mené triple la vente associée sur cette classe."
+  - "Un conseil structuré améliore nettement l'acceptation du probiotique associé."
 faq:
   - q: "Faut-il proposer un probiotique à chaque antibiotique ?"
     a: "Oui pour les antibiotiques à large spectre (amoxicilline + acide clavulanique, azithromycine, ciprofloxacine). Le rapport bénéfice/risque est très favorable et le patient perçoit immédiatement la valeur du conseil."
@@ -41,4 +41,4 @@ Court, factuel, sans pression commerciale : le patient comprend la valeur en une
 
 ## Impact commercial mesuré
 
-Sur nos pharmacies pilotes, structurer ce réflexe multiplie par 2,8 le taux d'acceptation du probiotique associé.
+Sur nos pharmacies pilotes, structurer ce réflexe augmente sensiblement l'acceptation du probiotique associé (observation interne, échantillon limité : à considérer comme une tendance, pas comme une donnée statistique).

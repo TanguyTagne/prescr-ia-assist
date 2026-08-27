@@ -47,4 +47,4 @@ Un logiciel comme Asclion analyse chaque ordonnance en moins de 3 secondes et pr
 
 ## Ce qu'il faut retenir
 
-Développer son panier moyen n'est pas une question de pression commerciale : c'est un problème de *systématisation du conseil*. Les officines qui structurent leur cross-sell voient leur panier progresser de 8 à 15 % sur 3 mois.
+Développer son panier moyen n'est pas une question de pression commerciale : c'est un problème de *systématisation du conseil*. Les officines qui structurent leur conseil associé constatent généralement une progression de leur panier moyen sur quelques mois ; l'ampleur dépend de la typologie, de l'équipe et du taux d'acceptation.
