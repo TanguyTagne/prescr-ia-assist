@@ -11,6 +11,12 @@ interface SeoProps {
   ogImage?: string;
   /** When true, injects <meta name="robots" content="noindex,follow" />. */
   noindex?: boolean;
+  /**
+   * Content exists only in French (e.g. blog articles). Canonical always points
+   * to the FR URL, the /en alternate is dropped, and the /en variant is noindexed
+   * so Google never indexes French content under an English path.
+   */
+  frenchOnly?: boolean;
   jsonLd?: Record<string, any> | Record<string, any>[];
 }
 
