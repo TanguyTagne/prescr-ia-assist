@@ -554,7 +554,7 @@ export const translations = {
   "demo.search.subtitle": { fr: "— testez le médicament de votre choix", en: "— try any medication you want" },
   "demo.search.placeholder": { fr: "Tapez un médicament", en: "Type a medication" },
   "demo.search.analyze": { fr: "Analyser ce médicament", en: "Analyze this medication" },
-  "demo.search.examples": { fr: "Exemples :", en: "Examples:" },
+  
   "demo.search.notFound": {
     fr: "Médicament introuvable dans la base clinique. Essayez une autre orthographe ou un nom de marque.",
     en: "Medication not found in the clinical database. Try another spelling or a brand name.",
