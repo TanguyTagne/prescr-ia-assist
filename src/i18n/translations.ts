@@ -300,7 +300,7 @@ export const translations = {
   "form.privacy": { fr: "politique de confidentialité", en: "privacy policy" },
   "form.and": { fr: "et aux", en: "and the" },
   "form.terms": { fr: "CGU", en: "Terms of Use" },
-  "form.submit": { fr: "Réserver ma démo gratuite →", en: "Book my free demo →" },
+  "form.submit": { fr: "Demander une démo de 15 min →", en: "Request a 15-min demo →" },
   "form.submitted.title": { fr: "Demande envoyée !", en: "Request sent!" },
   "form.submitted.desc": { fr: "Nous vous contactons sous 24 h ouvrées avec un créneau adapté.", en: "We'll contact you within 24 business hours with a slot that fits." },
   "form.error.consent": { fr: "Veuillez accepter la politique de confidentialité.", en: "Please accept the privacy policy." },
