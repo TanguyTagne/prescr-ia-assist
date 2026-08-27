@@ -233,14 +233,14 @@ export const translations = {
 
   // ===== NEW: GUARANTEE =====
   "landing.guarantee.badge": { fr: "Garantie", en: "Guarantee" },
-  "landing.guarantee.title": { fr: "Résultat ou remboursé — sans discussion.", en: "Results or refunded — no questions asked." },
+  "landing.guarantee.title": { fr: "Le premier mois est offert — sans engagement.", en: "The first month is free — no commitment." },
   "landing.guarantee.body": {
-    fr: "Si Asclion ne vous génère pas au moins l'équivalent de son coût en CA additionnel dès le 2ᵉ mois, on vous rembourse intégralement.",
-    en: "If Asclion doesn't generate at least its own cost in additional revenue from month 2, we refund you in full.",
+    fr: "Essayez Asclion gratuitement pendant un mois dans votre officine. Vous jugez sur pièces : si ça ne vous convainc pas, vous arrêtez en un email, sans avoir rien payé.",
+    en: "Try Asclion free for one month in your pharmacy. Judge on results: if it doesn't convince you, stop with one email, without having paid anything.",
   },
   "landing.guarantee.footnote": {
-    fr: "On peut se le permettre : nos pharmacies pilotes font en moyenne +800 €/mois dès le premier mois.",
-    en: "We can afford it: our pilot pharmacies average +€800/month from month one.",
+    fr: "On peut se le permettre : nos pharmacies pilotes visent +2 à 4 % de CA additionnel dès le premier mois.",
+    en: "We can afford it: our pilot pharmacies target +2 to 4% additional revenue from month one.",
   },
 
   // ===== NEW: FOR WHOM =====
@@ -257,8 +257,8 @@ export const translations = {
   "landing.faq.title": { fr: "Les 4 questions qu'on nous pose toujours", en: "The 4 questions we always get" },
   "landing.faq.q1": { fr: "Combien ça coûte, vraiment ?", en: "How much does it really cost?" },
   "landing.faq.a1": {
-    fr: "Un abonnement mensuel unique, sans frais cachés, sans engagement long. Prix communiqué en démo (adapté à la taille de l'officine). Rappel : garantie « résultat ou remboursé » dès le 2ᵉ mois.",
-    en: "A single monthly subscription, no hidden fees, no long lock-in. Price shared during the demo (adapted to pharmacy size). Reminder: results-or-refund guarantee from month 2.",
+    fr: "Un abonnement mensuel unique, sans frais cachés, sans engagement long. Prix communiqué en démo (adapté à la taille de l'officine). Rappel : le premier mois est offert, vous ne risquez rien.",
+    en: "A single monthly subscription, no hidden fees, no long lock-in. Price shared during the demo (adapted to pharmacy size). Reminder: the first month is free, you risk nothing.",
   },
   "landing.faq.q2": { fr: "Combien de temps pour installer ?", en: "How long does setup take?" },
   "landing.faq.a2": {
