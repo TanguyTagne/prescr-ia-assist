@@ -18,9 +18,10 @@ const Blog = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Seo
-        title="Blog Asclion — Conseil associé & panier moyen en officine"
-        description="Articles pratiques pour développer le CA de votre officine : conseil associé, panier moyen, outils et gestion — par les fondateurs d'Asclion."
+        title="Blog Asclion — Conseil associé en pharmacie"
+        description="Méthodes, exemples et outils d'aide au conseil associé au comptoir : formuler le bon conseil, au bon moment, sans alourdir la délivrance."
         path="/blog"
+        frenchOnly
       />
       <header className="pharmacy-gradient px-4 py-4">
         <div className="container max-w-5xl mx-auto flex items-center justify-between gap-3">
