@@ -41,29 +41,31 @@ const Seo = ({
   ogType = "website",
   ogImage = DEFAULT_OG_IMAGE,
   noindex = false,
+  frenchOnly = false,
   jsonLd,
 }: SeoProps) => {
   const { lang, lp } = useI18n();
   const localized = lp(path);
-  const url = `${SITE}${localized === "/" ? "" : localized}`;
-  const locale = lang === "en" ? "en_US" : "fr_FR";
   const altFr = `${SITE}${path === "/" ? "" : path}`;
   const altEn = `${SITE}${path === "/" ? "/en" : "/en" + path}`;
+  const url = frenchOnly ? altFr : `${SITE}${localized === "/" ? "" : localized}`;
+  const locale = lang === "en" && !frenchOnly ? "en_US" : "fr_FR";
+  const isNoindex = noindex || (frenchOnly && lang === "en");
   const userLd = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : [];
   const lds = [ORGANIZATION_LD, ...userLd];
   return (
     <Helmet>
-      <html lang={lang === "en" ? "en" : "fr"} />
+      <html lang={frenchOnly ? "fr" : lang === "en" ? "en" : "fr"} />
       <title>{title}</title>
       <meta name="description" content={description} />
-      {noindex ? (
+      {isNoindex ? (
         <meta name="robots" content="noindex,follow" />
       ) : (
         <meta name="robots" content="index,follow" />
       )}
       <link rel="canonical" href={url} />
       <link rel="alternate" hrefLang="fr-FR" href={altFr} />
-      <link rel="alternate" hrefLang="en" href={altEn} />
+      {!frenchOnly && <link rel="alternate" hrefLang="en" href={altEn} />}
       <link rel="alternate" hrefLang="x-default" href={altFr} />
       <meta property="og:title" content={title} />
       <meta property="og:description" content={description} />
