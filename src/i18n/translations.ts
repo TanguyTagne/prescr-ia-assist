@@ -278,10 +278,10 @@ export const translations = {
     en: "⏱ Limited pilot slots — we personally accompany each pharmacy through its first 30 days. We will no longer accept more than 10 new pharmacies per month to guarantee onboarding quality.",
   },
 
-  "landing.access.title": { fr: "Réservez votre démo (15 min)", en: "Book your demo (15 min)" },
+  "landing.access.title": { fr: "Parlons de votre officine", en: "Let's talk about your pharmacy" },
   "landing.access.desc": {
-    fr: "Trois champs suffisent. On revient vers vous sous 24 h ouvrées avec un créneau adapté.",
-    en: "Three fields, that's it. We get back to you within 24 business hours with a slot that fits.",
+    fr: "15 minutes pour vous montrer concrètement comment Asclion s'intègre à votre façon de travailler.",
+    en: "15 minutes to show you concretely how Asclion fits into the way you work.",
   },
 
   // ===== ACCESS FORM =====
