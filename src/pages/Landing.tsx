@@ -330,7 +330,7 @@ const Landing = () => {
             <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight leading-tight">
               {t("landing.hero.question")}
               <br />
-              <span className="text-primary">{t("landing.title.line1")} {t("landing.hero.title.amount")}, {t("landing.hero.title.line2")}</span>
+              <span className="text-primary">{t("landing.hero.title.line1")} {t("landing.hero.title.amount")}, {t("landing.hero.title.line2")}</span>
             </h1>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
               {t("landing.hero.proof")}

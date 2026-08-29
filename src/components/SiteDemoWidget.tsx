@@ -6,7 +6,7 @@ import { trackEvent } from "@/hooks/useAnalytics";
 import { cn } from "@/lib/utils";
 
 const SiteDemoWidget = () => {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(() => typeof document === "undefined" || !document.getElementById("demo"));
 
   // When the page already embeds the full demo panel, keep the popup closed
   // so the visitor has a single demo surface.
