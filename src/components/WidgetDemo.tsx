@@ -93,12 +93,12 @@ const WidgetDemo = ({ onClose, size = "compact" }: WidgetDemoProps) => {
 
       // Démo : uniquement les 2 PC suggérés, avec leur phrase conseil exacte
       // issue de la base (aucune reformulation côté client).
-      const med = {
+      const medResult = {
         ...res.medicament,
         recommendations: (res.medicament?.recommendations || []).slice(0, 2),
       };
       setResult({
-        medicaments: [med],
+        medicaments: [medResult],
         interactions: [],
         contextes: [],
         conseil: res.medicament?.conseil_associe || "",
