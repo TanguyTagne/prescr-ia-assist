@@ -26,7 +26,7 @@ function extractCore(name: string): string {
 // Exclut les produits non-médicamenteux / peu impressionnants de la démo :
 // pilluliers, compresses, pansements, dispositifs médicaux, accessoires…
 const BORING_RE =
-  /pillulier|compresse|pansement|bandage|bande\b|gants?\b|thermom[eè]tre|tensiom[eè]tre|canne\b|b[eé]quille|bas de contention|collier cervical|dispositif|masque\b|s[eé]rum physiologique|coton|sparadrap|poche de (?:froid|chaud)|attelle|orth[eè]se|ceinture lombaire|fauteuil|d[eé]ambulateur|brosse [àa] dents|dentifrice|bain de bouche|lingette|alcool modifi[eé]|eau oxyg[eé]n[eé]e|test de grossesse|autotest|pile\b|lancette|aiguille|seringue|glucom[eè]tre/i;
+  /pillulier|compresse|pansement(?! gastrique)|bandage|bande\b|gants?\b|thermom[eè]tre|tensiom[eè]tre|canne\b|b[eé]quille|bas de contention|collier cervical|dispositif|masque\b|s[eé]rum physiologique|coton|sparadrap|poche de (?:froid|chaud)|attelle|orth[eè]se|ceinture lombaire|fauteuil|d[eé]ambulateur|brosse [àa] dents|dentifrice|bain de bouche|lingette|alcool modifi[eé]|eau oxyg[eé]n[eé]e|test de grossesse|autotest|pile\b|lancette|aiguille|seringue|glucom[eè]tre|carnet de suivi|calendrier mictionnel|protection absorbante/i;
 
 const isImpressive = (p: any) => !BORING_RE.test(`${p.produit ?? ""} ${p.categorie ?? ""}`);
 
