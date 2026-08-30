@@ -79,7 +79,6 @@ const WidgetDemo = ({ onClose, size = "compact" }: WidgetDemoProps) => {
   const runAnalysis = async (med: string) => {
     setNotFound(false);
     setResult(null);
-    setSuggestions([]);
     setPhase("analyzing");
     trackEvent("demo_analyzed", { medicament: med });
     trackDemoSession(med);

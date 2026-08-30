@@ -606,7 +606,8 @@ export const translations = {
   "demo.list.subtitle": { fr: "— choisissez une ordonnance à analyser\n", en: "— pick a sample prescription" },
   "demo.preview.back": { fr: "Retour", en: "Back" },
   "demo.preview.analyze": { fr: "Analyser cette ordonnance", en: "Analyze this prescription" },
-  "demo.search.subtitle": { fr: "— testez le médicament de votre choix", en: "— try any medication you want" },
+  "demo.search.subtitle": { fr: "— choisissez un médicament avec suggestions pertinentes", en: "— pick a medication with relevant suggestions" },
+  "demo.list.loading": { fr: "Chargement des médicaments…", en: "Loading medications…" },
   "demo.search.placeholder": { fr: "Tapez un médicament", en: "Type a medication" },
   "demo.search.analyze": { fr: "Analyser ce médicament", en: "Analyze this medication" },
   
