@@ -30,6 +30,27 @@ const BORING_RE =
 
 const isImpressive = (p: any) => !BORING_RE.test(`${p.produit ?? ""} ${p.categorie ?? ""}`);
 
+// Noms de laboratoires : jamais affichés dans les suggestions (ni dans les
+// noms de médicaments de la démo, ni dans les produits conseillés).
+const LAB_RE =
+  /\b(sandoz|teva|mylan|viatris|biogaran|zentiva|arrow|eg\b|eg labo|krka|zydus|actavis|ratiopharm|cristers|aurobindo|ranbaxy|stada|servier|pfizer|sanofi|bayer|gsk|glaxosmithkline|novartis|roche|merck|msd|boehringer|astrazeneca|lilly|janssen|bristol|myers|squibb|abbvie|amgen|takeda|pierre fabre|ipsen|lundbeck|recordati|menarini|theramex|effik|mylan|sandoz)\b/gi;
+
+// Retire les mentions de laboratoires d'un libellé affiché.
+function stripLab(name: string): string {
+  return (name || "")
+    .replace(LAB_RE, "")
+    .replace(/\s{2,}/g, " ")
+    .replace(/[\s,;:\-–—()\/]+$/, "")
+    .replace(/^[\s,;:\-–—()\/]+/, "")
+    .replace(/\(\s*\)/g, "")
+    .trim();
+}
+
+const hasLab = (name: string) => {
+  LAB_RE.lastIndex = 0;
+  return LAB_RE.test(name || "");
+};
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -64,7 +85,7 @@ Deno.serve(async (req) => {
           if (row.pertinence_pc1 && String(row.pertinence_pc1).trim()) score += 3;
           if (row.pertinence_pc2 && String(row.pertinence_pc2).trim()) score += 2;
           if (row.phrase_conseil_pc1 && String(row.phrase_conseil_pc1).trim()) score += 2;
-          return { nom: row.medicaments?.nom_commercial as string, score };
+          return { nom: stripLab(row.medicaments?.nom_commercial as string), score };
         })
         .filter((x: any) => x?.nom);
 
@@ -93,7 +114,7 @@ Deno.serve(async (req) => {
         .limit(10);
       const seen = new Set<string>();
       const suggestions = (data || [])
-        .map((m: any) => m.medicaments?.nom_commercial)
+        .map((m: any) => stripLab(m.medicaments?.nom_commercial))
         .filter((n: string) => {
           const k = (n || "").toLowerCase();
           if (!k || seen.has(k)) return false;
@@ -246,6 +267,7 @@ Deno.serve(async (req) => {
     const seen = new Set<string>();
     const recommendations = produits
       .filter((p: any) => {
+        if (hasLab(p.produit || "")) return false;
         const k = (p.produit || "").toLowerCase().trim();
         if (!k || seen.has(k)) return false;
         // Démo : uniquement des suggestions impressionnantes (actifs chimiques /
@@ -292,7 +314,7 @@ Deno.serve(async (req) => {
     return json({
       found: true,
       medicament: {
-        nom: medicament.nom_commercial,
+        nom: stripLab(medicament.nom_commercial),
         classe: classe || "Classe non renseignée",
         molecule: molecule?.nom_molecule || undefined,
         code_atc: atcCode || undefined,
