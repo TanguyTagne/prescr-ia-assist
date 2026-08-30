@@ -124,16 +124,8 @@ const WidgetDemo = ({ onClose, size = "compact" }: WidgetDemoProps) => {
     const med = (value ?? query).trim();
     if (med.length < 2) return;
     setQuery(med);
-
-    const uses = Number(localStorage.getItem(USES_KEY) || "0");
-    const savedEmail = localStorage.getItem(EMAIL_KEY);
-    // À partir du 2ᵉ test, l'email est obligatoire
-    if (uses >= 1 && !savedEmail) {
-      pendingQuery.current = med;
-      trackEvent("demo_email_gate_shown", { medicament: med });
-      setPhase("gate");
-      return;
-    }
+    pendingQuery.current = med;
+    // Les résultats s'affichent toujours ; l'email est demandé après (phase "lead").
     runAnalysis(med);
   };
 
