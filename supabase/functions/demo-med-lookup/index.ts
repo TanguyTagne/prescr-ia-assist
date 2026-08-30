@@ -30,6 +30,27 @@ const BORING_RE =
 
 const isImpressive = (p: any) => !BORING_RE.test(`${p.produit ?? ""} ${p.categorie ?? ""}`);
 
+// Noms de laboratoires : jamais affichés dans les suggestions (ni dans les
+// noms de médicaments de la démo, ni dans les produits conseillés).
+const LAB_RE =
+  /\b(sandoz|teva|mylan|viatris|biogaran|zentiva|arrow|eg\b|eg labo|krka|zydus|actavis|ratiopharm|cristers|aurobindo|ranbaxy|stada|servier|pfizer|sanofi|bayer|gsk|glaxosmithkline|novartis|roche|merck|msd|boehringer|astrazeneca|lilly|janssen|bristol|myers|squibb|abbvie|amgen|takeda|pierre fabre|ipsen|lundbeck|recordati|menarini|theramex|effik|mylan|sandoz)\b/gi;
+
+// Retire les mentions de laboratoires d'un libellé affiché.
+function stripLab(name: string): string {
+  return (name || "")
+    .replace(LAB_RE, "")
+    .replace(/\s{2,}/g, " ")
+    .replace(/[\s,;:\-–—()\/]+$/, "")
+    .replace(/^[\s,;:\-–—()\/]+/, "")
+    .replace(/\(\s*\)/g, "")
+    .trim();
+}
+
+const hasLab = (name: string) => {
+  LAB_RE.lastIndex = 0;
+  return LAB_RE.test(name || "");
+};
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
