@@ -5,31 +5,17 @@ import {
   Download,
   BarChart3,
   LogOut,
-  Zap,
   Send,
   Loader2,
   Settings,
-  FolderSearch,
   ShieldCheck,
   CheckCircle2,
-  Clock,
-  TrendingUp,
   Sparkles,
 } from "lucide-react";
-import GainSimulator from "@/components/GainSimulator";
 import DemoFullPanel from "@/components/DemoFullPanel";
-import pharmacistCounter from "@/assets/pharmacist-counter.jpg";
-import pharmacistTeam from "@/assets/pharmacist-team.jpg";
-import pharmacistPortrait from "@/assets/pharmacist-portrait.jpg";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
 import { supabase } from "@/integrations/supabase/client";
 
 import { toast } from "sonner";
@@ -51,7 +37,6 @@ const AccessRequestForm = () => {
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [accepted, setAccepted] = useState(false);
-  const [showMore, setShowMore] = useState(false);
   const [form, setForm] = useState({
     pharmacy_name: "",
     contact_name: "",
@@ -113,6 +98,13 @@ const AccessRequestForm = () => {
         onChange={(e) => setForm((f) => ({ ...f, pharmacy_name: e.target.value }))}
       />
       <Input
+        aria-label={t("form.contact_name")}
+        placeholder={t("form.contact_name")}
+        required
+        value={form.contact_name}
+        onChange={(e) => setForm((f) => ({ ...f, contact_name: e.target.value }))}
+      />
+      <Input
         aria-label={t("form.email")}
         type="email"
         placeholder={t("form.email")}
@@ -126,39 +118,12 @@ const AccessRequestForm = () => {
         value={form.phone}
         onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
       />
-
-      {!showMore ? (
-        <button
-          type="button"
-          onClick={() => setShowMore(true)}
-          className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2"
-        >
-          {t("form.more")}
-        </button>
-      ) : (
-        <div className="space-y-3 pt-1">
-          <Input
-            aria-label={t("form.contact_name")}
-            placeholder={t("form.contact_name")}
-            value={form.contact_name}
-            onChange={(e) => setForm((f) => ({ ...f, contact_name: e.target.value }))}
-          />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Input
-              aria-label={t("form.city")}
-              placeholder={t("form.city")}
-              value={form.city}
-              onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))}
-            />
-            <Input
-              aria-label={t("form.lgo")}
-              placeholder={t("form.lgo")}
-              value={form.lgo_type}
-              onChange={(e) => setForm((f) => ({ ...f, lgo_type: e.target.value }))}
-            />
-          </div>
-        </div>
-      )}
+      <Input
+        aria-label={t("form.lgo")}
+        placeholder={t("form.lgo")}
+        value={form.lgo_type}
+        onChange={(e) => setForm((f) => ({ ...f, lgo_type: e.target.value }))}
+      />
 
       <label className="flex items-start gap-2 text-xs text-muted-foreground leading-relaxed">
         <Checkbox
@@ -201,24 +166,10 @@ const Landing = () => {
   const navigate = useNavigate();
   const { t, lp } = useI18n();
 
-
-  const features = [
-    { icon: FolderSearch, title: t("landing.how.step1.title"), desc: t("landing.how.step1.desc") },
-    { icon: Zap, title: t("landing.how.step2.title"), desc: t("landing.how.step2.desc") },
-    { icon: ShieldCheck, title: t("landing.how.step3.title"), desc: t("landing.how.step3.desc") },
-  ];
-
-  const forWhomYes = [
-    t("landing.forwhom.yes.1"),
-    t("landing.forwhom.yes.2"),
-    t("landing.forwhom.yes.3"),
-  ];
-
-  const faqs = [
-    { q: t("landing.faq.q1"), a: t("landing.faq.a1") },
-    { q: t("landing.faq.q2"), a: t("landing.faq.a2") },
-    { q: t("landing.faq.q3"), a: t("landing.faq.a3") },
-    { q: t("landing.faq.q4"), a: t("landing.faq.a4") },
+  const objections = [
+    { title: t("landing.obj.1.title"), desc: t("landing.obj.1.desc") },
+    { title: t("landing.obj.2.title"), desc: t("landing.obj.2.desc") },
+    { title: t("landing.obj.3.title"), desc: t("landing.obj.3.desc") },
   ];
 
   return (
@@ -252,7 +203,12 @@ const Landing = () => {
             <span className="font-bold text-lg tracking-tight">Asclion</span>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={() => navigate(lp("/blog"))} className="gap-1.5 text-xs hidden sm:inline-flex">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate(lp("/blog"))}
+              className="gap-1.5 text-xs hidden sm:inline-flex"
+            >
               Blog
             </Button>
             {user ? (
@@ -312,393 +268,153 @@ const Landing = () => {
       </nav>
 
       <main>
-        {/* ===== 01 · HERO ===== */}
-        <section className="relative py-20 md:py-24 px-4 overflow-hidden">
+        {/* ===== HERO + FORM (single action above the fold) ===== */}
+        <section className="relative py-14 md:py-20 px-4 overflow-hidden">
           <div
             aria-hidden
             className="pointer-events-none absolute inset-0 -z-10"
             style={{
               background:
-                "radial-gradient(ellipse 60% 50% at 50% 20%, hsl(var(--pharmacy-green-light) / 0.55), transparent 70%)",
+                "radial-gradient(ellipse 60% 50% at 50% 15%, hsl(var(--pharmacy-green-light) / 0.55), transparent 70%)",
             }}
           />
-          <div className="container max-w-3xl mx-auto text-center space-y-6">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent text-accent-foreground text-xs font-medium tracking-wide">
-              <Sparkles className="h-3 w-3" />
-              {t("landing.hero.badge")}
-            </div>
-            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight leading-tight">
-              {t("landing.hero.question")}
-              <br />
-              <span className="text-primary">{t("landing.hero.title.line1")} {t("landing.hero.title.amount")}, {t("landing.hero.title.line2")}</span>
-            </h1>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-              {t("landing.hero.proof")}
-            </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-              <Button
-                size="lg"
-                asChild
-                className="h-12 px-8 text-base font-semibold pharmacy-gradient border-0 gap-2"
-              >
-                <a href="#demo" onClick={() => trackEvent("demo_opened_hero", {})}>
-                  <Sparkles className="h-5 w-5" />
-                  {t("landing.hero.cta.demo")}
-                </a>
-              </Button>
-              <Button size="lg" variant="outline" asChild className="h-12 px-8 text-base font-semibold">
-                <a href="#comment">{t("landing.hero.cta.see")}</a>
-              </Button>
-            </div>
-            <ul className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-xs text-muted-foreground pt-2">
-              {[t("landing.hero.trust1"), t("landing.hero.trust2"), t("landing.hero.trust3")].map((item, i) => (
-                <li key={i} className="inline-flex items-center gap-1.5">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </section>
-
-        {/* ===== PROOF BAR ===== */}
-        <section className="px-4 pb-4">
-          <div className="container max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {[
-              { v: t("landing.proofbar.1.value"), l: t("landing.proofbar.1.label") },
-              { v: t("landing.proofbar.2.value"), l: t("landing.proofbar.2.label") },
-              { v: t("landing.proofbar.3.value"), l: t("landing.proofbar.3.label") },
-            ].map((k, i) => (
-              <div key={i} className="rounded-xl border border-border bg-card p-4 text-center space-y-1">
-                <div className="text-2xl font-extrabold text-primary tracking-tight">{k.v}</div>
-                <div className="text-xs text-muted-foreground leading-snug">{k.l}</div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* ===== 02 · DEMO (primary CTA target) ===== */}
-        <DemoFullPanel />
-
-        {/* ===== 03 · PROMISE — you change nothing ===== */}
-        <section className="py-20 px-4 bg-secondary/50">
-          <div className="container max-w-3xl mx-auto text-center space-y-8">
-            <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight">
-              {t("landing.promise.title")}
-            </h2>
-            <p className="text-muted-foreground leading-relaxed max-w-2xl mx-auto">
-              {t("landing.promise.desc")}
-            </p>
-            <div className="grid sm:grid-cols-2 gap-4 text-left">
-              <div className="rounded-xl border border-border bg-card p-5 space-y-1.5">
-                <div className="text-xs uppercase tracking-wider text-muted-foreground">
-                  {t("landing.promise.before.title")}
-                </div>
-                <div className="text-sm font-medium">{t("landing.promise.before.flow")}</div>
-              </div>
-              <div className="rounded-xl border border-primary/30 bg-primary/5 p-5 space-y-1.5">
-                <div className="text-xs uppercase tracking-wider text-primary">
-                  {t("landing.promise.after.title")}
-                </div>
-                <div className="text-sm font-medium">{t("landing.promise.after.flow")}</div>
-              </div>
-            </div>
-            <p className="text-sm font-semibold">{t("landing.promise.footnote")}</p>
-          </div>
-        </section>
-
-        {/* ===== 04 · HOW IT WORKS ===== */}
-        <section id="comment" className="py-16 px-4 scroll-mt-16">
-          <div className="container max-w-4xl mx-auto">
-            <div className="text-center space-y-2 mb-10">
-              <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
-                {t("landing.how.title")}
-              </h2>
-              <p className="text-sm text-muted-foreground">{t("landing.how.subtitle")}</p>
-            </div>
-            <div className="grid md:grid-cols-3 gap-6">
-              {features.map((f, i) => (
-                <div key={i} className="glass-card rounded-xl p-6 space-y-3">
-                  <div className="h-10 w-10 rounded-lg bg-accent flex items-center justify-center">
-                    <f.icon className="h-5 w-5 text-accent-foreground" />
-                  </div>
-                  <h3 className="font-semibold">{f.title}</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
-                </div>
-              ))}
-            </div>
-            <p className="text-center text-sm text-muted-foreground mt-8">{t("landing.how.footnote")}</p>
-          </div>
-        </section>
-
-        {/* ===== 04b · TRAINING vs ASCLION ===== */}
-        <section className="py-16 px-4 bg-secondary/50">
-          <div className="container max-w-4xl mx-auto">
-            <div className="text-center space-y-2 mb-8">
-              <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
-                {t("landing.training.title")}
-              </h2>
-              <p className="text-sm text-muted-foreground">{t("landing.training.subtitle")}</p>
-            </div>
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="rounded-xl border border-border bg-card p-6 space-y-2">
-                <h3 className="font-semibold text-muted-foreground">{t("landing.training.a.title")}</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">{t("landing.training.a.desc")}</p>
-              </div>
-              <div className="rounded-xl border border-primary/30 bg-card p-6 space-y-2">
-                <h3 className="font-semibold text-primary">{t("landing.training.b.title")}</h3>
-                <p className="text-sm leading-relaxed">{t("landing.training.b.desc")}</p>
-              </div>
-            </div>
-            <p className="text-center text-sm text-muted-foreground mt-6">{t("landing.training.footnote")}</p>
-          </div>
-        </section>
-
-        {/* ===== 05 · PROOF ===== */}
-        <section className="py-14 px-4">
-          <div className="container max-w-4xl mx-auto">
-            <div className="pharmacy-gradient rounded-2xl p-[1px]">
-              <div className="rounded-2xl bg-card p-8 md:p-10 space-y-8">
-                <div className="text-center space-y-4">
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent text-accent-foreground text-xs font-medium">
-                    <TrendingUp className="h-3 w-3" />
-                    {t("landing.proof.badge")}
-                  </div>
-                  <blockquote className="text-xl md:text-2xl font-semibold leading-snug text-foreground max-w-3xl mx-auto">
-                    {t("landing.proof.quote")}
-                  </blockquote>
-                  <p className="text-sm text-muted-foreground">{t("landing.proof.author")}</p>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
-                  {[
-                    { v: t("landing.proof.kpi1.value"), l: t("landing.proof.kpi1.label") },
-                    { v: t("landing.proof.kpi2.value"), l: t("landing.proof.kpi2.label") },
-                    { v: t("landing.proof.kpi3.value"), l: t("landing.proof.kpi3.label") },
-                  ].map((k, i) => (
-                    <div
-                      key={i}
-                      className="rounded-xl border border-border bg-background p-5 text-center space-y-1"
-                    >
-                      <div className="text-2xl md:text-3xl font-extrabold text-primary tracking-tight">
-                        {k.v}
-                      </div>
-                      <div className="text-xs text-muted-foreground">{k.l}</div>
-                    </div>
-                  ))}
-                </div>
-                <p className="text-xs text-center text-muted-foreground italic">
-                  {t("landing.results.disclaimer")}
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ===== 06 · LGO INTEGRATION ===== */}
-        <section className="py-16 px-4 bg-secondary/50">
-          <div className="container max-w-3xl mx-auto text-center space-y-4">
-            <h2 className="text-2xl md:text-3xl font-bold tracking-tight">{t("landing.lgo.title")}</h2>
-            <p className="text-muted-foreground">{t("landing.lgo.desc")}</p>
-            <p className="text-base md:text-lg font-semibold text-primary tracking-tight">
-              {t("landing.lgo.list")}
-            </p>
-            <p className="text-sm text-muted-foreground leading-relaxed max-w-2xl mx-auto">
-              {t("landing.lgo.footnote")}
-            </p>
-          </div>
-        </section>
-
-        {/* ===== 07 · TEAM ===== */}
-        <section className="py-14 px-4">
-          <div className="container max-w-5xl mx-auto space-y-8">
-            <div className="text-center space-y-2">
-              <h2 className="text-2xl md:text-3xl font-bold tracking-tight">{t("landing.people.title")}</h2>
-              <p className="text-sm text-muted-foreground max-w-2xl mx-auto">{t("landing.people.desc")}</p>
-            </div>
-            <div className="grid sm:grid-cols-3 gap-4">
-              {[
-                { src: pharmacistCounter, alt: t("landing.people.alt1"), caption: t("landing.people.cap1") },
-                { src: pharmacistTeam, alt: t("landing.people.alt2"), caption: t("landing.people.cap2") },
-                { src: pharmacistPortrait, alt: t("landing.people.alt3"), caption: t("landing.people.cap3") },
-              ].map((img, i) => (
-                <figure key={i} className="rounded-xl overflow-hidden border border-border bg-card">
-                  <img
-                    src={img.src}
-                    alt={img.alt}
-                    loading="lazy"
-                    width={1024}
-                    height={768}
-                    className="w-full h-44 object-cover"
-                  />
-                  <figcaption className="p-3 text-xs text-muted-foreground leading-snug">{img.caption}</figcaption>
-                </figure>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* ===== 08 · TRUST — no forced selling ===== */}
-        <section className="py-16 px-4">
-          <div className="container max-w-3xl mx-auto rounded-2xl border border-border bg-card p-8 md:p-10 text-center space-y-4">
-            <div className="h-12 w-12 rounded-xl bg-accent flex items-center justify-center mx-auto">
-              <ShieldCheck className="h-6 w-6 text-accent-foreground" />
-            </div>
-            <h2 className="text-2xl md:text-3xl font-bold tracking-tight">{t("landing.trust.title")}</h2>
-            <p className="text-muted-foreground leading-relaxed max-w-2xl mx-auto">
-              {t("landing.trust.desc")}
-            </p>
-          </div>
-        </section>
-
-        {/* ===== 09 · ROI / SIMULATOR ===== */}
-        <section className="py-16 px-4 bg-secondary/50">
-          <div className="container max-w-3xl mx-auto space-y-6">
-            <div className="text-center space-y-2">
-              <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
-                {t("landing.results.title")}
-              </h2>
-              <p className="text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-                {t("landing.roi.desc")}
+          <div className="container max-w-5xl mx-auto grid lg:grid-cols-2 gap-10 items-start">
+            <div className="space-y-5 text-center lg:text-left">
+              <h1 className="text-3xl md:text-[2.75rem] font-extrabold tracking-tight leading-[1.1]">
+                {t("landing.h1")}
+              </h1>
+              <p className="text-base md:text-lg text-muted-foreground leading-relaxed">
+                {t("landing.h1.sub")}
               </p>
-            </div>
-            <GainSimulator />
-          </div>
-        </section>
-
-        {/* ===== OFFER ===== */}
-        <section className="py-16 px-4">
-          <div className="container max-w-3xl mx-auto space-y-8">
-            <div className="text-center space-y-3">
-              <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
-                {t("landing.offer.title")}
-              </h2>
-              <p className="text-muted-foreground">{t("landing.offer.subtitle")}</p>
-            </div>
-            <div className="rounded-2xl border border-border bg-card overflow-hidden">
-              <ul className="divide-y divide-border">
-                {[
-                  t("landing.offer.item1"),
-                  t("landing.offer.item2"),
-                  t("landing.offer.item3"),
-                  t("landing.offer.item4"),
-                ].map((line, i) => (
-                  <li key={i} className="flex items-start gap-3 p-4 md:px-6">
-                    <CheckCircle2 className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-                    <span className="text-sm md:text-[15px] font-medium">{line}</span>
-                  </li>
-                ))}
+              <div className="flex flex-col sm:flex-row items-center lg:items-start justify-center lg:justify-start gap-3">
+                <Button
+                  size="lg"
+                  asChild
+                  className="h-12 px-7 text-base font-semibold pharmacy-gradient border-0 gap-2 w-full sm:w-auto"
+                >
+                  <a href="#demande-acces">
+                    <Send className="h-5 w-5" />
+                    {t("form.submit")}
+                  </a>
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  asChild
+                  className="h-12 px-7 text-base font-semibold w-full sm:w-auto"
+                >
+                  <a href="#demo" onClick={() => trackEvent("demo_opened_hero", {})}>
+                    <Sparkles className="h-5 w-5" />
+                    {t("landing.hero.cta.demo")}
+                  </a>
+                </Button>
+              </div>
+              <ul className="flex flex-wrap items-center justify-center lg:justify-start gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
+                {[t("landing.hero.trust1"), t("landing.hero.trust2"), t("landing.hero.trust3")].map(
+                  (item, i) => (
+                    <li key={i} className="inline-flex items-center gap-1.5">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
+                      {item}
+                    </li>
+                  ),
+                )}
               </ul>
             </div>
-            <div className="flex justify-center">
-              <Button
-                size="lg"
-                asChild
-                className="h-12 px-8 text-base font-semibold pharmacy-gradient border-0 gap-2"
-              >
-                <a href="#demande-acces">
-                  <Send className="h-5 w-5" />
-                  {t("landing.offer.cta")}
-                </a>
-              </Button>
-            </div>
-          </div>
-        </section>
 
-        {/* ===== GUARANTEE ===== */}
-        <section id="garantie" className="py-16 px-4">
-          <div className="container max-w-3xl mx-auto">
-            <div className="pharmacy-gradient rounded-2xl p-[1px]">
-              <div className="rounded-2xl bg-background p-8 md:p-10 text-center space-y-4">
-                <div className="h-14 w-14 rounded-2xl bg-accent flex items-center justify-center mx-auto">
-                  <ShieldCheck className="h-7 w-7 text-accent-foreground" />
-                </div>
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold">
-                  {t("landing.guarantee.badge")}
-                </div>
-                <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
-                  {t("landing.guarantee.title")}
-                </h2>
-                <p className="text-base md:text-lg text-muted-foreground leading-relaxed max-w-2xl mx-auto">
-                  {t("landing.guarantee.body")}
-                </p>
-                <p className="text-xs text-muted-foreground italic max-w-xl mx-auto">
-                  {t("landing.guarantee.footnote")}
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ===== FOR WHOM ===== */}
-        <section className="py-16 px-4 bg-secondary/50">
-          <div className="container max-w-4xl mx-auto space-y-10">
-            <h2 className="text-2xl md:text-3xl font-bold text-center tracking-tight">
-              {t("landing.forwhom.title")}
-            </h2>
-            <div className="max-w-2xl mx-auto">
-              <div className="rounded-xl border border-border bg-card p-6 space-y-4">
-                <h3 className="font-semibold text-primary flex items-center gap-2">
-                  <CheckCircle2 className="h-5 w-5" />
-                  {t("landing.forwhom.yes.title")}
-                </h3>
-                <ul className="space-y-2.5">
-                  {forWhomYes.map((line, i) => (
-                    <li key={i} className="flex items-start gap-2 text-sm">
-                      <CheckCircle2 className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                      <span>{line}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ===== FAQ ===== */}
-        <section className="py-16 px-4">
-          <div className="container max-w-3xl mx-auto space-y-8">
-            <h2 className="text-2xl md:text-3xl font-bold text-center tracking-tight">
-              {t("landing.faq.title")}
-            </h2>
-            <Accordion type="single" collapsible className="rounded-xl border border-border bg-card">
-              {faqs.map((f, i) => (
-                <AccordionItem key={i} value={`faq-${i}`} className="px-5">
-                  <AccordionTrigger className="text-left text-sm md:text-base font-semibold">
-                    {f.q}
-                  </AccordionTrigger>
-                  <AccordionContent className="text-sm text-muted-foreground leading-relaxed">
-                    {f.a}
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
-          </div>
-        </section>
-
-        {/* ===== ACCESS FORM ===== */}
-        <section id="demande-acces" className="py-16 px-4 bg-secondary/50">
-          <div className="container max-w-xl mx-auto space-y-5">
-            <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 flex items-start gap-3">
-              <Clock className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-              <p className="text-xs md:text-sm text-foreground leading-relaxed">
-                {t("landing.urgency.text")}
+            <div
+              id="demande-acces"
+              className="rounded-2xl border border-border bg-card p-6 shadow-sm scroll-mt-20"
+            >
+              <h2 className="text-xl font-bold tracking-tight">{t("landing.form.title")}</h2>
+              <p className="text-xs text-muted-foreground mt-1 mb-4 leading-relaxed">
+                {t("landing.form.why")}
               </p>
-            </div>
-            <div className="text-center space-y-3">
-              <div className="h-14 w-14 rounded-2xl bg-accent flex items-center justify-center mx-auto">
-                <Send className="h-7 w-7 text-accent-foreground" />
-              </div>
-              <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
-                {t("landing.access.title")}
-              </h2>
-              <p className="text-muted-foreground leading-relaxed">{t("landing.access.desc")}</p>
-            </div>
-            <div className="rounded-xl border border-border p-6 bg-card">
               <AccessRequestForm />
             </div>
           </div>
         </section>
 
+        {/* ===== PROOF: live demo of the actual product ===== */}
+        <DemoFullPanel />
+
+        {/* ===== 3 OBJECTIONS ===== */}
+        <section className="py-16 px-4 bg-secondary/50">
+          <div className="container max-w-4xl mx-auto">
+            <h2 className="text-2xl md:text-3xl font-bold text-center tracking-tight mb-8">
+              {t("landing.obj.title")}
+            </h2>
+            <div className="grid md:grid-cols-3 gap-4">
+              {objections.map((o, i) => (
+                <div key={i} className="rounded-xl border border-border bg-card p-6 space-y-2">
+                  <h3 className="font-semibold text-[15px]">{o.title}</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{o.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ===== SOCIAL PROOF + GUARANTEE ===== */}
+        <section className="py-16 px-4">
+          <div className="container max-w-4xl mx-auto space-y-6">
+            <div className="rounded-2xl border border-border bg-card p-8 md:p-10 space-y-8">
+              <div className="text-center space-y-3">
+                <blockquote className="text-lg md:text-xl font-semibold leading-snug max-w-2xl mx-auto">
+                  {t("landing.proof.quote")}
+                </blockquote>
+                <p className="text-xs text-muted-foreground">{t("landing.proof.author")}</p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {[
+                  { v: t("landing.proof.kpi1.value"), l: t("landing.proof.kpi1.label") },
+                  { v: t("landing.proof.kpi2.value"), l: t("landing.proof.kpi2.label") },
+                  { v: t("landing.proof.kpi3.value"), l: t("landing.proof.kpi3.label") },
+                ].map((k, i) => (
+                  <div
+                    key={i}
+                    className="rounded-xl border border-border bg-background p-5 text-center space-y-1"
+                  >
+                    <div className="text-2xl font-extrabold text-primary tracking-tight">{k.v}</div>
+                    <div className="text-xs text-muted-foreground">{k.l}</div>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-center text-muted-foreground italic">
+                {t("landing.results.disclaimer")}
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-primary/30 bg-primary/5 p-6 flex items-start gap-3">
+              <ShieldCheck className="h-6 w-6 text-primary shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <p className="font-semibold">{t("landing.guarantee.title")}</p>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {t("landing.guarantee.body")}
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ===== FINAL CTA ===== */}
+        <section className="py-16 px-4 bg-secondary/50">
+          <div className="container max-w-xl mx-auto text-center space-y-4">
+            <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
+              {t("landing.finalcta.title")}
+            </h2>
+            <p className="text-muted-foreground leading-relaxed">{t("landing.access.desc")}</p>
+            <Button
+              size="lg"
+              asChild
+              className="h-12 px-8 text-base font-semibold pharmacy-gradient border-0 gap-2"
+            >
+              <a href="#demande-acces">
+                <Send className="h-5 w-5" />
+                {t("form.submit")}
+              </a>
+            </Button>
+          </div>
+        </section>
       </main>
       <SiteFooter />
     </div>

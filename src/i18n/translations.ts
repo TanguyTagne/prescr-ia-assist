@@ -310,6 +310,39 @@ export const translations = {
     en: "15 minutes to show you concretely how Asclion fits into the way you work.",
   },
 
+  // ===== HORMOZI-STYLE LEAD PAGE =====
+  "landing.h1": {
+    fr: "Le bon conseil associé, proposé au bon moment, sans rien changer à vos habitudes.",
+    en: "The right companion advice, at the right moment, without changing a thing in your habits.",
+  },
+  "landing.h1.sub": {
+    fr: "Asclion lit le médicament scanné dans votre LGO et affiche en moins de 2,5 s le conseil pertinent à donner au patient. Rien à saisir, rien à apprendre.",
+    en: "Asclion reads the medication scanned in your pharmacy software and shows the relevant advice in under 2.5 s. Nothing to type, nothing to learn.",
+  },
+  "landing.form.title": { fr: "Demandez votre démo de 15 minutes", en: "Book your 15-minute demo" },
+  "landing.form.why": {
+    fr: "Pourquoi votre email ? Pour vous envoyer le créneau de démo et votre premier mois d'accès offert — rien d'autre.",
+    en: "Why your email? To send your demo slot and your free first month of access — nothing else.",
+  },
+  "landing.obj.title": { fr: "Les 3 questions qu'on nous pose en premier", en: "The 3 questions we get first" },
+  "landing.obj.1.title": { fr: "« Il faut changer de logiciel ? »", en: "\"Do I have to change software?\"" },
+  "landing.obj.1.desc": {
+    fr: "Non. Asclion se pose à côté de votre LGO (Winpharma, LGPI, Pharmagest, Léo, Smart Rx…). Installation en quelques minutes, aucune migration.",
+    en: "No. Asclion sits next to your existing software (Winpharma, LGPI, Pharmagest, Léo, Smart Rx…). Set up in minutes, no migration.",
+  },
+  "landing.obj.2.title": { fr: "« Ça va ralentir le comptoir ? »", en: "\"Will it slow down the counter?\"" },
+  "landing.obj.2.desc": {
+    fr: "Non. Le conseil s'affiche automatiquement à partir du CIP scanné, en moins de 2,5 s. Zéro saisie supplémentaire pour l'équipe.",
+    en: "No. Advice appears automatically from the scanned barcode, in under 2.5 s. Zero extra data entry for the team.",
+  },
+  "landing.obj.3.title": { fr: "« Et les données patients ? »", en: "\"What about patient data?\"" },
+  "landing.obj.3.desc": {
+    fr: "Données hébergées dans l'UE, pseudonymisées, conformes RGPD. Aucun diagnostic : Asclion propose un conseil, le pharmacien décide.",
+    en: "EU-hosted, pseudonymised, GDPR-compliant data. No diagnosis: Asclion suggests advice, the pharmacist decides.",
+  },
+  "landing.finalcta.title": { fr: "Voir Asclion sur votre comptoir", en: "See Asclion on your counter" },
+
+
   // ===== ACCESS FORM =====
   "form.pharmacy_name": { fr: "Nom de la pharmacie *", en: "Pharmacy name *" },
   "form.contact_name": { fr: "Nom du contact", en: "Contact name" },
