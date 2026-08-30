@@ -302,6 +302,32 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
+    // ── Auth : cron (x-cron-secret) ou admin authentifié ─────────────────
+    // Sans cela, n'importe qui peut lire les emails/stats des pharmacies ou
+    // déclencher des envois d'emails via notre compte Resend.
+    let authorized = false;
+    const cronHeader = req.headers.get("x-cron-secret");
+    if (cronHeader) {
+      const { data: cfg } = await supabase
+        .from("internal_config").select("value").eq("key", "cron_secret").maybeSingle();
+      if (cfg?.value && cronHeader === cfg.value) authorized = true;
+    }
+    if (!authorized) {
+      const auth = req.headers.get("authorization");
+      if (auth) {
+        const { data: { user } } = await supabase.auth.getUser(auth.replace("Bearer ", ""));
+        if (user) {
+          const { data: isAdmin } = await supabase.rpc("has_role", { _user_id: user.id, _role: "admin" });
+          if (isAdmin) authorized = true;
+        }
+      }
+    }
+    if (!authorized) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const body = req.method === "POST" ? await req.json().catch(() => ({})) : {};
     const { pharmacy_id, month, dry_run, preview, send_to } = body ?? {};
 
