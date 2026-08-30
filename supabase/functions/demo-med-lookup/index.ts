@@ -130,29 +130,6 @@ Deno.serve(async (req) => {
       medicament = { nom_commercial: query, molecules: mol, atc_code: mol.atc_code };
     }
 
-    // ── Raccourci démo : les 5 médicaments vedettes utilisent leurs PC curés ──
-    const haystack = `${medicament.nom_commercial || ""} ${query} ${medicament.molecules?.nom_molecule || ""}`;
-    const demoEntry = DEMO_CURATED.find((d) => d.match.test(haystack));
-    if (demoEntry) {
-      return json({
-        found: true,
-        medicament: {
-          nom: demoEntry.nom,
-          classe: demoEntry.classe,
-          molecule: medicament.molecules?.nom_molecule || undefined,
-          code_atc: medicament.atc_code || medicament.molecules?.atc_code || undefined,
-          conseil_associe: demoEntry.conseil,
-          recommendations: demoEntry.pcs.map((p, i) => ({
-            produit: p.produit,
-            categorie: "Conseil associé",
-            priorite: 100 - i,
-            phrase_conseil: p.phrase,
-            description: p.description,
-          })),
-        },
-      });
-    }
-
     const molecule = medicament.molecules;
     const atcCode = medicament.atc_code || molecule?.atc_code;
 
