@@ -55,7 +55,7 @@ const hasLab = (name: string) => {
 // Les PC, phrases conseil et explications viennent EXCLUSIVEMENT de la base
 // (medicament_curated_pcs / produits_complementaires / conseils_associes),
 // via le pipeline de recherche standard ci-dessous. Aucun contenu inventé.
-const DEMO_MED_NAMES = ["Curacne", "Augmentin", "Codoliprane", "Cortancyl", "Advil"];
+const DEMO_MED_NAMES = ["Curacne", "Bactrim Forte", "Flagyl 500mg", "Jardiance 25mg", "Durogesic"];
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
