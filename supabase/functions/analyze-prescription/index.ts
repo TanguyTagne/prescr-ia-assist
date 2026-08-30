@@ -548,6 +548,7 @@ async function clinicalLookup(
     produits,
     protocoles,
     curated_pcs: curatedPcsOut,
+    vigilance,
   };
 }
 
