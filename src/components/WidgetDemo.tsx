@@ -289,60 +289,34 @@ const WidgetDemo = ({ onClose, size = "compact" }: WidgetDemoProps) => {
         <span className={c.sub}>{t("demo.search.subtitle")}</span>
       </div>
 
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          handleSubmitSearch();
-        }}
-        className="space-y-1.5"
-      >
-        <div className="relative">
-          <Search className={c.icon} />
-          <input
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              setNotFound(false);
-            }}
-            placeholder={t("demo.search.placeholder")}
-            maxLength={120}
-            aria-label={t("demo.search.placeholder")}
-            className={c.input}
-          />
+      {notFound && (
+        <p className="flex items-start gap-1 text-[10px] text-destructive leading-snug">
+          <AlertCircle className="h-3 w-3 shrink-0 mt-0.5" />
+          {t("demo.search.notFound")}
+        </p>
+      )}
+
+      {listLoading && medList.length === 0 ? (
+        <div className="flex items-center justify-center gap-2 py-3 text-[11px] text-muted-foreground">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          {t("demo.list.loading")}
         </div>
-
-        {suggestions.length > 0 && (
-          <ul className="rounded border border-border bg-card divide-y divide-border overflow-hidden">
-            {suggestions.map((s) => (
-              <li key={s}>
-                <button
-                  type="button"
-                  onClick={() => handleSubmitSearch(s)}
-                  className={c.sugg}
-                >
-                  {s}
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-
-        {notFound && (
-          <p className="flex items-start gap-1 text-[10px] text-destructive leading-snug">
-            <AlertCircle className="h-3 w-3 shrink-0 mt-0.5" />
-            {t("demo.search.notFound")}
-          </p>
-        )}
-
-        <button
-          type="submit"
-          disabled={query.trim().length < 2}
-          className={c.cta}
-        >
-          <Sparkles className={full ? "h-4 w-4" : "h-3.5 w-3.5"} />
-          {t("demo.search.analyze")}
-        </button>
-      </form>
+      ) : (
+        <ul className="rounded border border-border bg-card divide-y divide-border overflow-hidden">
+          {medList.map((med) => (
+            <li key={med}>
+              <button
+                type="button"
+                onClick={() => handleSubmitSearch(med)}
+                className={`${c.sugg} flex items-center gap-2 w-full`}
+              >
+                <Sparkles className={full ? "h-3.5 w-3.5 text-primary shrink-0" : "h-3 w-3 text-primary shrink-0"} />
+                <span className="flex-1 truncate">{med}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
 
       <LegalDisclaimer />
     </div>
