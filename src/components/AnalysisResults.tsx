@@ -580,26 +580,20 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
         const label = (produit || "").trim();
         const norm = normalizeLookupKey(label);
         if (label && norm && pending.ean) {
-          void (supabase as any)
-            .from("pc_cip_mapping")
-            .insert(
-              {
+          // Insert via edge function (validation serveur, table partagée)
+          supabase.functions
+            .invoke("learn-pc-cip", {
+              body: {
                 pc_label: label,
                 pc_label_norm: norm,
                 categorie: categorie || null,
                 code: pending.ean,
-                type_code: pending.ean.length === 13 ? "ean13" : "cip",
-                source: "learned_from_click",
-                statut: "pending",
-                occurrences: 1,
               },
-              { count: "exact" }
-            )
+            })
             .then(({ error }: any) => {
-              if (error && !/duplicate|unique/i.test(error.message || "")) {
-                console.warn("[learn-pc-cip] insert failed:", error.message);
-              }
-            });
+              if (error) console.warn("[learn-pc-cip] insert failed:", error.message ?? error);
+            })
+            .catch(() => {});
         }
       }
 
