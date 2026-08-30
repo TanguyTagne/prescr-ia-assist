@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Sparkles, Loader2, Send, AlertCircle } from "lucide-react";
 import AnalysisSkeleton from "@/components/AnalysisSkeleton";
 import AnalysisResults from "@/components/AnalysisResults";
@@ -7,9 +7,6 @@ import type { AnalysisResult } from "@/lib/prescriptionAnalyzer";
 import { trackEvent } from "@/hooks/useAnalytics";
 import { trackDemoSession } from "@/lib/demoTracking";
 import { supabase } from "@/integrations/supabase/client";
-import { getSessionId } from "@/components/DemoLeadForm";
-import { getStoredAttribution } from "@/lib/trackingAttribution";
-import { toast } from "sonner";
 import { useI18n } from "@/i18n/I18nProvider";
 
 type Phase = "search" | "analyzing" | "result" | "lead";
@@ -42,12 +39,11 @@ const WidgetDemo = ({ onClose, size = "compact" }: WidgetDemoProps) => {
       ? "px-3 py-1.5 rounded-full border border-border bg-card text-sm hover:border-primary hover:bg-accent transition-colors"
       : "px-2 py-1 rounded-full border border-border bg-card text-[10px] hover:border-primary hover:bg-accent transition-colors",
   };
-  const { t, lp } = useI18n();
+  const { t } = useI18n();
   const [phase, setPhase] = useState<Phase>("search");
   const [query, setQuery] = useState("");
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [notFound, setNotFound] = useState(false);
-  const pendingQuery = useRef<string>("");
 
   // ── Liste des médicaments de la base avec suggestions pertinentes ──
   const [medList, setMedList] = useState<string[]>([]);
@@ -114,8 +110,7 @@ const WidgetDemo = ({ onClose, size = "compact" }: WidgetDemoProps) => {
     const med = (value ?? query).trim();
     if (med.length < 2) return;
     setQuery(med);
-    pendingQuery.current = med;
-    // Les résultats s'affichent toujours ; l'email est demandé après (phase "lead").
+    // Démo illimitée : les résultats s'affichent directement, sans porte email.
     runAnalysis(med);
   };
 
