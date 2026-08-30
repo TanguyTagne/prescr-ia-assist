@@ -666,6 +666,26 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
           </div>
 
 
+          {/* Vigilance — avertissement de sécurité, aucun produit à vendre */}
+          {med.vigilance?.titre && (
+            <div className="flex items-start gap-2 px-2 py-1.5 rounded-lg border border-amber-500/40 bg-amber-500/5">
+              <AlertTriangle className="h-3 w-3 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+              <div className="min-w-0">
+                <div className="flex items-center gap-1 flex-wrap">
+                  <span className="font-semibold text-xs text-foreground">{med.vigilance.titre}</span>
+                  <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400">
+                    · {med.vigilance.pertinence || "Sécurité"}
+                  </span>
+                </div>
+                {med.vigilance.phrase && (
+                  <div className="mt-0.5 text-[11px] font-medium leading-tight text-amber-700 dark:text-amber-300">
+                    {med.vigilance.phrase}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Recommendations for this medication */}
           {med.recommendations && med.recommendations.length > 0 && (
             <div className="space-y-1 pt-1 border-t border-border/50">
