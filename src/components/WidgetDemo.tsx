@@ -67,11 +67,19 @@ const WidgetDemo = ({ onClose, size = "compact" }: WidgetDemoProps) => {
   }, [phase, medList.length, listLoading]);
 
   // Le lead/CTA apparaît automatiquement 20 s après l'affichage des résultats.
+  // À partir du 2ᵉ test sans email connu, on demande l'email (après les résultats).
   useEffect(() => {
     if (phase !== "result") return;
     const tm = setTimeout(() => {
-      trackEvent("demo_lead_auto_shown", { delay_s: 20 });
-      setPhase("lead");
+      const uses = Number(localStorage.getItem(USES_KEY) || "0");
+      const savedEmail = localStorage.getItem(EMAIL_KEY);
+      if (uses >= 2 && !savedEmail) {
+        trackEvent("demo_email_gate_shown", { medicament: pendingQuery.current });
+        setPhase("gate");
+      } else {
+        trackEvent("demo_lead_auto_shown", { delay_s: 20 });
+        setPhase("lead");
+      }
     }, 20_000);
     return () => clearTimeout(tm);
   }, [phase]);
@@ -124,16 +132,8 @@ const WidgetDemo = ({ onClose, size = "compact" }: WidgetDemoProps) => {
     const med = (value ?? query).trim();
     if (med.length < 2) return;
     setQuery(med);
-
-    const uses = Number(localStorage.getItem(USES_KEY) || "0");
-    const savedEmail = localStorage.getItem(EMAIL_KEY);
-    // À partir du 2ᵉ test, l'email est obligatoire
-    if (uses >= 1 && !savedEmail) {
-      pendingQuery.current = med;
-      trackEvent("demo_email_gate_shown", { medicament: med });
-      setPhase("gate");
-      return;
-    }
+    pendingQuery.current = med;
+    // Les résultats s'affichent toujours ; l'email est demandé après (phase "lead").
     runAnalysis(med);
   };
 
