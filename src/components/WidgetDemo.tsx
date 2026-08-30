@@ -119,35 +119,12 @@ const WidgetDemo = ({ onClose, size = "compact" }: WidgetDemoProps) => {
     runAnalysis(med);
   };
 
-  const handleGateSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const value = email.trim();
-    if (!value) return;
-    setGateLoading(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("submit-demo-lead", {
-        body: {
-          session_id: getSessionId(),
-          nom: t("demo.gate.leadName"),
-          officine: t("demo.gate.leadOfficine"),
-          email: value,
-          tracking_link_id: getStoredAttribution(),
-        },
-      });
-      if (error) throw error;
-      if ((data as any)?.error) throw new Error("invalid");
-      localStorage.setItem(EMAIL_KEY, value);
-      trackEvent("demo_email_gate_submitted", {});
-      runAnalysis(pendingQuery.current || query);
-    } catch (err) {
-      console.error(err);
-      toast.error(t("demo.gate.error"));
-    } finally {
-      setGateLoading(false);
-    }
+  // Retour à la liste des médicaments — démo illimitée.
+  const handleReset = () => {
+    setResult(null);
+    setQuery("");
+    setPhase("search");
   };
-
-  const handleReset = () => setPhase("lead");
 
   const handleNewDemoFromLead = () => {
     setResult(null);
