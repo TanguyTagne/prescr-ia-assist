@@ -51,6 +51,115 @@ const hasLab = (name: string) => {
   return LAB_RE.test(name || "");
 };
 
+// ── Démo : 5 médicaments vedettes avec PC et phrases validés ──
+const DEMO_CURATED: {
+  match: RegExp;
+  nom: string;
+  classe: string;
+  conseil: string;
+  pcs: { produit: string; phrase: string; description: string }[];
+}[] = [
+  {
+    match: /isotr[eé]tino|roaccutane|accutane|curacn[eé]|procuta/i,
+    nom: "Isotrétinoïne",
+    classe: "Rétinoïde anti-acnéique",
+    conseil:
+      "La chéilite touche ~90 % des patients et la photosensibilisation est constante : la photoprotection fait partie du traitement, au même titre que la molécule.",
+    pcs: [
+      {
+        produit: "SPF50+ non comédogène",
+        phrase: "protège la peau fragilisée",
+        description:
+          "Photosensibilisation majeure sous isotrétinoïne : SPF50+ quotidien visage et zones exposées, dès le premier jour.",
+      },
+      {
+        produit: "Baume lèvres réparateur",
+        phrase: "soulage la chéilite",
+        description:
+          "Chéilite chez ~90 % des patients : application répétée dès les premières semaines de traitement.",
+      },
+      {
+        produit: "Larmes artificielles",
+        phrase: "compense la sécheresse oculaire",
+        description:
+          "Sécheresse oculaire fréquente : instiller dès les premiers signes de gêne, surtout chez les porteurs de lentilles.",
+      },
+    ],
+  },
+  {
+    match: /hydrochlorothiazide|esidrex|coaprovel|hyzaar/i,
+    nom: "Hydrochlorothiazide",
+    classe: "Diurétique thiazidique",
+    conseil:
+      "Alerte ANSM du 06/11/2018 : risque de cancer cutané non mélanome à dose cumulée — la photoprotection est une recommandation explicite, pas un confort.",
+    pcs: [
+      {
+        produit: "SPF50+ visage et mains",
+        phrase: "réduit le risque cumulé UV",
+        description:
+          "Alerte ANSM 2018 : risque de cancer cutané non mélanome à dose cumulée, avec recommandation explicite de photoprotection.",
+      },
+    ],
+  },
+  {
+    match: /metformine|glucophage|stagid/i,
+    nom: "Metformine",
+    classe: "Antidiabétique biguanide",
+    conseil:
+      "La metformine bloque l'absorption iléale de la B12 : 10–30 % des patients sont carencés, et les fourmillements sont souvent mis à tort sur le dos de la neuropathie diabétique.",
+    pcs: [
+      {
+        produit: "Vitamine B12 sublinguale",
+        phrase: "prévient la carence silencieuse",
+        description:
+          "Blocage de l'absorption iléale calcium-dépendante : 10–30 % de carencés — dont les fourmillements sont attribués à tort à la neuropathie diabétique.",
+      },
+    ],
+  },
+  {
+    match: /om[eé]prazole|mopral|esomeprazole|inexium|pantoprazole|lansoprazole|rabeprazole|pariet/i,
+    nom: "IPP (oméprazole…)",
+    classe: "Inhibiteur de la pompe à protons",
+    conseil:
+      "Sous IPP, le carbonate de calcium n'est plus absorbé faute d'acidité gastrique — or 90 % des compléments du marché sont au carbonate. Le citrate, lui, reste absorbé.",
+    pcs: [
+      {
+        produit: "Magnésium bisglycinate",
+        phrase: "compense la fuite magnésienne",
+        description:
+          "Hypomagnésémie documentée au long cours sous IPP — forme bisglycinate bien tolérée et biodisponible.",
+      },
+      {
+        produit: "Calcium citrate",
+        phrase: "absorbé même sans acidité",
+        description:
+          "Le carbonate a besoin d'acidité gastrique : sous IPP il ne sert à rien. 90 % des compléments sont au carbonate — le citrate reste absorbé.",
+      },
+    ],
+  },
+  {
+    match: /vesicare|solif[eé]nacine|ditropan|oxybutynine|tolterodine|fesoterodine/i,
+    nom: "Anticholinergique vessie",
+    classe: "Antimuscarinique urinaire",
+    conseil:
+      "Blocage muscarinique → hyposialie → caries radiculaires. Personne ne relie spontanément un traitement urologique au dentiste — c'est exactement le rôle du conseil associé.",
+    pcs: [
+      {
+        produit: "Salive artificielle",
+        phrase: "compense l'hyposialie",
+        description:
+          "Blocage muscarinique → sécheresse buccale marquée : la salive artificielle restaure le confort et la protection.",
+      },
+      {
+        produit: "Dentifrice fluoré haute teneur",
+        phrase: "protège les racines exposées",
+        description:
+          "Hyposialie prolongée → caries radiculaires : le fluor haute teneur protège l'émail fragilisé.",
+      },
+    ],
+  },
+];
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -64,44 +173,9 @@ Deno.serve(async (req) => {
     const mode = String(body.mode || "lookup");
     const query = String(body.query || "").trim().slice(0, 120);
 
-    // ── Liste — médicaments ayant les meilleures suggestions pertinentes ──
+    // ── Liste — les 5 médicaments vedettes de la démo ──
     if (mode === "list") {
-      const { data } = await supabase
-        .from("medicament_curated_pcs")
-        .select("pc_1, pc_2, pertinence_pc1, pertinence_pc2, phrase_conseil_pc1, medicaments!inner(nom_commercial)")
-        .not("pc_1", "is", null)
-        .limit(400);
-
-      const scored = (data || [])
-        .map((row: any) => {
-          const pcs = [row.pc_1, row.pc_2]
-            .filter((p: any) => p && String(p).trim())
-            .map((p: any) => String(p).trim());
-          const impressivePcs = pcs.filter((p: string) =>
-            isImpressive({ produit: p, categorie: "" })
-          );
-          if (impressivePcs.length === 0) return null;
-          let score = impressivePcs.length * 10;
-          if (row.pertinence_pc1 && String(row.pertinence_pc1).trim()) score += 3;
-          if (row.pertinence_pc2 && String(row.pertinence_pc2).trim()) score += 2;
-          if (row.phrase_conseil_pc1 && String(row.phrase_conseil_pc1).trim()) score += 2;
-          return { nom: stripLab(row.medicaments?.nom_commercial as string), score };
-        })
-        .filter((x: any) => x?.nom);
-
-      const seen = new Set<string>();
-      const meds = scored
-        .sort((a: any, b: any) => b.score - a.score)
-        .filter((m: any) => {
-          const k = m.nom.toLowerCase();
-          if (seen.has(k)) return false;
-          seen.add(k);
-          return true;
-        })
-        .slice(0, 8)
-        .map((m: any) => m.nom);
-
-      return json({ medications: meds });
+      return json({ medications: DEMO_CURATED.map((d) => d.nom) });
     }
 
     // ── Autocomplete — uniquement les médicaments ayant des PC curés ──
@@ -157,6 +231,29 @@ Deno.serve(async (req) => {
         .maybeSingle();
       if (!mol) return json({ found: false, message: "Médicament non trouvé dans la base clinique" });
       medicament = { nom_commercial: query, molecules: mol, atc_code: mol.atc_code };
+    }
+
+    // ── Raccourci démo : les 5 médicaments vedettes utilisent leurs PC curés ──
+    const haystack = `${medicament.nom_commercial || ""} ${query} ${medicament.molecules?.nom_molecule || ""}`;
+    const demoEntry = DEMO_CURATED.find((d) => d.match.test(haystack));
+    if (demoEntry) {
+      return json({
+        found: true,
+        medicament: {
+          nom: demoEntry.nom,
+          classe: demoEntry.classe,
+          molecule: medicament.molecules?.nom_molecule || undefined,
+          code_atc: medicament.atc_code || medicament.molecules?.atc_code || undefined,
+          conseil_associe: demoEntry.conseil,
+          recommendations: demoEntry.pcs.map((p, i) => ({
+            produit: p.produit,
+            categorie: "Conseil associé",
+            priorite: 100 - i,
+            phrase_conseil: p.phrase,
+            description: p.description,
+          })),
+        },
+      });
     }
 
     const molecule = medicament.molecules;
