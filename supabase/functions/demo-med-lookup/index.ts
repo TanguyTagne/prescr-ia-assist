@@ -70,9 +70,9 @@ Deno.serve(async (req) => {
     const mode = String(body.mode || "lookup");
     const query = String(body.query || "").trim().slice(0, 120);
 
-    // ── Liste — les 5 médicaments vedettes de la démo ──
+    // ── Liste — les 5 médicaments vedettes de la démo (noms réels en base) ──
     if (mode === "list") {
-      return json({ medications: DEMO_CURATED.map((d) => d.nom) });
+      return json({ medications: DEMO_MED_NAMES });
     }
 
     // ── Autocomplete — uniquement les médicaments ayant des PC curés ──
