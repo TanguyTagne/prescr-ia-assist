@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Sparkles, Search, Loader2, ArrowLeft, Send, Mail, AlertCircle } from "lucide-react";
+import { Sparkles, Loader2, ArrowLeft, Send, Mail, AlertCircle } from "lucide-react";
 import AnalysisSkeleton from "@/components/AnalysisSkeleton";
 import AnalysisResults from "@/components/AnalysisResults";
 import LegalDisclaimer from "@/components/LegalDisclaimer";
@@ -46,31 +46,25 @@ const WidgetDemo = ({ onClose, size = "compact" }: WidgetDemoProps) => {
   const { t, lp } = useI18n();
   const [phase, setPhase] = useState<Phase>("search");
   const [query, setQuery] = useState("");
-  const [suggestions, setSuggestions] = useState<string[]>([]);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [email, setEmail] = useState("");
   const [gateLoading, setGateLoading] = useState(false);
   const pendingQuery = useRef<string>("");
 
-  // ── Autocomplete (public edge function) ──
+  // ── Liste des médicaments de la base avec suggestions pertinentes ──
+  const [medList, setMedList] = useState<string[]>([]);
+  const [listLoading, setListLoading] = useState(false);
+
   useEffect(() => {
-    if (phase !== "search" || query.trim().length < 2) {
-      setSuggestions([]);
-      return;
-    }
-    const tm = setTimeout(async () => {
-      try {
-        const { data } = await supabase.functions.invoke("demo-med-lookup", {
-          body: { mode: "suggest", query: query.trim() },
-        });
-        setSuggestions(((data as any)?.suggestions || []).slice(0, 5));
-      } catch {
-        setSuggestions([]);
-      }
-    }, 250);
-    return () => clearTimeout(tm);
-  }, [query, phase]);
+    if (phase !== "search" || medList.length > 0 || listLoading) return;
+    setListLoading(true);
+    supabase.functions
+      .invoke("demo-med-lookup", { body: { mode: "list" } })
+      .then(({ data }) => setMedList(((data as any)?.medications || []).slice(0, 6)))
+      .catch(() => setMedList([]))
+      .finally(() => setListLoading(false));
+  }, [phase, medList.length, listLoading]);
 
   // Le lead/CTA apparaît automatiquement 20 s après l'affichage des résultats.
   useEffect(() => {
@@ -85,7 +79,6 @@ const WidgetDemo = ({ onClose, size = "compact" }: WidgetDemoProps) => {
   const runAnalysis = async (med: string) => {
     setNotFound(false);
     setResult(null);
-    setSuggestions([]);
     setPhase("analyzing");
     trackEvent("demo_analyzed", { medicament: med });
     trackDemoSession(med);
@@ -294,60 +287,34 @@ const WidgetDemo = ({ onClose, size = "compact" }: WidgetDemoProps) => {
         <span className={c.sub}>{t("demo.search.subtitle")}</span>
       </div>
 
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          handleSubmitSearch();
-        }}
-        className="space-y-1.5"
-      >
-        <div className="relative">
-          <Search className={c.icon} />
-          <input
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              setNotFound(false);
-            }}
-            placeholder={t("demo.search.placeholder")}
-            maxLength={120}
-            aria-label={t("demo.search.placeholder")}
-            className={c.input}
-          />
+      {notFound && (
+        <p className="flex items-start gap-1 text-[10px] text-destructive leading-snug">
+          <AlertCircle className="h-3 w-3 shrink-0 mt-0.5" />
+          {t("demo.search.notFound")}
+        </p>
+      )}
+
+      {listLoading && medList.length === 0 ? (
+        <div className="flex items-center justify-center gap-2 py-3 text-[11px] text-muted-foreground">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          {t("demo.list.loading")}
         </div>
-
-        {suggestions.length > 0 && (
-          <ul className="rounded border border-border bg-card divide-y divide-border overflow-hidden">
-            {suggestions.map((s) => (
-              <li key={s}>
-                <button
-                  type="button"
-                  onClick={() => handleSubmitSearch(s)}
-                  className={c.sugg}
-                >
-                  {s}
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-
-        {notFound && (
-          <p className="flex items-start gap-1 text-[10px] text-destructive leading-snug">
-            <AlertCircle className="h-3 w-3 shrink-0 mt-0.5" />
-            {t("demo.search.notFound")}
-          </p>
-        )}
-
-        <button
-          type="submit"
-          disabled={query.trim().length < 2}
-          className={c.cta}
-        >
-          <Sparkles className={full ? "h-4 w-4" : "h-3.5 w-3.5"} />
-          {t("demo.search.analyze")}
-        </button>
-      </form>
+      ) : (
+        <ul className="rounded border border-border bg-card divide-y divide-border overflow-hidden">
+          {medList.map((med) => (
+            <li key={med}>
+              <button
+                type="button"
+                onClick={() => handleSubmitSearch(med)}
+                className={`${c.sugg} flex items-center gap-2 w-full`}
+              >
+                <Sparkles className={full ? "h-3.5 w-3.5 text-primary shrink-0" : "h-3 w-3 text-primary shrink-0"} />
+                <span className="flex-1 truncate">{med}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
 
       <LegalDisclaimer />
     </div>
