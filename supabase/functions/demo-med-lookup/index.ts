@@ -43,6 +43,46 @@ Deno.serve(async (req) => {
     const mode = String(body.mode || "lookup");
     const query = String(body.query || "").trim().slice(0, 120);
 
+    // ── Liste — médicaments ayant les meilleures suggestions pertinentes ──
+    if (mode === "list") {
+      const { data } = await supabase
+        .from("medicament_curated_pcs")
+        .select("pc_1, pc_2, pertinence_pc1, pertinence_pc2, phrase_conseil_pc1, medicaments!inner(nom_commercial)")
+        .not("pc_1", "is", null)
+        .limit(400);
+
+      const scored = (data || [])
+        .map((row: any) => {
+          const pcs = [row.pc_1, row.pc_2]
+            .filter((p: any) => p && String(p).trim())
+            .map((p: any) => String(p).trim());
+          const impressivePcs = pcs.filter((p: string) =>
+            isImpressive({ produit: p, categorie: "" })
+          );
+          if (impressivePcs.length === 0) return null;
+          let score = impressivePcs.length * 10;
+          if (row.pertinence_pc1 && String(row.pertinence_pc1).trim()) score += 3;
+          if (row.pertinence_pc2 && String(row.pertinence_pc2).trim()) score += 2;
+          if (row.phrase_conseil_pc1 && String(row.phrase_conseil_pc1).trim()) score += 2;
+          return { nom: row.medicaments?.nom_commercial as string, score };
+        })
+        .filter((x: any) => x?.nom);
+
+      const seen = new Set<string>();
+      const meds = scored
+        .sort((a: any, b: any) => b.score - a.score)
+        .filter((m: any) => {
+          const k = m.nom.toLowerCase();
+          if (seen.has(k)) return false;
+          seen.add(k);
+          return true;
+        })
+        .slice(0, 8)
+        .map((m: any) => m.nom);
+
+      return json({ medications: meds });
+    }
+
     // ── Autocomplete — uniquement les médicaments ayant des PC curés ──
     if (mode === "suggest") {
       if (query.length < 2) return json({ suggestions: [] });
