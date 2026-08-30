@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Sparkles, Loader2, Send, AlertCircle } from "lucide-react";
+import { Sparkles, Loader2, AlertCircle } from "lucide-react";
 import AnalysisSkeleton from "@/components/AnalysisSkeleton";
 import AnalysisResults from "@/components/AnalysisResults";
 import LegalDisclaimer from "@/components/LegalDisclaimer";
@@ -91,8 +91,14 @@ const WidgetDemo = ({ onClose, size = "compact" }: WidgetDemoProps) => {
       localStorage.setItem(USES_KEY, String(uses));
       window.dispatchEvent(new Event("asclion:demo-tested"));
 
+      // Démo : uniquement les 2 PC suggérés, avec leur phrase conseil exacte
+      // issue de la base (aucune reformulation côté client).
+      const med = {
+        ...res.medicament,
+        recommendations: (res.medicament?.recommendations || []).slice(0, 2),
+      };
       setResult({
-        medicaments: [res.medicament],
+        medicaments: [med],
         interactions: [],
         contextes: [],
         conseil: res.medicament?.conseil_associe || "",
@@ -121,12 +127,6 @@ const WidgetDemo = ({ onClose, size = "compact" }: WidgetDemoProps) => {
     setPhase("search");
   };
 
-  const handleNewDemoFromLead = () => {
-    setResult(null);
-    setQuery("");
-    setPhase("search");
-  };
-
   if (phase === "analyzing") {
     return (
       <div className={full ? "p-5 md:p-7" : "p-4"}>
@@ -143,45 +143,6 @@ const WidgetDemo = ({ onClose, size = "compact" }: WidgetDemoProps) => {
     );
   }
 
-  if (phase === "lead") {
-    const handleGoToForm = () => {
-      trackEvent("demo_cta_to_form_clicked", { source: "widget_lead" });
-      onClose?.();
-      setTimeout(() => {
-        const el = document.getElementById("demande-acces");
-        if (el) {
-          el.scrollIntoView({ behavior: "smooth", block: "start" });
-        } else {
-          window.location.href = "#demande-acces";
-        }
-      }, 50);
-    };
-
-    return (
-      <div className={`${c.wrap} animate-fade-in`}>
-        <div className="text-center space-y-1">
-          <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary">
-            <Sparkles className="h-3.5 w-3.5" />
-            {t("demo.lead.intro")}
-          </div>
-          <p className="text-[11px] text-muted-foreground leading-snug">{t("demo.lead.desc")}</p>
-        </div>
-        <button
-          onClick={handleGoToForm}
-          className="w-full h-10 rounded-md pharmacy-gradient text-primary-foreground text-sm font-semibold flex items-center justify-center gap-2 hover:opacity-95 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-        >
-          <Send className="h-3.5 w-3.5" />
-          {t("demo.lead.ctaForm")}
-        </button>
-        <button
-          onClick={handleNewDemoFromLead}
-          className="w-full text-[11px] text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
-        >
-          {t("demo.search.tryAnother")}
-        </button>
-      </div>
-    );
-  }
 
   // ── Search phase ──
   return (
