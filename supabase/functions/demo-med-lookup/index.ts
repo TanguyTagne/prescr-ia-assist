@@ -152,15 +152,24 @@ Deno.serve(async (req) => {
 
     // ── Complementary products ──
     let produits: any[] = [];
+    // Message de vigilance (avertissement de sécurité, ne vend rien)
+    let vigilance: { titre: string; phrase?: string; pertinence: string } | null = null;
 
     // 1) Curated PCs (highest priority source)
     if (medicament?.id) {
       const { data: curated } = await supabase
         .from("medicament_curated_pcs")
-        .select("pc_1, pc_2, pertinence_pc1, pertinence_pc2, phrase_conseil_pc1, phrase_conseil_pc2")
+        .select("pc_1, pc_2, pertinence_pc1, pertinence_pc2, phrase_conseil_pc1, phrase_conseil_pc2, vigilance, phrase_vigilance, pertinence_vigilance")
         .eq("medicament_id", medicament.id)
         .maybeSingle();
       if (curated) {
+        if (curated.vigilance && String(curated.vigilance).trim()) {
+          vigilance = {
+            titre: String(curated.vigilance).trim(),
+            phrase: (curated.phrase_vigilance || "").trim() || undefined,
+            pertinence: (curated.pertinence_vigilance || "Sécurité").trim(),
+          };
+        }
         const pairs = [
           { name: curated.pc_1, phrase: curated.phrase_conseil_pc1, pertinence: curated.pertinence_pc1 },
           { name: curated.pc_2, phrase: curated.phrase_conseil_pc2, pertinence: curated.pertinence_pc2 },
@@ -290,6 +299,7 @@ Deno.serve(async (req) => {
         molecule: molecule?.nom_molecule || undefined,
         code_atc: atcCode || undefined,
         conseil_associe: conseil || undefined,
+        vigilance: vigilance || undefined,
         recommendations,
       },
     });
