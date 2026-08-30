@@ -1581,14 +1581,43 @@ serve(async (req) => {
 
     medEntries = aiResult.medicaments_detectes || [];
     extractedPatientName = aiResult.patient_nom || null;
-    extractedMedicationCountForUsage = medEntries.length;
 
+    // Filet de sécurité : si l'IA ne reconnaît rien (nom court, code produit,
+    // marque atypique type "A 313"), on cherche directement en base Asclion.
+    if (medEntries.length === 0 && prescriptionText && prescriptionText.trim().length <= 60) {
+      const raw = prescriptionText.trim();
+      const variants = buildSearchVariants(raw);
+      for (const v of variants) {
+        if (medEntries.length > 0) break;
+        for (const pattern of [v, `${v}%`, `%${v}%`]) {
+          const { data: rows } = await supabase
+            .from("medicaments")
+            .select("nom_commercial, forme_galenique, voie_administration, dosage")
+            .ilike("nom_commercial", pattern)
+            .limit(1);
+          if (rows && rows.length > 0) {
+            medEntries = [{
+              nom_commercial: rows[0].nom_commercial,
+              molecule_probable: null as any,
+              dosage: rows[0].dosage || null,
+              forme_galenique: rows[0].forme_galenique || null,
+              voie_administration: rows[0].voie_administration || null,
+              confiance: "moyenne",
+            } as any];
+            break;
+          }
+        }
+      }
+    }
+
+    extractedMedicationCountForUsage = medEntries.length;
 
     if (medEntries.length === 0) {
       return new Response(JSON.stringify({
         medicaments: [], interactions: [], contextes: [], conseil: "", sources: [],
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
+
 
     const medNames = medEntries.map((m: any) => typeof m === "string" ? m : m.nom_commercial);
     const medMolecules = medEntries.map((m: any) => typeof m === "string" ? null : m.molecule_probable);
