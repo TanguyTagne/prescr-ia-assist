@@ -409,7 +409,7 @@ async function clinicalLookup(
   const curatedTopPromise = medicament?.id
     ? supabase
         .from("medicament_curated_pcs")
-        .select("pc_1, pc_2, pertinence_pc1, pertinence_pc2, phrase_conseil_pc1, phrase_conseil_pc2")
+        .select("pc_1, pc_2, pertinence_pc1, pertinence_pc2, phrase_conseil_pc1, phrase_conseil_pc2, vigilance, phrase_vigilance, pertinence_vigilance")
         .eq("medicament_id", medicament.id)
         .maybeSingle()
     : Promise.resolve({ data: null });
@@ -507,8 +507,17 @@ async function clinicalLookup(
     curatedTopPromise,
   ]);
   conseils = conseilsRes.data || [];
-  const curatedTop = await buildCuratedTop((curatedTopRes as any).data || null);
+  const curatedRow = (curatedTopRes as any).data || null;
+  const curatedTop = await buildCuratedTop(curatedRow);
   curatedPcsOut = curatedTop;
+  // Message de vigilance (avertissement de sécurité, ne vend rien)
+  const vigilance = curatedRow?.vigilance && String(curatedRow.vigilance).trim()
+    ? {
+        titre: String(curatedRow.vigilance).trim(),
+        phrase: (curatedRow.phrase_vigilance || "").trim() || undefined,
+        pertinence: (curatedRow.pertinence_vigilance || "Sécurité").trim(),
+      }
+    : null;
   produits = filterPediatricSafe(curatedTop, medicament);
   protocoles = protocolesRes.data || [];
 
@@ -539,6 +548,7 @@ async function clinicalLookup(
     produits,
     protocoles,
     curated_pcs: curatedPcsOut,
+    vigilance,
   };
 }
 
@@ -1646,6 +1656,7 @@ serve(async (req) => {
           clinical_kb: true,
           pathologies: clinical.pathologies || [],
           curated_pcs: clinical.curated_pcs || [],
+          vigilance: clinical.vigilance || null,
         };
 
       } else if (dbMed?.matched) {
@@ -2063,6 +2074,7 @@ serve(async (req) => {
       molecule: m.molecule_active || null,
       code_atc: m.code_atc || null,
       conseil_associe: null,
+      vigilance: m.vigilance || undefined,
       recommendations: medRecommendations.get(i) || [],
     }));
 
