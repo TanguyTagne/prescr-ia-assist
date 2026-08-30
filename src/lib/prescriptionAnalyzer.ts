@@ -200,6 +200,7 @@ function normalizeResult(data: any): AnalysisResult {
       molecule: med.molecule,
       code_atc: med.code_atc,
       conseil_associe: undefined,
+      vigilance: med.vigilance || undefined,
       recommendations: (med.recommendations || []).slice(0, 3),
     })),
     interactions: data.interactions || [],
