@@ -23,6 +23,13 @@ function extractCore(name: string): string {
     .trim();
 }
 
+// Exclut les produits non-médicamenteux / peu impressionnants de la démo :
+// pilluliers, compresses, pansements, dispositifs médicaux, accessoires…
+const BORING_RE =
+  /pillulier|compresse|pansement|bandage|bande\b|gants?\b|thermom[eè]tre|tensiom[eè]tre|canne\b|b[eé]quille|bas de contention|collier cervical|dispositif|masque\b|s[eé]rum physiologique|coton|sparadrap|poche de (?:froid|chaud)|attelle|orth[eè]se|ceinture lombaire|fauteuil|d[eé]ambulateur|brosse [àa] dents|dentifrice|bain de bouche|lingette|alcool modifi[eé]|eau oxyg[eé]n[eé]e|test de grossesse|autotest|pile\b|lancette|aiguille|seringue|glucom[eè]tre/i;
+
+const isImpressive = (p: any) => !BORING_RE.test(`${p.produit ?? ""} ${p.categorie ?? ""}`);
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -36,23 +43,24 @@ Deno.serve(async (req) => {
     const mode = String(body.mode || "lookup");
     const query = String(body.query || "").trim().slice(0, 120);
 
-    // ── Autocomplete ──
+    // ── Autocomplete — uniquement les médicaments ayant des PC curés ──
     if (mode === "suggest") {
       if (query.length < 2) return json({ suggestions: [] });
       const { data } = await supabase
-        .from("medicaments")
-        .select("nom_commercial")
-        .ilike("nom_commercial", `${query}%`)
-        .limit(8);
+        .from("medicament_curated_pcs")
+        .select("medicaments!inner(nom_commercial)")
+        .ilike("medicaments.nom_commercial", `${query}%`)
+        .limit(10);
       const seen = new Set<string>();
       const suggestions = (data || [])
-        .map((m: any) => m.nom_commercial)
+        .map((m: any) => m.medicaments?.nom_commercial)
         .filter((n: string) => {
           const k = (n || "").toLowerCase();
           if (!k || seen.has(k)) return false;
           seen.add(k);
           return true;
-        });
+        })
+        .slice(0, 5);
       return json({ suggestions });
     }
 
@@ -200,10 +208,14 @@ Deno.serve(async (req) => {
       .filter((p: any) => {
         const k = (p.produit || "").toLowerCase().trim();
         if (!k || seen.has(k)) return false;
+        // Démo : uniquement des suggestions impressionnantes (actifs chimiques /
+        // effets secondaires) — pas de pillulier, compresses, accessoires…
+        if (!isImpressive(p)) return false;
         seen.add(k);
         return true;
       })
-      .slice(0, 3)
+      .sort((a: any, b: any) => (b.priorite || 0) - (a.priorite || 0))
+      .slice(0, 5)
       .map((p: any) => ({
         produit: p.produit,
         categorie: p.categorie || "Conseil",
