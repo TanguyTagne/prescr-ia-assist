@@ -47,8 +47,6 @@ const WidgetDemo = ({ onClose, size = "compact" }: WidgetDemoProps) => {
   const [query, setQuery] = useState("");
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [notFound, setNotFound] = useState(false);
-  const [email, setEmail] = useState("");
-  const [gateLoading, setGateLoading] = useState(false);
   const pendingQuery = useRef<string>("");
 
   // ── Liste des médicaments de la base avec suggestions pertinentes ──
@@ -65,23 +63,8 @@ const WidgetDemo = ({ onClose, size = "compact" }: WidgetDemoProps) => {
       .finally(() => setListLoading(false));
   }, [phase, medList.length, listLoading]);
 
-  // Le lead/CTA apparaît automatiquement 20 s après l'affichage des résultats.
-  // À partir du 2ᵉ test sans email connu, on demande l'email (après les résultats).
-  useEffect(() => {
-    if (phase !== "result") return;
-    const tm = setTimeout(() => {
-      const uses = Number(localStorage.getItem(USES_KEY) || "0");
-      const savedEmail = localStorage.getItem(EMAIL_KEY);
-      if (uses >= 2 && !savedEmail) {
-        trackEvent("demo_email_gate_shown", { medicament: pendingQuery.current });
-        setPhase("gate");
-      } else {
-        trackEvent("demo_lead_auto_shown", { delay_s: 20 });
-        setPhase("lead");
-      }
-    }, 20_000);
-    return () => clearTimeout(tm);
-  }, [phase]);
+  // Démo illimitée : aucune porte email, on reste sur les résultats tant que
+  // l'utilisateur ne relance pas une recherche.
 
   const runAnalysis = async (med: string) => {
     setNotFound(false);
