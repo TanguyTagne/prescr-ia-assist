@@ -43,23 +43,24 @@ Deno.serve(async (req) => {
     const mode = String(body.mode || "lookup");
     const query = String(body.query || "").trim().slice(0, 120);
 
-    // ── Autocomplete ──
+    // ── Autocomplete — uniquement les médicaments ayant des PC curés ──
     if (mode === "suggest") {
       if (query.length < 2) return json({ suggestions: [] });
       const { data } = await supabase
-        .from("medicaments")
-        .select("nom_commercial")
-        .ilike("nom_commercial", `${query}%`)
-        .limit(8);
+        .from("medicament_curated_pcs")
+        .select("medicaments!inner(nom_commercial)")
+        .ilike("medicaments.nom_commercial", `${query}%`)
+        .limit(10);
       const seen = new Set<string>();
       const suggestions = (data || [])
-        .map((m: any) => m.nom_commercial)
+        .map((m: any) => m.medicaments?.nom_commercial)
         .filter((n: string) => {
           const k = (n || "").toLowerCase();
           if (!k || seen.has(k)) return false;
           seen.add(k);
           return true;
-        });
+        })
+        .slice(0, 5);
       return json({ suggestions });
     }
 
@@ -207,10 +208,14 @@ Deno.serve(async (req) => {
       .filter((p: any) => {
         const k = (p.produit || "").toLowerCase().trim();
         if (!k || seen.has(k)) return false;
+        // Démo : uniquement des suggestions impressionnantes (actifs chimiques /
+        // effets secondaires) — pas de pillulier, compresses, accessoires…
+        if (!isImpressive(p)) return false;
         seen.add(k);
         return true;
       })
-      .slice(0, 3)
+      .sort((a: any, b: any) => (b.priorite || 0) - (a.priorite || 0))
+      .slice(0, 5)
       .map((p: any) => ({
         produit: p.produit,
         categorie: p.categorie || "Conseil",
