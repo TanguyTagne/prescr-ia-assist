@@ -53,24 +53,19 @@ const WidgetDemo = ({ onClose, size = "compact" }: WidgetDemoProps) => {
   const [gateLoading, setGateLoading] = useState(false);
   const pendingQuery = useRef<string>("");
 
-  // ── Autocomplete (public edge function) ──
+  // ── Liste des médicaments de la base avec suggestions pertinentes ──
+  const [medList, setMedList] = useState<string[]>([]);
+  const [listLoading, setListLoading] = useState(false);
+
   useEffect(() => {
-    if (phase !== "search" || query.trim().length < 2) {
-      setSuggestions([]);
-      return;
-    }
-    const tm = setTimeout(async () => {
-      try {
-        const { data } = await supabase.functions.invoke("demo-med-lookup", {
-          body: { mode: "suggest", query: query.trim() },
-        });
-        setSuggestions(((data as any)?.suggestions || []).slice(0, 5));
-      } catch {
-        setSuggestions([]);
-      }
-    }, 250);
-    return () => clearTimeout(tm);
-  }, [query, phase]);
+    if (phase !== "search" || medList.length > 0 || listLoading) return;
+    setListLoading(true);
+    supabase.functions
+      .invoke("demo-med-lookup", { body: { mode: "list" } })
+      .then(({ data }) => setMedList(((data as any)?.medications || []).slice(0, 6)))
+      .catch(() => setMedList([]))
+      .finally(() => setListLoading(false));
+  }, [phase, medList.length, listLoading]);
 
   // Le lead/CTA apparaît automatiquement 20 s après l'affichage des résultats.
   useEffect(() => {
