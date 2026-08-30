@@ -15,6 +15,8 @@ export interface MedicamentInfo {
   molecule?: string;
   code_atc?: string;
   conseil_associe?: string;
+  /** Avertissement de sécurité (ne vend rien) — champ "vigilance" de la base. */
+  vigilance?: { titre: string; phrase?: string; pertinence?: string };
   recommendations?: Recommendation[];
   // CIP du code-barre scanné — alimenté quand l'analyse vient d'un scan douchette.
   // Permet au pharmacien de signaler un mauvais référencement avec le CIP exact.

@@ -1051,10 +1051,13 @@ export type Database = {
           pc_2: string | null
           pertinence_pc1: string | null
           pertinence_pc2: string | null
+          pertinence_vigilance: string | null
           phrase_conseil_pc1: string | null
           phrase_conseil_pc2: string | null
+          phrase_vigilance: string | null
           source: string
           updated_at: string
+          vigilance: string | null
         }
         Insert: {
           created_at?: string
@@ -1063,10 +1066,13 @@ export type Database = {
           pc_2?: string | null
           pertinence_pc1?: string | null
           pertinence_pc2?: string | null
+          pertinence_vigilance?: string | null
           phrase_conseil_pc1?: string | null
           phrase_conseil_pc2?: string | null
+          phrase_vigilance?: string | null
           source?: string
           updated_at?: string
+          vigilance?: string | null
         }
         Update: {
           created_at?: string
@@ -1075,10 +1081,13 @@ export type Database = {
           pc_2?: string | null
           pertinence_pc1?: string | null
           pertinence_pc2?: string | null
+          pertinence_vigilance?: string | null
           phrase_conseil_pc1?: string | null
           phrase_conseil_pc2?: string | null
+          phrase_vigilance?: string | null
           source?: string
           updated_at?: string
+          vigilance?: string | null
         }
         Relationships: [
           {
