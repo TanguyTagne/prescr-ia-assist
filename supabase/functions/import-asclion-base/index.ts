@@ -518,7 +518,11 @@ serve(async (req) => {
         // Phrase conseil — accepte plusieurs noms de colonnes possibles
         const phrase1 = rowValue(r, ["phrase_conseil_pc1", "phrase conseil pc1", "phrase_pc1", "conseil_pc1", "phrase_conseil_1", "conseil_1", "phrase conseil 1"]);
         const phrase2 = rowValue(r, ["phrase_conseil_pc2", "phrase conseil pc2", "phrase_pc2", "conseil_pc2", "phrase_conseil_2", "conseil_2", "phrase conseil 2"]);
-        if (pc1 || pc2) {
+        // Vigilance (message sécurité, non commercial)
+        const vigilance = rowValue(r, ["vigilance", "vigilance_1", "pc_vigilance", "securite", "sécurité"]);
+        const phraseVig = rowValue(r, ["phrase_vigilance", "phrase vigilance", "phrase_conseil_vigilance", "conseil_vigilance", "phrase_securite"]);
+        const pertVig = rowValue(r, ["pertinence_vigilance", "pertinence vigilance", "raison_vigilance"]);
+        if (pc1 || pc2 || vigilance || phraseVig) {
           pcs.push({
             medicament_id: id,
             pc_1: pc1 || null,
@@ -527,9 +531,13 @@ serve(async (req) => {
             pertinence_pc2: pert2 || null,
             phrase_conseil_pc1: phrase1 || null,
             phrase_conseil_pc2: phrase2 || null,
+            vigilance: vigilance || null,
+            phrase_vigilance: phraseVig || null,
+            pertinence_vigilance: pertVig || (vigilance || phraseVig ? "Sécurité" : null),
             source: "asclion_2026_06",
           });
         }
+
       }
 
       // Dédup CIP (la contrainte UNIQUE rejetterait sinon)
@@ -560,6 +568,7 @@ serve(async (req) => {
       let pcsIns = 0, pcsErr = 0;
       const pcsWithPertinence = pcs.filter((p) => p.pertinence_pc1 || p.pertinence_pc2).length;
       const pcsWithPhrase = pcs.filter((p) => p.phrase_conseil_pc1 || p.phrase_conseil_pc2).length;
+      const pcsWithVigilance = pcs.filter((p) => p.vigilance || p.phrase_vigilance).length;
       for (const b of chunks(pcs, BATCH)) {
         const { error } = await supabase.from("medicament_curated_pcs").upsert(b, { onConflict: "medicament_id" });
         if (error) { pcsErr += b.length; console.error("pc batch err:", error.message); }
@@ -573,10 +582,12 @@ serve(async (req) => {
         pcs_upserted: pcsIns, pcs_failed: pcsErr,
         pcs_with_pertinence: pcsWithPertinence,
         pcs_with_phrase_conseil: pcsWithPhrase,
+        pcs_with_vigilance: pcsWithVigilance,
         next_offset: nextOffset < total ? nextOffset : null,
         done: nextOffset >= total,
       }), { headers: { ...cors, "Content-Type": "application/json" } });
     }
+
 
     return new Response(JSON.stringify({
         error: "mode requis : ?mode=upload, ?mode=upload_phrases, ?mode=wipe, ?mode=import&offset=0&limit=1000 ou ?mode=import_phrases&offset=0&limit=1000",
