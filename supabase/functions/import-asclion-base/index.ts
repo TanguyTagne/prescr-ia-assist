@@ -568,6 +568,7 @@ serve(async (req) => {
       let pcsIns = 0, pcsErr = 0;
       const pcsWithPertinence = pcs.filter((p) => p.pertinence_pc1 || p.pertinence_pc2).length;
       const pcsWithPhrase = pcs.filter((p) => p.phrase_conseil_pc1 || p.phrase_conseil_pc2).length;
+      const pcsWithVigilance = pcs.filter((p) => p.vigilance || p.phrase_vigilance).length;
       for (const b of chunks(pcs, BATCH)) {
         const { error } = await supabase.from("medicament_curated_pcs").upsert(b, { onConflict: "medicament_id" });
         if (error) { pcsErr += b.length; console.error("pc batch err:", error.message); }
@@ -581,10 +582,12 @@ serve(async (req) => {
         pcs_upserted: pcsIns, pcs_failed: pcsErr,
         pcs_with_pertinence: pcsWithPertinence,
         pcs_with_phrase_conseil: pcsWithPhrase,
+        pcs_with_vigilance: pcsWithVigilance,
         next_offset: nextOffset < total ? nextOffset : null,
         done: nextOffset >= total,
       }), { headers: { ...cors, "Content-Type": "application/json" } });
     }
+
 
     return new Response(JSON.stringify({
         error: "mode requis : ?mode=upload, ?mode=upload_phrases, ?mode=wipe, ?mode=import&offset=0&limit=1000 ou ?mode=import_phrases&offset=0&limit=1000",
