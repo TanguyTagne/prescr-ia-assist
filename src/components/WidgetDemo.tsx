@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Sparkles, Loader2, ArrowLeft, Send, Mail, AlertCircle } from "lucide-react";
+import { Sparkles, Loader2, Send, AlertCircle } from "lucide-react";
 import AnalysisSkeleton from "@/components/AnalysisSkeleton";
 import AnalysisResults from "@/components/AnalysisResults";
 import LegalDisclaimer from "@/components/LegalDisclaimer";
@@ -12,10 +12,9 @@ import { getStoredAttribution } from "@/lib/trackingAttribution";
 import { toast } from "sonner";
 import { useI18n } from "@/i18n/I18nProvider";
 
-type Phase = "search" | "gate" | "analyzing" | "result" | "lead";
+type Phase = "search" | "analyzing" | "result" | "lead";
 
 const USES_KEY = "asclion_demo_uses";
-const EMAIL_KEY = "asclion_demo_email";
 
 
 
