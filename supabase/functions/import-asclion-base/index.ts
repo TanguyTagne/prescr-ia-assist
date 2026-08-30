@@ -518,7 +518,11 @@ serve(async (req) => {
         // Phrase conseil — accepte plusieurs noms de colonnes possibles
         const phrase1 = rowValue(r, ["phrase_conseil_pc1", "phrase conseil pc1", "phrase_pc1", "conseil_pc1", "phrase_conseil_1", "conseil_1", "phrase conseil 1"]);
         const phrase2 = rowValue(r, ["phrase_conseil_pc2", "phrase conseil pc2", "phrase_pc2", "conseil_pc2", "phrase_conseil_2", "conseil_2", "phrase conseil 2"]);
-        if (pc1 || pc2) {
+        // Vigilance (message sécurité, non commercial)
+        const vigilance = rowValue(r, ["vigilance", "vigilance_1", "pc_vigilance", "securite", "sécurité"]);
+        const phraseVig = rowValue(r, ["phrase_vigilance", "phrase vigilance", "phrase_conseil_vigilance", "conseil_vigilance", "phrase_securite"]);
+        const pertVig = rowValue(r, ["pertinence_vigilance", "pertinence vigilance", "raison_vigilance"]);
+        if (pc1 || pc2 || vigilance || phraseVig) {
           pcs.push({
             medicament_id: id,
             pc_1: pc1 || null,
@@ -527,9 +531,13 @@ serve(async (req) => {
             pertinence_pc2: pert2 || null,
             phrase_conseil_pc1: phrase1 || null,
             phrase_conseil_pc2: phrase2 || null,
+            vigilance: vigilance || null,
+            phrase_vigilance: phraseVig || null,
+            pertinence_vigilance: pertVig || (vigilance || phraseVig ? "Sécurité" : null),
             source: "asclion_2026_06",
           });
         }
+
       }
 
       // Dédup CIP (la contrainte UNIQUE rejetterait sinon)
