@@ -23,6 +23,11 @@ function extractCore(name: string): string {
     .trim();
 }
 
+// Exclut les produits non-médicamenteux / peu impressionnants de la démo :
+// pilluliers, compresses, pansements, dispositifs médicaux, accessoires…
+const BORING_RE =
+  /pillulier|compresse|pansement|bande(?!s? de (?:bien))/i; // placeholder, replaced below
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
