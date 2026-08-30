@@ -148,53 +148,6 @@ const WidgetDemo = ({ onClose, size = "compact" }: WidgetDemoProps) => {
     );
   }
 
-  if (phase === "gate") {
-    return (
-      <div className={`${c.wrap} animate-fade-in`}>
-        <button
-          onClick={() => setPhase("search")}
-          className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
-        >
-          <ArrowLeft className="h-3 w-3" />
-          {t("demo.preview.back")}
-        </button>
-        <div className="text-center space-y-1">
-          <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary">
-            <Mail className="h-3.5 w-3.5" />
-            {t("demo.gate.title")}
-          </div>
-          <p className="text-[11px] text-muted-foreground leading-snug">{t("demo.gate.desc")}</p>
-        </div>
-        <form onSubmit={handleGateSubmit} className="space-y-1.5">
-          <input
-            type="email"
-            required
-            autoFocus
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder={t("demo.lead.emailPh")}
-            maxLength={255}
-            className="w-full h-9 px-2 text-xs rounded border border-input bg-background focus:outline-none focus:ring-1 focus:ring-primary"
-          />
-          <button
-            type="submit"
-            disabled={gateLoading}
-            className="w-full h-9 rounded pharmacy-gradient text-primary-foreground text-xs font-semibold flex items-center justify-center gap-1.5 hover:opacity-95 transition-opacity disabled:opacity-60"
-          >
-            {gateLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-            {t("demo.gate.submit")}
-          </button>
-        </form>
-        <p className="text-[9px] text-muted-foreground leading-snug">
-          {t("demo.lead.disclaimer")}{" "}
-          <a href={lp("/confidentialite")} target="_blank" rel="noopener" className="underline hover:text-foreground">
-            {t("demo.lead.privacyLink")}
-          </a>
-        </p>
-      </div>
-    );
-  }
-
   if (phase === "lead") {
     const handleGoToForm = () => {
       trackEvent("demo_cta_to_form_clicked", { source: "widget_lead" });
