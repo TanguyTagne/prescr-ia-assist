@@ -56,8 +56,30 @@ export const I18nProvider = ({ children }: { children: ReactNode }) => {
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
 };
 
+/** Fallback used if the context is missing (e.g. duplicated module instance after HMR). */
+const buildFallback = (): I18nContextValue => {
+  const pathname = typeof window !== "undefined" ? window.location.pathname : "/";
+  const lang = detectLangFromPath(pathname);
+  return {
+    lang,
+    t: (key: TranslationKey) => translations[key]?.[lang] ?? translations[key]?.fr ?? key,
+    lp: (path: string) => {
+      if (!path.startsWith("/")) path = "/" + path;
+      if (lang === "en") return path === "/" ? "/en" : "/en" + path;
+      return path;
+    },
+    switchLang: (target: Lang) => {
+      if (typeof window === "undefined") return;
+      const current = window.location.pathname;
+      const stripped =
+        current === "/en" ? "/" : current.startsWith("/en/") ? current.slice(3) : current;
+      window.location.pathname =
+        target === "en" ? (stripped === "/" ? "/en" : "/en" + stripped) : stripped;
+    },
+  };
+};
+
 export const useI18n = () => {
   const ctx = useContext(I18nContext);
-  if (!ctx) throw new Error("useI18n must be used within I18nProvider");
-  return ctx;
+  return ctx ?? buildFallback();
 };
