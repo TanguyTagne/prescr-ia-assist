@@ -1656,6 +1656,7 @@ serve(async (req) => {
           clinical_kb: true,
           pathologies: clinical.pathologies || [],
           curated_pcs: clinical.curated_pcs || [],
+          vigilance: clinical.vigilance || null,
         };
 
       } else if (dbMed?.matched) {
@@ -2073,6 +2074,7 @@ serve(async (req) => {
       molecule: m.molecule_active || null,
       code_atc: m.code_atc || null,
       conseil_associe: null,
+      vigilance: m.vigilance || undefined,
       recommendations: medRecommendations.get(i) || [],
     }));
 
