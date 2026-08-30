@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Sparkles, Search, Loader2, ArrowLeft, Send, Mail, AlertCircle } from "lucide-react";
+import { Sparkles, Loader2, ArrowLeft, Send, Mail, AlertCircle } from "lucide-react";
 import AnalysisSkeleton from "@/components/AnalysisSkeleton";
 import AnalysisResults from "@/components/AnalysisResults";
 import LegalDisclaimer from "@/components/LegalDisclaimer";
@@ -46,7 +46,6 @@ const WidgetDemo = ({ onClose, size = "compact" }: WidgetDemoProps) => {
   const { t, lp } = useI18n();
   const [phase, setPhase] = useState<Phase>("search");
   const [query, setQuery] = useState("");
-  const [suggestions, setSuggestions] = useState<string[]>([]);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [email, setEmail] = useState("");
