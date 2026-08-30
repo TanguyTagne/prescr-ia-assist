@@ -85,7 +85,7 @@ Deno.serve(async (req) => {
           if (row.pertinence_pc1 && String(row.pertinence_pc1).trim()) score += 3;
           if (row.pertinence_pc2 && String(row.pertinence_pc2).trim()) score += 2;
           if (row.phrase_conseil_pc1 && String(row.phrase_conseil_pc1).trim()) score += 2;
-          return { nom: row.medicaments?.nom_commercial as string, score };
+          return { nom: stripLab(row.medicaments?.nom_commercial as string), score };
         })
         .filter((x: any) => x?.nom);
 
@@ -114,7 +114,7 @@ Deno.serve(async (req) => {
         .limit(10);
       const seen = new Set<string>();
       const suggestions = (data || [])
-        .map((m: any) => m.medicaments?.nom_commercial)
+        .map((m: any) => stripLab(m.medicaments?.nom_commercial))
         .filter((n: string) => {
           const k = (n || "").toLowerCase();
           if (!k || seen.has(k)) return false;
@@ -267,6 +267,7 @@ Deno.serve(async (req) => {
     const seen = new Set<string>();
     const recommendations = produits
       .filter((p: any) => {
+        if (hasLab(p.produit || "")) return false;
         const k = (p.produit || "").toLowerCase().trim();
         if (!k || seen.has(k)) return false;
         // Démo : uniquement des suggestions impressionnantes (actifs chimiques /
@@ -313,7 +314,7 @@ Deno.serve(async (req) => {
     return json({
       found: true,
       medicament: {
-        nom: medicament.nom_commercial,
+        nom: stripLab(medicament.nom_commercial),
         classe: classe || "Classe non renseignée",
         molecule: molecule?.nom_molecule || undefined,
         code_atc: atcCode || undefined,
