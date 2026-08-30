@@ -11,10 +11,8 @@ const PAGE = 1000;
 
 export default function AsclionBaseImportTab() {
   const [wiping, setWiping] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [uploadingPhrases, setUploadingPhrases] = useState(false);
   const [importing, setImporting] = useState(false);
-  const [importingPhrases, setImportingPhrases] = useState(false);
   const [log, setLog] = useState<string[]>([]);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -30,31 +28,6 @@ export default function AsclionBaseImportTab() {
       binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
     }
     return btoa(binary);
-  };
-
-  const uploadCsv = async (file: File) => {
-    setUploading(true);
-    setLog([]);
-    setProgress(null);
-    push(`→ Envoi du CSV enrichi : ${file.name}`);
-    try {
-      const contentBase64 = arrayBufferToBase64(await file.arrayBuffer());
-      const { data, error } = await supabase.functions.invoke("import-asclion-base", {
-        body: { mode: "upload", contentBase64, filename: file.name },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      push(`✓ CSV poussé dans imports/${FILE} (${data.rows ?? "?"} lignes)`);
-      push(`✓ Pertinence détectée : ${data.has_pertinence ? "oui" : "non"}`);
-      push(`✓ Phrases conseil détectées : ${data.has_phrase_conseil ? "oui" : "non"}`);
-      toast.success("CSV enrichi poussé");
-    } catch (e: any) {
-      toast.error(e.message);
-      push(`✗ push CSV : ${e.message}`);
-    } finally {
-      setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    }
   };
 
   const uploadPhrasesCsv = async (file: File) => {
@@ -198,7 +171,7 @@ export default function AsclionBaseImportTab() {
     }
   };
 
-  const busy = wiping || uploading || uploadingPhrases || importing || importingPhrases;
+  const busy = wiping || uploadingPhrases || importing;
 
   return (
     <Card>
