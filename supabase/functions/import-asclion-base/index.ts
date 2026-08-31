@@ -265,16 +265,18 @@ serve(async (req) => {
       const { data: blob, error: stErr } = await supabase.storage.from(BUCKET).download(sourceFile);
       if (stErr || !blob) throw new Error(`Fichier introuvable: ${stErr?.message ?? "blob null"}`);
       const text = decodeCsvBytes(new Uint8Array(await blob.arrayBuffer()));
-      const rows = parseCsv(text);
-      const headers = rows.length ? Object.keys(rows[0]).filter((h) => h === h.trim()) : [];
       const match = (url.searchParams.get("match") ?? bodyJson.match ?? "").toLowerCase();
+      // Streaming : on ne garde que les premières lignes (ou 2000 max pour la recherche)
+      const parsed = parseCsvRange(text, 0, match ? 2000 : 2);
+      const headers = parsed.headers;
       const hits = match
-        ? rows.filter((r) => Object.values(r).some((v) => String(v).toLowerCase().includes(match))).slice(0, 10)
-        : rows.slice(0, 2);
+        ? parsed.rows.filter((r) => Object.values(r).some((v) => String(v).toLowerCase().includes(match))).slice(0, 10)
+        : parsed.rows;
       return new Response(
-        JSON.stringify({ source_file: sourceFile, total_rows: rows.length, headers, hits }),
+        JSON.stringify({ source_file: sourceFile, total_rows: parsed.total, headers, hits }),
         { headers: { ...cors, "Content-Type": "application/json" } },
       );
+
     }
 
     // ── UPLOAD CSV ENRICHI ──────────────────────────────────────────────
