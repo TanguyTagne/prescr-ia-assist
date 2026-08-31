@@ -298,14 +298,24 @@ serve(async (req) => {
         }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
       }
 
+      // Le fichier poussé devient le CSV maître (nom d'origine conservé,
+      // sanitizé). resolveMasterFile choisit le plus récent : ce sera lui.
+      const rawName = String(bodyJson.filename || "asclion-base.csv");
+      const safeName = rawName
+        .split(/[\\/]/).pop()!
+        .normalize("NFD").replace(/[̀-ͯ]/g, "")
+        .replace(/[^A-Za-z0-9._-]+/g, "_")
+        .replace(/^_+|_+$/g, "") || "asclion-base.csv";
+      const finalName = safeName.toLowerCase().endsWith(".csv") ? safeName : `${safeName}.csv`;
+
       const { error: uploadErr } = await supabase.storage
         .from(BUCKET)
-        .upload(FILE, bytes, { contentType: "text/csv; charset=utf-8", upsert: true });
+        .upload(finalName, bytes, { contentType: "text/csv; charset=utf-8", upsert: true });
       if (uploadErr) throw uploadErr;
 
       return new Response(JSON.stringify({
         ok: true,
-        file: `${BUCKET}/${FILE}`,
+        file: `${BUCKET}/${finalName}`,
         size: bytes.byteLength,
         rows: previewRows.length,
         has_pertinence: hasPertinence,
