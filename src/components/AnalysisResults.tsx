@@ -84,6 +84,7 @@ function productNamesMatch(a?: string | null, b?: string | null): boolean {
 }
 
 type CuratedHint = { pertinence?: string; phrase_conseil?: string };
+type VigilanceHint = { titre: string; phrase?: string; pertinence?: string };
 
 function cleanHintValue(value?: string | null): string | null {
   const cleaned = (value || "").trim();
@@ -146,9 +147,73 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
   const { t } = useI18n();
   const [orderedItems, setOrderedItems] = useState<Map<string, "manual_click" | "hid_auto">>(new Map());
   const [curatedHints, setCuratedHints] = useState<Map<string, CuratedHint>>(new Map());
+  const [resolvedVigilance, setResolvedVigilance] = useState<Map<string, VigilanceHint>>(new Map());
   const [expandedConseils, setExpandedConseils] = useState<Set<number>>(new Set());
   const [conseilGlobalOpen, setConseilGlobalOpen] = useState(false);
   const { recordFeedback } = usePcFeedback();
+
+  // Filet Electron : certains événements de scan plus anciens ne transportent
+  // pas encore `vigilance`. On la relit alors depuis la base clinique avant le
+  // rendu. Le mode démo conserve volontairement son propre flux de données.
+  useEffect(() => {
+    if (demoMode) return;
+    const missing = result.medicaments.filter(
+      (med) => !med.vigilance?.titre && !med.vigilance?.phrase && med.nom.trim(),
+    );
+    if (missing.length === 0) return;
+
+    let cancelled = false;
+    void Promise.all(missing.map(async (med) => {
+      const firstWord = med.nom.trim().split(/[\s/]+/)[0];
+      if (!firstWord || firstWord.length < 3) return null;
+
+      const { data: candidates } = await supabase
+        .from("medicaments")
+        .select("id, nom_commercial")
+        .ilike("nom_commercial", `${firstWord}%`)
+        .limit(50);
+      if (!candidates?.length) return null;
+
+      const target = normalizeLookupKey(med.nom);
+      const ordered = [...candidates].sort((a, b) => {
+        const aExact = normalizeLookupKey(a.nom_commercial) === target ? 1 : 0;
+        const bExact = normalizeLookupKey(b.nom_commercial) === target ? 1 : 0;
+        return bExact - aExact;
+      });
+      const ids = ordered.map((candidate) => candidate.id);
+      const { data: rows } = await supabase
+        .from("medicament_curated_pcs")
+        .select("medicament_id, vigilance, phrase_vigilance, pertinence_vigilance")
+        .in("medicament_id", ids);
+
+      const byId = new Map((rows || []).map((row) => [row.medicament_id, row]));
+      const row = ordered.map((candidate) => byId.get(candidate.id)).find(
+        (candidate) => candidate?.vigilance?.trim() || candidate?.phrase_vigilance?.trim(),
+      );
+      if (!row) return null;
+      const titre = row.vigilance?.trim() || row.phrase_vigilance?.trim();
+      if (!titre) return null;
+      return {
+        key: normalizeLookupKey(med.nom),
+        vigilance: {
+          titre,
+          phrase: row.vigilance?.trim() ? row.phrase_vigilance?.trim() || undefined : undefined,
+          pertinence: row.pertinence_vigilance?.trim() || "Sécurité",
+        } satisfies VigilanceHint,
+      };
+    })).then((found) => {
+      if (cancelled) return;
+      const entries = found.filter((item): item is NonNullable<typeof item> => item !== null);
+      if (entries.length === 0) return;
+      setResolvedVigilance((previous) => {
+        const next = new Map(previous);
+        entries.forEach(({ key, vigilance }) => next.set(key, vigilance));
+        return next;
+      });
+    });
+
+    return () => { cancelled = true; };
+  }, [demoMode, result.medicaments]);
 
 
 
@@ -695,8 +760,8 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
 
 
           {/* Vigilance — avertissement de sécurité, aucun produit à vendre */}
-          {(med.vigilance?.titre || med.vigilance?.phrase) && (
-            <VigilanceLine vigilance={med.vigilance} />
+          {(med.vigilance?.titre || med.vigilance?.phrase || resolvedVigilance.has(normalizeLookupKey(med.nom))) && (
+            <VigilanceLine vigilance={med.vigilance || resolvedVigilance.get(normalizeLookupKey(med.nom)) as VigilanceHint} />
           )}
 
           {/* Recommendations for this medication */}
