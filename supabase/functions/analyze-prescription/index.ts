@@ -258,22 +258,6 @@ async function clinicalLookup(
     }
   }
 
-  if (!medicament) {
-    for (const variant of searchVariants) {
-      if (medicament) break;
-      const { data: partialRows } = await supabase
-        .from("medicaments")
-        .select("*, molecules(*)")
-        .ilike("nom_commercial", `%${variant}%`)
-        .limit(10);
-      const picked = pickByForm(partialRows);
-      if (picked) {
-        medicament = picked;
-        molecule = picked.molecules;
-      }
-    }
-  }
-
   if (!molecule && moleculeName) {
     const { data: molMatch } = await supabase
       .from("molecules")
@@ -1742,9 +1726,7 @@ serve(async (req) => {
         return (await query.limit(1)).data;
       };
 
-      let rows = await findMedication(name);
-      if (!rows?.length) rows = await findMedication(`${name}%`);
-      if (!rows?.length) rows = await findMedication(`%${name}%`);
+      const rows = await findMedication(name);
       if (!rows?.length) return;
 
       const { data: curated } = await supabase
@@ -2062,9 +2044,7 @@ serve(async (req) => {
       if (!name) return;
       const find = async (pattern: string) =>
         (await supabase.from("medicaments").select("id").ilike("nom_commercial", pattern).limit(1)).data;
-      let rows = await find(name);
-      if (!rows?.length) rows = await find(`${name}%`);
-      if (!rows?.length) rows = await find(`%${name}%`);
+      const rows = await find(name);
       if (!rows?.length) return;
       const { data: cur } = await supabase
         .from("medicament_curated_pcs")
