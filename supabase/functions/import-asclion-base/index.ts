@@ -1,16 +1,17 @@
 /**
- * Importe asclion-medicaments-pertinence-enrichi.csv depuis le bucket "imports".
- * CSV = base définitive : id, cip_code, nom_commercial, laboratoire, dosage,
+ * Importe le CSV maître Asclion (le plus récent du bucket "imports") :
+ *   id, cip_code, nom_commercial, laboratoire, dosage,
  *   forme_galenique, voie_administration, atc_code, nom_molecule,
  *   classe_therapeutique, cible_age, statut_officine, est_otc,
- *   est_produit_conseil, posologie, pc_1, pc_2, pc_3 (ignoré, max 2 PC),
- *   pertinence_pc1, pertinence_pc2, phrase_conseil_pc1, phrase_conseil_pc2
+ *   est_produit_conseil, posologie, pc_1, pc_2,
+ *   pertinence_pc1, pertinence_pc2, phrase_conseil_pc1, phrase_conseil_pc2,
+ *   vigilance, phrase_vigilance, pertinence_vigilance
  *
  * Modes :
  *   POST /import-asclion-base?mode=wipe         → vide medicaments + curated_pcs
- *   POST /import-asclion-base?mode=import&offset=0&limit=1000 → importe une tranche
- *   POST /import-asclion-base?mode=upload_phrases → pousse un CSV séparé de phrases conseil
- *   POST /import-asclion-base?mode=import_phrases&offset=0&limit=1000 → applique les phrases aux PCs existants
+ *   POST /import-asclion-base?mode=import&offset=0&limit=1000 → importe une tranche (wipe auto à offset 0)
+ *   POST /import-asclion-base?mode=upload       → pousse un nouveau CSV maître (nom d'origine conservé)
+ *   POST /import-asclion-base?mode=peek&match=x → debug admin : en-têtes + lignes correspondantes
  * Admin only.
  */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
