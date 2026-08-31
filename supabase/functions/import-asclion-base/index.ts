@@ -267,39 +267,35 @@ async function applyPhraseRow(supabase: any, row: Record<string, string>): Promi
     if (phraseVigilance) directPatch.phrase_vigilance = phraseVigilance;
     if (pertinenceVigilance) directPatch.pertinence_vigilance = pertinenceVigilance;
 
-    if (Object.keys(directPatch).length > 0) {
-      const { error } = await supabase.from("medicament_curated_pcs").upsert(
-        { medicament_id: medId, ...directPatch },
-        { onConflict: "medicament_id" },
-      );
-      return error ? "skipped" : "updated";
-    }
-
-    if (pcLong && (phraseLong || pertinenceLong)) {
+    // Format long : une ligne = médicament + PC + phrase. Auparavant, une
+    // phrase numérotée faisait retourner la fonction avant que `pcLong` soit
+    // copié dans pc_1/pc_2, créant des lignes avec phrase mais sans produit.
+    if (pcLong) {
       const { data: curated } = await supabase
         .from("medicament_curated_pcs")
         .select("pc_1, pc_2")
         .eq("medicament_id", medId)
         .maybeSingle();
-      const patch: Record<string, string> = {};
       if (productNamesMatch(curated?.pc_1, pcLong)) {
-        if (phraseLong) patch.phrase_conseil_pc1 = phraseLong;
-        if (pertinenceLong) patch.pertinence_pc1 = pertinenceLong;
+        if (phraseLong) directPatch.phrase_conseil_pc1 = phraseLong;
+        if (pertinenceLong) directPatch.pertinence_pc1 = pertinenceLong;
       } else if (productNamesMatch(curated?.pc_2, pcLong)) {
-        if (phraseLong) patch.phrase_conseil_pc2 = phraseLong;
-        if (pertinenceLong) patch.pertinence_pc2 = pertinenceLong;
-      } else if (!curated?.pc_1) {
-        patch.pc_1 = pcLong;
-        if (phraseLong) patch.phrase_conseil_pc1 = phraseLong;
-        if (pertinenceLong) patch.pertinence_pc1 = pertinenceLong;
-      } else if (!curated?.pc_2) {
-        patch.pc_2 = pcLong;
-        if (phraseLong) patch.phrase_conseil_pc2 = phraseLong;
-        if (pertinenceLong) patch.pertinence_pc2 = pertinenceLong;
+        if (phraseLong) directPatch.phrase_conseil_pc2 = phraseLong;
+        if (pertinenceLong) directPatch.pertinence_pc2 = pertinenceLong;
+      } else if (!curated?.pc_1 || directPatch.pc_1 === pcLong) {
+        directPatch.pc_1 = pcLong;
+        if (phraseLong) directPatch.phrase_conseil_pc1 = phraseLong;
+        if (pertinenceLong) directPatch.pertinence_pc1 = pertinenceLong;
+      } else if (!curated?.pc_2 || directPatch.pc_2 === pcLong) {
+        directPatch.pc_2 = pcLong;
+        if (phraseLong) directPatch.phrase_conseil_pc2 = phraseLong;
+        if (pertinenceLong) directPatch.pertinence_pc2 = pertinenceLong;
       }
-      if (Object.keys(patch).length === 0) return "skipped";
+    }
+
+    if (Object.keys(directPatch).length > 0) {
       const { error } = await supabase.from("medicament_curated_pcs").upsert(
-        { medicament_id: medId, ...patch },
+        { medicament_id: medId, ...directPatch },
         { onConflict: "medicament_id" },
       );
       return error ? "skipped" : "updated";
