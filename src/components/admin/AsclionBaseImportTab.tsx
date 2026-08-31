@@ -47,7 +47,8 @@ export default function AsclionBaseImportTab() {
     let offset = 0;
     let total = 0;
     push(`→ Import médicaments + PCs + phrases + vigilance depuis le CSV maître (lots de ${PAGE})`);
-    for (let i = 0; i < 50; i++) {
+    // Boucle jusqu'à la fin réelle du CSV (garde-fou large : 2000 lots = 1M lignes)
+    for (let i = 0; i < 2000; i++) {
       const { data, error } = await supabase.functions.invoke("import-asclion-base", {
         body: { mode: "import", offset, limit: PAGE },
       });
@@ -68,7 +69,9 @@ export default function AsclionBaseImportTab() {
       }
       offset = data.next_offset;
     }
+    throw new Error("Import interrompu : trop de lots (garde-fou). Relance l'import.");
   };
+
 
   const runCipMapping = async () => {
     push("→ Import mapping PC → CIP/EAN (auto-acceptation scan)");
