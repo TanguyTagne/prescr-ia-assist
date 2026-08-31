@@ -59,12 +59,45 @@ function detectDelim(headerLine: string): string {
   return ',';
 }
 
-function parseCsv(text: string): Record<string, string>[] {
+/**
+ * Parseur CSV en streaming : ne matérialise QUE les lignes de la tranche
+ * demandée (offset/limit). Matérialiser tout le fichier faisait exploser la
+ * mémoire de l'edge function (WORKER_RESOURCE_LIMIT).
+ */
+function parseCsvRange(
+  text: string,
+  start = 0,
+  count = Number.MAX_SAFE_INTEGER,
+): { headers: string[]; rows: Record<string, string>[]; total: number } {
   const cleaned = text.startsWith("\uFEFF") ? text.slice(1) : text;
   const headerLine = cleaned.split(/\r?\n/, 1)[0] || "";
-  if (!headerLine) return [];
+  if (!headerLine) return { headers: [], rows: [], total: 0 };
   const delim = detectDelim(headerLine);
-  const records: string[][] = [];
+
+  let headers: string[] | null = null;
+  const normalizedHeaders: string[] = [];
+  const rows: Record<string, string>[] = [];
+  let total = 0;
+
+  const emit = (record: string[]) => {
+    if (!record.some((value) => value.trim())) return;
+    if (!headers) {
+      headers = record.map((h) => h.trim().replace(/^"|"$/g, ""));
+      for (const h of headers) normalizedHeaders.push(normalizeHeaderKey(h));
+      return;
+    }
+    const index = total++;
+    if (index < start || rows.length >= count) return;
+    const row: Record<string, string> = {};
+    for (let idx = 0; idx < headers.length; idx++) {
+      const value = (record[idx] ?? "").trim();
+      row[headers[idx]] = value;
+      const normalized = normalizedHeaders[idx];
+      if (normalized && row[normalized] == null) row[normalized] = value;
+    }
+    rows.push(row);
+  };
+
   let record: string[] = [];
   let field = "";
   let inQuotes = false;
@@ -80,30 +113,18 @@ function parseCsv(text: string): Record<string, string>[] {
       if (ch === "\r" && cleaned[i + 1] === "\n") i++;
       record.push(field);
       field = "";
-      if (record.some((value) => value.trim())) records.push(record);
+      emit(record);
       record = [];
     } else {
       field += ch;
     }
   }
   record.push(field);
-  if (record.some((value) => value.trim())) records.push(record);
-  if (records.length < 2) return [];
-  const headers = records[0].map(h => h.trim().replace(/^"|"$/g, ""));
-  const rows: Record<string, string>[] = [];
-  for (let i = 1; i < records.length; i++) {
-    const vals = records[i];
-    const row: Record<string, string> = {};
-    headers.forEach((h, idx) => {
-      const value = (vals[idx] ?? "").trim();
-      row[h] = value;
-      const normalized = normalizeHeaderKey(h);
-      if (normalized && row[normalized] == null) row[normalized] = value;
-    });
-    rows.push(row);
-  }
-  return rows;
+  emit(record);
+
+  return { headers: headers ?? [], rows, total };
 }
+
 
 async function resolveMasterFile(supabase: any): Promise<string> {
   const { data, error } = await supabase.storage.from(BUCKET).list("", {
@@ -244,16 +265,18 @@ serve(async (req) => {
       const { data: blob, error: stErr } = await supabase.storage.from(BUCKET).download(sourceFile);
       if (stErr || !blob) throw new Error(`Fichier introuvable: ${stErr?.message ?? "blob null"}`);
       const text = decodeCsvBytes(new Uint8Array(await blob.arrayBuffer()));
-      const rows = parseCsv(text);
-      const headers = rows.length ? Object.keys(rows[0]).filter((h) => h === h.trim()) : [];
       const match = (url.searchParams.get("match") ?? bodyJson.match ?? "").toLowerCase();
+      // Streaming : on ne garde que les premières lignes (ou 2000 max pour la recherche)
+      const parsed = parseCsvRange(text, 0, match ? 2000 : 2);
+      const headers = parsed.headers;
       const hits = match
-        ? rows.filter((r) => Object.values(r).some((v) => String(v).toLowerCase().includes(match))).slice(0, 10)
-        : rows.slice(0, 2);
+        ? parsed.rows.filter((r) => Object.values(r).some((v) => String(v).toLowerCase().includes(match))).slice(0, 10)
+        : parsed.rows;
       return new Response(
-        JSON.stringify({ source_file: sourceFile, total_rows: rows.length, headers, hits }),
+        JSON.stringify({ source_file: sourceFile, total_rows: parsed.total, headers, hits }),
         { headers: { ...cors, "Content-Type": "application/json" } },
       );
+
     }
 
     // ── UPLOAD CSV ENRICHI ──────────────────────────────────────────────
@@ -264,8 +287,9 @@ serve(async (req) => {
       }
 
       const previewText = decodeCsvBytes(bytes);
-      const previewRows = parseCsv(previewText);
-      const previewSample = previewRows.slice(0, 200);
+      const previewParsed = parseCsvRange(previewText, 0, 200);
+      const previewSample = previewParsed.rows;
+
       const hasPertinence = previewSample.some((row) =>
         !!(
           rowValue(row, ["pertinence_pc1", "pertinence pc1", "pertinence_1", "raison_pc1", "raison pc1", "pertinence", "raison"]) ||
@@ -278,7 +302,7 @@ serve(async (req) => {
           rowValue(row, ["phrase_conseil_pc2", "phrase conseil pc2", "phrase_pc2", "conseil_pc2", "phrase_conseil_2", "conseil_2"])
         )
       );
-      const hasPc = previewRows.some((row) => !!rowValue(row, [
+      const hasPc = previewSample.some((row) => !!rowValue(row, [
         "pc_1", "pc1", "pc", "pc_suggere", "pc suggéré", "pc_suggere_1", "pc suggéré 1",
         "suggestion", "suggestion_1", "suggestion 1", "produit_suggere", "produit suggéré",
         "produit_suggere_1", "produit suggéré 1", "produit_complementaire", "produit complémentaire",
@@ -287,9 +311,10 @@ serve(async (req) => {
         "produit_suggere_2", "produit suggéré 2", "produit_complementaire_2", "produit complémentaire 2", "produit_conseil_2",
       ]));
       if (!hasPc) {
-        const headers = previewRows[0]
-          ? [...new Set(Object.keys(previewRows[0]).filter((key) => key === normalizeHeaderKey(key)))].join(", ")
+        const headers = previewParsed.headers.length
+          ? [...new Set(previewParsed.headers.map((h) => normalizeHeaderKey(h)))].join(", ")
           : "aucun en-tête";
+
         return new Response(JSON.stringify({
           error: "COLONNES_PC_INTROUVABLES",
           message: `Aucun nom de produit complémentaire reconnu. En-têtes détectés : ${headers}`,
@@ -305,7 +330,7 @@ serve(async (req) => {
         ok: true,
         file: `${BUCKET}/${MASTER_FILE}`,
         size: bytes.byteLength,
-        rows: previewRows.length,
+        rows: previewParsed.total,
         has_pertinence: hasPertinence,
         has_phrase_conseil: hasPhrase,
       }), { headers: { ...cors, "Content-Type": "application/json" } });
@@ -339,10 +364,10 @@ serve(async (req) => {
           fffd_count: fffdCount,
         }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
       }
-      const rows = parseCsv(text);
+      const parsed = parseCsvRange(text, offset, limit);
+      const total = parsed.total;
+      const slice = parsed.rows;
 
-      const total = rows.length;
-      const slice = rows.slice(offset, offset + limit);
 
       // Import autoritaire réel : le premier lot supprime la base précédente.
       // Sans ceci, les upserts laissaient les anciennes valeurs en place pour

@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Trash2, Upload, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
-const PAGE = 1000;
+const PAGE = 500;
 
 export default function AsclionBaseImportTab() {
   const [wiping, setWiping] = useState(false);
