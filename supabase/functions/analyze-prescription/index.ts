@@ -475,11 +475,15 @@ async function clinicalLookup(
   const curatedTop = await buildCuratedTop(curatedRow);
   curatedPcsOut = curatedTop;
   // Message de vigilance (avertissement de sécurité, ne vend rien)
-  const vigilance = curatedRow?.vigilance && String(curatedRow.vigilance).trim()
+  // Certaines règles v3 ne portent qu'une phrase de vigilance, sans titre court.
+  // Exiger le titre faisait disparaître la vigilance entière sur ces lignes.
+  const vigTitre = String(curatedRow?.vigilance || "").trim();
+  const vigPhrase = String(curatedRow?.phrase_vigilance || "").trim();
+  const vigilance = (vigTitre || vigPhrase)
     ? {
-        titre: String(curatedRow.vigilance).trim(),
-        phrase: (curatedRow.phrase_vigilance || "").trim() || undefined,
-        pertinence: (curatedRow.pertinence_vigilance || "Sécurité").trim(),
+        titre: vigTitre || vigPhrase,
+        phrase: vigTitre ? (vigPhrase || undefined) : undefined,
+        pertinence: (curatedRow?.pertinence_vigilance || "Sécurité").trim(),
       }
     : null;
   produits = filterPediatricSafe(curatedTop, medicament);

@@ -5,7 +5,11 @@
  *   classe_therapeutique, cible_age, statut_officine, est_otc,
  *   est_produit_conseil, posologie, pc_1, pc_2,
  *   pertinence_pc1, pertinence_pc2, phrase_conseil_pc1, phrase_conseil_pc2,
- *   vigilance, phrase_vigilance, pertinence_vigilance
+ *   vigilance, phrase_vigilance, pertinence_vigilance, canal
+ *
+ * `id` est facultatif depuis la v3 : s'il manque, un UUID déterministe est
+ * dérivé du CIP (sinon nom+dosage+labo+forme). `canal` = "hors comptoir"
+ * bascule la ligne en statut_officine = "exclu".
  *
  * Modes :
  *   POST /import-asclion-base?mode=wipe         → vide medicaments + curated_pcs
@@ -147,6 +151,28 @@ function cleanCip(raw: string): string | null {
   if (!raw) return null;
   const s = raw.replace(/\.0$/, "").trim();
   return s || null;
+}
+
+/**
+ * UUID déterministe (SHA-256 tronqué, forme v5) dérivé d'une clé naturelle.
+ * Sert quand le CSV maître ne porte pas de colonne `id` : sans ça, la boucle
+ * d'import sautait TOUTES les lignes et laissait la base vide après le wipe,
+ * ce qui se voit à l'écran par "aucun PC, aucune vigilance" alors que le
+ * médicament est bien reconnu via la BDPM.
+ */
+async function deterministicUuid(key: string): Promise<string> {
+  const digest = new Uint8Array(
+    await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`asclion:${key}`)),
+  );
+  const hex = [...digest.slice(0, 16)].map((b) => b.toString(16).padStart(2, "0")).join("");
+  const v = `${hex.slice(0, 12)}5${hex.slice(13, 16)}${((parseInt(hex[16], 16) & 0x3) | 0x8).toString(16)}${hex.slice(17, 32)}`;
+  return `${v.slice(0, 8)}-${v.slice(8, 12)}-${v.slice(12, 16)}-${v.slice(16, 20)}-${v.slice(20, 32)}`;
+}
+
+/** Le CSV v3 marque les lignes hospitalières dans `canal` ("hors comptoir"). */
+function isHorsComptoir(canal: string): boolean {
+  const c = (canal || "").toLowerCase();
+  return c.includes("hors") || c.includes("hopital") || c.includes("hôpital") || c.includes("hospital");
 }
 
 function normalizeLookupKey(value: string): string {
@@ -382,9 +408,25 @@ serve(async (req) => {
       const meds: any[] = [];
       const pcs: any[] = [];
       const atcByCode = new Map<string, string>();
+      let idsDerived = 0;
+      let rowsUnidentifiable = 0;
       for (const r of slice) {
-        const id = rowValue(r, ["id"]);
-        if (!id || seen.has(id)) continue;
+        // `id` peut manquer : le CSV v3 est régénéré depuis le référentiel ATC
+        // et ne reporte pas toujours l'identifiant historique. On dérive alors
+        // un UUID stable depuis la clé naturelle (CIP, sinon nom+dosage+labo)
+        // pour que la ligne soit importée au lieu d'être silencieusement jetée.
+        let id = rowValue(r, ["id", "medicament_id", "id_medicament"]);
+        const cipRaw = cleanCip(rowValue(r, ["cip_code", "cip", "code_cip", "code cip"]));
+        if (!id) {
+          const nomForKey = rowValue(r, ["nom_commercial", "nom commercial", "nom", "medicament", "médicament"]);
+          const naturalKey = cipRaw
+            || [nomForKey, rowValue(r, ["dosage"]), rowValue(r, ["laboratoire", "labo"]), rowValue(r, ["forme_galenique", "forme galénique", "forme"])]
+              .filter(Boolean).join("|");
+          if (!naturalKey) { rowsUnidentifiable++; continue; }
+          id = await deterministicUuid(naturalKey);
+          idsDerived++;
+        }
+        if (seen.has(id)) continue;
         seen.add(id);
         const cibleAge = rowValue(r, ["cible_age", "age", "cible age"]);
         const age = ALLOWED_AGE.has(cibleAge) ? cibleAge : "tous";
@@ -393,7 +435,7 @@ serve(async (req) => {
         meds.push({
           id,
           nom_commercial: rowValue(r, ["nom_commercial", "nom commercial", "nom", "medicament", "médicament"]) || "?",
-          cip_code: cleanCip(rowValue(r, ["cip_code", "cip", "code_cip", "code cip"])),
+          cip_code: cipRaw,
           atc_code: atcCode || null,
           laboratoire: rowValue(r, ["laboratoire", "labo"]) || null,
           forme_galenique: rowValue(r, ["forme_galenique", "forme galénique", "forme"]) || null,
@@ -401,7 +443,12 @@ serve(async (req) => {
           voie_administration: rowValue(r, ["voie_administration", "voie administration", "voie"]) || null,
           posologie: rowValue(r, ["posologie"]) || null,
           cible_age: age,
-          statut_officine: rowValue(r, ["statut_officine", "statut officine", "statut"]) || "actif",
+          // `canal` = officine / hors comptoir dans le référentiel v3. Les
+          // 5 747 lignes hospitalières (oxygène, produits de contraste,
+          // chimiothérapies…) ne doivent jamais recevoir de conseil comptoir.
+          statut_officine: isHorsComptoir(rowValue(r, ["canal", "canal_distribution", "circuit"]))
+            ? "exclu"
+            : (rowValue(r, ["statut_officine", "statut officine", "statut"]) || "actif"),
           est_otc: asBool(rowValue(r, ["est_otc", "otc"])),
           est_produit_conseil: asBool(rowValue(r, ["est_produit_conseil", "produit_conseil", "est produit conseil"])),
         });
@@ -442,18 +489,37 @@ serve(async (req) => {
           vigilance: vigilance || null,
           phrase_vigilance: phraseVig || null,
           pertinence_vigilance: pertVig || (vigilance || phraseVig ? "Sécurité" : null),
-          source: "asclion_2026_06",
+          source: "asclion_v3",
         });
 
 
       }
 
-      // Dédup CIP (la contrainte UNIQUE rejetterait sinon)
+      // Dédup CIP (la contrainte UNIQUE rejetterait sinon).
+      // 1) à l'intérieur du lot courant
       const cipSeen = new Set<string>();
       for (const m of meds) {
         if (m.cip_code) {
           if (cipSeen.has(m.cip_code)) m.cip_code = null;
           else cipSeen.add(m.cip_code);
+        }
+      }
+      // 2) ENTRE les lots : un CIP déjà posé par un lot précédent sur un autre
+      // id faisait échouer tout le lot (violation UNIQUE) et interrompait
+      // l'import au milieu — la base se retrouvait à moitié remplie.
+      let cipConflicts = 0;
+      const batchCips = [...cipSeen];
+      for (const b of chunks(batchCips, 200)) {
+        const { data: taken } = await supabase
+          .from("medicaments")
+          .select("id, cip_code")
+          .in("cip_code", b);
+        if (!taken?.length) continue;
+        const ownerByCip = new Map<string, string>(taken.map((t: any) => [t.cip_code, t.id]));
+        for (const m of meds) {
+          if (!m.cip_code) continue;
+          const owner = ownerByCip.get(m.cip_code);
+          if (owner && owner !== m.id) { m.cip_code = null; cipConflicts++; }
         }
       }
 
@@ -495,6 +561,9 @@ serve(async (req) => {
         pcs_with_phrase_conseil: pcsWithPhrase,
         pcs_with_vigilance: pcsWithVigilance,
         orphan_phrase_rows: orphanPhraseRows,
+        ids_derived: idsDerived,
+        rows_unidentifiable: rowsUnidentifiable,
+        cip_conflicts_nulled: cipConflicts,
         next_offset: nextOffset < total ? nextOffset : null,
         done: nextOffset >= total,
       }), { headers: { ...cors, "Content-Type": "application/json" } });

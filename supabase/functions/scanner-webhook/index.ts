@@ -210,22 +210,48 @@ serve(async (req) => {
       let suggestions: any[] = [];
 
       if (medIds.length > 0) {
+        // Base v3 : on remonte les phrases conseil, la pertinence ET le bloc
+        // vigilance. Sans ça le webhook ne renvoyait que des noms de produits
+        // nus, alors que la valeur du conseil est justement dans la phrase.
         const { data: curated } = await supabaseAdmin
           .from("medicament_curated_pcs")
-          .select("medicament_id, pc_1, pc_2")
+          .select("medicament_id, pc_1, pc_2, pertinence_pc1, pertinence_pc2, phrase_conseil_pc1, phrase_conseil_pc2, vigilance, phrase_vigilance, pertinence_vigilance")
           .in("medicament_id", medIds);
 
         suggestions = (curated || []).map((c: any) => {
           const med = (meds || []).find((m: any) => m.id === c.medicament_id);
-          const produits = [c.pc_1, c.pc_2]
-            .filter((p: any) => p && String(p).trim().length > 0)
-            .map((p: string) => ({ produit: p, categorie: "", type_produit: "curated" }));
+          const produits = [
+            { produit: c.pc_1, pertinence: c.pertinence_pc1, phrase_conseil: c.phrase_conseil_pc1 },
+            { produit: c.pc_2, pertinence: c.pertinence_pc2, phrase_conseil: c.phrase_conseil_pc2 },
+          ]
+            .filter((p: any) => p.produit && String(p.produit).trim().length > 0)
+            .map((p: any) => ({
+              produit: String(p.produit).trim(),
+              categorie: "",
+              type_produit: "curated",
+              pertinence: String(p.pertinence || "").trim() || undefined,
+              phrase_conseil: String(p.phrase_conseil || "").trim() || undefined,
+            }));
+
+          const vigTitre = String(c.vigilance || "").trim();
+          const vigPhrase = String(c.phrase_vigilance || "").trim();
+          const vigilance = (vigTitre || vigPhrase)
+            ? {
+                titre: vigTitre || vigPhrase,
+                phrase: vigTitre ? (vigPhrase || undefined) : undefined,
+                pertinence: String(c.pertinence_vigilance || "Sécurité").trim(),
+              }
+            : undefined;
+
           return {
             medicament: med?.nom_commercial,
             medicament_id: c.medicament_id,
             produits,
+            vigilance,
           };
-        }).filter((s: any) => s.produits.length > 0);
+        // Une vigilance seule (sans aucun PC) reste une information à afficher :
+        // c'est tout l'apport de la v3 (« pas d'alcool avec le Flagyl »).
+        }).filter((s: any) => s.produits.length > 0 || s.vigilance);
       }
 
       // ── Tracking temporel cross-sell : fenêtre 10 minutes ────────────────

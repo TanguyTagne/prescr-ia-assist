@@ -417,36 +417,13 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
         }
       }
 
-      // Fallback global : pour toute reco encore sans pertinence/phrase, on cherche directement
-      // par nom de PC dans medicament_curated_pcs (toutes les lignes confondues). Garantit l'affichage
-      // quelle que soit la voie (scan, saisie manuelle, délivrance robot, OCR).
-      for (const med of medsToEnrich) {
-        for (const rec of med.recommendations || []) {
-          const key = recommendationKey(med.nom, rec.produit);
-          const already = next.get(key);
-          const havePert = rec.pertinence?.trim() || already?.pertinence;
-          const havePhr = rec.phrase_conseil?.trim() || already?.phrase_conseil;
-          if (havePert && havePhr) continue;
-          const pcName = (rec.produit || "").trim();
-          if (pcName.length < 3) continue;
-          const firstWord = pcName.split(/\s+/)[0];
-          const { data: rows } = await supabase
-            .from("medicament_curated_pcs")
-            .select("pc_1, pc_2, pertinence_pc1, pertinence_pc2, phrase_conseil_pc1, phrase_conseil_pc2")
-            .or(`pc_1.ilike.${firstWord}%,pc_2.ilike.${firstWord}%`)
-            .limit(20);
-          const hit = ((rows as any[] | null) || []).find((row) =>
-            productNamesMatch(row.pc_1, pcName) || productNamesMatch(row.pc_2, pcName)
-          );
-          if (!hit) continue;
-          const isPc1 = productNamesMatch(hit.pc_1, pcName);
-          const pertinence = havePert || cleanHintValue(isPc1 ? hit.pertinence_pc1 : hit.pertinence_pc2) || undefined;
-          const phrase_conseil = havePhr || cleanHintValue(isPc1 ? hit.phrase_conseil_pc1 : hit.phrase_conseil_pc2) || undefined;
-          if (pertinence || phrase_conseil) {
-            next.set(key, { pertinence, phrase_conseil });
-          }
-        }
-      }
+      // NOTE — un fallback « global » existait ici : pour une reco sans phrase,
+      // il cherchait le nom du PC dans TOUTE la table medicament_curated_pcs et
+      // recopiait la première phrase trouvée. Incompatible avec la base v3 :
+      // un même produit (probiotiques, protection solaire, laxatif macrogol…)
+      // y porte une phrase DIFFÉRENTE selon la classe ATC. Le fallback collait
+      // donc la justification d'une autre molécule sous le médicament affiché —
+      // faux au comptoir. L'enrichissement reste limité au médicament lui-même.
 
       if (!cancelled) setCuratedHints(next);
 

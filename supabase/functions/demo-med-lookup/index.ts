@@ -152,6 +152,8 @@ Deno.serve(async (req) => {
 
     // ── Complementary products ──
     let produits: any[] = [];
+    /** true dès que la base curée v3 a répondu : elle devient la seule source. */
+    let curatedWins = false;
     // Message de vigilance (avertissement de sécurité, ne vend rien)
     let vigilance: { titre: string; phrase?: string; pertinence: string } | null = null;
 
@@ -163,10 +165,12 @@ Deno.serve(async (req) => {
         .eq("medicament_id", medicament.id)
         .maybeSingle();
       if (curated) {
-        if (curated.vigilance && String(curated.vigilance).trim()) {
+        const vigTitre = String(curated.vigilance || "").trim();
+        const vigPhrase = String(curated.phrase_vigilance || "").trim();
+        if (vigTitre || vigPhrase) {
           vigilance = {
-            titre: String(curated.vigilance).trim(),
-            phrase: (curated.phrase_vigilance || "").trim() || undefined,
+            titre: vigTitre || vigPhrase,
+            phrase: vigTitre ? (vigPhrase || undefined) : undefined,
             pertinence: (curated.pertinence_vigilance || "Sécurité").trim(),
           };
         }
@@ -183,31 +187,38 @@ Deno.serve(async (req) => {
         }));
       }
 
-      // 2) Validated PCs bound to the medication
-      const { data: mpv } = await supabase
-        .from("medicament_pc_valide")
-        .select("score, pc:produits_complementaires(produit, categorie, description, phrase_conseil, pathologies(nom_pathologie))")
-        .eq("medicament_id", medicament.id)
-        .order("score", { ascending: false })
-        .limit(10);
-      produits = [
-        ...produits,
-        ...(mpv || [])
-          .filter((r: any) => r.pc)
-          .map((r: any) => ({ ...r.pc, priorite: Math.max(r.score || 0, 90) })),
-      ];
+      // La base v3 fait autorité : quand elle a tranché (pc_1 seul dans 90 %
+      // des cas), on n'ajoute PAS les anciennes sources par-dessus. Les
+      // empiler rediluait exactement ce que la refonte avait nettoyé.
+      curatedWins = produits.length > 0;
 
-      const { data } = await supabase
-        .from("produits_complementaires")
-        .select("produit, categorie, description, priorite, phrase_conseil, pathologies(nom_pathologie)")
-        .eq("medicament_id", medicament.id)
-        .order("priorite", { ascending: false })
-        .limit(10);
-      produits = [...produits, ...(data || []).map((p: any) => ({ ...p, priorite: Math.max(p.priorite || 0, 85) }))];
+      // 2) Anciennes sources — uniquement si la v3 n'a rien dit sur ce médicament
+      if (!curatedWins) {
+        const { data: mpv } = await supabase
+          .from("medicament_pc_valide")
+          .select("score, pc:produits_complementaires(produit, categorie, description, phrase_conseil, pathologies(nom_pathologie))")
+          .eq("medicament_id", medicament.id)
+          .order("score", { ascending: false })
+          .limit(10);
+        produits = [
+          ...produits,
+          ...(mpv || [])
+            .filter((r: any) => r.pc)
+            .map((r: any) => ({ ...r.pc, priorite: Math.max(r.score || 0, 90) })),
+        ];
+
+        const { data } = await supabase
+          .from("produits_complementaires")
+          .select("produit, categorie, description, priorite, phrase_conseil, pathologies(nom_pathologie)")
+          .eq("medicament_id", medicament.id)
+          .order("priorite", { ascending: false })
+          .limit(10);
+        produits = [...produits, ...(data || []).map((p: any) => ({ ...p, priorite: Math.max(p.priorite || 0, 85) }))];
+      }
     }
 
     // 3) Pathology-based PCs
-    if (pathologieIds.size > 0) {
+    if (!curatedWins && pathologieIds.size > 0) {
       const { data } = await supabase
         .from("produits_complementaires")
         .select("produit, categorie, description, priorite, phrase_conseil, pathologies(nom_pathologie)")

@@ -593,9 +593,11 @@ const WidgetApp = () => {
             }
           : undefined;
         prependMedicament({ nom: med.nom_commercial, classe: "", recommendations, vigilance, cip_scanned: code });
-        // Pop Asclion devant l'LGO UNIQUEMENT si on a des PCs à proposer.
-        // Sinon : analyse silencieuse (pas de toast/bip/flash/foreground).
-        if (recommendations.length > 0) notifyAnalysisDone({ count: 1 });
+        // Pop Asclion devant l'LGO si on a quelque chose à dire : un PC OU une
+        // vigilance. La v3 porte 21 492 vigilances dont beaucoup sans produit
+        // associé (« arrêter la metformine 48 h avant un scanner ») — les
+        // passer sous silence reviendrait à perdre le meilleur du conseil.
+        if (recommendations.length > 0 || vigilance) notifyAnalysisDone({ count: 1 });
         void logHidScan(code, { nom: med.nom_commercial, recommendations });
         lastAnalysisAtRef.current = Date.now(); // marque session active
         return;

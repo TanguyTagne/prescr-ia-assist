@@ -62,6 +62,18 @@ export default function AsclionBaseImportTab() {
       if ((data.orphan_phrase_rows ?? 0) > 0) {
         push(`⚠ ${data.orphan_phrase_rows} ligne(s) ont une phrase mais aucun nom de PC reconnu : vérifie les en-têtes du CSV`);
       }
+      if ((data.rows_unidentifiable ?? 0) > 0) {
+        push(`⚠ ${data.rows_unidentifiable} ligne(s) sans id NI CIP NI nom : impossibles à importer`);
+      }
+      if ((data.ids_derived ?? 0) > 0) {
+        push(`• ${data.ids_derived} id(s) dérivé(s) du CIP/nom (le CSV n'a pas de colonne id)`);
+      }
+      if ((data.cip_conflicts_nulled ?? 0) > 0) {
+        push(`• ${data.cip_conflicts_nulled} CIP déjà pris par une autre ligne → mis à null (doublon dans le CSV)`);
+      }
+      if ((data.meds_upserted ?? 0) === 0 && (data.processed ?? 0) > 0) {
+        push(`✗ ALERTE : ${data.processed} lignes lues mais 0 médicament écrit. La base va rester vide.`);
+      }
       setProgress({ done: Math.min(offset + PAGE, total), total });
       if (data.done || data.next_offset == null) {
         push(`✓ Import base terminé : ${total} lignes traitées`);
