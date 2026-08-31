@@ -380,7 +380,7 @@ serve(async (req) => {
       const sourceFile = await resolveMasterFile(supabase);
       const { data: blob, error: stErr } = await supabase.storage.from(BUCKET).download(sourceFile);
       if (stErr || !blob) throw new Error(`Fichier introuvable: ${stErr?.message ?? "blob null"}`);
-      const text = decodeCsvText(new Uint8Array(await blob.arrayBuffer()));
+      const text = decodeCsvBytes(new Uint8Array(await blob.arrayBuffer()));
       const rows = parseCsv(text);
       const headers = rows.length ? Object.keys(rows[0]).filter((h) => h === h.trim()) : [];
       const match = (url.searchParams.get("match") ?? bodyJson.match ?? "").toLowerCase();
