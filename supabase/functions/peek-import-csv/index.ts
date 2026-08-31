@@ -21,13 +21,7 @@ serve(async (req) => {
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
     const admin0 = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    const secretHeader = req.headers.get("x-cron-secret");
-    let bypass = false;
-    if (secretHeader) {
-      const { data: cfg } = await admin0
-        .from("internal_config").select("value").eq("key", "cron_secret").maybeSingle();
-      bypass = !!cfg?.value && cfg.value === secretHeader;
-    }
+    const bypass = false;
 
     const authHeader = req.headers.get("authorization");
     if (!bypass && !authHeader?.startsWith("Bearer ")) {
