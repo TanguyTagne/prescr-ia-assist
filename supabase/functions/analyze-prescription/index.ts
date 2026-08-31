@@ -440,26 +440,6 @@ async function clinicalLookup(
     const byKey = new Map<string, any>();
     for (const m of matched || []) byKey.set(norm(m.produit || ""), m);
 
-    // 2) Fuzzy fallback (ILIKE) for any unmatched names — picks the row whose
-    //    normalized name contains, or is contained in, the requested name.
-    const unmatched = names.filter((n) => !byKey.get(norm(n)));
-    for (const name of unmatched) {
-      const key = norm(name);
-      if (!key) continue;
-      const tokens = key.split(" ").filter(Boolean);
-      const head = tokens.slice(0, 2).join(" ");
-      const { data: rows } = await supabase
-        .from("produits_complementaires")
-        .select("produit, categorie, description, phrase_conseil, type_produit, pathologies(nom_pathologie)")
-        .or(`produit.ilike.%${key}%,produit.ilike.${head}%`)
-        .limit(5);
-      const best = (rows || []).find((r) => {
-        const k = norm(r.produit || "");
-        return k === key || k.startsWith(key) || key.startsWith(k) || (head && k.includes(head));
-      });
-      if (best) byKey.set(key, best);
-    }
-
     return pairs.map(({ name, pertinence, phrase }, idx) => {
       const enrich = byKey.get(norm(name));
       // Priorité phrase CSV > phrase DB produits_complementaires
@@ -469,7 +449,7 @@ async function clinicalLookup(
         categorie: enrich?.categorie || "Conseil associé",
         description: enrich?.description || "",
         priorite: 100 - idx, // 100, 99 → always above mpv (≤95) and pathology PCs
-        phrase_conseil: csvPhrase || enrich?.phrase_conseil || undefined,
+        phrase_conseil: csvPhrase || undefined,
         pertinence: (pertinence || "").trim() || undefined,
         type_produit: enrich?.type_produit || undefined,
         pathologies: enrich?.pathologies || null,
@@ -1999,90 +1979,16 @@ serve(async (req) => {
         .filter((r: any) => !isAlreadyPrescribed(r.produit))
         .filter((r: any) => !looksLikeMedicationRecommendation(r.produit));
 
-      // Apply mappings: groupement first (priority override), then pharmacy
-      filteredRecs = filteredRecs.map((r: any) => {
-        const catNorm = normalizeText(r.categorie);
-        // 1. Groupement mapping (highest priority)
-        const gMap = groupMappings.find((m: any) => normalizeText(m.categorie) === catNorm);
-        if (gMap) {
-          return { ...r, produit: gMap.produit_prioritaire, mapped: true, mapped_source: "groupement", laboratoire: gMap.laboratoire_partenaire || null };
-        }
-        // 2. Pharmacy mapping
-        const pMap = productMappings.find((m: any) => normalizeText(m.categorie) === catNorm);
-        if (pMap) {
-          return { ...r, produit: pMap.produit_selectionne, mapped: true, mapped_source: "pharmacy" };
-        }
-        return r;
-      });
-
-      // Inject pharmacy-forced med→PC mappings: always proposed first when the medication is detected
-      if (medForcedMappings.length > 0) {
-        const medNameNorm = normalizeText(med.nom_commercial || med.nom || "");
-        const forced = medForcedMappings.filter((fm: any) => {
-          const fmNorm = normalizeText(fm.medicament_nom || "");
-          return fmNorm && (medNameNorm.includes(fmNorm) || fmNorm.includes(medNameNorm));
-        });
-        for (const fm of forced) {
-          const pcNameNorm = normalizeText(fm.pc_nom);
-          // Drop any existing rec of the same PC to avoid duplicates, then prepend
-          filteredRecs = filteredRecs.filter((r: any) => normalizeText(r.produit) !== pcNameNorm);
-          filteredRecs.unshift({
-            produit: fm.pc_nom,
-            categorie: fm.pc_categorie || "Recommandation officine",
-            description: "Produit favori de votre officine pour ce médicament",
-            priorite: 100,
-            pathologie: "",
-            forced: true,
-            mapped: true,
-            mapped_source: "pharmacy_med_forced",
-          });
-        }
-      }
-
       // Final semantic dedupe (same PC must not appear twice for the same med, even
       // when names differ slightly: "Solution de réhydratation orale" / "Sachets de
       // réhydratation orale" / "Solution réhydratation"), then cap to degressive limit.
       const finalRecs = pickDistinctProducts(filteredRecs, maxPCPerMed);
 
 
-      // Use only curated short DB phrase_conseil (3-7 words). If missing, try a fuzzy DB lookup
-      // so every displayed PC has a short phrase. Long auto-generated phrases stay disabled.
-      const MAX_WORDS_HINT = 9;
-      const normPc = (s: string) => (s || "").toLowerCase().replace(/\([^)]*\)/g, " ").replace(/\s+/g, " ").trim();
+      // Phrase strictement issue de la même ligne CSV que le PC. Aucun texte
+      // d'une autre table ou d'un produit au nom ressemblant n'est injecté.
       for (const r of finalRecs) {
-        let p = (r.phrase_conseil || "").trim();
-        let wc = p ? p.split(/\s+/).length : 0;
-        if (!p || wc > MAX_WORDS_HINT || phraseIsForWrongMed(p, med)) {
-          // Fuzzy DB fallback: find a row whose normalized produit matches the rec's name
-          const key = normPc(r.produit);
-          if (key) {
-            const head = key.split(" ").slice(0, 2).join(" ");
-            const { data: rows } = await supabase
-              .from("produits_complementaires")
-              .select("produit, phrase_conseil")
-              .or(`produit.ilike.%${key}%,produit.ilike.${head}%`)
-              .not("phrase_conseil", "is", null)
-              .limit(5);
-            const hit = (rows || []).find((row: any) => {
-              const k = normPc(row.produit);
-              const ph = (row.phrase_conseil || "").trim();
-              if (!ph) return false;
-              const w = ph.split(/\s+/).length;
-              if (w > MAX_WORDS_HINT) return false;
-              if (phraseIsForWrongMed(ph, med)) return false;
-              return k === key || k.startsWith(key) || key.startsWith(k) || (head && k.includes(head));
-            });
-            if (hit) {
-              r.phrase_conseil = hit.phrase_conseil;
-              p = hit.phrase_conseil;
-              wc = p.split(/\s+/).length;
-            } else {
-              r.phrase_conseil = null;
-            }
-          } else {
-            r.phrase_conseil = null;
-          }
-        }
+        r.phrase_conseil = (r.phrase_conseil || "").trim() || null;
         allProposedPCs.push(normalizeText(r.produit));
       }
 

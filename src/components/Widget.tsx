@@ -22,7 +22,6 @@ import SoundToggle from "@/components/SoundToggle";
 import { notifyAnalysisDone } from "@/lib/notifyAnalysisDone";
 import { logger } from "@/lib/logger";
 import { SCANNER } from "@/constants/scanner";
-import { lookupEanMock } from "@/lib/eanLookup";
 import { useLgoPreset } from "@/hooks/useLgoPreset";
 import { getPresetClasses, LGO_PRESETS, type LgoType } from "@/lib/lgoPresets";
 import { isAsclionDesktopRuntime } from "@/lib/runtime";
@@ -539,11 +538,14 @@ const WidgetApp = () => {
           pertinence_pc2: string | null;
           phrase_conseil_pc1: string | null;
           phrase_conseil_pc2: string | null;
+          vigilance: string | null;
+          phrase_vigilance: string | null;
+          pertinence_vigilance: string | null;
         } | null = null;
         if (med.id) {
           const { data } = await supabase
             .from("medicament_curated_pcs")
-            .select("pc_1, pc_2, pertinence_pc1, pertinence_pc2, phrase_conseil_pc1, phrase_conseil_pc2")
+            .select("pc_1, pc_2, pertinence_pc1, pertinence_pc2, phrase_conseil_pc1, phrase_conseil_pc2, vigilance, phrase_vigilance, pertinence_vigilance")
             .eq("medicament_id", med.id)
             .maybeSingle();
           curated = data;
@@ -582,7 +584,15 @@ const WidgetApp = () => {
           logger.log(`[SCAN] ${ts} med=${med.nom_commercial} aucun PC curated — pas de suggestion`);
         }
 
-        prependMedicament({ nom: med.nom_commercial, classe: "", recommendations, cip_scanned: code });
+        const vigilanceTitle = curated?.vigilance?.trim() || curated?.phrase_vigilance?.trim();
+        const vigilance = vigilanceTitle
+          ? {
+              titre: vigilanceTitle,
+              phrase: curated?.vigilance?.trim() ? curated?.phrase_vigilance?.trim() || undefined : undefined,
+              pertinence: curated?.pertinence_vigilance?.trim() || "Sécurité",
+            }
+          : undefined;
+        prependMedicament({ nom: med.nom_commercial, classe: "", recommendations, vigilance, cip_scanned: code });
         // Pop Asclion devant l'LGO UNIQUEMENT si on a des PCs à proposer.
         // Sinon : analyse silencieuse (pas de toast/bip/flash/foreground).
         if (recommendations.length > 0) notifyAnalysisDone({ count: 1 });
@@ -591,28 +601,6 @@ const WidgetApp = () => {
         return;
       }
 
-
-      const mock = lookupEanMock(code);
-      if (mock) {
-        logger.log(`[SCAN] ${ts} ean=${code} match=mock name=${mock.nom}`);
-        const recommendations = mock.complementaires.map((c) => ({
-          produit: c.nom,
-          categorie: "",
-          description: c.raison,
-          priorite: 90,
-        }));
-        // Mock products don't have CIP codes — block by name only
-        if (recommendations.length > 0) {
-          setBlockedProducts((prev) => [
-            ...new Set([...prev, ...recommendations.map((r) => r.produit)]),
-          ]);
-        }
-        prependMedicament({ nom: mock.nom, classe: "", recommendations, cip_scanned: code });
-        if (recommendations.length > 0) notifyAnalysisDone({ count: 1 });
-        void logHidScan(code, { nom: mock.nom, recommendations });
-        lastAnalysisAtRef.current = Date.now(); // marque session active
-        return;
-      }
 
       logger.log(`[SCAN] ${ts} ean=${code} match=none`);
       void logScanEvent(code, "no_match");
