@@ -2105,7 +2105,9 @@ serve(async (req) => {
       if (!name) return;
       const find = async (pattern: string) =>
         (await supabase.from("medicaments").select("id").ilike("nom_commercial", pattern).limit(1)).data;
-      const rows = (await find(name)) || (await find(`${name}%`)) || (await find(`%${name}%`));
+      let rows = await find(name);
+      if (!rows?.length) rows = await find(`${name}%`);
+      if (!rows?.length) rows = await find(`%${name}%`);
       if (!rows?.length) return;
       const { data: cur } = await supabase
         .from("medicament_curated_pcs")
