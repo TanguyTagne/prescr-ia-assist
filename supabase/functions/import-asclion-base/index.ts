@@ -43,21 +43,6 @@ function rowValue(row: Record<string, string>, aliases: string[]): string {
   return "";
 }
 
-function parseCsvLine(line: string, delim: string): string[] {
-  const out: string[] = [];
-  let cur = "", inQ = false;
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
-    if (ch === '"') {
-      if (inQ && line[i + 1] === '"') { cur += '"'; i++; }
-      else inQ = !inQ;
-    } else if (ch === delim && !inQ) { out.push(cur); cur = ""; }
-    else cur += ch;
-  }
-  out.push(cur);
-  return out;
-}
-
 function detectDelim(headerLine: string): string {
   // Comptage hors des guillemets pour deviner le séparateur (`,` ou `;` ou `\t`).
   let semi = 0, comma = 0, tab = 0, inQ = false;
@@ -76,16 +61,38 @@ function detectDelim(headerLine: string): string {
 
 function parseCsv(text: string): Record<string, string>[] {
   const cleaned = text.startsWith("\uFEFF") ? text.slice(1) : text;
-  const lines = cleaned.split("\n");
-  if (lines.length < 2) return [];
-  const headerLine = lines[0].replace(/\r$/, "");
+  const headerLine = cleaned.split(/\r?\n/, 1)[0] || "";
+  if (!headerLine) return [];
   const delim = detectDelim(headerLine);
-  const headers = parseCsvLine(headerLine, delim).map(h => h.trim().replace(/^"|"$/g, ""));
+  const records: string[][] = [];
+  let record: string[] = [];
+  let field = "";
+  let inQuotes = false;
+  for (let i = 0; i < cleaned.length; i++) {
+    const ch = cleaned[i];
+    if (ch === '"') {
+      if (inQuotes && cleaned[i + 1] === '"') { field += '"'; i++; }
+      else inQuotes = !inQuotes;
+    } else if (ch === delim && !inQuotes) {
+      record.push(field);
+      field = "";
+    } else if ((ch === "\n" || ch === "\r") && !inQuotes) {
+      if (ch === "\r" && cleaned[i + 1] === "\n") i++;
+      record.push(field);
+      field = "";
+      if (record.some((value) => value.trim())) records.push(record);
+      record = [];
+    } else {
+      field += ch;
+    }
+  }
+  record.push(field);
+  if (record.some((value) => value.trim())) records.push(record);
+  if (records.length < 2) return [];
+  const headers = records[0].map(h => h.trim().replace(/^"|"$/g, ""));
   const rows: Record<string, string>[] = [];
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i].replace(/\r$/, "");
-    if (!line.trim()) continue;
-    const vals = parseCsvLine(line, delim);
+  for (let i = 1; i < records.length; i++) {
+    const vals = records[i];
     const row: Record<string, string> = {};
     headers.forEach((h, idx) => {
       const value = (vals[idx] ?? "").trim();
@@ -96,6 +103,21 @@ function parseCsv(text: string): Record<string, string>[] {
     rows.push(row);
   }
   return rows;
+}
+
+async function resolveMasterFile(supabase: any): Promise<string> {
+  const { data, error } = await supabase.storage.from(BUCKET).list("", {
+    limit: 100,
+    sortBy: { column: "updated_at", order: "desc" },
+  });
+  if (error) throw error;
+  const candidates = (data || []).filter((object: any) => {
+    const name = String(object.name || "").toLowerCase();
+    return name.endsWith(".csv") && !name.includes("phrase") && !name.includes("mapping") && !name.includes("cip");
+  });
+  const master = candidates[0]?.name;
+  if (!master) throw new Error("Aucun CSV maître trouvé dans storage/imports");
+  return master;
 }
 
 function chunks<T>(a: T[], n: number): T[][] {
@@ -490,7 +512,8 @@ serve(async (req) => {
       const offset = parseInt(url.searchParams.get("offset") ?? String(bodyJson.offset ?? 0), 10);
       const limit = parseInt(url.searchParams.get("limit") ?? String(bodyJson.limit ?? 1000), 10);
 
-      const { data: blob, error: stErr } = await supabase.storage.from(BUCKET).download(FILE);
+      const sourceFile = await resolveMasterFile(supabase);
+      const { data: blob, error: stErr } = await supabase.storage.from(BUCKET).download(sourceFile);
       if (stErr || !blob) throw new Error(`Fichier introuvable: ${stErr?.message ?? "blob null"}`);
       const buf = new Uint8Array(await blob.arrayBuffer());
       // Détection encodage : si UTF-8 invalide, fallback windows-1252 (export Numbers/Excel par défaut)
@@ -610,7 +633,7 @@ serve(async (req) => {
       let medsIns = 0, medsErr = 0;
       for (const b of chunks(meds, BATCH)) {
         const { error } = await supabase.from("medicaments").upsert(b, { onConflict: "id" });
-        if (error) { medsErr += b.length; console.error("med batch err:", error.message); }
+        if (error) { medsErr += b.length; throw new Error(`Échec médicaments: ${error.message}`); }
         else medsIns += b.length;
       }
       let pcsIns = 0, pcsErr = 0;
@@ -622,13 +645,13 @@ serve(async (req) => {
       ).length;
       for (const b of chunks(pcs, BATCH)) {
         const { error } = await supabase.from("medicament_curated_pcs").upsert(b, { onConflict: "medicament_id" });
-        if (error) { pcsErr += b.length; console.error("pc batch err:", error.message); }
+        if (error) { pcsErr += b.length; throw new Error(`Échec PC/vigilance: ${error.message}`); }
         else pcsIns += b.length;
       }
 
       const nextOffset = offset + limit;
       return new Response(JSON.stringify({
-        ok: true, total_in_csv: total, offset, limit,
+        ok: true, source_file: sourceFile, total_in_csv: total, offset, limit,
         processed: slice.length, meds_upserted: medsIns, meds_failed: medsErr,
         pcs_upserted: pcsIns, pcs_failed: pcsErr,
         pcs_with_pertinence: pcsWithPertinence,
