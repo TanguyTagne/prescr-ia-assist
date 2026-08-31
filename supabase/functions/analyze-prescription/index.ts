@@ -2035,32 +2035,47 @@ serve(async (req) => {
       conseilText = `${formattedAdvice.join(". ")}. ${defaultFollowup}`;
     }
 
-    // Filet de sécurité vigilance : si le chemin clinique n'a pas rempli la
-    // vigilance (médicament reconnu via `medications` ou enrichissement externe),
-    // on la relit directement depuis medicament_curated_pcs par nom.
+    // Filet de sécurité vigilance (OBLIGATOIRE) : la phrase de vigilance de la
+    // base Asclion doit toujours s'afficher dans l'app. Si aucun chemin
+    // précédent ne l'a remplie, on la relit par nom exact, puis par préfixe,
+    // puis par nom de base (marque sans dosage/labo).
     await Promise.all(enrichedMeds.map(async (m: any, i: number) => {
       if (!m || m.vigilance) return;
       const name = String(medNames[i] || m.nom_commercial || "").trim();
       if (!name) return;
-      const find = async (pattern: string) =>
-        (await supabase.from("medicaments").select("id").ilike("nom_commercial", pattern).limit(1)).data;
-      const rows = await find(name);
-      if (!rows?.length) return;
-      const { data: cur } = await supabase
-        .from("medicament_curated_pcs")
-        .select("vigilance, phrase_vigilance, pertinence_vigilance")
-        .eq("medicament_id", rows[0].id)
-        .maybeSingle();
-      const titre = String(cur?.vigilance || "").trim();
-      const phrase = String(cur?.phrase_vigilance || "").trim();
-      if (titre || phrase) {
-        m.vigilance = {
-          titre: titre || phrase,
-          phrase: titre ? phrase || undefined : undefined,
-          pertinence: String(cur?.pertinence_vigilance || "Sécurité").trim(),
-        };
+      const base = extractCoreDrugName(name).trim();
+      const patterns = [name, `${name}%`];
+      if (base && base.toLowerCase() !== name.toLowerCase() && base.length >= 4) {
+        patterns.push(base, `${base}%`);
+      }
+      for (const pattern of patterns) {
+        if (m.vigilance) break;
+        const { data: rows } = await supabase
+          .from("medicaments")
+          .select("id, medicament_curated_pcs(vigilance, phrase_vigilance, pertinence_vigilance)")
+          .ilike("nom_commercial", pattern)
+          .limit(10);
+        for (const row of rows || []) {
+          const curatedRows = Array.isArray((row as any).medicament_curated_pcs)
+            ? (row as any).medicament_curated_pcs
+            : (row as any).medicament_curated_pcs ? [(row as any).medicament_curated_pcs] : [];
+          for (const cur of curatedRows) {
+            const titre = String(cur?.vigilance || "").trim();
+            const phrase = String(cur?.phrase_vigilance || "").trim();
+            if (titre || phrase) {
+              m.vigilance = {
+                titre: titre || phrase,
+                phrase: titre ? phrase || undefined : undefined,
+                pertinence: String(cur?.pertinence_vigilance || "Sécurité").trim(),
+              };
+              break;
+            }
+          }
+          if (m.vigilance) break;
+        }
       }
     }));
+
 
     // Step 7: Build result
     const medicamentsResult = enrichedMeds.map((m: any, i: number) => ({
