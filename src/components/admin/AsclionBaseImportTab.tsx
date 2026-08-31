@@ -46,7 +46,7 @@ export default function AsclionBaseImportTab() {
   const runImport = async () => {
     let offset = 0;
     let total = 0;
-    push(`→ Import médicaments + PCs + phrases + vigilance depuis ${FILE} (lots de ${PAGE})`);
+    push(`→ Import médicaments + PCs + phrases + vigilance depuis le CSV maître (lots de ${PAGE})`);
     for (let i = 0; i < 50; i++) {
       const { data, error } = await supabase.functions.invoke("import-asclion-base", {
         body: { mode: "import", offset, limit: PAGE },
@@ -127,11 +127,12 @@ export default function AsclionBaseImportTab() {
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">
-          Un seul bouton : choisis le CSV enrichi et tout est importé d'un coup — médicaments,{" "}
+          Un seul bouton : choisis le CSV maître et tout est importé d'un coup — médicaments,{" "}
           <strong>pc_1 / pc_2</strong> (1 seul PC si une seule colonne remplie),{" "}
           <strong>pertinence_pc1/2</strong>, <strong>phrase_conseil_pc1/2</strong>,{" "}
-          <strong>vigilance / phrase_vigilance / pertinence_vigilance</strong>, puis les phrases du fichier
-          directement depuis le même fichier maître, puis le mapping PC → CIP/EAN.
+          <strong>vigilance / phrase_vigilance / pertinence_vigilance</strong>, puis le mapping PC → CIP/EAN.
+          Le CSV maître est toujours le plus récent du bucket <code>imports</code> ; l'import vide la base au démarrage
+          pour garantir qu'elle reflète exactement ce fichier.
         </p>
 
         <div className="flex flex-wrap gap-2">
