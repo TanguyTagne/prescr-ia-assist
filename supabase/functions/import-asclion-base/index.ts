@@ -312,10 +312,9 @@ serve(async (req) => {
       ]));
       if (!hasPc) {
         const headers = previewParsed.headers.length
-          ? [...new Set(previewParsed.headers.filter((key) => key === normalizeHeaderKey(key)))].join(", ")
+          ? [...new Set(previewParsed.headers.map((h) => normalizeHeaderKey(h)))].join(", ")
           : "aucun en-tête";
-        void ((key: string) => Object.keys({}.filter((key) => key === normalizeHeaderKey(key)))].join(", ")
-          : "aucun en-tête";
+
         return new Response(JSON.stringify({
           error: "COLONNES_PC_INTROUVABLES",
           message: `Aucun nom de produit complémentaire reconnu. En-têtes détectés : ${headers}`,
