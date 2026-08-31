@@ -244,23 +244,34 @@ async function applyPhraseRow(supabase: any, row: Record<string, string>): Promi
   ]));
   const pertinenceLong = cleanText(rowValue(row, ["pertinence", "raison", "raison_suggestion", "raison suggestion", "type"]));
 
-  const pc1 = rowValue(row, ["pc_1", "pc1", "produit_complementaire_1", "produit complémentaire 1", "produit_conseil_1"]);
-  const pc2 = rowValue(row, ["pc_2", "pc2", "produit_complementaire_2", "produit complémentaire 2", "produit_conseil_2"]);
+  const pc1 = rowValue(row, ["pc_1", "pc1", "pc_suggere_1", "pc suggéré 1", "suggestion_1", "suggestion 1", "produit_suggere_1", "produit suggéré 1", "produit_complementaire_1", "produit complémentaire 1", "produit_conseil_1"]);
+  const pc2 = rowValue(row, ["pc_2", "pc2", "pc_suggere_2", "pc suggéré 2", "suggestion_2", "suggestion 2", "produit_suggere_2", "produit suggéré 2", "produit_complementaire_2", "produit complémentaire 2", "produit_conseil_2"]);
   const phrase1 = cleanText(rowValue(row, ["phrase_conseil_pc1", "phrase conseil pc1", "phrase_pc1", "conseil_pc1", "phrase_conseil_1", "conseil_1", "phrase conseil 1"]));
   const phrase2 = cleanText(rowValue(row, ["phrase_conseil_pc2", "phrase conseil pc2", "phrase_pc2", "conseil_pc2", "phrase_conseil_2", "conseil_2", "phrase conseil 2"]));
   const pert1 = cleanText(rowValue(row, ["pertinence_pc1", "pertinence pc1", "pertinence_1", "raison_pc1", "raison pc1", "raison_1"]));
   const pert2 = cleanText(rowValue(row, ["pertinence_pc2", "pertinence pc2", "pertinence_2", "raison_pc2", "raison pc2", "raison_2"]));
+  const vigilance = cleanText(rowValue(row, ["vigilance", "vigilance_1", "pc_vigilance", "securite", "sécurité"]));
+  const phraseVigilance = cleanText(rowValue(row, ["phrase_vigilance", "phrase vigilance", "phrase_conseil_vigilance", "conseil_vigilance", "phrase_securite"]));
+  const pertinenceVigilance = cleanText(rowValue(row, ["pertinence_vigilance", "pertinence vigilance", "raison_vigilance"]));
 
   const medId = await findMedicamentId(supabase, row);
   if (medId) {
     const directPatch: Record<string, string> = {};
+    if (pc1) directPatch.pc_1 = pc1;
+    if (pc2) directPatch.pc_2 = pc2;
     if (phrase1) directPatch.phrase_conseil_pc1 = phrase1;
     if (phrase2) directPatch.phrase_conseil_pc2 = phrase2;
     if (pert1) directPatch.pertinence_pc1 = pert1;
     if (pert2) directPatch.pertinence_pc2 = pert2;
+    if (vigilance) directPatch.vigilance = vigilance;
+    if (phraseVigilance) directPatch.phrase_vigilance = phraseVigilance;
+    if (pertinenceVigilance) directPatch.pertinence_vigilance = pertinenceVigilance;
 
     if (Object.keys(directPatch).length > 0) {
-      const { error } = await supabase.from("medicament_curated_pcs").update(directPatch).eq("medicament_id", medId);
+      const { error } = await supabase.from("medicament_curated_pcs").upsert(
+        { medicament_id: medId, ...directPatch },
+        { onConflict: "medicament_id" },
+      );
       return error ? "skipped" : "updated";
     }
 
@@ -270,17 +281,27 @@ async function applyPhraseRow(supabase: any, row: Record<string, string>): Promi
         .select("pc_1, pc_2")
         .eq("medicament_id", medId)
         .maybeSingle();
-      if (!curated) return "skipped";
       const patch: Record<string, string> = {};
-      if (productNamesMatch(curated.pc_1, pcLong)) {
+      if (productNamesMatch(curated?.pc_1, pcLong)) {
         if (phraseLong) patch.phrase_conseil_pc1 = phraseLong;
         if (pertinenceLong) patch.pertinence_pc1 = pertinenceLong;
-      } else if (productNamesMatch(curated.pc_2, pcLong)) {
+      } else if (productNamesMatch(curated?.pc_2, pcLong)) {
+        if (phraseLong) patch.phrase_conseil_pc2 = phraseLong;
+        if (pertinenceLong) patch.pertinence_pc2 = pertinenceLong;
+      } else if (!curated?.pc_1) {
+        patch.pc_1 = pcLong;
+        if (phraseLong) patch.phrase_conseil_pc1 = phraseLong;
+        if (pertinenceLong) patch.pertinence_pc1 = pertinenceLong;
+      } else if (!curated?.pc_2) {
+        patch.pc_2 = pcLong;
         if (phraseLong) patch.phrase_conseil_pc2 = phraseLong;
         if (pertinenceLong) patch.pertinence_pc2 = pertinenceLong;
       }
       if (Object.keys(patch).length === 0) return "skipped";
-      const { error } = await supabase.from("medicament_curated_pcs").update(patch).eq("medicament_id", medId);
+      const { error } = await supabase.from("medicament_curated_pcs").upsert(
+        { medicament_id: medId, ...patch },
+        { onConflict: "medicament_id" },
+      );
       return error ? "skipped" : "updated";
     }
   }
@@ -358,6 +379,23 @@ serve(async (req) => {
           rowValue(row, ["phrase_conseil_pc2", "phrase conseil pc2", "phrase_pc2", "conseil_pc2", "phrase_conseil_2", "conseil_2"])
         )
       );
+      const hasPc = previewRows.some((row) => !!rowValue(row, [
+        "pc_1", "pc1", "pc", "pc_suggere", "pc suggéré", "pc_suggere_1", "pc suggéré 1",
+        "suggestion", "suggestion_1", "suggestion 1", "produit_suggere", "produit suggéré",
+        "produit_suggere_1", "produit suggéré 1", "produit_complementaire", "produit complémentaire",
+        "produit_complementaire_1", "produit complémentaire 1", "produit_conseil", "produit_conseil_1",
+        "pc_2", "pc2", "pc_suggere_2", "pc suggéré 2", "suggestion_2", "suggestion 2",
+        "produit_suggere_2", "produit suggéré 2", "produit_complementaire_2", "produit complémentaire 2", "produit_conseil_2",
+      ]));
+      if (!hasPc) {
+        const headers = previewRows[0]
+          ? [...new Set(Object.keys(previewRows[0]).filter((key) => key === normalizeHeaderKey(key)))].join(", ")
+          : "aucun en-tête";
+        return new Response(JSON.stringify({
+          error: "COLONNES_PC_INTROUVABLES",
+          message: `Aucun nom de produit complémentaire reconnu. En-têtes détectés : ${headers}`,
+        }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
+      }
 
       const { error: uploadErr } = await supabase.storage
         .from(BUCKET)
@@ -517,12 +555,13 @@ serve(async (req) => {
         const pc1 = rowValue(r, [
           "pc_1", "pc1", "pc", "pc_suggere", "pc suggéré", "pc suggere",
           "pc_suggere_1", "pc suggéré 1", "pc suggere 1",
+           "suggestion", "suggestion_1", "suggestion 1",
           "produit_suggere", "produit suggéré", "produit suggere",
           "produit_suggere_1", "produit suggéré 1", "produit suggere 1",
           "produit_complementaire_1", "produit complémentaire 1",
           "produit_complementaire", "produit complémentaire", "produit_conseil_1", "produit_conseil",
         ]);
-        const pc2 = rowValue(r, ["pc_2", "pc2", "pc_suggere_2", "pc suggéré 2", "pc suggere 2", "produit_suggere_2", "produit suggéré 2", "produit suggere 2", "produit_complementaire_2", "produit complémentaire 2", "produit_conseil_2"]);
+        const pc2 = rowValue(r, ["pc_2", "pc2", "pc_suggere_2", "pc suggéré 2", "pc suggere 2", "suggestion_2", "suggestion 2", "produit_suggere_2", "produit suggéré 2", "produit suggere 2", "produit_complementaire_2", "produit complémentaire 2", "produit_conseil_2"]);
         const pert1 = rowValue(r, ["pertinence_pc1", "pertinence pc1", "pertinence_1", "raison_pc1", "raison pc1", "raison_1", "pertinence", "raison", "type"]);
         const pert2 = rowValue(r, ["pertinence_pc2", "pertinence pc2", "pertinence_2", "raison_pc2", "raison pc2", "raison_2"]);
         // Phrase conseil — accepte plusieurs noms de colonnes possibles
