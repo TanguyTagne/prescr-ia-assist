@@ -511,12 +511,19 @@ serve(async (req) => {
           est_otc: asBool(rowValue(r, ["est_otc", "otc"])),
           est_produit_conseil: asBool(rowValue(r, ["est_produit_conseil", "produit_conseil", "est produit conseil"])),
         });
-        const pc1 = rowValue(r, ["pc_1", "pc1", "produit_complementaire_1", "produit complémentaire 1", "produit_conseil_1"]);
-        const pc2 = rowValue(r, ["pc_2", "pc2", "produit_complementaire_2", "produit complémentaire 2", "produit_conseil_2"]);
-        const pert1 = rowValue(r, ["pertinence_pc1", "pertinence pc1", "pertinence_1", "raison_pc1", "raison pc1", "raison_1"]);
+        // Le fichier « Produits Complémentaires » peut contenir soit deux
+        // colonnes numérotées, soit un seul PC avec des en-têtes au singulier.
+        // Dans ce second cas, ce PC doit alimenter pc_1 (et non être perdu).
+        const pc1 = rowValue(r, [
+          "pc_1", "pc1", "pc", "pc_suggere", "pc suggéré", "pc suggere",
+          "produit_complementaire_1", "produit complémentaire 1",
+          "produit_complementaire", "produit complémentaire", "produit_conseil_1", "produit_conseil",
+        ]);
+        const pc2 = rowValue(r, ["pc_2", "pc2", "pc_suggere_2", "pc suggéré 2", "pc suggere 2", "produit_complementaire_2", "produit complémentaire 2", "produit_conseil_2"]);
+        const pert1 = rowValue(r, ["pertinence_pc1", "pertinence pc1", "pertinence_1", "raison_pc1", "raison pc1", "raison_1", "pertinence", "raison", "type"]);
         const pert2 = rowValue(r, ["pertinence_pc2", "pertinence pc2", "pertinence_2", "raison_pc2", "raison pc2", "raison_2"]);
         // Phrase conseil — accepte plusieurs noms de colonnes possibles
-        const phrase1 = rowValue(r, ["phrase_conseil_pc1", "phrase conseil pc1", "phrase_pc1", "conseil_pc1", "phrase_conseil_1", "conseil_1", "phrase conseil 1"]);
+        const phrase1 = rowValue(r, ["phrase_conseil_pc1", "phrase conseil pc1", "phrase_pc1", "conseil_pc1", "phrase_conseil_1", "conseil_1", "phrase conseil 1", "phrase_conseil", "phrase conseil", "phrase", "conseil"]);
         const phrase2 = rowValue(r, ["phrase_conseil_pc2", "phrase conseil pc2", "phrase_pc2", "conseil_pc2", "phrase_conseil_2", "conseil_2", "phrase conseil 2"]);
         // Vigilance (message sécurité, non commercial)
         const vigilance = rowValue(r, ["vigilance", "vigilance_1", "pc_vigilance", "securite", "sécurité"]);
