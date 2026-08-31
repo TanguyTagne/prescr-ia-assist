@@ -36,9 +36,9 @@ serve(async (req) => {
 
     if (!bypass) {
     const anon = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      global: { headers: { Authorization: authHeader } },
+      global: { headers: { Authorization: authHeader! } },
     });
-    const token = authHeader.replace("Bearer ", "");
+    const token = authHeader!.replace("Bearer ", "");
     const { data: claims, error: authErr } = await anon.auth.getClaims(token);
     if (authErr || !claims?.claims?.sub) {
       return json({ error: "Unauthorized" }, 401);
