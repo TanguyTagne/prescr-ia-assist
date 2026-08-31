@@ -1743,6 +1743,57 @@ serve(async (req) => {
       }
     }));
 
+    // Tous les chemins de reconnaissance doivent aboutir à la même source
+    // curated. Un médicament peut être reconnu via la table legacy ou une API
+    // sans passer par clinicalLookup : dans ce cas on rattache ici PC, phrases
+    // exactes et vigilance depuis medicament_curated_pcs.
+    await Promise.all(enrichedMeds.map(async (med: any, i: number) => {
+      if (!med || ((med.curated_pcs || []).length > 0 && med.vigilance)) return;
+      const name = String(medNames[i] || med.nom_commercial || "").trim();
+      if (!name) return;
+
+      const findMedication = async (pattern: string) => {
+        const query = supabase
+          .from("medicaments")
+          .select("id, nom_commercial")
+          .ilike("nom_commercial", pattern);
+        const dosage = String(medHints[i]?.dosage || "").trim();
+        if (dosage) query.ilike("dosage", dosage);
+        return (await query.limit(1)).data;
+      };
+
+      let rows = await findMedication(name);
+      if (!rows?.length) rows = await findMedication(`${name}%`);
+      if (!rows?.length) rows = await findMedication(`%${name}%`);
+      if (!rows?.length) return;
+
+      const { data: curated } = await supabase
+        .from("medicament_curated_pcs")
+        .select("pc_1, pc_2, pertinence_pc1, pertinence_pc2, phrase_conseil_pc1, phrase_conseil_pc2, vigilance, phrase_vigilance, pertinence_vigilance")
+        .eq("medicament_id", rows[0].id)
+        .maybeSingle();
+      if (!curated) return;
+
+      if (!(med.curated_pcs || []).length) {
+        med.curated_pcs = [
+          { produit: curated.pc_1, pertinence: curated.pertinence_pc1, phrase_conseil: curated.phrase_conseil_pc1, priorite: 100 },
+          { produit: curated.pc_2, pertinence: curated.pertinence_pc2, phrase_conseil: curated.phrase_conseil_pc2, priorite: 99 },
+        ].filter((pc) => pc.produit && String(pc.produit).trim());
+      }
+
+      if (!med.vigilance) {
+        const titre = String(curated.vigilance || "").trim();
+        const phrase = String(curated.phrase_vigilance || "").trim();
+        if (titre || phrase) {
+          med.vigilance = {
+            titre: titre || phrase,
+            phrase: titre ? phrase || undefined : undefined,
+            pertinence: String(curated.pertinence_vigilance || "Sécurité").trim(),
+          };
+        }
+      }
+    }));
+
     // ====== STEP 3.5: Detect latent needs (already preloaded) ======
     const normalized = medNames.map((n) => normalizeText(extractCoreDrugName(n)));
     const latentNeeds: LatentNeed[] = [];
