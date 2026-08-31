@@ -482,7 +482,7 @@ serve(async (req) => {
 
 
     return new Response(JSON.stringify({
-        error: "mode requis : ?mode=upload, ?mode=upload_phrases, ?mode=wipe, ?mode=import&offset=0&limit=1000 ou ?mode=import_phrases&offset=0&limit=1000",
+        error: "mode requis : ?mode=upload, ?mode=wipe, ?mode=import&offset=0&limit=1000 ou ?mode=peek&match=nom",
     }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
