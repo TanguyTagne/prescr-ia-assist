@@ -567,21 +567,24 @@ serve(async (req) => {
         const vigilance = rowValue(r, ["vigilance", "vigilance_1", "pc_vigilance", "securite", "sécurité"]);
         const phraseVig = rowValue(r, ["phrase_vigilance", "phrase vigilance", "phrase_conseil_vigilance", "conseil_vigilance", "phrase_securite"]);
         const pertVig = rowValue(r, ["pertinence_vigilance", "pertinence vigilance", "raison_vigilance"]);
-        if (pc1 || pc2 || vigilance || phraseVig) {
-          pcs.push({
-            medicament_id: id,
-            pc_1: pc1 || null,
-            pc_2: pc2 || null,
-            pertinence_pc1: pert1 || null,
-            pertinence_pc2: pert2 || null,
-            phrase_conseil_pc1: phrase1 || null,
-            phrase_conseil_pc2: phrase2 || null,
-            vigilance: vigilance || null,
-            phrase_vigilance: phraseVig || null,
-            pertinence_vigilance: pertVig || (vigilance || phraseVig ? "Sécurité" : null),
-            source: "asclion_2026_06",
-          });
-        }
+        // Le CSV maître fait AUTORITÉ : on écrit toujours la ligne curated,
+        // y compris avec des valeurs nulles, afin d'effacer d'anciennes
+        // suggestions héritées d'imports/seeds précédents (ex. Febuxostat qui
+        // gardait des PC alors que le CSV n'en a aucun).
+        pcs.push({
+          medicament_id: id,
+          pc_1: pc1 || null,
+          pc_2: pc2 || null,
+          pertinence_pc1: pc1 ? (pert1 || null) : null,
+          pertinence_pc2: pc2 ? (pert2 || null) : null,
+          phrase_conseil_pc1: pc1 ? (phrase1 || null) : null,
+          phrase_conseil_pc2: pc2 ? (phrase2 || null) : null,
+          vigilance: vigilance || null,
+          phrase_vigilance: phraseVig || null,
+          pertinence_vigilance: pertVig || (vigilance || phraseVig ? "Sécurité" : null),
+          source: "asclion_2026_06",
+        });
+
 
       }
 
