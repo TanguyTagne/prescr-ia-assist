@@ -19,6 +19,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { buildCorsHeaders } from "../_shared/cors.ts";
 
 const BUCKET = "imports";
+const MASTER_FILE = "asclion_medicaments_conseil_v3.csv";
 const BATCH = 200;
 
 function normalizeHeaderKey(header: string): string {
@@ -110,13 +111,9 @@ async function resolveMasterFile(supabase: any): Promise<string> {
     sortBy: { column: "updated_at", order: "desc" },
   });
   if (error) throw error;
-  const candidates = (data || []).filter((object: any) => {
-    const name = String(object.name || "").toLowerCase();
-    return name.endsWith(".csv") && !name.includes("phrase") && !name.includes("mapping") && !name.includes("cip");
-  });
-  const master = candidates[0]?.name;
-  if (!master) throw new Error("Aucun CSV maître trouvé dans storage/imports");
-  return master;
+  const master = (data || []).find((object: any) => String(object.name || "") === MASTER_FILE);
+  if (!master) throw new Error(`CSV maître introuvable : imports/${MASTER_FILE}`);
+  return MASTER_FILE;
 }
 
 function chunks<T>(a: T[], n: number): T[][] {
@@ -299,24 +296,14 @@ serve(async (req) => {
         }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
       }
 
-      // Le fichier poussé devient le CSV maître (nom d'origine conservé,
-      // sanitizé). resolveMasterFile choisit le plus récent : ce sera lui.
-      const rawName = String(bodyJson.filename || "asclion-base.csv");
-      const safeName = rawName
-        .split(/[\\/]/).pop()!
-        .normalize("NFD").replace(/[̀-ͯ]/g, "")
-        .replace(/[^A-Za-z0-9._-]+/g, "_")
-        .replace(/^_+|_+$/g, "") || "asclion-base.csv";
-      const finalName = safeName.toLowerCase().endsWith(".csv") ? safeName : `${safeName}.csv`;
-
       const { error: uploadErr } = await supabase.storage
         .from(BUCKET)
-        .upload(finalName, bytes, { contentType: "text/csv; charset=utf-8", upsert: true });
+        .upload(MASTER_FILE, bytes, { contentType: "text/csv; charset=utf-8", upsert: true });
       if (uploadErr) throw uploadErr;
 
       return new Response(JSON.stringify({
         ok: true,
-        file: `${BUCKET}/${finalName}`,
+        file: `${BUCKET}/${MASTER_FILE}`,
         size: bytes.byteLength,
         rows: previewRows.length,
         has_pertinence: hasPertinence,
@@ -356,6 +343,14 @@ serve(async (req) => {
 
       const total = rows.length;
       const slice = rows.slice(offset, offset + limit);
+
+      // Import autoritaire réel : le premier lot supprime la base précédente.
+      // Sans ceci, les upserts laissaient les anciennes valeurs en place pour
+      // les lignes non encore retraitées, malgré le libellé affiché dans l'admin.
+      if (offset === 0) {
+        const { error: wipeErr } = await supabase.rpc("wipe_asclion_base");
+        if (wipeErr) throw new Error(`Échec remise à zéro avant import: ${wipeErr.message}`);
+      }
 
       // Dédupliquer par id dans la tranche
       const seen = new Set<string>();
