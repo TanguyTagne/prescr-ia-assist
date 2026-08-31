@@ -287,8 +287,9 @@ serve(async (req) => {
       }
 
       const previewText = decodeCsvBytes(bytes);
-      const previewRows = parseCsv(previewText);
-      const previewSample = previewRows.slice(0, 200);
+      const previewParsed = parseCsvRange(previewText, 0, 200);
+      const previewSample = previewParsed.rows;
+
       const hasPertinence = previewSample.some((row) =>
         !!(
           rowValue(row, ["pertinence_pc1", "pertinence pc1", "pertinence_1", "raison_pc1", "raison pc1", "pertinence", "raison"]) ||
