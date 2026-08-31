@@ -540,14 +540,6 @@ serve(async (req) => {
       const total = rows.length;
       const slice = rows.slice(offset, offset + limit);
 
-      // Un nouvel import remplace entièrement la base précédente. C'est la seule
-      // manière de garantir qu'une ligne supprimée ou renumérotée dans le CSV ne
-      // conserve jamais d'anciens PC. Les appels suivants reprennent par offset.
-      if (offset === 0) {
-        const { error: wipeErr } = await supabase.rpc("wipe_asclion_base");
-        if (wipeErr) throw wipeErr;
-      }
-
       // Dédupliquer par id dans la tranche
       const seen = new Set<string>();
       const meds: any[] = [];
