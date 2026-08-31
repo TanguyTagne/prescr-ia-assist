@@ -147,9 +147,22 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
   const [conseilGlobalOpen, setConseilGlobalOpen] = useState(false);
   const { recordFeedback } = usePcFeedback();
 
-  // Filet Electron : certains événements de scan plus anciens ne transportent
-  // pas encore `vigilance`. On la relit alors depuis la base clinique avant le
-  // rendu. Le mode démo conserve volontairement son propre flux de données.
+  // Filet de sécurité vigilance — INDÉPENDANT du chemin d'analyse.
+  //
+  // La phrase de vigilance doit s'afficher dans l'app exactement comme dans la
+  // démo. Or la démo la reçoit de `demo-med-lookup`, tandis que l'app la reçoit
+  // d'`analyze-prescription` ou du scan HID : trois chemins, trois occasions de
+  // la perdre (fonction edge non redéployée, scan qui ne la transporte pas,
+  // médicament reconnu par la BDPM sans ligne interne).
+  //
+  // On la relit donc ici, côté client, dès qu'elle manque — en trois passes,
+  // de la plus précise à la plus large :
+  //   1) le CIP scanné, quand il y en a un — correspondance exacte ;
+  //   2) le nom commercial, préfixe du premier mot ;
+  //   3) le code ATC — la vigilance de la base v3 est écrite PAR CLASSE ATC,
+  //      donc n'importe quelle ligne de la même classe porte la bonne phrase.
+  //      C'est cette passe qui garantit l'affichage : le code ATC est déjà à
+  //      l'écran, à côté du nom du médicament.
   useEffect(() => {
     if (demoMode) return;
     const missing = result.medicaments.filter(
@@ -158,47 +171,96 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
     if (missing.length === 0) return;
 
     let cancelled = false;
-    void Promise.all(missing.map(async (med) => {
-      const firstWord = med.nom.trim().split(/[\s/]+/)[0];
-      if (!firstWord || firstWord.length < 3) return null;
 
-      const { data: candidates } = await supabase
-        .from("medicaments")
-        .select("id, nom_commercial")
-        .ilike("nom_commercial", `${firstWord}%`)
-        .limit(50);
-      if (!candidates?.length) return null;
-
-      const target = normalizeLookupKey(med.nom);
-      const ordered = [...candidates].sort((a, b) => {
-        const aExact = normalizeLookupKey(a.nom_commercial) === target ? 1 : 0;
-        const bExact = normalizeLookupKey(b.nom_commercial) === target ? 1 : 0;
-        return bExact - aExact;
-      });
-      const ids = ordered.map((candidate) => candidate.id);
-      const { data: rows } = await supabase
-        .from("medicament_curated_pcs")
-        .select("medicament_id, vigilance, phrase_vigilance, pertinence_vigilance")
-        .in("medicament_id", ids);
-
-      const byId = new Map((rows || []).map((row) => [row.medicament_id, row]));
-      const row = ordered.map((candidate) => byId.get(candidate.id)).find(
-        (candidate) => candidate?.vigilance?.trim() || candidate?.phrase_vigilance?.trim(),
-      );
-      if (!row) return null;
-      const titre = row.vigilance?.trim() || row.phrase_vigilance?.trim();
+    const toHint = (row: {
+      vigilance?: string | null;
+      phrase_vigilance?: string | null;
+      pertinence_vigilance?: string | null;
+    } | null | undefined): VigilanceHint | null => {
+      const titre = row?.vigilance?.trim() || row?.phrase_vigilance?.trim();
       if (!titre) return null;
       return {
-        key: normalizeLookupKey(med.nom),
-        vigilance: {
-          titre,
-          phrase: row.vigilance?.trim() ? row.phrase_vigilance?.trim() || undefined : undefined,
-          pertinence: row.pertinence_vigilance?.trim() || "Sécurité",
-        } satisfies VigilanceHint,
+        titre,
+        phrase: row?.vigilance?.trim() ? row?.phrase_vigilance?.trim() || undefined : undefined,
+        pertinence: row?.pertinence_vigilance?.trim() || "Sécurité",
       };
+    };
+
+    const VIG_COLS = "medicament_id, vigilance, phrase_vigilance, pertinence_vigilance";
+
+    const fromMedIds = async (ids: string[], preferred?: string[]) => {
+      if (ids.length === 0) return null;
+      const { data: rows } = await supabase
+        .from("medicament_curated_pcs")
+        .select(VIG_COLS)
+        .in("medicament_id", ids);
+      if (!rows?.length) return null;
+      const byId = new Map(rows.map((row) => [row.medicament_id, row]));
+      const order = preferred?.length ? preferred : ids;
+      for (const id of order) {
+        const hint = toHint(byId.get(id));
+        if (hint) return hint;
+      }
+      for (const row of rows) {
+        const hint = toHint(row);
+        if (hint) return hint;
+      }
+      return null;
+    };
+
+    void Promise.all(missing.map(async (med) => {
+      const key = normalizeLookupKey(med.nom);
+
+      // ── Passe 1 : le CIP scanné ─────────────────────────────────────────
+      const cip = (med.cip_scanned || "").trim();
+      if (cip) {
+        const { data } = await supabase
+          .from("medicaments")
+          .select("id")
+          .eq("cip_code", cip)
+          .limit(1);
+        const hint = await fromMedIds((data || []).map((r) => r.id));
+        if (hint) return { key, vigilance: hint };
+      }
+
+      // ── Passe 2 : le nom commercial ─────────────────────────────────────
+      const firstWord = med.nom.trim().split(/[\s/]+/)[0];
+      if (firstWord && firstWord.length >= 3) {
+        const { data: candidates } = await supabase
+          .from("medicaments")
+          .select("id, nom_commercial")
+          .ilike("nom_commercial", `${firstWord}%`)
+          .limit(50);
+        if (candidates?.length) {
+          const ordered = [...candidates].sort((a, b) => {
+            const aExact = normalizeLookupKey(a.nom_commercial) === key ? 1 : 0;
+            const bExact = normalizeLookupKey(b.nom_commercial) === key ? 1 : 0;
+            return bExact - aExact;
+          });
+          const ids = ordered.map((c) => c.id);
+          const hint = await fromMedIds(ids, ids);
+          if (hint) return { key, vigilance: hint };
+        }
+      }
+
+      // ── Passe 3 : le code ATC ───────────────────────────────────────────
+      // La vigilance est écrite par classe : toute ligne de la même classe
+      // porte la même phrase. C'est le filet qui ne rate presque jamais.
+      const atc = (med.code_atc || "").trim();
+      if (atc.length >= 4) {
+        const { data: sameClass } = await supabase
+          .from("medicaments")
+          .select("id")
+          .eq("atc_code", atc)
+          .limit(30);
+        const hint = await fromMedIds((sameClass || []).map((r) => r.id));
+        if (hint) return { key, vigilance: hint };
+      }
+
+      return null;
     })).then((found) => {
       if (cancelled) return;
-      const entries = found.filter((item): item is NonNullable<typeof item> => item !== null);
+      const entries = found.filter((item): item is { key: string; vigilance: VigilanceHint } => item !== null);
       if (entries.length === 0) return;
       setResolvedVigilance((previous) => {
         const next = new Map(previous);
