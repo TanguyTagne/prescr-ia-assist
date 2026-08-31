@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import PrescriptionInput from "@/components/PrescriptionInput";
 import AnalysisResults from "@/components/AnalysisResults";
 import LegalDisclaimer from "@/components/LegalDisclaimer";
-import { analyzePrescription, analyzePrescriptionImage, type AnalysisResult } from "@/lib/prescriptionAnalyzer";
+import { analyzePrescription, fillMissingVigilance, analyzePrescriptionImage, type AnalysisResult } from "@/lib/prescriptionAnalyzer";
 import { trackEvent } from "@/hooks/useAnalytics";
 import { ScannerStatus } from "@/components/ScannerStatus";
 import { pdfToImageBase64 } from "@/lib/pdfToImage";
@@ -170,7 +170,7 @@ const WidgetApp = () => {
     }
   };
 
-  const handleScanResult = (scan: any) => {
+  const handleScanResult = async (scan: any) => {
     if (scan.scan_type === "prescription" && scan.result) {
       try {
         const normalized = {
@@ -181,6 +181,10 @@ const WidgetApp = () => {
           structuredData: scan.result.structuredData || false,
           sources: scan.result.sources || [],
         };
+        // Même filet que pour l'analyse directe : une ordonnance arrivée par la
+        // file de scan doit porter sa vigilance, quelle que soit la version de
+        // la fonction edge qui l'a produite.
+        normalized.medicaments = await fillMissingVigilance(normalized.medicaments);
         setResult(normalized as AnalysisResult);
         notifyAnalysisDone({ count: normalized.medicaments.length });
       } catch {}
