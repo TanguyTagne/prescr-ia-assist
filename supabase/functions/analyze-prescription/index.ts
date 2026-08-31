@@ -2096,6 +2096,35 @@ serve(async (req) => {
       conseilText = `${formattedAdvice.join(". ")}. ${defaultFollowup}`;
     }
 
+    // Filet de sécurité vigilance : si le chemin clinique n'a pas rempli la
+    // vigilance (médicament reconnu via `medications` ou enrichissement externe),
+    // on la relit directement depuis medicament_curated_pcs par nom.
+    await Promise.all(enrichedMeds.map(async (m: any, i: number) => {
+      if (!m || m.vigilance) return;
+      const name = String(medNames[i] || m.nom_commercial || "").trim();
+      if (!name) return;
+      const find = async (pattern: string) =>
+        (await supabase.from("medicaments").select("id").ilike("nom_commercial", pattern).limit(1)).data;
+      let rows = await find(name);
+      if (!rows?.length) rows = await find(`${name}%`);
+      if (!rows?.length) rows = await find(`%${name}%`);
+      if (!rows?.length) return;
+      const { data: cur } = await supabase
+        .from("medicament_curated_pcs")
+        .select("vigilance, phrase_vigilance, pertinence_vigilance")
+        .eq("medicament_id", rows[0].id)
+        .maybeSingle();
+      const titre = String(cur?.vigilance || "").trim();
+      const phrase = String(cur?.phrase_vigilance || "").trim();
+      if (titre || phrase) {
+        m.vigilance = {
+          titre: titre || phrase,
+          phrase: titre ? phrase || undefined : undefined,
+          pertinence: String(cur?.pertinence_vigilance || "Sécurité").trim(),
+        };
+      }
+    }));
+
     // Step 7: Build result
     const medicamentsResult = enrichedMeds.map((m: any, i: number) => ({
       nom: m.nom_commercial,
