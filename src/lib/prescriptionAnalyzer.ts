@@ -68,6 +68,112 @@ export interface AnalysisResult {
   patient_name?: string;
 }
 
+
+/**
+ * Complète la vigilance manquante AVANT le rendu.
+ *
+ * La phrase de vigilance peut manquer dans la réponse d'`analyze-prescription`
+ * — typiquement quand la fonction edge déployée est antérieure à l'ajout des
+ * colonnes vigilance. On la relit alors directement en base, ici, pendant que
+ * l'appel est encore en cours : le composant reçoit un résultat déjà complet
+ * et n'a aucun effet asynchrone à jouer après coup.
+ *
+ * Trois passes, de la plus précise à la plus large :
+ *   1) le CIP scanné ;
+ *   2) le nom commercial (préfixe du premier mot) ;
+ *   3) le code ATC — la vigilance de la base est écrite PAR CLASSE, donc
+ *      n'importe quelle ligne de la même classe porte la bonne phrase.
+ */
+const VIGILANCE_COLS = "medicament_id, vigilance, phrase_vigilance, pertinence_vigilance";
+
+type CuratedVigilanceRow = {
+  medicament_id: string;
+  vigilance: string | null;
+  phrase_vigilance: string | null;
+  pertinence_vigilance: string | null;
+};
+
+function toVigilance(row?: CuratedVigilanceRow | null): MedicamentInfo["vigilance"] | null {
+  const titre = row?.vigilance?.trim() || row?.phrase_vigilance?.trim();
+  if (!titre) return null;
+  return {
+    titre,
+    phrase: row?.vigilance?.trim() ? row?.phrase_vigilance?.trim() || undefined : undefined,
+    pertinence: row?.pertinence_vigilance?.trim() || "Sécurité",
+  };
+}
+
+async function vigilanceFromMedIds(ids: string[]): Promise<MedicamentInfo["vigilance"] | null> {
+  if (ids.length === 0) return null;
+  const { data } = await supabase
+    .from("medicament_curated_pcs")
+    .select(VIGILANCE_COLS)
+    .in("medicament_id", ids);
+  const rows = (data || []) as CuratedVigilanceRow[];
+  const byId = new Map(rows.map((row) => [row.medicament_id, row]));
+  for (const id of ids) {
+    const hit = toVigilance(byId.get(id));
+    if (hit) return hit;
+  }
+  for (const row of rows) {
+    const hit = toVigilance(row);
+    if (hit) return hit;
+  }
+  return null;
+}
+
+export async function fillMissingVigilance(meds: MedicamentInfo[]): Promise<MedicamentInfo[]> {
+  const needs = meds.some((m) => !m.vigilance?.titre && !m.vigilance?.phrase);
+  if (!needs) return meds;
+
+  return Promise.all(meds.map(async (med) => {
+    if (med.vigilance?.titre || med.vigilance?.phrase) return med;
+
+    try {
+      // 1) CIP scanné
+      const cip = (med.cip_scanned || "").trim();
+      if (cip) {
+        const { data } = await supabase.from("medicaments").select("id").eq("cip_code", cip).limit(1);
+        const hit = await vigilanceFromMedIds((data || []).map((r) => r.id));
+        if (hit) return { ...med, vigilance: hit };
+      }
+
+      // 2) nom commercial
+      const firstWord = (med.nom || "").trim().split(/[\s/]+/)[0];
+      if (firstWord && firstWord.length >= 3) {
+        const { data } = await supabase
+          .from("medicaments")
+          .select("id, nom_commercial")
+          .ilike("nom_commercial", `${firstWord}%`)
+          .limit(50);
+        const target = (med.nom || "").toLowerCase().trim();
+        const ordered = [...(data || [])].sort((a, b) => {
+          const ae = (a.nom_commercial || "").toLowerCase().trim() === target ? 1 : 0;
+          const be = (b.nom_commercial || "").toLowerCase().trim() === target ? 1 : 0;
+          return be - ae;
+        });
+        const hit = await vigilanceFromMedIds(ordered.map((r) => r.id));
+        if (hit) return { ...med, vigilance: hit };
+      }
+
+      // 3) code ATC
+      const atc = (med.code_atc || "").trim();
+      if (atc.length >= 4) {
+        const { data } = await supabase.from("medicaments").select("id").eq("atc_code", atc).limit(30);
+        const hit = await vigilanceFromMedIds((data || []).map((r) => r.id));
+        if (hit) return { ...med, vigilance: hit };
+      }
+
+      // logger.error et non warn : warn est coupé en production, or c'est
+      // exactement en production qu'on a besoin de voir ce cas.
+      logger.error(`[vigilance] AUCUNE vigilance trouvée pour "${med.nom}" — atc=${med.code_atc || "(vide)"} cip=${med.cip_scanned || "(vide)"}`);
+    } catch (e) {
+      logger.error("[vigilance] échec de la relecture:", e);
+    }
+    return med;
+  }));
+}
+
 export async function analyzePrescription(
   input: string,
   options?: { basketSessionId?: string; blockedProducts?: string[] },
@@ -100,7 +206,9 @@ export async function analyzePrescription(
   if (data?.error) {
     throw new Error(data.error);
   }
-  return normalizeResult(data);
+  const normalized = normalizeResult(data);
+  normalized.medicaments = await fillMissingVigilance(normalized.medicaments);
+  return normalized;
   } finally {
     endCriticalTask();
   }
@@ -137,7 +245,9 @@ export async function analyzePrescriptionImage(
   if (data?.error) {
     throw new Error(data.error);
   }
-  return normalizeResult(data);
+  const normalized = normalizeResult(data);
+  normalized.medicaments = await fillMissingVigilance(normalized.medicaments);
+  return normalized;
   } finally {
     endCriticalTask();
   }
