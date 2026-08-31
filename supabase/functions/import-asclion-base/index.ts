@@ -1,16 +1,17 @@
 /**
- * Importe asclion-medicaments-pertinence-enrichi.csv depuis le bucket "imports".
- * CSV = base définitive : id, cip_code, nom_commercial, laboratoire, dosage,
+ * Importe le CSV maître Asclion (le plus récent du bucket "imports") :
+ *   id, cip_code, nom_commercial, laboratoire, dosage,
  *   forme_galenique, voie_administration, atc_code, nom_molecule,
  *   classe_therapeutique, cible_age, statut_officine, est_otc,
- *   est_produit_conseil, posologie, pc_1, pc_2, pc_3 (ignoré, max 2 PC),
- *   pertinence_pc1, pertinence_pc2, phrase_conseil_pc1, phrase_conseil_pc2
+ *   est_produit_conseil, posologie, pc_1, pc_2,
+ *   pertinence_pc1, pertinence_pc2, phrase_conseil_pc1, phrase_conseil_pc2,
+ *   vigilance, phrase_vigilance, pertinence_vigilance
  *
  * Modes :
  *   POST /import-asclion-base?mode=wipe         → vide medicaments + curated_pcs
- *   POST /import-asclion-base?mode=import&offset=0&limit=1000 → importe une tranche
- *   POST /import-asclion-base?mode=upload_phrases → pousse un CSV séparé de phrases conseil
- *   POST /import-asclion-base?mode=import_phrases&offset=0&limit=1000 → applique les phrases aux PCs existants
+ *   POST /import-asclion-base?mode=import&offset=0&limit=1000 → importe une tranche (wipe auto à offset 0)
+ *   POST /import-asclion-base?mode=upload       → pousse un nouveau CSV maître (nom d'origine conservé)
+ *   POST /import-asclion-base?mode=peek&match=x → debug admin : en-têtes + lignes correspondantes
  * Admin only.
  */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -18,8 +19,6 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { buildCorsHeaders } from "../_shared/cors.ts";
 
 const BUCKET = "imports";
-const FILE = "asclion-medicaments-pertinence-enrichi.csv";
-const PHRASES_FILE = "asclion-phrases-conseil.csv";
 const BATCH = 200;
 
 function normalizeHeaderKey(header: string): string {
@@ -207,139 +206,6 @@ async function findMedicamentId(supabase: any, row: Record<string, string>): Pro
   return (exact || rows[0])?.id ?? null;
 }
 
-async function applyPcHintGlobally(
-  supabase: any,
-  pcName: string,
-  patch: { pertinence?: string | null; phrase_conseil?: string | null },
-): Promise<{ matched: number; updated: number }> {
-  const firstWord = normalizeLookupKey(pcName).split(" ")[0];
-  if (!firstWord || firstWord.length < 3) return { matched: 0, updated: 0 };
-
-  const { data: rows } = await supabase
-    .from("medicament_curated_pcs")
-    .select("medicament_id, pc_1, pc_2")
-    .or(`pc_1.ilike.${firstWord}%,pc_2.ilike.${firstWord}%`)
-    .limit(1000);
-
-  let matched = 0;
-  let updated = 0;
-  for (const row of (rows || []) as any[]) {
-    const update: Record<string, string> = {};
-    if (productNamesMatch(row.pc_1, pcName)) {
-      matched++;
-      if (patch.pertinence) update.pertinence_pc1 = patch.pertinence;
-      if (patch.phrase_conseil) update.phrase_conseil_pc1 = patch.phrase_conseil;
-    }
-    if (productNamesMatch(row.pc_2, pcName)) {
-      matched++;
-      if (patch.pertinence) update.pertinence_pc2 = patch.pertinence;
-      if (patch.phrase_conseil) update.phrase_conseil_pc2 = patch.phrase_conseil;
-    }
-    if (Object.keys(update).length === 0) continue;
-    const { error } = await supabase
-      .from("medicament_curated_pcs")
-      .update(update)
-      .eq("medicament_id", row.medicament_id);
-    if (!error) updated++;
-  }
-  return { matched, updated };
-}
-
-async function applyPhraseRow(supabase: any, row: Record<string, string>): Promise<"updated" | "skipped"> {
-  const pcLong = rowValue(row, [
-    "pc",
-    "produit",
-    "produit_complementaire",
-    "produit complémentaire",
-    "produit_conseil",
-    "nom_pc",
-    "pc_nom",
-  ]);
-  const phraseLong = cleanText(rowValue(row, [
-    "phrase_conseil",
-    "phrase conseil",
-    "phrase",
-    "conseil",
-    "phrase_patient",
-    "benefice_patient",
-    "bénéfice patient",
-  ]));
-  const pertinenceLong = cleanText(rowValue(row, ["pertinence", "raison", "raison_suggestion", "raison suggestion", "type"]));
-
-  const pc1 = rowValue(row, ["pc_1", "pc1", "pc_suggere_1", "pc suggéré 1", "suggestion_1", "suggestion 1", "produit_suggere_1", "produit suggéré 1", "produit_complementaire_1", "produit complémentaire 1", "produit_conseil_1"]);
-  const pc2 = rowValue(row, ["pc_2", "pc2", "pc_suggere_2", "pc suggéré 2", "suggestion_2", "suggestion 2", "produit_suggere_2", "produit suggéré 2", "produit_complementaire_2", "produit complémentaire 2", "produit_conseil_2"]);
-  const phrase1 = cleanText(rowValue(row, ["phrase_conseil_pc1", "phrase conseil pc1", "phrase_pc1", "conseil_pc1", "phrase_conseil_1", "conseil_1", "phrase conseil 1"]));
-  const phrase2 = cleanText(rowValue(row, ["phrase_conseil_pc2", "phrase conseil pc2", "phrase_pc2", "conseil_pc2", "phrase_conseil_2", "conseil_2", "phrase conseil 2"]));
-  const pert1 = cleanText(rowValue(row, ["pertinence_pc1", "pertinence pc1", "pertinence_1", "raison_pc1", "raison pc1", "raison_1"]));
-  const pert2 = cleanText(rowValue(row, ["pertinence_pc2", "pertinence pc2", "pertinence_2", "raison_pc2", "raison pc2", "raison_2"]));
-  const vigilance = cleanText(rowValue(row, ["vigilance", "vigilance_1", "pc_vigilance", "securite", "sécurité"]));
-  const phraseVigilance = cleanText(rowValue(row, ["phrase_vigilance", "phrase vigilance", "phrase_conseil_vigilance", "conseil_vigilance", "phrase_securite"]));
-  const pertinenceVigilance = cleanText(rowValue(row, ["pertinence_vigilance", "pertinence vigilance", "raison_vigilance"]));
-
-  const medId = await findMedicamentId(supabase, row);
-  if (medId) {
-    const directPatch: Record<string, string> = {};
-    if (pc1) directPatch.pc_1 = pc1;
-    if (pc2) directPatch.pc_2 = pc2;
-    if (phrase1) directPatch.phrase_conseil_pc1 = phrase1;
-    if (phrase2) directPatch.phrase_conseil_pc2 = phrase2;
-    if (pert1) directPatch.pertinence_pc1 = pert1;
-    if (pert2) directPatch.pertinence_pc2 = pert2;
-    if (vigilance) directPatch.vigilance = vigilance;
-    if (phraseVigilance) directPatch.phrase_vigilance = phraseVigilance;
-    if (pertinenceVigilance) directPatch.pertinence_vigilance = pertinenceVigilance;
-
-    // Format long : une ligne = médicament + PC + phrase. Auparavant, une
-    // phrase numérotée faisait retourner la fonction avant que `pcLong` soit
-    // copié dans pc_1/pc_2, créant des lignes avec phrase mais sans produit.
-    if (pcLong) {
-      const { data: curated } = await supabase
-        .from("medicament_curated_pcs")
-        .select("pc_1, pc_2")
-        .eq("medicament_id", medId)
-        .maybeSingle();
-      if (productNamesMatch(curated?.pc_1, pcLong)) {
-        if (phraseLong) directPatch.phrase_conseil_pc1 = phraseLong;
-        if (pertinenceLong) directPatch.pertinence_pc1 = pertinenceLong;
-      } else if (productNamesMatch(curated?.pc_2, pcLong)) {
-        if (phraseLong) directPatch.phrase_conseil_pc2 = phraseLong;
-        if (pertinenceLong) directPatch.pertinence_pc2 = pertinenceLong;
-      } else if (!curated?.pc_1 || directPatch.pc_1 === pcLong) {
-        directPatch.pc_1 = pcLong;
-        if (phraseLong) directPatch.phrase_conseil_pc1 = phraseLong;
-        if (pertinenceLong) directPatch.pertinence_pc1 = pertinenceLong;
-      } else if (!curated?.pc_2 || directPatch.pc_2 === pcLong) {
-        directPatch.pc_2 = pcLong;
-        if (phraseLong) directPatch.phrase_conseil_pc2 = phraseLong;
-        if (pertinenceLong) directPatch.pertinence_pc2 = pertinenceLong;
-      }
-    }
-
-    if (Object.keys(directPatch).length > 0) {
-      const { error } = await supabase.from("medicament_curated_pcs").upsert(
-        { medicament_id: medId, ...directPatch },
-        { onConflict: "medicament_id" },
-      );
-      return error ? "skipped" : "updated";
-    }
-  }
-
-  // Dernier recours : fichier avec seulement PC + phrase/pertinence → applique à tous les PCs du même nom.
-  if (pcLong && (phraseLong || pertinenceLong)) {
-    const res = await applyPcHintGlobally(supabase, pcLong, { phrase_conseil: phraseLong, pertinence: pertinenceLong });
-    return res.updated > 0 ? "updated" : "skipped";
-  }
-  if (pc1 && (phrase1 || pert1)) {
-    const res = await applyPcHintGlobally(supabase, pc1, { phrase_conseil: phrase1, pertinence: pert1 });
-    if (res.updated > 0) return "updated";
-  }
-  if (pc2 && (phrase2 || pert2)) {
-    const res = await applyPcHintGlobally(supabase, pc2, { phrase_conseil: phrase2, pertinence: pert2 });
-    if (res.updated > 0) return "updated";
-  }
-
-  return "skipped";
-}
 
 function asBool(s: string): boolean {
   return s === "t" || s === "true" || s === "1";
@@ -373,6 +239,24 @@ serve(async (req) => {
       const { data, error: wipeErr } = await supabase.rpc("wipe_asclion_base");
       if (wipeErr) throw wipeErr;
       return new Response(JSON.stringify(data ?? { ok: true, deleted: 0 }), { headers: { ...cors, "Content-Type": "application/json" } });
+    }
+
+    // ── PEEK (debug admin) : en-têtes + lignes correspondant à ?match= ──
+    if (mode === "peek") {
+      const sourceFile = await resolveMasterFile(supabase);
+      const { data: blob, error: stErr } = await supabase.storage.from(BUCKET).download(sourceFile);
+      if (stErr || !blob) throw new Error(`Fichier introuvable: ${stErr?.message ?? "blob null"}`);
+      const text = decodeCsvBytes(new Uint8Array(await blob.arrayBuffer()));
+      const rows = parseCsv(text);
+      const headers = rows.length ? Object.keys(rows[0]).filter((h) => h === h.trim()) : [];
+      const match = (url.searchParams.get("match") ?? bodyJson.match ?? "").toLowerCase();
+      const hits = match
+        ? rows.filter((r) => Object.values(r).some((v) => String(v).toLowerCase().includes(match))).slice(0, 10)
+        : rows.slice(0, 2);
+      return new Response(
+        JSON.stringify({ source_file: sourceFile, total_rows: rows.length, headers, hits }),
+        { headers: { ...cors, "Content-Type": "application/json" } },
+      );
     }
 
     // ── UPLOAD CSV ENRICHI ──────────────────────────────────────────────
@@ -415,95 +299,28 @@ serve(async (req) => {
         }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
       }
 
+      // Le fichier poussé devient le CSV maître (nom d'origine conservé,
+      // sanitizé). resolveMasterFile choisit le plus récent : ce sera lui.
+      const rawName = String(bodyJson.filename || "asclion-base.csv");
+      const safeName = rawName
+        .split(/[\\/]/).pop()!
+        .normalize("NFD").replace(/[̀-ͯ]/g, "")
+        .replace(/[^A-Za-z0-9._-]+/g, "_")
+        .replace(/^_+|_+$/g, "") || "asclion-base.csv";
+      const finalName = safeName.toLowerCase().endsWith(".csv") ? safeName : `${safeName}.csv`;
+
       const { error: uploadErr } = await supabase.storage
         .from(BUCKET)
-        .upload(FILE, bytes, { contentType: "text/csv; charset=utf-8", upsert: true });
+        .upload(finalName, bytes, { contentType: "text/csv; charset=utf-8", upsert: true });
       if (uploadErr) throw uploadErr;
 
       return new Response(JSON.stringify({
         ok: true,
-        file: `${BUCKET}/${FILE}`,
+        file: `${BUCKET}/${finalName}`,
         size: bytes.byteLength,
         rows: previewRows.length,
         has_pertinence: hasPertinence,
         has_phrase_conseil: hasPhrase,
-      }), { headers: { ...cors, "Content-Type": "application/json" } });
-    }
-
-    // ── UPLOAD FICHIER PHRASES CONSEIL SÉPARÉ ───────────────────────────
-    if (mode === "upload_phrases") {
-      const bytes = csvBytesFromBody(bodyJson);
-      if (!bytes) {
-        return new Response(JSON.stringify({ error: "CSV phrases manquant" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
-      }
-
-      const previewText = decodeCsvBytes(bytes);
-      const previewRows = parseCsv(previewText);
-      const previewSample = previewRows.slice(0, 200);
-      const hasMedKey = previewSample.some((row) => !!rowValue(row, ["medicament_id", "id_medicament", "id", "nom_commercial", "medicament", "médicament", "nom_medicament"]));
-      const hasPcKey = previewSample.some((row) => !!rowValue(row, ["pc", "produit", "produit_complementaire", "produit complémentaire", "pc_1", "pc1", "pc_2", "pc2"]));
-      const hasPhrase = previewSample.some((row) => !!rowValue(row, ["phrase_conseil", "phrase conseil", "phrase", "conseil", "phrase_conseil_pc1", "phrase conseil pc1", "phrase_conseil_pc2", "phrase conseil pc2"]));
-
-      const { error: uploadErr } = await supabase.storage
-        .from(BUCKET)
-        .upload(PHRASES_FILE, bytes, { contentType: "text/csv; charset=utf-8", upsert: true });
-      if (uploadErr) throw uploadErr;
-
-      return new Response(JSON.stringify({
-        ok: true,
-        file: `${BUCKET}/${PHRASES_FILE}`,
-        size: bytes.byteLength,
-        rows: previewRows.length,
-        has_med_key: hasMedKey,
-        has_pc_key: hasPcKey,
-        has_phrase_conseil: hasPhrase,
-      }), { headers: { ...cors, "Content-Type": "application/json" } });
-    }
-
-    // ── IMPORT FICHIER PHRASES CONSEIL SÉPARÉ ───────────────────────────
-    if (mode === "import_phrases") {
-      const offset = parseInt(url.searchParams.get("offset") ?? String(bodyJson.offset ?? 0), 10);
-      const limit = parseInt(url.searchParams.get("limit") ?? String(bodyJson.limit ?? 1000), 10);
-
-      const { data: blob, error: stErr } = await supabase.storage.from(BUCKET).download(PHRASES_FILE);
-      if (stErr || !blob) {
-        return new Response(JSON.stringify({
-          ok: false,
-          error: `Fichier ${PHRASES_FILE} absent du bucket imports. Utilise d'abord le bouton "0bis. Pousser phrases conseil" pour uploader le CSV.`,
-        }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
-      }
-      const buf = new Uint8Array(await blob.arrayBuffer());
-      const text = decodeCsvBytes(buf);
-      const rows = parseCsv(text);
-      const total = rows.length;
-      const slice = rows.slice(offset, offset + limit);
-
-      // Budget-temps : chaque ligne peut coûter plusieurs requêtes DB.
-      // On sort tôt avant 120s pour éviter l'IDLE_TIMEOUT (150s) de l'edge runtime.
-      const startedAt = Date.now();
-      const TIME_BUDGET_MS = 120_000;
-      let updated = 0;
-      let skipped = 0;
-      let processed = 0;
-      for (const row of slice) {
-        if (Date.now() - startedAt > TIME_BUDGET_MS) break;
-        const status = await applyPhraseRow(supabase, row);
-        if (status === "updated") updated++;
-        else skipped++;
-        processed++;
-      }
-
-      const nextOffset = offset + processed;
-      return new Response(JSON.stringify({
-        ok: true,
-        total_in_csv: total,
-        offset,
-        limit,
-        processed,
-        phrases_updated: updated,
-        phrases_skipped: skipped,
-        next_offset: nextOffset < total ? nextOffset : null,
-        done: nextOffset >= total,
       }), { headers: { ...cors, "Content-Type": "application/json" } });
     }
 
@@ -665,7 +482,7 @@ serve(async (req) => {
 
 
     return new Response(JSON.stringify({
-        error: "mode requis : ?mode=upload, ?mode=upload_phrases, ?mode=wipe, ?mode=import&offset=0&limit=1000 ou ?mode=import_phrases&offset=0&limit=1000",
+        error: "mode requis : ?mode=upload, ?mode=wipe, ?mode=import&offset=0&limit=1000 ou ?mode=peek&match=nom",
     }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
