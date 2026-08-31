@@ -302,7 +302,7 @@ serve(async (req) => {
           rowValue(row, ["phrase_conseil_pc2", "phrase conseil pc2", "phrase_pc2", "conseil_pc2", "phrase_conseil_2", "conseil_2"])
         )
       );
-      const hasPc = previewRows.some((row) => !!rowValue(row, [
+      const hasPc = previewSample.some((row) => !!rowValue(row, [
         "pc_1", "pc1", "pc", "pc_suggere", "pc suggéré", "pc_suggere_1", "pc suggéré 1",
         "suggestion", "suggestion_1", "suggestion 1", "produit_suggere", "produit suggéré",
         "produit_suggere_1", "produit suggéré 1", "produit_complementaire", "produit complémentaire",
@@ -311,8 +311,10 @@ serve(async (req) => {
         "produit_suggere_2", "produit suggéré 2", "produit_complementaire_2", "produit complémentaire 2", "produit_conseil_2",
       ]));
       if (!hasPc) {
-        const headers = previewRows[0]
-          ? [...new Set(Object.keys(previewRows[0]).filter((key) => key === normalizeHeaderKey(key)))].join(", ")
+        const headers = previewParsed.headers.length
+          ? [...new Set(previewParsed.headers.filter((key) => key === normalizeHeaderKey(key)))].join(", ")
+          : "aucun en-tête";
+        void ((key: string) => Object.keys({}.filter((key) => key === normalizeHeaderKey(key)))].join(", ")
           : "aucun en-tête";
         return new Response(JSON.stringify({
           error: "COLONNES_PC_INTROUVABLES",
@@ -329,7 +331,7 @@ serve(async (req) => {
         ok: true,
         file: `${BUCKET}/${MASTER_FILE}`,
         size: bytes.byteLength,
-        rows: previewRows.length,
+        rows: previewParsed.total,
         has_pertinence: hasPertinence,
         has_phrase_conseil: hasPhrase,
       }), { headers: { ...cors, "Content-Type": "application/json" } });
