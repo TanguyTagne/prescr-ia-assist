@@ -59,12 +59,45 @@ function detectDelim(headerLine: string): string {
   return ',';
 }
 
-function parseCsv(text: string): Record<string, string>[] {
+/**
+ * Parseur CSV en streaming : ne matérialise QUE les lignes de la tranche
+ * demandée (offset/limit). Matérialiser tout le fichier faisait exploser la
+ * mémoire de l'edge function (WORKER_RESOURCE_LIMIT).
+ */
+function parseCsvRange(
+  text: string,
+  start = 0,
+  count = Number.MAX_SAFE_INTEGER,
+): { headers: string[]; rows: Record<string, string>[]; total: number } {
   const cleaned = text.startsWith("\uFEFF") ? text.slice(1) : text;
   const headerLine = cleaned.split(/\r?\n/, 1)[0] || "";
-  if (!headerLine) return [];
+  if (!headerLine) return { headers: [], rows: [], total: 0 };
   const delim = detectDelim(headerLine);
-  const records: string[][] = [];
+
+  let headers: string[] | null = null;
+  const normalizedHeaders: string[] = [];
+  const rows: Record<string, string>[] = [];
+  let total = 0;
+
+  const emit = (record: string[]) => {
+    if (!record.some((value) => value.trim())) return;
+    if (!headers) {
+      headers = record.map((h) => h.trim().replace(/^"|"$/g, ""));
+      for (const h of headers) normalizedHeaders.push(normalizeHeaderKey(h));
+      return;
+    }
+    const index = total++;
+    if (index < start || rows.length >= count) return;
+    const row: Record<string, string> = {};
+    for (let idx = 0; idx < headers.length; idx++) {
+      const value = (record[idx] ?? "").trim();
+      row[headers[idx]] = value;
+      const normalized = normalizedHeaders[idx];
+      if (normalized && row[normalized] == null) row[normalized] = value;
+    }
+    rows.push(row);
+  };
+
   let record: string[] = [];
   let field = "";
   let inQuotes = false;
@@ -80,30 +113,18 @@ function parseCsv(text: string): Record<string, string>[] {
       if (ch === "\r" && cleaned[i + 1] === "\n") i++;
       record.push(field);
       field = "";
-      if (record.some((value) => value.trim())) records.push(record);
+      emit(record);
       record = [];
     } else {
       field += ch;
     }
   }
   record.push(field);
-  if (record.some((value) => value.trim())) records.push(record);
-  if (records.length < 2) return [];
-  const headers = records[0].map(h => h.trim().replace(/^"|"$/g, ""));
-  const rows: Record<string, string>[] = [];
-  for (let i = 1; i < records.length; i++) {
-    const vals = records[i];
-    const row: Record<string, string> = {};
-    headers.forEach((h, idx) => {
-      const value = (vals[idx] ?? "").trim();
-      row[h] = value;
-      const normalized = normalizeHeaderKey(h);
-      if (normalized && row[normalized] == null) row[normalized] = value;
-    });
-    rows.push(row);
-  }
-  return rows;
+  emit(record);
+
+  return { headers: headers ?? [], rows, total };
 }
+
 
 async function resolveMasterFile(supabase: any): Promise<string> {
   const { data, error } = await supabase.storage.from(BUCKET).list("", {
