@@ -121,24 +121,19 @@ function VigilanceLine({ vigilance }: { vigilance: { titre?: string; phrase?: st
   const label = (vigilance.pertinence || "Sécurité").trim();
   const full = [vigilance.titre, vigilance.phrase].filter(Boolean).join(" ").trim();
   return (
-    <div className="rounded-md border border-amber-500/40 bg-amber-500/5 px-2 py-1">
-      <div className="flex items-center gap-1.5 min-w-0">
-        <AlertTriangle className="h-3 w-3 text-amber-600 dark:text-amber-400 shrink-0" />
-        <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400 shrink-0">{label}</span>
-        {!open && (
-          <span className="text-[11px] text-amber-700 dark:text-amber-300 truncate min-w-0">{full}</span>
-        )}
-        <button
-          type="button"
-          onClick={() => setOpen((o) => !o)}
-          className="ml-auto shrink-0 text-[10px] font-medium text-amber-700 dark:text-amber-300 underline underline-offset-2 hover:opacity-80"
-        >
-          {open ? "voir moins" : "voir plus"}
-        </button>
-      </div>
-      {open && (
-        <div className="mt-1 text-[11px] font-medium leading-snug text-amber-700 dark:text-amber-300">{full}</div>
-      )}
+    <div className="grid min-w-0 grid-cols-[auto_auto_minmax(0,1fr)_auto] items-start gap-1.5 rounded-md border border-amber-500/40 bg-amber-500/5 px-2 py-1">
+      <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-amber-600 dark:text-amber-400" />
+      <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400">{label}</span>
+      <span className={`min-w-0 text-[11px] leading-snug text-amber-700 dark:text-amber-300 ${open ? "whitespace-normal" : "truncate"}`}>
+        {full}
+      </span>
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        className="shrink-0 text-[10px] font-medium text-amber-700 underline underline-offset-2 hover:opacity-80 dark:text-amber-300"
+      >
+        {open ? "voir moins" : "voir plus"}
+      </button>
     </div>
   );
 }
