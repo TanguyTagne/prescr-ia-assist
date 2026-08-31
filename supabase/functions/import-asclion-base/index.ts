@@ -375,6 +375,24 @@ serve(async (req) => {
       return new Response(JSON.stringify(data ?? { ok: true, deleted: 0 }), { headers: { ...cors, "Content-Type": "application/json" } });
     }
 
+    // ── PEEK (debug admin) : en-têtes + lignes correspondant à ?match= ──
+    if (mode === "peek") {
+      const sourceFile = await resolveMasterFile(supabase);
+      const { data: blob, error: stErr } = await supabase.storage.from(BUCKET).download(sourceFile);
+      if (stErr || !blob) throw new Error(`Fichier introuvable: ${stErr?.message ?? "blob null"}`);
+      const text = decodeCsvText(new Uint8Array(await blob.arrayBuffer()));
+      const rows = parseCsv(text);
+      const headers = rows.length ? Object.keys(rows[0]).filter((h) => h === h.trim()) : [];
+      const match = (url.searchParams.get("match") ?? bodyJson.match ?? "").toLowerCase();
+      const hits = match
+        ? rows.filter((r) => Object.values(r).some((v) => String(v).toLowerCase().includes(match))).slice(0, 10)
+        : rows.slice(0, 2);
+      return new Response(
+        JSON.stringify({ source_file: sourceFile, total_rows: rows.length, headers, hits }),
+        { headers: { ...cors, "Content-Type": "application/json" } },
+      );
+    }
+
     // ── UPLOAD CSV ENRICHI ──────────────────────────────────────────────
     if (mode === "upload") {
       const bytes = csvBytesFromBody(bodyJson);
