@@ -516,10 +516,13 @@ serve(async (req) => {
         // Dans ce second cas, ce PC doit alimenter pc_1 (et non être perdu).
         const pc1 = rowValue(r, [
           "pc_1", "pc1", "pc", "pc_suggere", "pc suggéré", "pc suggere",
+          "pc_suggere_1", "pc suggéré 1", "pc suggere 1",
+          "produit_suggere", "produit suggéré", "produit suggere",
+          "produit_suggere_1", "produit suggéré 1", "produit suggere 1",
           "produit_complementaire_1", "produit complémentaire 1",
           "produit_complementaire", "produit complémentaire", "produit_conseil_1", "produit_conseil",
         ]);
-        const pc2 = rowValue(r, ["pc_2", "pc2", "pc_suggere_2", "pc suggéré 2", "pc suggere 2", "produit_complementaire_2", "produit complémentaire 2", "produit_conseil_2"]);
+        const pc2 = rowValue(r, ["pc_2", "pc2", "pc_suggere_2", "pc suggéré 2", "pc suggere 2", "produit_suggere_2", "produit suggéré 2", "produit suggere 2", "produit_complementaire_2", "produit complémentaire 2", "produit_conseil_2"]);
         const pert1 = rowValue(r, ["pertinence_pc1", "pertinence pc1", "pertinence_1", "raison_pc1", "raison pc1", "raison_1", "pertinence", "raison", "type"]);
         const pert2 = rowValue(r, ["pertinence_pc2", "pertinence pc2", "pertinence_2", "raison_pc2", "raison pc2", "raison_2"]);
         // Phrase conseil — accepte plusieurs noms de colonnes possibles
@@ -576,6 +579,9 @@ serve(async (req) => {
       const pcsWithPertinence = pcs.filter((p) => p.pertinence_pc1 || p.pertinence_pc2).length;
       const pcsWithPhrase = pcs.filter((p) => p.phrase_conseil_pc1 || p.phrase_conseil_pc2).length;
       const pcsWithVigilance = pcs.filter((p) => p.vigilance || p.phrase_vigilance).length;
+      const orphanPhraseRows = pcs.filter((p) =>
+        (p.phrase_conseil_pc1 && !p.pc_1) || (p.phrase_conseil_pc2 && !p.pc_2)
+      ).length;
       for (const b of chunks(pcs, BATCH)) {
         const { error } = await supabase.from("medicament_curated_pcs").upsert(b, { onConflict: "medicament_id" });
         if (error) { pcsErr += b.length; console.error("pc batch err:", error.message); }
@@ -590,6 +596,7 @@ serve(async (req) => {
         pcs_with_pertinence: pcsWithPertinence,
         pcs_with_phrase_conseil: pcsWithPhrase,
         pcs_with_vigilance: pcsWithVigilance,
+        orphan_phrase_rows: orphanPhraseRows,
         next_offset: nextOffset < total ? nextOffset : null,
         done: nextOffset >= total,
       }), { headers: { ...cors, "Content-Type": "application/json" } });

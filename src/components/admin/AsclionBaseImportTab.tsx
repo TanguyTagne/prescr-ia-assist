@@ -87,6 +87,9 @@ export default function AsclionBaseImportTab() {
       push(
         `lot offset=${offset} → ${data.meds_upserted} méds, ${data.pcs_upserted} PCs, ${data.pcs_with_phrase_conseil ?? 0} phrases, ${data.pcs_with_vigilance ?? 0} vigilances (échec: ${data.meds_failed}/${data.pcs_failed})`,
       );
+      if ((data.orphan_phrase_rows ?? 0) > 0) {
+        push(`⚠ ${data.orphan_phrase_rows} ligne(s) ont une phrase mais aucun nom de PC reconnu : vérifie les en-têtes du CSV`);
+      }
       setProgress({ done: Math.min(offset + PAGE, total), total });
       if (data.done || data.next_offset == null) {
         push(`✓ Import base terminé : ${total} lignes traitées`);
