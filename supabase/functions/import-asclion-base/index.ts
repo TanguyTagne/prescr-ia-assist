@@ -362,10 +362,10 @@ serve(async (req) => {
           fffd_count: fffdCount,
         }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
       }
-      const rows = parseCsv(text);
+      const parsed = parseCsvRange(text, offset, limit);
+      const total = parsed.total;
+      const slice = parsed.rows;
 
-      const total = rows.length;
-      const slice = rows.slice(offset, offset + limit);
 
       // Import autoritaire réel : le premier lot supprime la base précédente.
       // Sans ceci, les upserts laissaient les anciennes valeurs en place pour
