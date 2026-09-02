@@ -218,6 +218,7 @@ export const translations = {
   "landing.hero.trust1": { fr: "Aucun changement d'habitude, aucune saisie supplémentaire", en: "No habit change, no extra data entry" },
   "landing.hero.trust2": { fr: "Compatible avec votre LGO", en: "Works with your pharmacy software" },
   "landing.hero.trust3": { fr: "Réponse en quelques secondes · RGPD, données UE", en: "Answer in seconds · GDPR, EU-hosted data" },
+  "landing.hero.trust4": { fr: "30 000+ médicaments avec un produit complémentaire recommandé", en: "30,000+ medications with a recommended complementary product" },
 
   // ===== NEW: PROOF =====
   "landing.proof.badge": { fr: "Et concrètement ?", en: "And concretely?" },
