@@ -310,7 +310,7 @@ const Landing = () => {
                 </Button>
               </div>
               <ul className="flex flex-wrap items-center justify-center lg:justify-start gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
-                {[t("landing.hero.trust1"), t("landing.hero.trust2"), t("landing.hero.trust3")].map(
+                {[t("landing.hero.trust1"), t("landing.hero.trust2"), t("landing.hero.trust3"), t("landing.hero.trust4")].map(
                   (item, i) => (
                     <li key={i} className="inline-flex items-center gap-1.5">
                       <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
