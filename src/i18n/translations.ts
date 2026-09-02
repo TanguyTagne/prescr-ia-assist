@@ -31,8 +31,8 @@ export const translations = {
   },
   "landing.how.step2.title": { fr: "02 — Asclion analyse", en: "02 — Asclion analyses" },
   "landing.how.step2.desc": {
-    fr: "En quelques secondes, Asclion identifie automatiquement les conseils associés pertinents pour cette délivrance.",
-    en: "In a few seconds, Asclion automatically identifies the associated advice relevant to this dispensation.",
+    fr: "En quelques secondes, Asclion identifie automatiquement le conseil associé pertinent parmi plus de 30 000 médicaments référencés.",
+    en: "In a few seconds, Asclion automatically identifies the relevant associated advice from a database of 30,000+ medications.",
   },
   "landing.how.step3.title": { fr: "03 — Vous conseillez", en: "03 — You advise" },
   "landing.how.step3.desc": {
@@ -242,7 +242,7 @@ export const translations = {
   "landing.stack.item2.value": { fr: "valeur ~ 490 €", en: "value ~ €490" },
   "landing.stack.item3.title": { fr: "Formation de votre équipe (visio 30 min)", en: "Team training (30-min video session)" },
   "landing.stack.item3.value": { fr: "valeur ~ 190 €", en: "value ~ €190" },
-  "landing.stack.item4.title": { fr: "Base de 28 000+ correspondances médicaments → conseils", en: "28,000+ drug → advice mappings knowledge base" },
+  "landing.stack.item4.title": { fr: "Base de 30 000+ médicaments avec un produit complémentaire recommandé", en: "30,000+ medications with a recommended complementary product" },
   "landing.stack.item4.value": { fr: "inclus", en: "included" },
   "landing.stack.item5.title": { fr: "Support prioritaire (réponse < 4 h ouvrées)", en: "Priority support (reply within 4 business hours)" },
   "landing.stack.item5.value": { fr: "valeur ~ 90 €/mois", en: "value ~ €90/mo" },
@@ -410,8 +410,8 @@ export const translations = {
   },
   "aide.q3": { fr: "Pourquoi un produit n'apparaît-il pas dans mes recommandations ?", en: "Why is a product missing from my recommendations?" },
   "aide.a3.p1": {
-    fr: "Asclion s'appuie sur une base clinique curatée. Si un produit manque, deux causes possibles :",
-    en: "Asclion relies on a curated clinical database. If a product is missing, two possible causes:",
+    fr: "Asclion s'appuie sur une base clinique curatée de plus de 30 000 médicaments avec un produit complémentaire recommandé. Si un produit manque, deux causes possibles :",
+    en: "Asclion relies on a curated clinical database of 30,000+ medications with a recommended complementary product. If a product is missing, two possible causes:",
   },
   "aide.a3.li1": {
     fr: "Le médicament détecté n'est pas encore couvert dans la base — signalez-le à",
