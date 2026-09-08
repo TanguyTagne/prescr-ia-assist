@@ -126,7 +126,7 @@ const AdminEmail2FAGate = ({ children }: Props) => {
             <button
               type="button"
               className="w-full text-xs text-muted-foreground hover:text-foreground underline"
-              onClick={sendCode}
+              onClick={() => sendCode(true)}
               disabled={sending}
             >
               Renvoyer un nouveau code
