@@ -67,7 +67,7 @@ serve(async (req) => {
       .select("expires_at")
       .eq("user_id", user.id)
       .maybeSingle();
-    if (existing && new Date(existing.expires_at).getTime() > Date.now() + 9 * 60 * 1000) {
+    if (!force && existing && new Date(existing.expires_at).getTime() > Date.now() + 9 * 60 * 1000) {
       return new Response(JSON.stringify({ success: true, email: user.email, reused: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
