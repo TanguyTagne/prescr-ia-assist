@@ -99,7 +99,7 @@ const AdminEmail2FAGate = ({ children }: Props) => {
         </div>
 
         {!codeSent ? (
-          <Button onClick={sendCode} disabled={sending} className="w-full gap-2">
+          <Button onClick={() => sendCode(false)} disabled={sending} className="w-full gap-2">
             {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
             Recevoir le code par email
           </Button>
