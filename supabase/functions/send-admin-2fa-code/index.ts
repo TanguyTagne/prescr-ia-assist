@@ -54,6 +54,25 @@ serve(async (req) => {
       });
     }
 
+    let force = false;
+    try {
+      const body = await req.json();
+      force = Boolean(body?.force);
+    } catch (_) { /* body vide */ }
+
+    // Anti double-envoi : si un code vient d'être généré (<1 min), on ne le
+    // remplace pas, sinon le code reçu en premier devient invalide.
+    const { data: existing } = await admin
+      .from("admin_2fa_codes")
+      .select("expires_at")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (!force && existing && new Date(existing.expires_at).getTime() > Date.now() + 9 * 60 * 1000) {
+      return new Response(JSON.stringify({ success: true, email: user.email, reused: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // 6-digit code
     const code = String(Math.floor(100000 + Math.random() * 900000));
     const code_hash = await sha256(code);
