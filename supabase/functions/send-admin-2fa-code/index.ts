@@ -54,8 +54,14 @@ serve(async (req) => {
       });
     }
 
-    // Anti double-envoi : si un code a déjà été généré il y a moins de 60s,
-    // on ne le remplace pas (sinon le code reçu en premier devient invalide).
+    let force = false;
+    try {
+      const body = await req.json();
+      force = Boolean(body?.force);
+    } catch (_) { /* body vide */ }
+
+    // Anti double-envoi : si un code vient d'être généré (<1 min), on ne le
+    // remplace pas, sinon le code reçu en premier devient invalide.
     const { data: existing } = await admin
       .from("admin_2fa_codes")
       .select("expires_at")
