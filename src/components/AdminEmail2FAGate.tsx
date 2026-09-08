@@ -41,10 +41,11 @@ const AdminEmail2FAGate = ({ children }: Props) => {
     return `${shown}${"*".repeat(Math.max(1, name.length - 2))}@${domain}`;
   };
 
-  const sendCode = async () => {
+  const sendCode = async (force = false) => {
+    if (sending) return;
     setSending(true);
     try {
-      const { data, error } = await supabase.functions.invoke("send-admin-2fa-code", { body: {} });
+      const { data, error } = await supabase.functions.invoke("send-admin-2fa-code", { body: { force } });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       setCodeSent(true);
