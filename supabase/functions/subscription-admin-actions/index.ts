@@ -60,6 +60,11 @@ const BodySchema = z.object({
     paid_at: z.string().nullable().optional(),
     activated_at: z.string().nullable().optional(),
   }).optional(),
+  // Identifiants saisis par l'admin (facultatifs : sinon e-mail du dossier + mot de passe généré).
+  credentials: z.object({
+    email: z.string().email().optional(),
+    password: z.string().min(10).max(128).optional(),
+  }).optional(),
 });
 
 /** Mot de passe provisoire lisible mais imprévisible (source cryptographique). */
