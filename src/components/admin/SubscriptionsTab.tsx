@@ -135,7 +135,8 @@ export default function SubscriptionsTab() {
   const [selected, setSelected] = useState<SubRow | null>(null);
   const [events, setEvents] = useState<EventRow[]>([]);
   const [note, setNote] = useState("");
-  const [followUps, setFollowUps] = useState({ j14: "", j30: "" });
+  const [officeEdit, setOfficeEdit] = useState({ ...EMPTY_OFFICE });
+  const [subEdit, setSubEdit] = useState({ ...EMPTY_SUB });
   const [acting, setActing] = useState(false);
 
   const load = async () => {
