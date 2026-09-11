@@ -10,6 +10,7 @@ import { Loader2, RefreshCcw } from "lucide-react";
 import { toast } from "sonner";
 
 const STATUS_LABELS: Record<string, string> = {
+  compatibility_review: "Compatibilité robot à valider",
   checkout_started: "Paiement commencé",
   payment_pending: "Paiement en attente",
   paid_pending_validation: "Payé — à valider",
