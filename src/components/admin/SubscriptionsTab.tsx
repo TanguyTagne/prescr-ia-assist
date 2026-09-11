@@ -241,6 +241,15 @@ export default function SubscriptionsTab() {
     return d;
   };
 
+  const q = search.trim().toLowerCase();
+  const visible = subs.filter((s) => {
+    if (statusFilter !== "all" && s.status !== statusFilter) return false;
+    if (!q) return true;
+    const o = offices[s.office_id];
+    return [o?.office_name, o?.contact_email, o?.siret, o?.billing_name]
+      .some((v) => (v ?? "").toLowerCase().includes(q));
+  });
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
