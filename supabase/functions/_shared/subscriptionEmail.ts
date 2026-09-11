@@ -46,6 +46,7 @@ const TITLES: Record<SubscriptionEmailKind, string> = {
   annual_reminder: "Reconduction de votre abonnement annuel dans 30 jours",
   annual_renewal_confirmed: "Renouvellement confirmé",
   subscription_expired: "Votre offre Asclion est arrivée à expiration",
+  abandoned_cart: "Votre souscription Asclion n'est pas finalisée",
   credentials: "Vos identifiants Asclion",
 };
 
@@ -63,11 +64,13 @@ const BODIES: Record<SubscriptionEmailKind, (c: SubscriptionEmailContext) => str
   cancellation_confirmed: (c) =>
     `Bonjour ${c.contactFirstName},<br><br>votre demande de résiliation est prise en compte. Votre accès reste actif jusqu'à la fin de la période déjà payée (${c.cycleLabel}).`,
   annual_reminder: (c) =>
-    `Bonjour ${c.contactFirstName},<br><br>votre abonnement <strong>${c.planLabel}</strong> arrive au terme de sa période annuelle dans 30 jours et sera reconduit automatiquement pour 12 mois. Si vous ne souhaitez pas poursuivre, résiliez depuis votre espace « Mon abonnement » avant cette date : l'accès reste ouvert jusqu'au dernier jour payé.`,
+    `Bonjour ${c.contactFirstName},<br><br>votre offre annuelle <strong>${c.planLabel}</strong> arrive à échéance dans 30 jours. Elle n'est pas reconduite automatiquement : pour continuer, il suffit de reprendre une offre depuis votre espace « Mon abonnement ». Sans action de votre part, l'accès se ferme à la date d'échéance.`,
   annual_renewal_confirmed: (c) =>
     `Bonjour ${c.contactFirstName},<br><br>votre renouvellement <strong>${c.planLabel}</strong> (${c.cycleLabel}) est confirmé. Merci de votre confiance.`,
   subscription_expired: (c) =>
     `Bonjour ${c.contactFirstName},<br><br>votre offre <strong>${c.planLabel}</strong> pour <strong>${c.officeName}</strong> a pris fin et l'accès de votre équipe est désormais fermé. Aucun nouveau débit n'aura lieu. Pour reprendre Asclion, contactez-nous.`,
+  abandoned_cart: (c) =>
+    `Bonjour ${c.contactFirstName},<br><br>votre souscription Asclion pour <strong>${c.officeName}</strong> (${c.planLabel} — ${c.cycleLabel}) a été commencée mais le paiement n'a pas été finalisé.<br><br>Vous pouvez reprendre là où vous en étiez en un clic. Si vous avez une question sur la compatibilité avec votre LGO ou votre robot, répondez simplement à cet e-mail.`,
   credentials: (c) =>
     `Bonjour ${c.contactFirstName},<br><br>voici vos identifiants Asclion pour <strong>${c.officeName}</strong> :<br><br>` +
     `<strong>Identifiant :</strong> ${c.loginEmail ?? ""}<br><strong>Mot de passe provisoire :</strong> ${c.tempPassword ?? ""}<br><br>` +
@@ -84,6 +87,7 @@ const SUBJECTS: Record<SubscriptionEmailKind, (c: SubscriptionEmailContext) => s
   annual_reminder: () => "Asclion — reconduction annuelle dans 30 jours",
   annual_renewal_confirmed: () => "Asclion — renouvellement confirmé",
   subscription_expired: () => "Asclion — votre offre a expiré",
+  abandoned_cart: () => "Asclion — votre souscription n'est pas finalisée",
   credentials: () => "Asclion — vos identifiants de connexion",
 };
 
@@ -104,7 +108,7 @@ export async function sendSubscriptionEmail(
       ${ctx.extraHtml ?? ""}
       ${button}
       <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0"/>
-      <p style="font-size:11px;color:#9ca3af">Asclion — copilote de conseil associé pour l'officine. Prix affichés HT, TVA en sus selon la réglementation en vigueur. Abonnements mensuels et annuels reconduits automatiquement, résiliables à tout moment avec effet à la fin de la période payée, sans remboursement au prorata.</p>
+      <p style="font-size:11px;color:#9ca3af">Asclion — copilote de conseil associé pour l'officine. Prix affichés HT, TVA en sus selon la réglementation en vigueur. Abonnement mensuel reconduit automatiquement, résiliable à tout moment avec effet à la fin de la période payée. Offre annuelle : paiement unique pour 12 mois, sans reconduction automatique, sans remboursement au prorata.</p>
     </div>`;
 
   const res = await fetch("https://api.resend.com/emails", {
