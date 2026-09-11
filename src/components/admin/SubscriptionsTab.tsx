@@ -158,11 +158,31 @@ export default function SubscriptionsTab() {
     setSelected(sub);
     const office = offices[sub.office_id];
     if (office) {
-      setFollowUps({
-        j14: office.followup_d14_at?.slice(0, 10) ?? "",
-        j30: office.followup_d30_at?.slice(0, 10) ?? "",
+      setOfficeEdit({
+        office_name: office.office_name ?? "",
+        billing_name: office.billing_name ?? "",
+        siret: office.siret ?? "",
+        billing_address: office.billing_address ?? "",
+        contact_first_name: office.contact_first_name ?? "",
+        contact_last_name: office.contact_last_name ?? "",
+        contact_email: office.contact_email ?? "",
+        contact_phone: office.contact_phone ?? "",
+        registers_count: office.registers_count != null ? String(office.registers_count) : "",
+        validation_completed_at: d10(office.validation_completed_at),
+        training_at: d10(office.training_at),
+        followup_d14_at: d10(office.followup_d14_at),
+        followup_d30_at: d10(office.followup_d30_at),
       });
     }
+    setSubEdit({
+      plan: sub.plan,
+      billing_cycle: sub.billing_cycle,
+      status: sub.status,
+      current_period_start: d10(sub.current_period_start),
+      current_period_end: d10(sub.current_period_end),
+      paid_at: d10(sub.paid_at),
+      activated_at: d10(sub.activated_at),
+    });
     const { data } = await supabase
       .from("subscription_events")
       .select("id, event_type, payload, processed_at")
