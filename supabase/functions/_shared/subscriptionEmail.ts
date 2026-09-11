@@ -80,6 +80,7 @@ const SUBJECTS: Record<SubscriptionEmailKind, (c: SubscriptionEmailContext) => s
   annual_reminder: () => "Asclion — reconduction annuelle dans 30 jours",
   annual_renewal_confirmed: () => "Asclion — renouvellement confirmé",
   subscription_expired: () => "Asclion — votre offre a expiré",
+  credentials: () => "Asclion — vos identifiants de connexion",
 };
 
 export async function sendSubscriptionEmail(
