@@ -11,12 +11,12 @@ const corsHeaders = {
 const PRICE_TO_OFFER: Record<string, { plan: "classic" | "premium"; cycle: "monthly" | "annual" }> = {
   asclion_classic_monthly: { plan: "classic", cycle: "monthly" },
   asclion_premium_monthly: { plan: "premium", cycle: "monthly" },
-  asclion_classic_annual: { plan: "classic", cycle: "annual" },
-  asclion_premium_annual: { plan: "premium", cycle: "annual" },
+  asclion_classic_yearly: { plan: "classic", cycle: "annual" },
+  asclion_premium_yearly: { plan: "premium", cycle: "annual" },
 };
 
 const BodySchema = z.object({
-  priceId: z.enum(["asclion_classic_monthly", "asclion_premium_monthly", "asclion_classic_annual", "asclion_premium_annual"]),
+  priceId: z.enum(["asclion_classic_monthly", "asclion_premium_monthly", "asclion_classic_yearly", "asclion_premium_yearly"]),
   environment: z.enum(["sandbox", "live"]),
   office: z.object({
     officeName: z.string().min(1).max(200),
@@ -69,7 +69,9 @@ Deno.serve(async (req) => {
     const env: StripeEnv = environment;
     const offer = PRICE_TO_OFFER[priceId];
 
-    if (offer.cycle === "monthly" && !office.acceptedRecurring) {
+    // Les deux cycles sont désormais des abonnements reconduits automatiquement :
+    // le consentement au paiement récurrent est obligatoire dans les deux cas.
+    if (!office.acceptedRecurring) {
       return new Response(JSON.stringify({ error: "Consentement au paiement récurrent requis" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -77,7 +79,7 @@ Deno.serve(async (req) => {
 
     const supabase = getSupabase();
 
-    // Réutilise une fiche officine existante (même SIRET ou même e-mail en cours de checkout).
+    // Réutilise une fiche officine existante (même SIRET ou même e-mail).
     let officeId: string;
     const { data: existing } = await supabase
       .from("subscription_offices")
@@ -127,8 +129,7 @@ Deno.serve(async (req) => {
     } else {
       const created = await stripe.customers.create({
         email: office.contactEmail.toLowerCase(),
-        name: `${office.contactFirstName} ${office.contactLastName}`,
-        business_name: office.billingName || office.officeName,
+        name: office.billingName || office.officeName,
         metadata: { siret: office.siret, office_id: officeId },
       });
       customerId = created.id;
@@ -146,42 +147,33 @@ Deno.serve(async (req) => {
       robot_declared: office.robotDeclared ? "true" : "false",
     };
 
-    let session;
+    const lineItems: Array<{ price: string; quantity: number }> = [{ price: stripePrice.id, quantity: 1 }];
+
+    // Frais de mise en place : mensuel uniquement, offerts sur l'annuel.
     if (offer.cycle === "monthly") {
       const setupPrices = await stripe.prices.list({ lookup_keys: ["asclion_setup_fee"] });
       const setupPrice = setupPrices.data[0];
       if (!setupPrice) throw new Error("Setup price not found");
-
-      session = await stripe.checkout.sessions.create({
-        mode: "subscription",
-        ui_mode: "embedded_page",
-        return_url: returnUrl,
-        customer: customerId,
-        payment_method_types: ["card", "sepa_debit"],
-        automatic_tax: { enabled: true },
-        line_items: [
-          { price: stripePrice.id, quantity: 1 },
-          { price: setupPrice.id, quantity: 1 },
-        ],
-        metadata,
-        subscription_data: { metadata },
-      });
-    } else {
-      const productId = typeof stripePrice.product === "string" ? stripePrice.product : stripePrice.product.id;
-      const product = await stripe.products.retrieve(productId);
-
-      session = await stripe.checkout.sessions.create({
-        mode: "payment",
-        ui_mode: "embedded_page",
-        return_url: returnUrl,
-        customer: customerId,
-        payment_method_types: ["card"],
-        automatic_tax: { enabled: true },
-        line_items: [{ price: stripePrice.id, quantity: 1 }],
-        payment_intent_data: { description: product.name, metadata },
-        metadata: { ...metadata, renewal_required: "true" },
-      });
+      lineItems.push({ price: setupPrice.id, quantity: 1 });
     }
+
+    const session = await stripe.checkout.sessions.create({
+      mode: "subscription",
+      ui_mode: "embedded_page",
+      return_url: returnUrl,
+      customer: customerId,
+      payment_method_types: ["card", "sepa_debit"],
+      // TVA : adresse obligatoire, numéro de TVA intracommunautaire facultatif,
+      // et enregistrement de l'adresse saisie sur la fiche client Stripe
+      // (indispensable au calcul automatique de la taxe).
+      billing_address_collection: "required",
+      tax_id_collection: { enabled: true },
+      customer_update: { address: "auto", name: "auto" },
+      automatic_tax: { enabled: true },
+      line_items: lineItems,
+      metadata,
+      subscription_data: { metadata },
+    });
 
     const { error: subErr } = await supabase.from("subscriptions").insert({
       office_id: officeId,
