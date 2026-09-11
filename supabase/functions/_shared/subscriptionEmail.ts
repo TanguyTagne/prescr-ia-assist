@@ -21,6 +21,7 @@ export type SubscriptionEmailKind =
   | "annual_reminder"
   | "annual_renewal_confirmed"
   | "subscription_expired"
+  | "abandoned_cart"
   | "credentials";
 
 export interface SubscriptionEmailContext {
