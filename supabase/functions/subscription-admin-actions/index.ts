@@ -60,6 +60,11 @@ const BodySchema = z.object({
     paid_at: z.string().nullable().optional(),
     activated_at: z.string().nullable().optional(),
   }).optional(),
+  // Identifiants saisis par l'admin (facultatifs : sinon e-mail du dossier + mot de passe généré).
+  credentials: z.object({
+    email: z.string().email().optional(),
+    password: z.string().min(10).max(128).optional(),
+  }).optional(),
 });
 
 /** Mot de passe provisoire lisible mais imprévisible (source cryptographique). */
@@ -185,7 +190,7 @@ Deno.serve(async (req) => {
       }
 
       case "create_credentials": {
-        const email = String(officeRow.contact_email);
+        const email = parsed.data.credentials?.email ?? String(officeRow.contact_email);
         const fullName = `${officeRow.contact_first_name ?? ""} ${officeRow.contact_last_name ?? ""}`.trim();
 
         // Officine rattachée (créée en pause si absente) : jamais d'accès sans validation admin.
@@ -200,7 +205,7 @@ Deno.serve(async (req) => {
           pharmacyId = created.id;
         }
 
-        const password = generatePassword();
+        const password = parsed.data.credentials?.password ?? generatePassword();
         let userId = (officeRow.user_id as string | null) ?? (await findUserIdByEmail(supabase, email));
 
         if (userId) {
