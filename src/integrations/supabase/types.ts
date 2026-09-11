@@ -3184,6 +3184,233 @@ export type Database = {
         }
         Relationships: []
       }
+      subscription_events: {
+        Row: {
+          event_type: string
+          id: string
+          payload: Json | null
+          processed_at: string
+          stripe_event_id: string
+          subscription_id: string | null
+        }
+        Insert: {
+          event_type: string
+          id?: string
+          payload?: Json | null
+          processed_at?: string
+          stripe_event_id: string
+          subscription_id?: string | null
+        }
+        Update: {
+          event_type?: string
+          id?: string
+          payload?: Json | null
+          processed_at?: string
+          stripe_event_id?: string
+          subscription_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_events_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscription_notes: {
+        Row: {
+          author_id: string | null
+          created_at: string
+          id: string
+          note: string
+          subscription_id: string
+        }
+        Insert: {
+          author_id?: string | null
+          created_at?: string
+          id?: string
+          note: string
+          subscription_id: string
+        }
+        Update: {
+          author_id?: string | null
+          created_at?: string
+          id?: string
+          note?: string
+          subscription_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_notes_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscription_offices: {
+        Row: {
+          billing_address: string | null
+          billing_name: string | null
+          contact_email: string
+          contact_first_name: string
+          contact_last_name: string
+          contact_phone: string | null
+          created_at: string
+          followup_d14_at: string | null
+          followup_d30_at: string | null
+          id: string
+          office_name: string
+          pharmacy_id: string | null
+          registers_count: number | null
+          robot_brand: string | null
+          robot_declared: boolean
+          robot_model: string | null
+          siret: string | null
+          source: string | null
+          training_at: string | null
+          updated_at: string
+          user_id: string | null
+          utm_campaign: string | null
+          validation_completed_at: string | null
+        }
+        Insert: {
+          billing_address?: string | null
+          billing_name?: string | null
+          contact_email: string
+          contact_first_name: string
+          contact_last_name: string
+          contact_phone?: string | null
+          created_at?: string
+          followup_d14_at?: string | null
+          followup_d30_at?: string | null
+          id?: string
+          office_name: string
+          pharmacy_id?: string | null
+          registers_count?: number | null
+          robot_brand?: string | null
+          robot_declared?: boolean
+          robot_model?: string | null
+          siret?: string | null
+          source?: string | null
+          training_at?: string | null
+          updated_at?: string
+          user_id?: string | null
+          utm_campaign?: string | null
+          validation_completed_at?: string | null
+        }
+        Update: {
+          billing_address?: string | null
+          billing_name?: string | null
+          contact_email?: string
+          contact_first_name?: string
+          contact_last_name?: string
+          contact_phone?: string | null
+          created_at?: string
+          followup_d14_at?: string | null
+          followup_d30_at?: string | null
+          id?: string
+          office_name?: string
+          pharmacy_id?: string | null
+          registers_count?: number | null
+          robot_brand?: string | null
+          robot_declared?: boolean
+          robot_model?: string | null
+          siret?: string | null
+          source?: string | null
+          training_at?: string | null
+          updated_at?: string
+          user_id?: string | null
+          utm_campaign?: string | null
+          validation_completed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_offices_pharmacy_id_fkey"
+            columns: ["pharmacy_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscriptions: {
+        Row: {
+          activated_at: string | null
+          billing_cycle: Database["public"]["Enums"]["subscription_cycle"]
+          created_at: string
+          current_period_end: string | null
+          current_period_start: string | null
+          environment: string
+          id: string
+          office_id: string
+          paid_at: string | null
+          plan: Database["public"]["Enums"]["subscription_plan"]
+          setup_fee_charged: boolean
+          status: Database["public"]["Enums"]["subscription_status"]
+          stripe_checkout_session_id: string | null
+          stripe_customer_id: string | null
+          stripe_invoice_id: string | null
+          stripe_payment_intent_id: string | null
+          stripe_price_id: string
+          stripe_subscription_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          activated_at?: string | null
+          billing_cycle: Database["public"]["Enums"]["subscription_cycle"]
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          environment?: string
+          id?: string
+          office_id: string
+          paid_at?: string | null
+          plan: Database["public"]["Enums"]["subscription_plan"]
+          setup_fee_charged?: boolean
+          status?: Database["public"]["Enums"]["subscription_status"]
+          stripe_checkout_session_id?: string | null
+          stripe_customer_id?: string | null
+          stripe_invoice_id?: string | null
+          stripe_payment_intent_id?: string | null
+          stripe_price_id: string
+          stripe_subscription_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          activated_at?: string | null
+          billing_cycle?: Database["public"]["Enums"]["subscription_cycle"]
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          environment?: string
+          id?: string
+          office_id?: string
+          paid_at?: string | null
+          plan?: Database["public"]["Enums"]["subscription_plan"]
+          setup_fee_charged?: boolean
+          status?: Database["public"]["Enums"]["subscription_status"]
+          stripe_checkout_session_id?: string | null
+          stripe_customer_id?: string | null
+          stripe_invoice_id?: string | null
+          stripe_payment_intent_id?: string | null
+          stripe_price_id?: string
+          stripe_subscription_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_office_id_fkey"
+            columns: ["office_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_offices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       symptome_pathologie: {
         Row: {
           id: string
@@ -3583,6 +3810,18 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "preparateur" | "manager" | "group_manager"
+      subscription_cycle: "monthly" | "annual"
+      subscription_plan: "classic" | "premium"
+      subscription_status:
+        | "checkout_started"
+        | "payment_pending"
+        | "paid_pending_validation"
+        | "activation_requested"
+        | "active"
+        | "payment_issue"
+        | "cancel_at_period_end"
+        | "expired"
+        | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -3711,6 +3950,19 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "preparateur", "manager", "group_manager"],
+      subscription_cycle: ["monthly", "annual"],
+      subscription_plan: ["classic", "premium"],
+      subscription_status: [
+        "checkout_started",
+        "payment_pending",
+        "paid_pending_validation",
+        "activation_requested",
+        "active",
+        "payment_issue",
+        "cancel_at_period_end",
+        "expired",
+        "cancelled",
+      ],
     },
   },
 } as const

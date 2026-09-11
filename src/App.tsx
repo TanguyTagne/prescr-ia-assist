@@ -48,6 +48,9 @@ const Quiz = lazyWithRetry(() => import("./pages/Quiz"));
 const NotFound = lazyWithRetry(() => import("./pages/NotFound"));
 const ResetPassword = lazyWithRetry(() => import("./pages/ResetPassword"));
 const VsLgo = lazyWithRetry(() => import("./pages/VsLgo"));
+const Souscrire = lazyWithRetry(() => import("./pages/Souscrire"));
+const Merci = lazyWithRetry(() => import("./pages/Merci"));
+const Compte = lazyWithRetry(() => import("./pages/Compte"));
 const Aide = lazyWithRetry(() => import("./pages/Aide"));
 const Fonctionnalites = lazyWithRetry(() => import("./pages/Fonctionnalites"));
 const Blog = lazyWithRetry(() => import("./pages/Blog"));
@@ -220,6 +223,9 @@ const App = () => {
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/reset-password" element={<ResetPassword />} />
                   <Route path="/vs-lgo" element={<VsLgo />} />
+                  <Route path="/souscrire" element={<Souscrire />} />
+                  <Route path="/merci" element={<Merci />} />
+                  <Route path="/compte" element={<ProtectedRoute><Compte /></ProtectedRoute>} />
                   <Route path="/aide" element={<Aide />} />
                   <Route path="/blog" element={<Blog />} />
                   <Route path="/blog/:slug" element={<BlogPost />} />

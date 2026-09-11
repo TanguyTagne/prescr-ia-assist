@@ -14,3 +14,18 @@ verify_jwt = false
 
 [functions.demo-med-lookup]
 verify_jwt = false
+
+[functions.create-subscription-checkout]
+verify_jwt = false
+
+[functions.payments-webhook]
+verify_jwt = false
+
+[functions.subscription-admin-actions]
+verify_jwt = false
+
+[functions.subscription-cancel]
+verify_jwt = false
+
+[functions.subscription-annual-reminder]
+verify_jwt = false

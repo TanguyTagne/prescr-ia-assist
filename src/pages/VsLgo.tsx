@@ -200,7 +200,7 @@ export default function VsLgo() {
           <Card className="p-12 bg-gradient-to-br from-primary/10 via-pharmacy-teal/5 to-pharmacy-warm/10 border-primary/20 backdrop-blur-sm shadow-xl">
             <h2 className="text-3xl sm:text-4xl font-bold mb-4">{t("vslgo.cta.title")}</h2>
             <p className="text-muted-foreground mb-8 text-lg">{t("vslgo.cta.subtitle")}</p>
-            <Link to={lp("/")}>
+            <Link to={lp("/souscrire?source=vsl&utm_campaign=vsl")}>
               <Button size="lg" className="pharmacy-gradient border-0 shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-shadow">
                 {t("vslgo.cta.button")}
                 <ArrowLeft className="h-4 w-4 ml-2 rotate-180" />
