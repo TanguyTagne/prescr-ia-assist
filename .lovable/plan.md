@@ -5,7 +5,8 @@ Modifier le site public et le tunnel de souscription pour qu'un pharmacien titul
 
 ## Validation reçue
 - Le chiffre pilote « +500 € de CA mensuel observé sur une caisse » peut être publié, avec l'encadré méthodologique.
-- Les vidéos (30 s accueil + VSL finale) existent mais leur lien/chemin n'a pas encore été fourni.
+- Vidéo 45 s reçue → intégrée sur `/` (bouton « Voir Asclion en 45 secondes »), lecteur muet.
+- VSL finale reçue → intégrée sur `/presentation` en fin de funnel.
 - Le texte sur la compatibilité robot (marques connues, délai de réponse) n'a pas encore été fourni.
 - Le périmètre est « tout, en étapes ».
 
@@ -62,6 +63,4 @@ Modifier le site public et le tunnel de souscription pour qu'un pharmacien titul
 5. CGV + tracking + recette.
 
 ## Questions en attente
-- Lien ou chemin de la vidéo 30 s pour l'accueil.
-- Lien ou chemin de la VSL finale pour `/presentation`.
-- Texte exact à afficher pour la compatibilité robot (marques, délai).
+- Texte exact à afficher pour la compatibilité robot (marques, délai de réponse).
