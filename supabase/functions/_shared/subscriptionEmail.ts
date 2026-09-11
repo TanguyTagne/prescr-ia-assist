@@ -28,6 +28,8 @@ export interface SubscriptionEmailContext {
   extraHtml?: string;
   actionUrl?: string;
   actionLabel?: string;
+  loginEmail?: string;
+  tempPassword?: string;
 }
 
 const TITLES: Record<SubscriptionEmailKind, string> = {
