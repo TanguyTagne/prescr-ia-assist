@@ -205,7 +205,7 @@ Deno.serve(async (req) => {
           pharmacyId = created.id;
         }
 
-        const password = generatePassword();
+        const password = parsed.data.credentials?.password ?? generatePassword();
         let userId = (officeRow.user_id as string | null) ?? (await findUserIdByEmail(supabase, email));
 
         if (userId) {
