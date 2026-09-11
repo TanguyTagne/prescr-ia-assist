@@ -17,7 +17,8 @@ export type SubscriptionEmailKind =
   | "cancellation_confirmed"
   | "annual_reminder"
   | "annual_renewal_confirmed"
-  | "subscription_expired";
+  | "subscription_expired"
+  | "credentials";
 
 export interface SubscriptionEmailContext {
   officeName: string;
