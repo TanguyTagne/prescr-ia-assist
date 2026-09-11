@@ -15,30 +15,7 @@ import { isAsclionDesktopRuntime } from "@/lib/runtime";
 import { useInstanceHeartbeat } from "@/hooks/useInstanceHeartbeat";
 import { PharmacyAccessGuard } from "@/components/PharmacyAccessGuard";
 import { useGlobalBarcodeBridge } from "@/hooks/useGlobalBarcodeBridge";
-import { purgeClientCaches } from "@/lib/versionCheck";
-
-// Retry dynamic import on failure (handles stale Vite chunks / transient network).
-// On second failure, force a hard reload to fetch the latest asset manifest.
-const lazyWithRetry = <T extends ComponentType<never>>(factory: () => Promise<{ default: T }>) =>
-  lazy(() =>
-    factory().catch(async (err: unknown) => {
-      console.warn("Dynamic import failed, retrying...", err);
-      await new Promise((r) => setTimeout(r, 500));
-      return factory().catch(async (err2: unknown) => {
-        console.error("Dynamic import failed twice, purging caches and reloading...", err2);
-        const key = "__chunk_reload_at";
-        const last = Number(sessionStorage.getItem(key) || 0);
-        if (Date.now() - last > 10_000) {
-          sessionStorage.setItem(key, String(Date.now()));
-          await purgeClientCaches();
-          const url = new URL(window.location.href);
-          url.searchParams.set("__asclion_reload", String(Date.now()));
-          window.location.replace(url.toString());
-        }
-        throw err2;
-      });
-    })
-  );
+import { lazyWithRetry } from "@/lib/lazyWithRetry";
 
 const Landing = lazyWithRetry(() => import("./pages/Landing"));
 const Auth = lazyWithRetry(() => import("./pages/Auth"));
