@@ -1,20 +1,11 @@
-# Roadmap — Tunnel de souscription Asclion
+# Roadmap — Refonte conversion Asclion.com
 
-- [x] Produits/prix Stripe (classic/premium, mensuel/annuel, setup fee 99 €)
-- [x] Schéma DB : subscription_offices, subscriptions, subscription_events, subscription_notes + RLS
-- [x] Fonctions serveur : create-subscription-checkout, payments-webhook (signé, idempotent), subscription-admin-actions, subscription-cancel, subscription-annual-reminder
-- [x] Pages : /souscrire (3 étapes), /merci, /compte (résiliation mensuelle)
-- [x] Onglet admin Souscriptions (liste, fiche, actions, suivis J+14/J+30, notes)
-- [x] CTA VSL → /souscrire?source=vsl&utm_campaign=vsl
-- [x] Rappel annuel J-30 planifié (cron quotidien, secret interne)
-- [x] Documentation d'exploitation (docs/SOUSCRIPTIONS.md)
-- [x] TVA : adresse + numéro de TVA intracommunautaire collectés au checkout
-- [x] Annuel reconduit automatiquement (prix récurrents) + rappel J-30
-- [x] Portail de facturation client (carte, factures) depuis /compte
-- [x] Coupure d'accès automatique en fin réelle d'abonnement
-- [x] Rapprochement officine par SIRET, recherche de compte sans limite de 200
-- [x] Espace client accessible officine en pause (activation en cours, fin d'abonnement)
-- [x] Changement de formule en libre-service avec prorata
-- [x] Alerte non bloquante en cas de souscription en doublon
-- [x] Verrou d'idempotence webhook libéré en cas d'échec (relance Stripe possible)
-- [ ] Go-live paiements : finaliser dans l'onglet Payments (compte live), puis test carte 4242
+- [ ] Étape 1 : design system + nav + refonte `/` (hero vidéo 45s, problème, fonctionnement, bénéfices, preuve pilote, offres, FAQ, CTA final)
+- [ ] Étape 1 : `/presentation` (VSL finale + CTA + FAQ)
+- [ ] Étape 1 : `/fonctionnalites`, `/vs-lgo`, `/aide` réécrits
+- [ ] Étape 2 : `/tarifs` (bascule mensuel/annuel, montants dus, comparatif)
+- [ ] Étape 2 : `/souscrire` (robot = blocage paiement, cases CGV, annuel = paiement unique)
+- [ ] Étape 2 : `/compatibilite-robot` + `/demo`
+- [ ] Étape 2 : checkout annuel en `payment` unique (pas d'abonnement Stripe)
+- [ ] Étape 3 : statuts `compatibility_review`, e-mails, admin Souscriptions
+- [ ] Étape 4 : `/cgv`, tracking, SEO, recette
