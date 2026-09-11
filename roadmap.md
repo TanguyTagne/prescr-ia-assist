@@ -18,9 +18,11 @@
 
 ## Étape 3 — Post-paiement
 - [x] CGV rédigées (`/cgv`, brouillon à faire relire)
-- [ ] E-mails transactionnels : bienvenue + credentials (existant), récap paiement annuel (webhook ok), relance panier abandonné
-- [ ] Admin : filtres/statuts souscriptions à enrichir (afficher compatibility_review distinctement)
+- [x] E-mails transactionnels : bienvenue + credentials, récap paiement annuel, relance panier abandonné (`subscription-abandoned-cart`, cron quotidien 9h15, 1 relance max par souscription)
+- [x] Textes e-mail alignés : annuel = paiement unique sans reconduction automatique
+- [x] Admin : filtres statut/recherche, colonne robot, badge `compatibility_review`
 
 ## Étape 4 — Mesure & conformité
-- [ ] Analytics de conversion sans cookies (événements serveur déjà en place : vues, lecture VSL, soumissions)
-- [ ] Test de recette : parcours clavier, mobile, SEPA, annuel, robot
+- [x] Analytics de conversion sans cookies (événements serveur : vues, lecture VSL, soumissions)
+- [x] Recette pages publiques (`/`, `/presentation`, `/tarifs`, `/fonctionnalites`, `/demo`, `/compatibilite-robot`, `/vs-lgo`, `/souscrire`, `/cgv`, `/aide`) : rendu OK, titres/H1 uniques, pas d'erreur console bloquante
+- [ ] Recette paiements réels (carte, SEPA, annuel) à faire par l'administrateur sur le site publié
