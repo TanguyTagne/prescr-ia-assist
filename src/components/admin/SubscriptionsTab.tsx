@@ -319,20 +319,66 @@ export default function SubscriptionsTab() {
                 </p>
               </div>
 
+              <div className="mt-4 rounded-lg border p-3 space-y-2">
+                <p className="text-sm font-medium">Identifiants de connexion</p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <Input
+                    type="email"
+                    placeholder="Adresse e-mail de connexion"
+                    value={credEmail}
+                    onChange={(e) => setCredEmail(e.target.value)}
+                  />
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Mot de passe généré"
+                      value={credPassword}
+                      onChange={(e) => setCredPassword(e.target.value)}
+                    />
+                    <Button size="sm" variant="outline" type="button" onClick={() => generatePassword()}>
+                      Générer
+                    </Button>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    disabled={acting}
+                    onClick={() => {
+                      const email = credEmail.trim();
+                      if (!email) return toast.error("Renseignez une adresse e-mail");
+                      const password = credPassword.trim() || generatePassword();
+                      if (password.length < 10) return toast.error("Mot de passe trop court (10 caractères minimum)");
+                      setCredPassword(password);
+                      action(
+                        {
+                          action: "create_credentials",
+                          subscriptionId: selected.id,
+                          credentials: { email, password },
+                        },
+                        "Identifiants créés et envoyés par e-mail",
+                      );
+                    }}
+                  >
+                    Créer / renvoyer les identifiants
+                  </Button>
+                  {credPassword && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(`${credEmail} / ${credPassword}`);
+                        toast.success("Identifiants copiés");
+                      }}
+                    >
+                      Copier
+                    </Button>
+                  )}
+                </div>
+              </div>
+
               <div className="flex flex-wrap gap-2 mt-4">
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  disabled={acting}
-                  onClick={() =>
-                    action(
-                      { action: "create_credentials", subscriptionId: selected.id },
-                      "Identifiants créés et envoyés par e-mail",
-                    )
-                  }
-                >
-                  Créer / renvoyer les identifiants
-                </Button>
                 <Button
                   size="sm"
                   variant="destructive"
