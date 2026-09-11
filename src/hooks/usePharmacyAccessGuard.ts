@@ -12,6 +12,8 @@ import { useAuth } from "@/hooks/useAuth";
  * Also treats PostgREST 403/permission errors as a suspension signal.
  */
 const INSTANCE_KEY = "asclion_instance_id";
+/** Pages toujours accessibles, même officine en pause (facturation, compte). */
+const BILLING_PATHS = ["/compte", "/reset-password", "/souscrire", "/merci"];
 
 export function usePharmacyAccessGuard() {
   const { user, isAdmin } = useAuth();
@@ -30,6 +32,14 @@ export function usePharmacyAccessGuard() {
 
     const triggerBlock = async () => {
       if (cancelled) return;
+      // L'espace client reste accessible même quand l'officine est en pause :
+      // le client doit pouvoir suivre son abonnement, sa facturation et
+      // resouscrire. Les données cliniques restent protégées par les règles
+      // d'accès côté base.
+      if (BILLING_PATHS.some((p) => window.location.pathname.startsWith(p))) {
+        setBlocked(false);
+        return;
+      }
       setBlocked(true);
       // Best-effort cleanup — the RLS may already refuse the delete when
       // suspended; that's fine, we still sign out.
