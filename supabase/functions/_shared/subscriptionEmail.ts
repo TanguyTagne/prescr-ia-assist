@@ -42,6 +42,7 @@ const TITLES: Record<SubscriptionEmailKind, string> = {
   annual_reminder: "Reconduction de votre abonnement annuel dans 30 jours",
   annual_renewal_confirmed: "Renouvellement confirmé",
   subscription_expired: "Votre offre Asclion est arrivée à expiration",
+  credentials: "Vos identifiants Asclion",
 };
 
 const BODIES: Record<SubscriptionEmailKind, (c: SubscriptionEmailContext) => string> = {
