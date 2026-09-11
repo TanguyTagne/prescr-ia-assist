@@ -11,15 +11,63 @@ const corsHeaders = {
 
 const BodySchema = z.object({
   subscriptionId: z.string().uuid(),
-  action: z.enum(["activate", "suspend", "mark_transfer_paid", "send_reminder", "add_note", "save_office"]),
+  action: z.enum([
+    "activate",
+    "suspend",
+    "mark_transfer_paid",
+    "send_reminder",
+    "add_note",
+    "save_office",
+    "create_credentials",
+    "disable_account",
+    "save_subscription",
+  ]),
   note: z.string().max(2000).optional(),
   office: z.object({
+    office_name: z.string().min(1).max(200).optional(),
+    billing_name: z.string().max(200).nullable().optional(),
+    siret: z.string().max(32).nullable().optional(),
+    billing_address: z.string().max(500).nullable().optional(),
+    contact_first_name: z.string().max(100).nullable().optional(),
+    contact_last_name: z.string().max(100).nullable().optional(),
+    contact_email: z.string().email().optional(),
+    contact_phone: z.string().max(40).nullable().optional(),
+    registers_count: z.number().int().min(0).max(200).nullable().optional(),
+    robot_declared: z.boolean().optional(),
+    robot_brand: z.string().max(100).nullable().optional(),
+    robot_model: z.string().max(100).nullable().optional(),
     validation_completed_at: z.string().nullable().optional(),
     training_at: z.string().nullable().optional(),
     followup_d14_at: z.string().nullable().optional(),
     followup_d30_at: z.string().nullable().optional(),
   }).optional(),
+  subscription: z.object({
+    plan: z.enum(["classic", "premium"]).optional(),
+    billing_cycle: z.enum(["monthly", "annual"]).optional(),
+    status: z.enum([
+      "checkout_started",
+      "payment_pending",
+      "paid_pending_validation",
+      "activation_requested",
+      "active",
+      "payment_issue",
+      "cancel_at_period_end",
+      "expired",
+      "cancelled",
+    ]).optional(),
+    current_period_start: z.string().nullable().optional(),
+    current_period_end: z.string().nullable().optional(),
+    paid_at: z.string().nullable().optional(),
+    activated_at: z.string().nullable().optional(),
+  }).optional(),
 });
+
+/** Mot de passe provisoire lisible mais imprévisible (source cryptographique). */
+function generatePassword(): string {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+  const bytes = crypto.getRandomValues(new Uint8Array(14));
+  return Array.from(bytes, (b) => alphabet[b % alphabet.length]).join("");
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
