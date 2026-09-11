@@ -39,6 +39,11 @@ const MentionsLegales = lazyWithRetry(() => import("./pages/legal/MentionsLegale
 const Confidentialite = lazyWithRetry(() => import("./pages/legal/Confidentialite"));
 const CookiesPage = lazyWithRetry(() => import("./pages/legal/Cookies"));
 const CGU = lazyWithRetry(() => import("./pages/legal/CGU"));
+const CGV = lazyWithRetry(() => import("./pages/legal/CGV"));
+const Tarifs = lazyWithRetry(() => import("./pages/Tarifs"));
+const Presentation = lazyWithRetry(() => import("./pages/Presentation"));
+const Demo = lazyWithRetry(() => import("./pages/Demo"));
+const CompatibiliteRobot = lazyWithRetry(() => import("./pages/CompatibiliteRobot"));
 const Groupement = lazyWithRetry(() => import("./pages/Groupement"));
 const DPA = lazyWithRetry(() => import("./pages/legal/DPA"));
 const PIA = lazyWithRetry(() => import("./pages/legal/PIA"));
@@ -201,12 +206,16 @@ const App = () => {
                   <Route path="/reset-password" element={<ResetPassword />} />
                   <Route path="/vs-lgo" element={<VsLgo />} />
                   <Route path="/souscrire" element={<Souscrire />} />
+                  <Route path="/tarifs" element={<Tarifs />} />
+                  <Route path="/presentation" element={<Presentation />} />
+                  <Route path="/demo" element={<Demo />} />
+                  <Route path="/compatibilite-robot" element={<CompatibiliteRobot />} />
                   <Route path="/merci" element={<Merci />} />
                   <Route path="/compte" element={<ProtectedRoute><Compte /></ProtectedRoute>} />
                   <Route path="/aide" element={<Aide />} />
                   <Route path="/blog" element={<Blog />} />
                   <Route path="/blog/:slug" element={<BlogPost />} />
-                  <Route path="/fonctionnalites" element={<ProtectedRoute><Fonctionnalites /></ProtectedRoute>} />
+                  <Route path="/fonctionnalites" element={<Fonctionnalites />} />
                   <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
                   <Route path="/groupement" element={<GroupRoute><Groupement /></GroupRoute>} />
                   <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
@@ -216,6 +225,7 @@ const App = () => {
                   <Route path="/confidentialite" element={<Confidentialite />} />
                   <Route path="/cookies" element={<CookiesPage />} />
                   <Route path="/cgu" element={<CGU />} />
+                  <Route path="/cgv" element={<CGV />} />
                   <Route path="/legal/dpa" element={<DPA />} />
                   <Route path="/legal/pia" element={<PIA />} />
                   {/* EN mirror */}
@@ -223,10 +233,16 @@ const App = () => {
                   <Route path="/en/auth" element={<Auth />} />
                   <Route path="/en/reset-password" element={<ResetPassword />} />
                   <Route path="/en/vs-lgo" element={<VsLgo />} />
+                  <Route path="/en/tarifs" element={<Tarifs />} />
+                  <Route path="/en/presentation" element={<Presentation />} />
+                  <Route path="/en/demo" element={<Demo />} />
+                  <Route path="/en/compatibilite-robot" element={<CompatibiliteRobot />} />
+                  <Route path="/en/souscrire" element={<Souscrire />} />
+                  <Route path="/en/merci" element={<Merci />} />
                   <Route path="/en/aide" element={<Aide />} />
                   <Route path="/en/blog" element={<Blog />} />
                   <Route path="/en/blog/:slug" element={<BlogPost />} />
-                  <Route path="/en/fonctionnalites" element={<ProtectedRoute><Fonctionnalites /></ProtectedRoute>} />
+                  <Route path="/en/fonctionnalites" element={<Fonctionnalites />} />
                   <Route path="/en/admin" element={<AdminRoute><Admin /></AdminRoute>} />
                   <Route path="/en/groupement" element={<GroupRoute><Groupement /></GroupRoute>} />
                   <Route path="/en/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
@@ -235,6 +251,7 @@ const App = () => {
                   <Route path="/en/confidentialite" element={<Confidentialite />} />
                   <Route path="/en/cookies" element={<CookiesPage />} />
                   <Route path="/en/cgu" element={<CGU />} />
+                  <Route path="/en/cgv" element={<CGV />} />
                   <Route path="/en/legal/dpa" element={<DPA />} />
                   <Route path="/en/legal/pia" element={<PIA />} />
                   <Route path="*" element={<NotFound />} />
