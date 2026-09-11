@@ -32,31 +32,31 @@ const PLANS: PlanDef[] = [
     priceId: "asclion_classic_yearly",
     name: "Classique annuel",
     cycle: "annual",
-    priceLabel: "990 € HT/an",
+    priceLabel: "990 € HT/an payé d'avance",
     setupLabel: "Mise en place offerte",
-    totalLabel: "990 € HT/an, reconduit automatiquement",
-    savingLabel: "12 mois au prix de 10 — 297 € HT d'économie vs mensuel",
+    totalLabel: "990 € HT dus aujourd'hui — 12 mois, sans renouvellement automatique",
+    savingLabel: "297 € HT économisés la première année vs mensuel + mise en place ; 198 € HT les années suivantes",
     recommended: true,
     features: [
       "Catalogue de 30 000+ médicaments avec PC recommandé",
       "Suggestions, sécurité et amélioration continue",
-      "Formation visio et suivis à J+14 et J+30 offerts",
-      "Reconduit chaque année, résiliable à tout moment",
+      "Formation visio et suivis à J+14 et J+30 inclus",
+      "Rappel un mois avant l'échéance ; renouvellement uniquement sur votre confirmation",
     ],
   },
   {
     priceId: "asclion_premium_yearly",
     name: "Premium annuel",
     cycle: "annual",
-    priceLabel: "1 490 € HT/an",
+    priceLabel: "1 490 € HT/an payé d'avance",
     setupLabel: "Mise en place offerte",
-    totalLabel: "1 490 € HT/an, reconduit automatiquement",
-    savingLabel: "397 € HT d'économie vs mensuel — stock actualisé chaque semaine",
+    totalLabel: "1 490 € HT dus aujourd'hui — 12 mois, sans renouvellement automatique",
+    savingLabel: "397 € HT économisés la première année vs mensuel + mise en place ; 298 € HT les années suivantes",
     features: [
       "Tout Classique, plus l'audit initial du stock",
       "Suggestions sur mesure selon votre stock",
       "Actualisation hebdomadaire du stock",
-      "Reconduit chaque année, résiliable à tout moment",
+      "Rappel un mois avant l'échéance ; renouvellement uniquement sur votre confirmation",
     ],
   },
   {
@@ -65,7 +65,7 @@ const PLANS: PlanDef[] = [
     cycle: "monthly",
     priceLabel: "99 € HT/mois",
     setupLabel: "+ 99 € HT de mise en place (une fois)",
-    totalLabel: "198 € HT le premier mois",
+    totalLabel: "198 € HT dus aujourd'hui, puis 99 € HT/mois",
     features: [
       "Catalogue de 30 000+ médicaments avec PC recommandé",
       "Suggestions, sécurité et amélioration continue",
@@ -79,7 +79,7 @@ const PLANS: PlanDef[] = [
     cycle: "monthly",
     priceLabel: "149 € HT/mois",
     setupLabel: "+ 99 € HT de mise en place (une fois)",
-    totalLabel: "248 € HT le premier mois",
+    totalLabel: "248 € HT dus aujourd'hui, puis 149 € HT/mois",
     features: [
       "Tout Classique, plus l'audit initial du stock",
       "Suggestions sur mesure selon votre stock",
@@ -117,13 +117,24 @@ export default function Souscrire() {
   const [searchParams] = useSearchParams();
   const source = searchParams.get("source") || "";
   const utmCampaign = searchParams.get("utm_campaign") || "";
+  const planParam = searchParams.get("plan") || "";
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [plan, setPlan] = useState<PlanDef | null>(null);
+  const [plan, setPlan] = useState<PlanDef | null>(() => {
+    const map: Record<string, PriceId> = {
+      classic_monthly: "asclion_classic_monthly",
+      premium_monthly: "asclion_premium_monthly",
+      classic_yearly: "asclion_classic_yearly",
+      premium_yearly: "asclion_premium_yearly",
+    };
+    const pid = map[planParam];
+    return pid ? PLANS.find((p) => p.priceId === pid) ?? null : null;
+  });
   const [form, setForm] = useState<OfficeForm>(EMPTY_FORM);
   const [formError, setFormError] = useState<string | null>(null);
   const [duplicate, setDuplicate] = useState(false);
   const [checking, setChecking] = useState(false);
+  const [reviewSent, setReviewSent] = useState(false);
 
   const configured = isPaymentsConfigured();
   const stripePromise = useMemo(() => (configured ? getStripe() : null), [configured]);
