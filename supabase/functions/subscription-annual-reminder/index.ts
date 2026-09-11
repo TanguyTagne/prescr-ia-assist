@@ -22,6 +22,21 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
+    // Protection : seul pg_cron (ou un appel service role) peut déclencher.
+    const authHeader = req.headers.get("authorization") ?? "";
+    let allowed = authHeader.includes(Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "@@none@@");
+    if (!allowed) {
+      const { data: cfg } = await supabase
+        .from("internal_config")
+        .select("value")
+        .eq("key", "cron_secret")
+        .maybeSingle();
+      allowed = !!cfg?.value && req.headers.get("x-cron-secret") === cfg.value;
+    }
+    if (!allowed) {
+      return new Response(JSON.stringify({ error: "Non autorisé" }), { status: 401, headers: corsHeaders });
+    }
+
     const in30Days = new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString();
     const in29Days = new Date(Date.now() + 29 * 24 * 3600 * 1000).toISOString();
 
