@@ -77,6 +77,57 @@ const PLAN_PRICE: Record<string, string> = {
   "premium/annual": "1 490 € HT/an — mise en place offerte",
 };
 
+const d10 = (v: string | null | undefined) => (v ? v.slice(0, 10) : "");
+const toIso = (v: string) => (v ? new Date(v).toISOString() : null);
+
+const EMPTY_OFFICE = {
+  office_name: "",
+  billing_name: "",
+  siret: "",
+  billing_address: "",
+  contact_first_name: "",
+  contact_last_name: "",
+  contact_email: "",
+  contact_phone: "",
+  registers_count: "",
+  validation_completed_at: "",
+  training_at: "",
+  followup_d14_at: "",
+  followup_d30_at: "",
+};
+
+const EMPTY_SUB = {
+  plan: "classic",
+  billing_cycle: "monthly",
+  status: "active",
+  current_period_start: "",
+  current_period_end: "",
+  paid_at: "",
+  activated_at: "",
+};
+
+const Field = ({ label, value, onChange, type = "text" }: { label: string; value: string; onChange: (v: string) => void; type?: string }) => (
+  <div>
+    <label className="text-xs text-muted-foreground">{label}</label>
+    <Input type={type} value={value} onChange={(e) => onChange(e.target.value)} />
+  </div>
+);
+
+const SelectField = ({ label, value, options, onChange }: { label: string; value: string; options: [string, string][]; onChange: (v: string) => void }) => (
+  <div>
+    <label className="text-xs text-muted-foreground">{label}</label>
+    <select
+      className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+    >
+      {options.map(([v, l]) => (
+        <option key={v} value={v}>{l}</option>
+      ))}
+    </select>
+  </div>
+);
+
 export default function SubscriptionsTab() {
   const [subs, setSubs] = useState<SubRow[]>([]);
   const [offices, setOffices] = useState<Record<string, OfficeRow>>({});
@@ -84,7 +135,8 @@ export default function SubscriptionsTab() {
   const [selected, setSelected] = useState<SubRow | null>(null);
   const [events, setEvents] = useState<EventRow[]>([]);
   const [note, setNote] = useState("");
-  const [followUps, setFollowUps] = useState({ j14: "", j30: "" });
+  const [officeEdit, setOfficeEdit] = useState({ ...EMPTY_OFFICE });
+  const [subEdit, setSubEdit] = useState({ ...EMPTY_SUB });
   const [acting, setActing] = useState(false);
 
   const load = async () => {
@@ -106,11 +158,31 @@ export default function SubscriptionsTab() {
     setSelected(sub);
     const office = offices[sub.office_id];
     if (office) {
-      setFollowUps({
-        j14: office.followup_d14_at?.slice(0, 10) ?? "",
-        j30: office.followup_d30_at?.slice(0, 10) ?? "",
+      setOfficeEdit({
+        office_name: office.office_name ?? "",
+        billing_name: office.billing_name ?? "",
+        siret: office.siret ?? "",
+        billing_address: office.billing_address ?? "",
+        contact_first_name: office.contact_first_name ?? "",
+        contact_last_name: office.contact_last_name ?? "",
+        contact_email: office.contact_email ?? "",
+        contact_phone: office.contact_phone ?? "",
+        registers_count: office.registers_count != null ? String(office.registers_count) : "",
+        validation_completed_at: d10(office.validation_completed_at),
+        training_at: d10(office.training_at),
+        followup_d14_at: d10(office.followup_d14_at),
+        followup_d30_at: d10(office.followup_d30_at),
       });
     }
+    setSubEdit({
+      plan: sub.plan,
+      billing_cycle: sub.billing_cycle,
+      status: sub.status,
+      current_period_start: d10(sub.current_period_start),
+      current_period_end: d10(sub.current_period_end),
+      paid_at: d10(sub.paid_at),
+      activated_at: d10(sub.activated_at),
+    });
     const { data } = await supabase
       .from("subscription_events")
       .select("id, event_type, payload, processed_at")
@@ -226,6 +298,30 @@ export default function SubscriptionsTab() {
               </div>
 
               <div className="flex flex-wrap gap-2 mt-4">
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  disabled={acting}
+                  onClick={() =>
+                    action(
+                      { action: "create_credentials", subscriptionId: selected.id },
+                      "Identifiants créés et envoyés par e-mail",
+                    )
+                  }
+                >
+                  Créer / renvoyer les identifiants
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  disabled={acting}
+                  onClick={() => {
+                    if (!confirm("Désactiver ce compte ? L'accès est coupé, les données sont conservées.")) return;
+                    action({ action: "disable_account", subscriptionId: selected.id }, "Compte désactivé");
+                  }}
+                >
+                  Désactiver le compte
+                </Button>
                 {(selected.status === "paid_pending_validation" || selected.status === "activation_requested") && (
                   <Button size="sm" disabled={acting} onClick={() => action({ action: "activate", subscriptionId: selected.id }, "Souscription activée, e-mail envoyé")}>
                     Activer
@@ -248,19 +344,29 @@ export default function SubscriptionsTab() {
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-3 mt-4">
-                <div>
-                  <label className="text-xs text-muted-foreground">Suivi J+14</label>
-                  <Input type="date" value={followUps.j14} onChange={(e) => setFollowUps((f) => ({ ...f, j14: e.target.value }))} />
-                </div>
-                <div>
-                  <label className="text-xs text-muted-foreground">Suivi J+30</label>
-                  <Input type="date" value={followUps.j30} onChange={(e) => setFollowUps((f) => ({ ...f, j30: e.target.value }))} />
+              <div className="mt-6 border-t pt-4">
+                <h3 className="text-sm font-semibold mb-2">Modifier la fiche</h3>
+                <div className="grid sm:grid-cols-2 gap-3">
+                  <Field label="Officine" value={officeEdit.office_name} onChange={(v) => setOfficeEdit((f) => ({ ...f, office_name: v }))} />
+                  <Field label="Raison sociale" value={officeEdit.billing_name} onChange={(v) => setOfficeEdit((f) => ({ ...f, billing_name: v }))} />
+                  <Field label="SIRET" value={officeEdit.siret} onChange={(v) => setOfficeEdit((f) => ({ ...f, siret: v }))} />
+                  <Field label="Téléphone" value={officeEdit.contact_phone} onChange={(v) => setOfficeEdit((f) => ({ ...f, contact_phone: v }))} />
+                  <Field label="Prénom contact" value={officeEdit.contact_first_name} onChange={(v) => setOfficeEdit((f) => ({ ...f, contact_first_name: v }))} />
+                  <Field label="Nom contact" value={officeEdit.contact_last_name} onChange={(v) => setOfficeEdit((f) => ({ ...f, contact_last_name: v }))} />
+                  <Field label="E-mail (identifiant)" value={officeEdit.contact_email} onChange={(v) => setOfficeEdit((f) => ({ ...f, contact_email: v }))} />
+                  <Field label="Caisses" value={officeEdit.registers_count} onChange={(v) => setOfficeEdit((f) => ({ ...f, registers_count: v }))} />
+                  <div className="sm:col-span-2">
+                    <Field label="Adresse de facturation" value={officeEdit.billing_address} onChange={(v) => setOfficeEdit((f) => ({ ...f, billing_address: v }))} />
+                  </div>
+                  <Field label="Validation le" type="date" value={officeEdit.validation_completed_at} onChange={(v) => setOfficeEdit((f) => ({ ...f, validation_completed_at: v }))} />
+                  <Field label="Formation le" type="date" value={officeEdit.training_at} onChange={(v) => setOfficeEdit((f) => ({ ...f, training_at: v }))} />
+                  <Field label="Suivi J+14" type="date" value={officeEdit.followup_d14_at} onChange={(v) => setOfficeEdit((f) => ({ ...f, followup_d14_at: v }))} />
+                  <Field label="Suivi J+30" type="date" value={officeEdit.followup_d30_at} onChange={(v) => setOfficeEdit((f) => ({ ...f, followup_d30_at: v }))} />
                 </div>
                 <Button
                   size="sm"
                   variant="secondary"
-                  className="col-span-2"
+                  className="w-full mt-3"
                   disabled={acting}
                   onClick={() =>
                     action(
@@ -268,15 +374,80 @@ export default function SubscriptionsTab() {
                         action: "save_office",
                         subscriptionId: selected.id,
                         office: {
-                          followup_d14_at: followUps.j14 ? new Date(followUps.j14).toISOString() : null,
-                          followup_d30_at: followUps.j30 ? new Date(followUps.j30).toISOString() : null,
+                          office_name: officeEdit.office_name.trim(),
+                          billing_name: officeEdit.billing_name.trim() || null,
+                          siret: officeEdit.siret.trim() || null,
+                          billing_address: officeEdit.billing_address.trim() || null,
+                          contact_first_name: officeEdit.contact_first_name.trim() || null,
+                          contact_last_name: officeEdit.contact_last_name.trim() || null,
+                          contact_email: officeEdit.contact_email.trim(),
+                          contact_phone: officeEdit.contact_phone.trim() || null,
+                          registers_count: officeEdit.registers_count ? Number(officeEdit.registers_count) : null,
+                          validation_completed_at: toIso(officeEdit.validation_completed_at),
+                          training_at: toIso(officeEdit.training_at),
+                          followup_d14_at: toIso(officeEdit.followup_d14_at),
+                          followup_d30_at: toIso(officeEdit.followup_d30_at),
                         },
                       },
-                      "Suivis enregistrés",
+                      "Fiche enregistrée",
                     )
                   }
                 >
-                  Enregistrer les suivis
+                  Enregistrer la fiche
+                </Button>
+              </div>
+
+              <div className="mt-6 border-t pt-4">
+                <h3 className="text-sm font-semibold mb-2">Modifier la souscription</h3>
+                <div className="grid sm:grid-cols-2 gap-3">
+                  <SelectField
+                    label="Formule"
+                    value={subEdit.plan}
+                    options={[["classic", "Classique"], ["premium", "Premium"]]}
+                    onChange={(v) => setSubEdit((f) => ({ ...f, plan: v }))}
+                  />
+                  <SelectField
+                    label="Cycle"
+                    value={subEdit.billing_cycle}
+                    options={[["monthly", "Mensuel"], ["annual", "Annuel"]]}
+                    onChange={(v) => setSubEdit((f) => ({ ...f, billing_cycle: v }))}
+                  />
+                  <SelectField
+                    label="Statut"
+                    value={subEdit.status}
+                    options={Object.entries(STATUS_LABELS)}
+                    onChange={(v) => setSubEdit((f) => ({ ...f, status: v }))}
+                  />
+                  <Field label="Début de période" type="date" value={subEdit.current_period_start} onChange={(v) => setSubEdit((f) => ({ ...f, current_period_start: v }))} />
+                  <Field label="Fin de période" type="date" value={subEdit.current_period_end} onChange={(v) => setSubEdit((f) => ({ ...f, current_period_end: v }))} />
+                  <Field label="Payée le" type="date" value={subEdit.paid_at} onChange={(v) => setSubEdit((f) => ({ ...f, paid_at: v }))} />
+                  <Field label="Activée le" type="date" value={subEdit.activated_at} onChange={(v) => setSubEdit((f) => ({ ...f, activated_at: v }))} />
+                </div>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="w-full mt-3"
+                  disabled={acting}
+                  onClick={() =>
+                    action(
+                      {
+                        action: "save_subscription",
+                        subscriptionId: selected.id,
+                        subscription: {
+                          plan: subEdit.plan,
+                          billing_cycle: subEdit.billing_cycle,
+                          status: subEdit.status,
+                          current_period_start: toIso(subEdit.current_period_start),
+                          current_period_end: toIso(subEdit.current_period_end),
+                          paid_at: toIso(subEdit.paid_at),
+                          activated_at: toIso(subEdit.activated_at),
+                        },
+                      },
+                      "Souscription enregistrée",
+                    )
+                  }
+                >
+                  Enregistrer la souscription
                 </Button>
               </div>
 
