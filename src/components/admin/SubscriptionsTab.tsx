@@ -77,6 +77,57 @@ const PLAN_PRICE: Record<string, string> = {
   "premium/annual": "1 490 € HT/an — mise en place offerte",
 };
 
+const d10 = (v: string | null | undefined) => (v ? v.slice(0, 10) : "");
+const toIso = (v: string) => (v ? new Date(v).toISOString() : null);
+
+const EMPTY_OFFICE = {
+  office_name: "",
+  billing_name: "",
+  siret: "",
+  billing_address: "",
+  contact_first_name: "",
+  contact_last_name: "",
+  contact_email: "",
+  contact_phone: "",
+  registers_count: "",
+  validation_completed_at: "",
+  training_at: "",
+  followup_d14_at: "",
+  followup_d30_at: "",
+};
+
+const EMPTY_SUB = {
+  plan: "classic",
+  billing_cycle: "monthly",
+  status: "active",
+  current_period_start: "",
+  current_period_end: "",
+  paid_at: "",
+  activated_at: "",
+};
+
+const Field = ({ label, value, onChange, type = "text" }: { label: string; value: string; onChange: (v: string) => void; type?: string }) => (
+  <div>
+    <label className="text-xs text-muted-foreground">{label}</label>
+    <Input type={type} value={value} onChange={(e) => onChange(e.target.value)} />
+  </div>
+);
+
+const SelectField = ({ label, value, options, onChange }: { label: string; value: string; options: [string, string][]; onChange: (v: string) => void }) => (
+  <div>
+    <label className="text-xs text-muted-foreground">{label}</label>
+    <select
+      className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+    >
+      {options.map(([v, l]) => (
+        <option key={v} value={v}>{l}</option>
+      ))}
+    </select>
+  </div>
+);
+
 export default function SubscriptionsTab() {
   const [subs, setSubs] = useState<SubRow[]>([]);
   const [offices, setOffices] = useState<Record<string, OfficeRow>>({});
