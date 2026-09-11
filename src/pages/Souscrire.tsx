@@ -13,7 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Check, Loader2, ArrowLeft } from "lucide-react";
 import Seo from "@/components/Seo";
 
-type PriceId = "asclion_classic_monthly" | "asclion_premium_monthly" | "asclion_classic_annual" | "asclion_premium_annual";
+type PriceId = "asclion_classic_monthly" | "asclion_premium_monthly" | "asclion_classic_yearly" | "asclion_premium_yearly";
 
 interface PlanDef {
   priceId: PriceId;
@@ -29,34 +29,34 @@ interface PlanDef {
 
 const PLANS: PlanDef[] = [
   {
-    priceId: "asclion_classic_annual",
+    priceId: "asclion_classic_yearly",
     name: "Classique annuel",
     cycle: "annual",
     priceLabel: "990 € HT/an",
     setupLabel: "Mise en place offerte",
-    totalLabel: "990 € HT la première année",
+    totalLabel: "990 € HT/an, reconduit automatiquement",
     savingLabel: "12 mois au prix de 10 — 297 € HT d'économie vs mensuel",
     recommended: true,
     features: [
       "Catalogue de 30 000+ médicaments avec PC recommandé",
       "Suggestions, sécurité et amélioration continue",
       "Formation visio et suivis à J+14 et J+30 offerts",
-      "Aucun renouvellement automatique",
+      "Reconduit chaque année, résiliable à tout moment",
     ],
   },
   {
-    priceId: "asclion_premium_annual",
+    priceId: "asclion_premium_yearly",
     name: "Premium annuel",
     cycle: "annual",
     priceLabel: "1 490 € HT/an",
     setupLabel: "Mise en place offerte",
-    totalLabel: "1 490 € HT la première année",
+    totalLabel: "1 490 € HT/an, reconduit automatiquement",
     savingLabel: "397 € HT d'économie vs mensuel — stock actualisé chaque semaine",
     features: [
       "Tout Classique, plus l'audit initial du stock",
       "Suggestions sur mesure selon votre stock",
       "Actualisation hebdomadaire du stock",
-      "Aucun renouvellement automatique",
+      "Reconduit chaque année, résiliable à tout moment",
     ],
   },
   {
@@ -136,7 +136,7 @@ export default function Souscrire() {
     form.contactLastName.trim().length > 0 &&
     /.+@.+\..+/.test(form.contactEmail) &&
     form.acceptedTerms &&
-    (plan?.cycle !== "monthly" || form.acceptedRecurring) &&
+    form.acceptedRecurring &&
     (!form.robotDeclared || (form.robotBrand.trim().length > 0 && form.robotModel.trim().length > 0));
 
   const fetchClientSecret = async (): Promise<string> => {
@@ -221,9 +221,10 @@ export default function Souscrire() {
             </div>
 
             <p className="text-xs text-muted-foreground text-center mt-6 max-w-2xl mx-auto">
-              Paiement par carte sur toutes les offres ; prélèvement SEPA disponible sur les offres mensuelles
-              (le compte est activé après confirmation finale du prélèvement). Virement sur facture possible sur demande.
-              Offres annuelles : aucun renouvellement automatique, aucune résiliation anticipée remboursable.
+              Paiement par carte ou prélèvement SEPA (avec le SEPA, le compte est activé après la confirmation finale
+              de votre banque). Virement sur facture possible sur demande. Tous les abonnements sont reconduits
+              automatiquement et résiliables à tout moment depuis votre espace client, avec effet à la fin de la
+              période déjà payée et sans remboursement au prorata.
             </p>
 
             <div className="flex justify-center mt-6">
@@ -316,18 +317,18 @@ export default function Souscrire() {
                   <a href="/confidentialite" target="_blank" className="underline">politique de confidentialité</a>. *
                 </Label>
               </div>
-              {plan.cycle === "monthly" && (
-                <div className="sm:col-span-2 flex items-start gap-2">
-                  <Checkbox
-                    id="acceptedRecurring"
-                    checked={form.acceptedRecurring}
-                    onCheckedChange={(v) => set({ acceptedRecurring: v === true })}
-                  />
-                  <Label htmlFor="acceptedRecurring" className="font-normal text-sm">
-                    J'accepte le prélèvement récurrent mensuel de {plan.priceLabel.replace(" HT/mois", "")} € HT, résiliable à tout moment avec effet à la fin de la période en cours. *
-                  </Label>
-                </div>
-              )}
+              <div className="sm:col-span-2 flex items-start gap-2">
+                <Checkbox
+                  id="acceptedRecurring"
+                  checked={form.acceptedRecurring}
+                  onCheckedChange={(v) => set({ acceptedRecurring: v === true })}
+                />
+                <Label htmlFor="acceptedRecurring" className="font-normal text-sm">
+                  J'accepte le prélèvement récurrent de {plan.priceLabel}, reconduit automatiquement
+                  {plan.cycle === "monthly" ? " chaque mois" : " chaque année"}, résiliable à tout moment avec effet
+                  à la fin de la période en cours et sans remboursement au prorata. *
+                </Label>
+              </div>
             </div>
 
             {formError && <p className="text-sm text-destructive mt-4">{formError}</p>}
