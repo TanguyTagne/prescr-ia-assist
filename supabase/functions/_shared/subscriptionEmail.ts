@@ -64,6 +64,10 @@ const BODIES: Record<SubscriptionEmailKind, (c: SubscriptionEmailContext) => str
     `Bonjour ${c.contactFirstName},<br><br>votre renouvellement <strong>${c.planLabel}</strong> (${c.cycleLabel}) est confirmé. Merci de votre confiance.`,
   subscription_expired: (c) =>
     `Bonjour ${c.contactFirstName},<br><br>votre offre <strong>${c.planLabel}</strong> pour <strong>${c.officeName}</strong> a pris fin et l'accès de votre équipe est désormais fermé. Aucun nouveau débit n'aura lieu. Pour reprendre Asclion, contactez-nous.`,
+  credentials: (c) =>
+    `Bonjour ${c.contactFirstName},<br><br>voici vos identifiants Asclion pour <strong>${c.officeName}</strong> :<br><br>` +
+    `<strong>Identifiant :</strong> ${c.loginEmail ?? ""}<br><strong>Mot de passe provisoire :</strong> ${c.tempPassword ?? ""}<br><br>` +
+    `Connectez-vous puis modifiez ce mot de passe dès votre première connexion depuis la page « Mon compte ». Ne transmettez ce message à personne.`,
 };
 
 const SUBJECTS: Record<SubscriptionEmailKind, (c: SubscriptionEmailContext) => string> = {
