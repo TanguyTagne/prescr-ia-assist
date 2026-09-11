@@ -25,7 +25,7 @@ interface OfficeRow {
   id: string;
   office_name: string;
   billing_name: string | null;
-  siret: string;
+  siret: string | null;
   billing_address: string | null;
   contact_first_name: string | null;
   contact_last_name: string | null;
@@ -39,6 +39,10 @@ interface OfficeRow {
   utm_campaign: string | null;
   pharmacy_id: string | null;
   user_id: string | null;
+  validation_completed_at: string | null;
+  training_at: string | null;
+  followup_d14_at: string | null;
+  followup_d30_at: string | null;
   created_at: string;
 }
 
@@ -48,14 +52,14 @@ interface SubRow {
   plan: string;
   billing_cycle: string;
   status: string;
-  amount_total_cents: number;
-  payment_method: string | null;
+  current_period_start: string | null;
   current_period_end: string | null;
-  annual_renewal_due_at: string | null;
-  annual_reminder_sent_at: string | null;
+  paid_at: string | null;
+  activated_at: string | null;
   environment: string;
   stripe_customer_id: string | null;
   stripe_checkout_session_id: string | null;
+  stripe_subscription_id: string | null;
   created_at: string;
 }
 
@@ -63,10 +67,15 @@ interface EventRow {
   id: string;
   event_type: string;
   payload: Record<string, unknown> | null;
-  created_at: string;
+  processed_at: string;
 }
 
-const eur = (cents: number) => `${(cents / 100).toLocaleString("fr-FR")} €`;
+const PLAN_PRICE: Record<string, string> = {
+  "classic/monthly": "99 € HT/mois + 99 € HT de mise en place",
+  "premium/monthly": "149 € HT/mois + 99 € HT de mise en place",
+  "classic/annual": "990 € HT/an — mise en place offerte",
+  "premium/annual": "1 490 € HT/an — mise en place offerte",
+};
 
 export default function SubscriptionsTab() {
   const [subs, setSubs] = useState<SubRow[]>([]);
@@ -84,9 +93,9 @@ export default function SubscriptionsTab() {
       supabase.from("subscriptions").select("*").order("created_at", { ascending: false }).limit(500),
       supabase.from("subscription_offices").select("*").order("created_at", { ascending: false }).limit(500),
     ]);
-    setSubs((subRows ?? []) as SubRow[]);
+    setSubs((subRows ?? []) as unknown as SubRow[]);
     const map: Record<string, OfficeRow> = {};
-    for (const o of (officeRows ?? []) as OfficeRow[]) map[o.id] = o;
+    for (const o of (officeRows ?? []) as unknown as OfficeRow[]) map[o.id] = o;
     setOffices(map);
     setLoading(false);
   };
@@ -98,17 +107,17 @@ export default function SubscriptionsTab() {
     const office = offices[sub.office_id];
     if (office) {
       setFollowUps({
-        j14: (office as unknown as { followup_j14_at?: string | null }).followup_j14_at ?? "",
-        j30: (office as unknown as { followup_j30_at?: string | null }).followup_j30_at ?? "",
+        j14: office.followup_d14_at?.slice(0, 10) ?? "",
+        j30: office.followup_d30_at?.slice(0, 10) ?? "",
       });
     }
     const { data } = await supabase
       .from("subscription_events")
-      .select("id, event_type, payload, created_at")
+      .select("id, event_type, payload, processed_at")
       .eq("subscription_id", sub.id)
-      .order("created_at", { ascending: false })
+      .order("processed_at", { ascending: false })
       .limit(50);
-    setEvents((data ?? []) as EventRow[]);
+    setEvents((data ?? []) as unknown as EventRow[]);
   };
 
   const action = async (body: Record<string, unknown>, okMsg: string) => {
@@ -123,11 +132,17 @@ export default function SubscriptionsTab() {
     await load();
     if (selected) {
       const updated = (await supabase.from("subscriptions").select("*").eq("id", selected.id).single()).data;
-      if (updated) setSelected(updated as SubRow);
+      if (updated) setSelected(updated as unknown as SubRow);
     }
   };
 
   const office = selected ? offices[selected.office_id] : null;
+  const annualDue = (s: SubRow) => {
+    if (s.billing_cycle !== "annual" || !s.paid_at) return null;
+    const d = new Date(s.paid_at);
+    d.setFullYear(d.getFullYear() + 1);
+    return d;
+  };
 
   return (
     <Card>
@@ -149,7 +164,6 @@ export default function SubscriptionsTab() {
                 <tr className="text-left text-muted-foreground border-b">
                   <th className="py-2 pr-3">Officine</th>
                   <th className="py-2 pr-3">Offre</th>
-                  <th className="py-2 pr-3">Montant</th>
                   <th className="py-2 pr-3">Statut</th>
                   <th className="py-2 pr-3">Source</th>
                   <th className="py-2 pr-3">Échéance</th>
@@ -159,11 +173,11 @@ export default function SubscriptionsTab() {
               <tbody>
                 {subs.map((s) => {
                   const o = offices[s.office_id];
+                  const due = s.current_period_end ?? annualDue(s)?.toISOString() ?? null;
                   return (
                     <tr key={s.id} className="border-b hover:bg-muted/50 cursor-pointer" onClick={() => openDetail(s)}>
                       <td className="py-2 pr-3 font-medium">{o?.office_name ?? "—"}</td>
                       <td className="py-2 pr-3">{s.plan} / {s.billing_cycle}</td>
-                      <td className="py-2 pr-3">{eur(s.amount_total_cents)}</td>
                       <td className="py-2 pr-3">
                         <Badge variant={s.status === "active" ? "default" : s.status.includes("issue") || s.status === "cancelled" ? "destructive" : "secondary"}>
                           {STATUS_LABELS[s.status] ?? s.status}
@@ -171,9 +185,7 @@ export default function SubscriptionsTab() {
                       </td>
                       <td className="py-2 pr-3 text-muted-foreground">{o?.source ?? "—"}{o?.utm_campaign ? ` (${o.utm_campaign})` : ""}</td>
                       <td className="py-2 pr-3 text-muted-foreground">
-                        {(s.current_period_end ?? s.annual_renewal_due_at)
-                          ? new Date((s.current_period_end ?? s.annual_renewal_due_at) as string).toLocaleDateString("fr-FR")
-                          : "—"}
+                        {due ? new Date(due).toLocaleDateString("fr-FR") : "—"}
                       </td>
                       <td className="py-2 pr-3 text-muted-foreground">{s.environment === "sandbox" ? "test" : "live"}</td>
                     </tr>
@@ -194,8 +206,9 @@ export default function SubscriptionsTab() {
               </DialogHeader>
 
               <div className="grid sm:grid-cols-2 gap-x-6 gap-y-1 text-sm">
+                <p><span className="text-muted-foreground">Tarif :</span> {PLAN_PRICE[`${selected.plan}/${selected.billing_cycle}`] ?? "—"}</p>
                 <p><span className="text-muted-foreground">Raison sociale :</span> {office.billing_name ?? "—"}</p>
-                <p><span className="text-muted-foreground">SIRET :</span> {office.siret}</p>
+                <p><span className="text-muted-foreground">SIRET :</span> {office.siret ?? "—"}</p>
                 <p className="sm:col-span-2"><span className="text-muted-foreground">Adresse :</span> {office.billing_address ?? "—"}</p>
                 <p><span className="text-muted-foreground">Contact :</span> {office.contact_first_name} {office.contact_last_name}</p>
                 <p><span className="text-muted-foreground">E-mail :</span> {office.contact_email}</p>
@@ -205,12 +218,15 @@ export default function SubscriptionsTab() {
                   <span className="text-muted-foreground">Robot :</span>{" "}
                   {office.robot_declared ? `Oui — ${office.robot_brand ?? "?"} ${office.robot_model ?? ""} (compatibilité à étudier)` : "Non"}
                 </p>
-                <p><span className="text-muted-foreground">Paiement :</span> {selected.payment_method ?? "—"} · {eur(selected.amount_total_cents)}</p>
+                <p><span className="text-muted-foreground">Payée le :</span> {selected.paid_at ? new Date(selected.paid_at).toLocaleString("fr-FR") : "—"}</p>
                 <p><span className="text-muted-foreground">Créée le :</span> {new Date(selected.created_at).toLocaleString("fr-FR")}</p>
+                <p className="sm:col-span-2 text-xs text-muted-foreground">
+                  Stripe : {selected.stripe_customer_id ?? "—"} · {selected.stripe_subscription_id ?? selected.stripe_checkout_session_id ?? "—"}
+                </p>
               </div>
 
               <div className="flex flex-wrap gap-2 mt-4">
-                {selected.status === "paid_pending_validation" && (
+                {(selected.status === "paid_pending_validation" || selected.status === "activation_requested") && (
                   <Button size="sm" disabled={acting} onClick={() => action({ action: "activate", subscriptionId: selected.id }, "Souscription activée, e-mail envoyé")}>
                     Activer
                   </Button>
@@ -220,11 +236,13 @@ export default function SubscriptionsTab() {
                     Suspendre
                   </Button>
                 )}
-                <Button size="sm" variant="outline" disabled={acting} onClick={() => action({ action: "mark_transfer_paid", subscriptionId: selected.id }, "Virement marqué payé")}>
-                  Marquer virement payé
-                </Button>
-                {selected.billing_cycle === "annual" && !selected.annual_reminder_sent_at && (
-                  <Button size="sm" variant="outline" disabled={acting} onClick={() => action({ action: "send_annual_reminder", subscriptionId: selected.id }, "Rappel annuel envoyé")}>
+                {["checkout_started", "payment_pending", "payment_issue"].includes(selected.status) && (
+                  <Button size="sm" variant="outline" disabled={acting} onClick={() => action({ action: "mark_transfer_paid", subscriptionId: selected.id }, "Virement marqué payé — compte créé")}>
+                    Marquer virement payé
+                  </Button>
+                )}
+                {selected.billing_cycle === "annual" && selected.status === "active" && (
+                  <Button size="sm" variant="outline" disabled={acting} onClick={() => action({ action: "send_reminder", subscriptionId: selected.id }, "Rappel annuel envoyé")}>
                     Envoyer rappel annuel
                   </Button>
                 )}
@@ -244,7 +262,19 @@ export default function SubscriptionsTab() {
                   variant="secondary"
                   className="col-span-2"
                   disabled={acting}
-                  onClick={() => action({ action: "update_office", subscriptionId: selected.id, followupJ14: followUps.j14 || null, followupJ30: followUps.j30 || null }, "Suivis enregistrés")}
+                  onClick={() =>
+                    action(
+                      {
+                        action: "save_office",
+                        subscriptionId: selected.id,
+                        office: {
+                          followup_d14_at: followUps.j14 ? new Date(followUps.j14).toISOString() : null,
+                          followup_d30_at: followUps.j30 ? new Date(followUps.j30).toISOString() : null,
+                        },
+                      },
+                      "Suivis enregistrés",
+                    )
+                  }
                 >
                   Enregistrer les suivis
                 </Button>
@@ -272,7 +302,7 @@ export default function SubscriptionsTab() {
                   {events.map((e) => (
                     <div key={e.id} className="text-xs flex justify-between gap-2 border-b pb-1">
                       <span className="font-mono">{e.event_type}</span>
-                      <span className="text-muted-foreground">{new Date(e.created_at).toLocaleString("fr-FR")}</span>
+                      <span className="text-muted-foreground">{new Date(e.processed_at).toLocaleString("fr-FR")}</span>
                     </div>
                   ))}
                 </div>
