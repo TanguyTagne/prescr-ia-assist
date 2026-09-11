@@ -142,6 +142,8 @@ export default function SubscriptionsTab() {
   // Identifiants à créer : e-mail saisi par l'admin + mot de passe généré aléatoirement.
   const [credEmail, setCredEmail] = useState("");
   const [credPassword, setCredPassword] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [search, setSearch] = useState("");
 
   const generatePassword = () => {
     const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%";
