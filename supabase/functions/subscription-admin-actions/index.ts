@@ -228,14 +228,26 @@ Deno.serve(async (req) => {
           .update({ pharmacy_id: pharmacyId, user_id: userId })
           .eq("id", sub.office_id);
 
-        await sendSubscriptionEmail(email, "credentials", {
-          officeName: officeRow.office_name as string,
-          contactFirstName: (officeRow.contact_first_name as string) ?? "",
-          planLabel: planLabel(sub.plan),
-          cycleLabel: cycleLabel(sub.billing_cycle),
-          loginEmail: email,
-          tempPassword: password,
-        });
+        // Le compte est créé même si l'e-mail échoue : on renvoie alors le mot de passe à l'admin.
+        try {
+          await sendSubscriptionEmail(email, "credentials", {
+            officeName: officeRow.office_name as string,
+            contactFirstName: (officeRow.contact_first_name as string) ?? "",
+            planLabel: planLabel(sub.plan),
+            cycleLabel: cycleLabel(sub.billing_cycle),
+            loginEmail: email,
+            tempPassword: password,
+          });
+        } catch (mailErr) {
+          console.error("credentials email failed:", mailErr);
+          return json({
+            success: true,
+            emailSent: false,
+            loginEmail: email,
+            tempPassword: password,
+            warning: mailErr instanceof Error ? mailErr.message : "Envoi e-mail impossible",
+          }, 200);
+        }
         break;
       }
 
