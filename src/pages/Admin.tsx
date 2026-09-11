@@ -31,6 +31,7 @@ const RemoteScannerDiagnosticTab = lazyWithRetry(() => import("@/components/admi
 const MedicamentsManquantsTab = lazyWithRetry(() => import("@/components/admin/MedicamentsManquantsTab"));
 const RoiManqueAGagnerTab = lazyWithRetry(() => import("@/components/admin/RoiManqueAGagnerTab"));
 const MonthlyRecapTab = lazyWithRetry(() => import("@/components/admin/MonthlyRecapTab"));
+const SubscriptionsTab = lazyWithRetry(() => import("@/components/admin/SubscriptionsTab"));
 
 
 
@@ -211,6 +212,10 @@ const Admin = () => {
             <Trophy className="h-3.5 w-3.5" />
             Récap mensuel
           </Button>
+          <Button variant={tab === "subscriptions" ? "default" : "outline"} size="sm" onClick={() => setTab("subscriptions")} className="gap-1.5">
+            <Trophy className="h-3.5 w-3.5" />
+            Souscriptions
+          </Button>
           <Button variant="outline" size="sm" onClick={() => navigate("/groupement")} className="gap-1.5">
             <Network className="h-3.5 w-3.5" />
             Ouvrir dashboard groupement →
@@ -241,6 +246,7 @@ const Admin = () => {
           {tab === "asclion-base" && <AsclionBaseImportTab />}
           {tab === "roi-manque-a-gagner" && <RoiManqueAGagnerTab />}
           {tab === "monthly-recap" && <MonthlyRecapTab />}
+          {tab === "subscriptions" && <SubscriptionsTab />}
         </Suspense>
 
         
