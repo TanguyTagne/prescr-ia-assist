@@ -102,7 +102,7 @@ async function activateFromPayment(subscriptionId: string) {
     } else {
       const { data: created, error } = await supabase
         .from("pharmacies")
-        .insert({ name: office.office_name as string, status: "active" })
+        .insert({ name: office.office_name as string, status: "paused" })
         .select("id")
         .single();
       if (error) throw error;

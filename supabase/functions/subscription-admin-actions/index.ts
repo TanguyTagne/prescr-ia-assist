@@ -119,7 +119,7 @@ Deno.serve(async (req) => {
           const { data: ph } = await supabase.from("pharmacies").select("id").eq("name", officeRow.office_name as string).maybeSingle();
           if (ph) pharmacyId = ph.id;
           else {
-            const { data: created, error: cErr } = await supabase.from("pharmacies").insert({ name: officeRow.office_name as string, status: "active" }).select("id").single();
+            const { data: created, error: cErr } = await supabase.from("pharmacies").insert({ name: officeRow.office_name as string, status: "paused" }).select("id").single();
             if (cErr) throw cErr;
             pharmacyId = created.id;
           }
