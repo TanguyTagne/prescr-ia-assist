@@ -1,274 +1,67 @@
-import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
+import { useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import {
-  Download,
-  BarChart3,
-  LogOut,
-  Send,
-  Loader2,
-  Settings,
-  ShieldCheck,
+  Play,
   CheckCircle2,
-  Sparkles,
+  Clock,
+  ScanBarcode,
+  MessageSquareText,
+  ShieldAlert,
+  Hand,
+  ArrowRight,
+  Timer,
+  Search,
+  Users,
 } from "lucide-react";
-import DemoFullPanel from "@/components/DemoFullPanel";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
-import { supabase } from "@/integrations/supabase/client";
-
-import { toast } from "sonner";
+import DemoFullPanel from "@/components/DemoFullPanel";
 import SiteFooter from "@/components/SiteFooter";
+import SiteHeader from "@/components/SiteHeader";
 import Seo from "@/components/Seo";
 import { useI18n } from "@/i18n/I18nProvider";
 import { trackEvent } from "@/hooks/useAnalytics";
-import LanguageToggle from "@/i18n/LanguageToggle";
-
-// Hardcoded fallback to the public Supabase project URL — VITE_SUPABASE_URL
-// may be missing in the published bundle, which produced `undefined/functions/...`
-// → 404 on the download link.
-const SUPABASE_BASE_URL =
-  import.meta.env.VITE_SUPABASE_URL || "https://oknjfjplseopgymijnca.supabase.co";
-const DOWNLOAD_URL = `${SUPABASE_BASE_URL}/functions/v1/download-app`;
-
-const AccessRequestForm = () => {
-  const { t, lp } = useI18n();
-  const [loading, setLoading] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-  const [accepted, setAccepted] = useState(false);
-  const [form, setForm] = useState({
-    pharmacy_name: "",
-    contact_name: "",
-    email: "",
-    phone: "",
-    city: "",
-    lgo_type: "",
-  });
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!accepted) {
-      toast.error(t("form.error.consent"));
-      return;
-    }
-    setLoading(true);
-    try {
-      const { error } = await supabase.from("access_requests" as any).insert(form as any);
-      if (error) throw error;
-      supabase.functions.invoke("notify-access-request", { body: form }).catch(console.error);
-      setSubmitted(true);
-      toast.success(t("form.success.toast"));
-    } catch (err: any) {
-      toast.error(err.message || t("form.error.toast"));
-      supabase.functions.invoke("notify-form-error", {
-        body: {
-          form,
-          errorMessage: err?.message || String(err),
-          errorCode: err?.code,
-          errorDetails:
-            err?.details || err?.hint || (err?.stack ? String(err.stack).slice(0, 1000) : undefined),
-          url: typeof window !== "undefined" ? window.location.href : undefined,
-        },
-      }).catch(console.error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (submitted) {
-    return (
-      <div className="text-center space-y-3 py-4">
-        <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
-          <Send className="h-5 w-5 text-primary" />
-        </div>
-        <p className="font-semibold">{t("form.submitted.title")}</p>
-        <p className="text-sm text-muted-foreground">{t("form.submitted.desc")}</p>
-      </div>
-    );
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-3">
-      <Input
-        aria-label={t("form.pharmacy_name")}
-        placeholder={t("form.pharmacy_name")}
-        required
-        value={form.pharmacy_name}
-        onChange={(e) => setForm((f) => ({ ...f, pharmacy_name: e.target.value }))}
-      />
-      <Input
-        aria-label={t("form.contact_name")}
-        placeholder={t("form.contact_name")}
-        required
-        value={form.contact_name}
-        onChange={(e) => setForm((f) => ({ ...f, contact_name: e.target.value }))}
-      />
-      <Input
-        aria-label={t("form.email")}
-        type="email"
-        placeholder={t("form.email")}
-        required
-        value={form.email}
-        onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-      />
-      <Input
-        aria-label={t("form.phone")}
-        placeholder={t("form.phone")}
-        value={form.phone}
-        onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-      />
-      <Input
-        aria-label={t("form.lgo")}
-        placeholder={t("form.lgo")}
-        value={form.lgo_type}
-        onChange={(e) => setForm((f) => ({ ...f, lgo_type: e.target.value }))}
-      />
-
-      <label className="flex items-start gap-2 text-xs text-muted-foreground leading-relaxed">
-        <Checkbox
-          checked={accepted}
-          onCheckedChange={(v) => setAccepted(v === true)}
-          className="mt-0.5"
-        />
-        <span>
-          {t("form.consent")}{" "}
-          <Link to={lp("/confidentialite")} className="text-primary underline">
-            {t("form.privacy")}
-          </Link>{" "}
-          {t("form.and")}{" "}
-          <Link to={lp("/cgu")} className="text-primary underline">
-            {t("form.terms")}
-          </Link>
-          .
-        </span>
-      </label>
-      <Button
-        type="submit"
-        className="w-full h-12 text-sm font-semibold pharmacy-gradient border-0 gap-2"
-        disabled={loading || !accepted}
-      >
-        {loading ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
-          <>
-            <Send className="h-4 w-4" /> {t("form.submit")}
-          </>
-        )}
-      </Button>
-      <p className="text-[11px] text-center text-muted-foreground">{t("form.microcopy")}</p>
-    </form>
-  );
-};
+import heroVideo from "@/assets/asclion-45s.mp4.asset.json";
 
 const Landing = () => {
-  const { user, isAdmin, signOut } = useAuth();
-  const navigate = useNavigate();
-  const { t, lp } = useI18n();
+  const { lp } = useI18n();
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [videoOpen, setVideoOpen] = useState(false);
 
-  const objections = [
-    { title: t("landing.obj.1.title"), desc: t("landing.obj.1.desc") },
-    { title: t("landing.obj.2.title"), desc: t("landing.obj.2.desc") },
-    { title: t("landing.obj.3.title"), desc: t("landing.obj.3.desc") },
-  ];
+  const playVideo = () => {
+    setVideoOpen(true);
+    trackEvent("landing_video_play", { source: "home_hero" });
+    requestAnimationFrame(() => videoRef.current?.play().catch(() => {}));
+  };
 
   return (
     <div className="min-h-screen bg-background">
       <Seo
-        title={t("seo.landing.title")}
-        description={t("seo.landing.desc")}
+        title="Asclion — Le conseil associé, au bon moment. Sans changer de LGO."
+        description="Au scan d'un médicament, Asclion affiche un point de vigilance, une suggestion pertinente et une phrase conseil. À partir de 99 € HT/mois par officine, caisses illimitées."
         path="/"
         jsonLd={{
           "@context": "https://schema.org",
           "@type": "SoftwareApplication",
           name: "Asclion",
           applicationCategory: "BusinessApplication",
-          applicationSubCategory: "PharmacyManagement",
           operatingSystem: "Web, Windows",
-          description: t("seo.landing.desc"),
+          description:
+            "Surcouche au LGO : au scan d'un médicament, point de vigilance, suggestion de produit complémentaire et phrase conseil au comptoir.",
           url: "https://www.asclion.com",
           offers: {
             "@type": "Offer",
-            price: "0",
+            price: "99",
             priceCurrency: "EUR",
             availability: "https://schema.org/InStock",
           },
           audience: { "@type": "Audience", audienceType: "Pharmacists" },
-          inLanguage: ["fr-FR", "en"],
+          inLanguage: ["fr-FR"],
         }}
       />
-      <nav className="border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <span className="font-bold text-lg tracking-tight">Asclion</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate(lp("/blog"))}
-              className="gap-1.5 text-xs hidden sm:inline-flex"
-            >
-              Blog
-            </Button>
-            {user ? (
-              <>
-                {isAdmin && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => navigate(lp("/admin"))}
-                    className="gap-1.5 text-xs"
-                  >
-                    <Settings className="h-3.5 w-3.5" />
-                    {t("nav.admin")}
-                  </Button>
-                )}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => navigate(lp("/dashboard"))}
-                  className="gap-1.5 text-xs"
-                >
-                  <BarChart3 className="h-3.5 w-3.5" />
-                  {t("nav.dashboard")}
-                </Button>
-                <Button variant="ghost" size="sm" asChild className="gap-1.5 text-xs">
-                  <a href={DOWNLOAD_URL} target="_blank" rel="noopener noreferrer">
-                    <Download className="h-3.5 w-3.5" />
-                    {t("nav.download")}
-                  </a>
-                </Button>
-                <LanguageToggle />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={signOut}
-                  className="gap-1.5 text-xs text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30"
-                >
-                  <LogOut className="h-3.5 w-3.5" />
-                  Se déconnecter
-                </Button>
-              </>
-            ) : (
-              <>
-                <LanguageToggle />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => navigate(lp("/auth"))}
-                  className="gap-1.5"
-                >
-                  {t("nav.signin")}
-                </Button>
-              </>
-            )}
-          </div>
-        </div>
-      </nav>
+      <SiteHeader />
 
       <main>
-        {/* ===== HERO + FORM (single action above the fold) ===== */}
+        {/* ===== HERO ===== */}
         <section className="relative py-14 md:py-20 px-4 overflow-hidden">
           <div
             aria-hidden
@@ -278,24 +71,25 @@ const Landing = () => {
                 "radial-gradient(ellipse 60% 50% at 50% 15%, hsl(var(--pharmacy-green-light) / 0.55), transparent 70%)",
             }}
           />
-          <div className="container max-w-5xl mx-auto grid lg:grid-cols-2 gap-10 items-start">
+          <div className="container max-w-5xl mx-auto grid lg:grid-cols-2 gap-10 items-center">
             <div className="space-y-5 text-center lg:text-left">
               <h1 className="text-3xl md:text-[2.75rem] font-extrabold tracking-tight leading-[1.1]">
-                {t("landing.h1")}
+                Le conseil associé, au bon moment.{" "}
+                <span className="text-primary">Sans changer de LGO.</span>
               </h1>
               <p className="text-base md:text-lg text-muted-foreground leading-relaxed">
-                {t("landing.h1.sub")}
+                Au scan d'un médicament, Asclion affiche un point de vigilance, une suggestion
+                pertinente et une phrase conseil prête à adapter. Votre équipe garde la décision ;
+                votre officine ne laisse plus les bonnes occasions au hasard.
               </p>
-              <div className="flex flex-col sm:flex-row items-center lg:items-start justify-center lg:justify-start gap-3">
+              <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3">
                 <Button
                   size="lg"
-                  asChild
+                  onClick={playVideo}
                   className="h-12 px-7 text-base font-semibold pharmacy-gradient border-0 gap-2 w-full sm:w-auto"
                 >
-                  <a href="#demande-acces">
-                    <Send className="h-5 w-5" />
-                    {t("form.submit")}
-                  </a>
+                  <Play className="h-5 w-5" />
+                  Voir Asclion en 45 secondes
                 </Button>
                 <Button
                   size="lg"
@@ -303,116 +97,289 @@ const Landing = () => {
                   asChild
                   className="h-12 px-7 text-base font-semibold w-full sm:w-auto"
                 >
-                  <a href="#demo" onClick={() => trackEvent("demo_opened_hero", {})}>
-                    <Sparkles className="h-5 w-5" />
-                    {t("landing.hero.cta.demo")}
-                  </a>
+                  <Link to={lp("/tarifs") + "?source=home_hero"}>Choisir mon offre</Link>
                 </Button>
               </div>
-              <ul className="flex flex-wrap items-center justify-center lg:justify-start gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
-                {[t("landing.hero.trust1"), t("landing.hero.trust2"), t("landing.hero.trust3"), t("landing.hero.trust4")].map(
-                  (item, i) => (
-                    <li key={i} className="inline-flex items-center gap-1.5">
-                      <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
-                      {item}
-                    </li>
-                  ),
-                )}
-              </ul>
+              <p className="text-xs text-muted-foreground">
+                À partir de 99 € HT/mois, par officine et caisses illimitées. Activation sous 24 à
+                48 h après validation.
+              </p>
             </div>
 
-            <div
-              id="demande-acces"
-              className="rounded-2xl border border-border bg-card p-6 shadow-sm scroll-mt-20"
-            >
-              <h2 className="text-xl font-bold tracking-tight">{t("landing.form.title")}</h2>
-              <p className="text-xs text-muted-foreground mt-1 mb-4 leading-relaxed">
-                {t("landing.form.why")}
+            <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
+              <video
+                ref={videoRef}
+                src={heroVideo.url}
+                className="w-full aspect-video object-cover bg-black"
+                muted
+                playsInline
+                controls={videoOpen}
+                preload="metadata"
+                onClick={playVideo}
+              />
+              {!videoOpen && (
+                <button
+                  onClick={playVideo}
+                  className="absolute inset-0 flex items-center justify-center"
+                  aria-label="Lire la vidéo de présentation Asclion (45 secondes)"
+                >
+                  <span className="h-16 w-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg">
+                    <Play className="h-7 w-7 ml-1" />
+                  </span>
+                </button>
+              )}
+              <p className="text-[11px] text-muted-foreground px-4 py-2 border-t border-border">
+                Démonstration du widget sur une fenêtre LGO générique — aucune donnée patient réelle.
               </p>
-              <AccessRequestForm />
             </div>
           </div>
         </section>
 
-        {/* ===== PROOF: live demo of the actual product ===== */}
-        <DemoFullPanel />
-
-        {/* ===== 3 OBJECTIONS ===== */}
+        {/* ===== PROBLÈME ===== */}
         <section className="py-16 px-4 bg-secondary/50">
           <div className="container max-w-4xl mx-auto">
             <h2 className="text-2xl md:text-3xl font-bold text-center tracking-tight mb-8">
-              {t("landing.obj.title")}
+              Le problème n'est pas de savoir conseiller.{" "}
+              <span className="text-primary">C'est d'y penser au bon moment.</span>
             </h2>
             <div className="grid md:grid-cols-3 gap-4">
-              {objections.map((o, i) => (
-                <div key={i} className="rounded-xl border border-border bg-card p-6 space-y-2">
-                  <h3 className="font-semibold text-[15px]">{o.title}</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{o.desc}</p>
+              {[
+                {
+                  icon: Timer,
+                  text: "Au comptoir, le rythme ne laisse pas de place à la recherche.",
+                },
+                {
+                  icon: Search,
+                  text: "Chaque médicament appelle un contexte, un conseil et parfois un produit associé.",
+                },
+                {
+                  icon: Users,
+                  text: "Sans repère immédiat, le conseil varie selon l'heure et la personne au comptoir.",
+                },
+              ].map((c, i) => (
+                <div key={i} className="rounded-xl border border-border bg-card p-6 space-y-3">
+                  <c.icon className="h-6 w-6 text-primary" />
+                  <p className="text-sm leading-relaxed">{c.text}</p>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        {/* ===== SOCIAL PROOF + GUARANTEE ===== */}
+        {/* ===== FONCTIONNEMENT ===== */}
         <section className="py-16 px-4">
-          <div className="container max-w-4xl mx-auto space-y-6">
-            <div className="rounded-2xl border border-border bg-card p-8 md:p-10 space-y-8">
-              <div className="text-center space-y-3">
-                <blockquote className="text-lg md:text-xl font-semibold leading-snug max-w-2xl mx-auto">
-                  {t("landing.proof.quote")}
-                </blockquote>
-                <p className="text-xs text-muted-foreground">{t("landing.proof.author")}</p>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {[
-                  { v: t("landing.proof.kpi1.value"), l: t("landing.proof.kpi1.label") },
-                  { v: t("landing.proof.kpi2.value"), l: t("landing.proof.kpi2.label") },
-                  { v: t("landing.proof.kpi3.value"), l: t("landing.proof.kpi3.label") },
-                ].map((k, i) => (
-                  <div
-                    key={i}
-                    className="rounded-xl border border-border bg-background p-5 text-center space-y-1"
-                  >
-                    <div className="text-2xl font-extrabold text-primary tracking-tight">{k.v}</div>
-                    <div className="text-xs text-muted-foreground">{k.l}</div>
+          <div className="container max-w-4xl mx-auto">
+            <h2 className="text-2xl md:text-3xl font-bold text-center tracking-tight mb-10">
+              Trois secondes. Trois informations utiles.
+            </h2>
+            <div className="grid md:grid-cols-3 gap-4">
+              {[
+                {
+                  icon: ScanBarcode,
+                  title: "Le médicament est scanné",
+                  text: "Asclion détecte le produit sans modifier le LGO.",
+                },
+                {
+                  icon: ShieldAlert,
+                  title: "Le widget apparaît",
+                  text: "Point de vigilance, suggestion et phrase conseil sont présentés au comptoir.",
+                },
+                {
+                  icon: Hand,
+                  title: "L'équipe garde la main",
+                  text: "Elle propose ou ignore. Les retours permettent d'affiner les suggestions pour l'officine.",
+                },
+              ].map((s, i) => (
+                <div key={i} className="rounded-xl border border-border bg-card p-6 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <span className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm">
+                      {i + 1}
+                    </span>
+                    <s.icon className="h-5 w-5 text-primary" />
                   </div>
-                ))}
-              </div>
-              <p className="text-xs text-center text-muted-foreground italic">
-                {t("landing.results.disclaimer")}
-              </p>
+                  <h3 className="font-semibold">{s.title}</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{s.text}</p>
+                </div>
+              ))}
             </div>
-
-            <div className="rounded-2xl border border-primary/30 bg-primary/5 p-6 flex items-start gap-3">
-              <ShieldCheck className="h-6 w-6 text-primary shrink-0 mt-0.5" />
-              <div className="space-y-1">
-                <p className="font-semibold">{t("landing.guarantee.title")}</p>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  {t("landing.guarantee.body")}
-                </p>
-              </div>
+            <div className="text-center mt-8">
+              <Button variant="outline" asChild className="gap-2">
+                <Link to={lp("/fonctionnalites")}>
+                  Voir le fonctionnement complet <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Button>
             </div>
           </div>
         </section>
 
-        {/* ===== FINAL CTA ===== */}
-        <section className="py-16 px-4 bg-secondary/50">
-          <div className="container max-w-xl mx-auto text-center space-y-4">
-            <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
-              {t("landing.finalcta.title")}
+        {/* ===== DÉMO PRODUIT ===== */}
+        <DemoFullPanel />
+
+        {/* ===== BÉNÉFICES ===== */}
+        <section className="py-16 px-4">
+          <div className="container max-w-4xl mx-auto grid md:grid-cols-2 gap-4">
+            <div className="rounded-2xl border border-border bg-card p-7 space-y-4">
+              <h2 className="text-xl font-bold tracking-tight">Pour le patient</h2>
+              <ul className="space-y-3">
+                {[
+                  "Un conseil associé plus systématique et explicable.",
+                  "Les points de vigilance remontent au bon moment.",
+                  "Le pharmacien reste le décideur.",
+                ].map((b, i) => (
+                  <li key={i} className="flex gap-2.5 text-sm leading-relaxed">
+                    <CheckCircle2 className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                    {b}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="rounded-2xl border border-border bg-card p-7 space-y-4">
+              <h2 className="text-xl font-bold tracking-tight">Pour l'officine</h2>
+              <ul className="space-y-3">
+                {[
+                  "La qualité du conseil ne dépend plus uniquement de la mémoire au comptoir.",
+                  "Les ventes associées reposent sur une justification, pas sur une pression commerciale.",
+                  "Premium adapte les suggestions au stock et aide à limiter les invendus.",
+                ].map((b, i) => (
+                  <li key={i} className="flex gap-2.5 text-sm leading-relaxed">
+                    <CheckCircle2 className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                    {b}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        {/* ===== PREUVE PILOTE ===== */}
+        <section id="preuve" className="py-16 px-4 bg-secondary/50 scroll-mt-16">
+          <div className="container max-w-3xl mx-auto">
+            <div className="rounded-2xl border border-border bg-card p-8 md:p-10 space-y-5 text-center">
+              <MessageSquareText className="h-7 w-7 text-primary mx-auto" />
+              <blockquote className="text-lg md:text-xl font-semibold leading-snug">
+                +500 € de chiffre d'affaires additionnel mensuel observé pendant trois mois sur une
+                caisse.
+              </blockquote>
+              <p className="text-sm text-muted-foreground leading-relaxed max-w-2xl mx-auto">
+                Pilote mené dans une officine équipée de cinq caisses ; Asclion était utilisé sur une
+                seule caisse. Ce résultat est propre à ce pilote, n'est pas une garantie et ne se
+                multiplie pas automatiquement par le nombre de caisses.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* ===== OFFRES ===== */}
+        <section className="py-16 px-4">
+          <div className="container max-w-4xl mx-auto">
+            <h2 className="text-2xl md:text-3xl font-bold text-center tracking-tight mb-2">
+              Une offre par officine. Pas par caisse.
             </h2>
-            <p className="text-muted-foreground leading-relaxed">{t("landing.access.desc")}</p>
-            <Button
-              size="lg"
-              asChild
-              className="h-12 px-8 text-base font-semibold pharmacy-gradient border-0 gap-2"
-            >
-              <a href="#demande-acces">
-                <Send className="h-5 w-5" />
-                {t("form.submit")}
-              </a>
-            </Button>
+            <p className="text-center text-muted-foreground mb-8">
+              Tous les prix sont HT. Caisses illimitées.
+            </p>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="rounded-2xl border border-border bg-card p-7 space-y-3">
+                <h3 className="text-lg font-bold">Classique</h3>
+                <p className="text-2xl font-extrabold text-primary">À partir de 99 € HT/mois</p>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Catalogue 30 000+ médicaments, suggestions, sécurité, phrase conseil et
+                  apprentissage issu des choix de l'équipe.
+                </p>
+              </div>
+              <div className="rounded-2xl border border-primary/40 bg-card p-7 space-y-3">
+                <h3 className="text-lg font-bold">Premium</h3>
+                <p className="text-2xl font-extrabold text-primary">À partir de 149 € HT/mois</p>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Tout Classique, plus l'audit de stock initial, les suggestions sur mesure et
+                  l'actualisation du stock.
+                </p>
+              </div>
+            </div>
+            <div className="text-center mt-8">
+              <Button size="lg" asChild className="pharmacy-gradient border-0 font-semibold gap-2">
+                <Link to={lp("/tarifs")}>
+                  Comparer les offres <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </section>
+
+        {/* ===== FAQ COURTE ===== */}
+        <section className="py-16 px-4 bg-secondary/50">
+          <div className="container max-w-3xl mx-auto space-y-6">
+            <h2 className="text-2xl md:text-3xl font-bold text-center tracking-tight">
+              Questions fréquentes
+            </h2>
+            <div className="space-y-3">
+              {[
+                {
+                  q: "Faut-il changer de LGO ?",
+                  a: "Non. Asclion est une surcouche ; la compatibilité est confirmée selon votre environnement avant l'activation.",
+                },
+                {
+                  q: "Est-ce que cela ralentit la délivrance ?",
+                  a: "Le widget est conçu pour rester discret : il apparaît sans prendre le focus de la souris et repasse au second plan après un clic extérieur.",
+                },
+                {
+                  q: "Que se passe-t-il après le paiement ?",
+                  a: "Vous recevez un e-mail pour définir votre mot de passe, installer Asclion en trois clics et terminer la validation. Activation sous 24 à 48 h après validation.",
+                },
+                {
+                  q: "Et si mon officine a un robot ?",
+                  a: "La compatibilité est vérifiée avant tout paiement, selon la marque et le modèle du robot.",
+                },
+              ].map((f, i) => (
+                <details
+                  key={i}
+                  className="rounded-xl border border-border bg-card p-5 group"
+                >
+                  <summary className="font-semibold cursor-pointer list-none flex items-center justify-between">
+                    {f.q}
+                    <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-90" />
+                  </summary>
+                  <p className="text-sm text-muted-foreground leading-relaxed mt-3">{f.a}</p>
+                </details>
+              ))}
+            </div>
+            <div className="text-center">
+              <Button variant="ghost" asChild className="gap-2">
+                <Link to={lp("/aide")}>
+                  Voir toute la FAQ <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </section>
+
+        {/* ===== CTA FINAL ===== */}
+        <section className="py-16 px-4">
+          <div className="container max-w-xl mx-auto text-center space-y-4">
+            <Clock className="h-7 w-7 text-primary mx-auto" />
+            <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
+              Prêt à structurer le conseil associé de votre officine ?
+            </h2>
+            <p className="text-muted-foreground leading-relaxed">
+              Choisissez votre offre, ou demandez une démonstration adaptée à votre LGO.
+            </p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+              <Button
+                size="lg"
+                asChild
+                className="h-12 px-8 text-base font-semibold pharmacy-gradient border-0 w-full sm:w-auto"
+              >
+                <Link to={lp("/tarifs")}>Choisir mon offre</Link>
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                asChild
+                className="h-12 px-8 text-base font-semibold w-full sm:w-auto"
+              >
+                <Link to={lp("/demo")}>Demander une démo de 15 min</Link>
+              </Button>
+            </div>
           </div>
         </section>
       </main>
