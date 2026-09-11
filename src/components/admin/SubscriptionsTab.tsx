@@ -10,6 +10,7 @@ import { Loader2, RefreshCcw } from "lucide-react";
 import { toast } from "sonner";
 
 const STATUS_LABELS: Record<string, string> = {
+  compatibility_review: "Compatibilité robot à valider",
   checkout_started: "Paiement commencé",
   payment_pending: "Paiement en attente",
   paid_pending_validation: "Payé — à valider",
@@ -141,6 +142,8 @@ export default function SubscriptionsTab() {
   // Identifiants à créer : e-mail saisi par l'admin + mot de passe généré aléatoirement.
   const [credEmail, setCredEmail] = useState("");
   const [credPassword, setCredPassword] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [search, setSearch] = useState("");
 
   const generatePassword = () => {
     const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%";
@@ -238,6 +241,15 @@ export default function SubscriptionsTab() {
     return d;
   };
 
+  const q = search.trim().toLowerCase();
+  const visible = subs.filter((s) => {
+    if (statusFilter !== "all" && s.status !== statusFilter) return false;
+    if (!q) return true;
+    const o = offices[s.office_id];
+    return [o?.office_name, o?.contact_email, o?.siret, o?.billing_name]
+      .some((v) => (v ?? "").toLowerCase().includes(q));
+  });
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
@@ -247,10 +259,36 @@ export default function SubscriptionsTab() {
         </Button>
       </CardHeader>
       <CardContent>
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          <select
+            className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option value="all">Tous les statuts</option>
+            {Object.entries(STATUS_LABELS).map(([v, l]) => (
+              <option key={v} value={v}>{l}</option>
+            ))}
+          </select>
+          <Input
+            className="h-9 w-56"
+            placeholder="Rechercher une officine…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <Button
+            variant={statusFilter === "compatibility_review" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setStatusFilter(statusFilter === "compatibility_review" ? "all" : "compatibility_review")}
+          >
+            Dossiers robot ({subs.filter((s) => s.status === "compatibility_review").length})
+          </Button>
+          <span className="text-xs text-muted-foreground ml-auto">{visible.length} / {subs.length}</span>
+        </div>
         {loading ? (
           <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
-        ) : subs.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-6 text-center">Aucune souscription pour le moment.</p>
+        ) : visible.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-6 text-center">Aucune souscription à afficher.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -259,13 +297,14 @@ export default function SubscriptionsTab() {
                   <th className="py-2 pr-3">Officine</th>
                   <th className="py-2 pr-3">Offre</th>
                   <th className="py-2 pr-3">Statut</th>
+                  <th className="py-2 pr-3">Robot</th>
                   <th className="py-2 pr-3">Source</th>
                   <th className="py-2 pr-3">Échéance</th>
                   <th className="py-2 pr-3">Env</th>
                 </tr>
               </thead>
               <tbody>
-                {subs.map((s) => {
+                {visible.map((s) => {
                   const o = offices[s.office_id];
                   const due = s.current_period_end ?? annualDue(s)?.toISOString() ?? null;
                   return (
@@ -273,9 +312,22 @@ export default function SubscriptionsTab() {
                       <td className="py-2 pr-3 font-medium">{o?.office_name ?? "—"}</td>
                       <td className="py-2 pr-3">{s.plan} / {s.billing_cycle}</td>
                       <td className="py-2 pr-3">
-                        <Badge variant={s.status === "active" ? "default" : s.status.includes("issue") || s.status === "cancelled" ? "destructive" : "secondary"}>
+                        <Badge
+                          variant={
+                            s.status === "active"
+                              ? "default"
+                              : s.status.includes("issue") || s.status === "cancelled"
+                              ? "destructive"
+                              : s.status === "compatibility_review"
+                              ? "outline"
+                              : "secondary"
+                          }
+                        >
                           {STATUS_LABELS[s.status] ?? s.status}
                         </Badge>
+                      </td>
+                      <td className="py-2 pr-3 text-muted-foreground">
+                        {o?.robot_declared ? `${o.robot_brand ?? "?"} ${o.robot_model ?? ""}`.trim() : "—"}
                       </td>
                       <td className="py-2 pr-3 text-muted-foreground">{o?.source ?? "—"}{o?.utm_campaign ? ` (${o.utm_campaign})` : ""}</td>
                       <td className="py-2 pr-3 text-muted-foreground">
