@@ -200,7 +200,16 @@ export default function SubscriptionsTab() {
       toast.error(data?.error || error?.message || "Action impossible");
       return;
     }
-    toast.success(okMsg);
+    if (data?.emailSent === false && data?.tempPassword) {
+      // L'e-mail n'a pas pu partir : on affiche les identifiants à transmettre manuellement.
+      window.prompt(
+        `Compte créé mais e-mail non envoyé (${data.warning ?? ""}). Copiez ces identifiants :`,
+        `${data.loginEmail} / ${data.tempPassword}`,
+      );
+      toast.warning("Compte créé — identifiants à transmettre manuellement");
+    } else {
+      toast.success(okMsg);
+    }
     await load();
     if (selected) {
       const updated = (await supabase.from("subscriptions").select("*").eq("id", selected.id).single()).data;
