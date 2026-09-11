@@ -122,6 +122,8 @@ export default function Souscrire() {
   const [plan, setPlan] = useState<PlanDef | null>(null);
   const [form, setForm] = useState<OfficeForm>(EMPTY_FORM);
   const [formError, setFormError] = useState<string | null>(null);
+  const [duplicate, setDuplicate] = useState(false);
+  const [checking, setChecking] = useState(false);
 
   const configured = isPaymentsConfigured();
   const stripePromise = useMemo(() => (configured ? getStripe() : null), [configured]);
@@ -333,19 +335,41 @@ export default function Souscrire() {
 
             {formError && <p className="text-sm text-destructive mt-4">{formError}</p>}
 
+            {duplicate && (
+              <div className="mt-4 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
+                Une souscription est déjà en cours pour cette officine (même SIRET ou même e-mail). Si vous souscrivez
+                pour une seconde officine, continuez. Sinon, retrouvez votre abonnement existant sur{" "}
+                <a href="/compte" className="underline font-medium">votre espace client</a> pour éviter un double
+                prélèvement.
+              </div>
+            )}
+
             <div className="flex justify-end mt-6">
               <Button
                 size="lg"
-                disabled={!formValid || !configured}
-                onClick={() => {
+                disabled={!formValid || !configured || checking}
+                onClick={async () => {
                   if (!configured) {
                     setFormError("Le paiement n'est pas encore configuré sur cet environnement.");
                     return;
                   }
+                  // Premier clic : on avertit d'un doublon éventuel sans bloquer.
+                  if (!duplicate) {
+                    setChecking(true);
+                    const { data } = await supabase.functions.invoke("subscription-precheck", {
+                      body: { siret: form.siret.replace(/\s/g, ""), email: form.contactEmail.trim() },
+                    });
+                    setChecking(false);
+                    if (data?.existing) {
+                      setDuplicate(true);
+                      return;
+                    }
+                  }
                   setStep(3);
                 }}
               >
-                Passer au paiement
+                {checking && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                {duplicate ? "Continuer quand même" : "Passer au paiement"}
               </Button>
             </div>
           </div>
