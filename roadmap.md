@@ -1,13 +1,11 @@
-# Roadmap — tunnel de souscription Asclion
+# Roadmap — Tunnel de souscription Asclion
 
-- [ ] Créer les produits/prix Stripe (classique mensuel 99€, premium mensuel 149€, mise en place 99€, classique annuel 990€, premium annuel 1490€)
-- [ ] Migration : tables subscription_offices, subscriptions (statuts), subscription_events (idempotence), subscription_notes + RLS
-- [ ] _shared/stripe.ts (createStripeClient + verifyWebhook)
-- [ ] Edge : create-subscription-checkout (mensuel = abonnement + frais de mise en place ; annuel = paiement unique, mise en place offerte)
-- [ ] Edge : stripe-subscription-webhook (source de vérité, SEPA en attente, création compte + email lien mot de passe)
-- [ ] Edge : subscription-admin-actions, subscription-cancel, subscription-annual-reminder
-- [ ] Pages /souscrire, /merci, /compte + routes + banner test mode
-- [ ] Onglet admin Souscriptions + fiche officine
-- [ ] CTA VSL → /souscrire?source=vsl
-- [ ] E-mails Resend (9 modèles)
-- [ ] Doc d'exploitation courte
+- [x] Produits/prix Stripe (classic/premium, mensuel/annuel, setup fee 99 €)
+- [x] Schéma DB : subscription_offices, subscriptions, subscription_events, subscription_notes + RLS
+- [x] Fonctions serveur : create-subscription-checkout, payments-webhook (signé, idempotent), subscription-admin-actions, subscription-cancel, subscription-annual-reminder
+- [x] Pages : /souscrire (3 étapes), /merci, /compte (résiliation mensuelle)
+- [x] Onglet admin Souscriptions (liste, fiche, actions, suivis J+14/J+30, notes)
+- [x] CTA VSL → /souscrire?source=vsl&utm_campaign=vsl
+- [x] Rappel annuel J-30 planifié (cron quotidien, secret interne)
+- [x] Documentation d'exploitation (docs/SOUSCRIPTIONS.md)
+- [ ] Go-live paiements : finaliser dans l'onglet Payments (compte live), puis test carte 4242
