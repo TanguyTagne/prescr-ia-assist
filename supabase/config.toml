@@ -32,3 +32,9 @@ verify_jwt = false
 
 [functions.subscription-portal]
 verify_jwt = false
+
+[functions.subscription-change-plan]
+verify_jwt = false
+
+[functions.subscription-precheck]
+verify_jwt = false

@@ -40,9 +40,21 @@ async function markProcessed(stripeEventId: string, eventType: string, subscript
 
 async function handleWebhook(req: Request, env: StripeEnv) {
   const event = await verifyWebhook(req, env);
-  const supabase = getSupabase();
+
 
   if (await alreadyProcessed(event.id)) return; // doublon : ignoré
+
+  try {
+    await routeEvent(event, env);
+  } catch (e) {
+    // Le verrou d'idempotence est libéré pour que Stripe puisse réessayer.
+    await getSupabase().from("subscription_events").delete().eq("stripe_event_id", event.id);
+    throw e;
+  }
+}
+
+async function routeEvent(event: { id: string; type: string; data: { object: unknown } }, env: StripeEnv) {
+  const supabase = getSupabase();
 
   const obj = event.data.object as Record<string, unknown>;
   let linkedSubscriptionId: string | null = null;

@@ -13,4 +13,8 @@
 - [x] Portail de facturation client (carte, factures) depuis /compte
 - [x] Coupure d'accès automatique en fin réelle d'abonnement
 - [x] Rapprochement officine par SIRET, recherche de compte sans limite de 200
+- [x] Espace client accessible officine en pause (activation en cours, fin d'abonnement)
+- [x] Changement de formule en libre-service avec prorata
+- [x] Alerte non bloquante en cas de souscription en doublon
+- [x] Verrou d'idempotence webhook libéré en cas d'échec (relance Stripe possible)
 - [ ] Go-live paiements : finaliser dans l'onglet Payments (compte live), puis test carte 4242
