@@ -167,6 +167,8 @@ export default function SubscriptionsTab() {
 
   const openDetail = async (sub: SubRow) => {
     setSelected(sub);
+    setCredEmail(offices[sub.office_id]?.contact_email ?? "");
+    setCredPassword("");
     const office = offices[sub.office_id];
     if (office) {
       setOfficeEdit({
