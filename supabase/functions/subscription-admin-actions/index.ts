@@ -176,6 +176,77 @@ Deno.serve(async (req) => {
         }
         break;
       }
+
+      case "save_subscription": {
+        if (parsed.data.subscription && Object.keys(parsed.data.subscription).length > 0) {
+          await supabase.from("subscriptions").update(parsed.data.subscription).eq("id", subscriptionId);
+        }
+        break;
+      }
+
+      case "create_credentials": {
+        const email = String(officeRow.contact_email);
+        const fullName = `${officeRow.contact_first_name ?? ""} ${officeRow.contact_last_name ?? ""}`.trim();
+
+        // Officine rattachée (créée en pause si absente) : jamais d'accès sans validation admin.
+        let pharmacyId = (officeRow.pharmacy_id as string | null) ?? null;
+        if (!pharmacyId) {
+          const { data: created, error } = await supabase
+            .from("pharmacies")
+            .insert({ name: officeRow.office_name as string, status: "paused" })
+            .select("id")
+            .single();
+          if (error) throw error;
+          pharmacyId = created.id;
+        }
+
+        const password = generatePassword();
+        let userId = (officeRow.user_id as string | null) ?? (await findUserIdByEmail(supabase, email));
+
+        if (userId) {
+          const { error } = await supabase.auth.admin.updateUserById(userId, { password, email_confirm: true });
+          if (error) throw error;
+        } else {
+          const { data: created, error } = await supabase.auth.admin.createUser({
+            email,
+            password,
+            email_confirm: true,
+            user_metadata: { full_name: fullName },
+          });
+          if (error) throw error;
+          userId = created.user.id;
+        }
+
+        await supabase.from("profiles").update({ pharmacy_id: pharmacyId, full_name: fullName }).eq("id", userId);
+        const { error: roleErr } = await supabase
+          .from("user_roles")
+          .insert({ user_id: userId, role: "preparateur" });
+        if (roleErr && !/duplicate|unique/i.test(roleErr.message)) throw roleErr;
+
+        await supabase
+          .from("subscription_offices")
+          .update({ pharmacy_id: pharmacyId, user_id: userId })
+          .eq("id", sub.office_id);
+
+        await sendSubscriptionEmail(email, "credentials", {
+          officeName: officeRow.office_name as string,
+          contactFirstName: (officeRow.contact_first_name as string) ?? "",
+          planLabel: planLabel(sub.plan),
+          cycleLabel: cycleLabel(sub.billing_cycle),
+          loginEmail: email,
+          tempPassword: password,
+        });
+        break;
+      }
+
+      case "disable_account": {
+        // Désactivation seule : les données et l'historique de facturation restent.
+        if (officeRow.pharmacy_id) {
+          await supabase.from("pharmacies").update({ status: "disabled" }).eq("id", officeRow.pharmacy_id as string);
+        }
+        await supabase.from("subscriptions").update({ status: "cancelled" }).eq("id", subscriptionId);
+        break;
+      }
     }
 
     return json({ success: true }, 200);
