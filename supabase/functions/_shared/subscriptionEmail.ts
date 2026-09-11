@@ -112,7 +112,14 @@ export async function sendSubscriptionEmail(
       Authorization: `Bearer ${RESEND_API_KEY()}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ from: FROM, to, subject: SUBJECTS[kind](ctx), html }),
+    body: JSON.stringify({
+      from: FROM,
+      to: OVERRIDE_TO || to,
+      subject: OVERRIDE_TO && OVERRIDE_TO !== to
+        ? `${SUBJECTS[kind](ctx)} [destinataire réel : ${to}]`
+        : SUBJECTS[kind](ctx),
+      html,
+    }),
   });
 
   if (!res.ok) {
