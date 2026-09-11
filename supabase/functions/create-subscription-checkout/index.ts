@@ -69,9 +69,10 @@ Deno.serve(async (req) => {
     const env: StripeEnv = environment;
     const offer = PRICE_TO_OFFER[priceId];
 
-    // Les deux cycles sont désormais des abonnements reconduits automatiquement :
-    // le consentement au paiement récurrent est obligatoire dans les deux cas.
-    if (!office.acceptedRecurring) {
+    // Mensuel : consentement explicite au paiement récurrent obligatoire.
+    // Annuel : paiement unique 12 mois, sans renouvellement automatique —
+    // pas de consentement récurrent à exiger.
+    if (offer.cycle === "monthly" && !office.acceptedRecurring) {
       return new Response(JSON.stringify({ error: "Consentement au paiement récurrent requis" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -119,6 +120,24 @@ Deno.serve(async (req) => {
       officeId = created.id;
     }
 
+    // Robot déclaré : aucune session de paiement. On crée la fiche en
+    // compatibility_review et l'équipe valide avant de proposer le paiement.
+    if (office.robotDeclared) {
+      const { error: revErr } = await supabase.from("subscriptions").insert({
+        office_id: officeId,
+        plan: offer.plan,
+        billing_cycle: offer.cycle,
+        status: "compatibility_review",
+        setup_fee_charged: false,
+        stripe_price_id: priceId,
+        environment: env,
+      });
+      if (revErr) throw revErr;
+      return new Response(JSON.stringify({ compatibilityReview: true }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const stripe = createStripeClient(env);
 
     // Client Stripe réutilisé par e-mail.
@@ -157,12 +176,23 @@ Deno.serve(async (req) => {
       lineItems.push({ price: setupPrice.id, quantity: 1 });
     }
 
+    // Annuel : paiement unique (mode payment), aucun abonnement Stripe récurrent.
+    // Mensuel : abonnement Stripe avec carte ou SEPA.
+    const isAnnual = offer.cycle === "annual";
+    let annualDescription: string | undefined;
+    if (isAnnual) {
+      const productId = typeof stripePrice.product === "string" ? stripePrice.product : stripePrice.product.id;
+      const product = await stripe.products.retrieve(productId);
+      annualDescription = product.name;
+    }
+
     const session = await stripe.checkout.sessions.create({
-      mode: "subscription",
+      mode: isAnnual ? "payment" : "subscription",
       ui_mode: "embedded_page",
       return_url: returnUrl,
       customer: customerId,
-      payment_method_types: ["card", "sepa_debit"],
+      payment_method_types: isAnnual ? ["card"] : ["card", "sepa_debit"],
+      ...(isAnnual && { payment_intent_data: { description: annualDescription } }),
       // TVA : adresse obligatoire, numéro de TVA intracommunautaire facultatif,
       // et enregistrement de l'adresse saisie sur la fiche client Stripe
       // (indispensable au calcul automatique de la taxe).
@@ -172,7 +202,7 @@ Deno.serve(async (req) => {
       automatic_tax: { enabled: true },
       line_items: lineItems,
       metadata,
-      subscription_data: { metadata },
+      ...(!isAnnual && { subscription_data: { metadata } }),
     });
 
     const { error: subErr } = await supabase.from("subscriptions").insert({
