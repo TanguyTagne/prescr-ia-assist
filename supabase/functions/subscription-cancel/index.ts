@@ -58,12 +58,8 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Non autorisé" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    if (sub.billing_cycle === "annual") {
-      return new Response(JSON.stringify({ error: "L'offre annuelle ne se renouvelle pas automatiquement : elle expire à l'échéance, sans résiliation anticipée remboursable." }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
+    // Les deux cycles sont reconduits automatiquement : la résiliation prend
+    // effet à la fin de la période déjà payée, sans remboursement au prorata.
     if (!sub.stripe_subscription_id) {
       await supabase.from("subscriptions").update({ status: "cancelled" }).eq("id", subscriptionId);
       return new Response(JSON.stringify({ success: true, status: "cancelled" }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
