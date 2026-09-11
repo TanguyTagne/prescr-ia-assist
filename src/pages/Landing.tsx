@@ -106,7 +106,7 @@ const Landing = () => {
               </p>
             </div>
 
-            <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
+            <div className="relative rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
               <video
                 ref={videoRef}
                 src={heroVideo.url}
