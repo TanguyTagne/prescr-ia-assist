@@ -87,6 +87,7 @@ Deno.serve(async (req) => {
           return new Response(JSON.stringify({ error: "Statut incompatible avec une activation" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
         }
         await supabase.from("subscriptions").update({ status: "active", activated_at: new Date().toISOString() }).eq("id", subscriptionId);
+        if (officeRow.pharmacy_id) await supabase.from("pharmacies").update({ status: "active" }).eq("id", officeRow.pharmacy_id as string);
         await sendTo("account_activated");
         break;
       }
