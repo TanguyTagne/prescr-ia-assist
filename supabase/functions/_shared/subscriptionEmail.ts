@@ -6,7 +6,10 @@ const RESEND_API_KEY = () => {
   return v;
 };
 
-const FROM = "Asclion <onboarding@resend.dev>";
+// Expéditeur : domaine vérifié dans Resend si configuré, sinon bac à sable.
+const FROM = Deno.env.get("RESEND_FROM") ?? "Asclion <onboarding@resend.dev>";
+// En bac à sable Resend, tous les envois sont redirigés vers cette adresse.
+const OVERRIDE_TO = Deno.env.get("RESEND_OVERRIDE_TO") ?? "";
 
 export type SubscriptionEmailKind =
   | "payment_confirmed"
