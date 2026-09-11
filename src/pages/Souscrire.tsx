@@ -12,6 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Check, Loader2, ArrowLeft } from "lucide-react";
 import Seo from "@/components/Seo";
+import SiteHeader from "@/components/SiteHeader";
+import { Bot, CheckCircle2 } from "lucide-react";
 
 type PriceId = "asclion_classic_monthly" | "asclion_premium_monthly" | "asclion_classic_yearly" | "asclion_premium_yearly";
 
@@ -32,31 +34,31 @@ const PLANS: PlanDef[] = [
     priceId: "asclion_classic_yearly",
     name: "Classique annuel",
     cycle: "annual",
-    priceLabel: "990 € HT/an",
+    priceLabel: "990 € HT/an payé d'avance",
     setupLabel: "Mise en place offerte",
-    totalLabel: "990 € HT/an, reconduit automatiquement",
-    savingLabel: "12 mois au prix de 10 — 297 € HT d'économie vs mensuel",
+    totalLabel: "990 € HT dus aujourd'hui — 12 mois, sans renouvellement automatique",
+    savingLabel: "297 € HT économisés la première année vs mensuel + mise en place ; 198 € HT les années suivantes",
     recommended: true,
     features: [
       "Catalogue de 30 000+ médicaments avec PC recommandé",
       "Suggestions, sécurité et amélioration continue",
-      "Formation visio et suivis à J+14 et J+30 offerts",
-      "Reconduit chaque année, résiliable à tout moment",
+      "Formation visio et suivis à J+14 et J+30 inclus",
+      "Rappel un mois avant l'échéance ; renouvellement uniquement sur votre confirmation",
     ],
   },
   {
     priceId: "asclion_premium_yearly",
     name: "Premium annuel",
     cycle: "annual",
-    priceLabel: "1 490 € HT/an",
+    priceLabel: "1 490 € HT/an payé d'avance",
     setupLabel: "Mise en place offerte",
-    totalLabel: "1 490 € HT/an, reconduit automatiquement",
-    savingLabel: "397 € HT d'économie vs mensuel — stock actualisé chaque semaine",
+    totalLabel: "1 490 € HT dus aujourd'hui — 12 mois, sans renouvellement automatique",
+    savingLabel: "397 € HT économisés la première année vs mensuel + mise en place ; 298 € HT les années suivantes",
     features: [
       "Tout Classique, plus l'audit initial du stock",
       "Suggestions sur mesure selon votre stock",
       "Actualisation hebdomadaire du stock",
-      "Reconduit chaque année, résiliable à tout moment",
+      "Rappel un mois avant l'échéance ; renouvellement uniquement sur votre confirmation",
     ],
   },
   {
@@ -65,7 +67,7 @@ const PLANS: PlanDef[] = [
     cycle: "monthly",
     priceLabel: "99 € HT/mois",
     setupLabel: "+ 99 € HT de mise en place (une fois)",
-    totalLabel: "198 € HT le premier mois",
+    totalLabel: "198 € HT dus aujourd'hui, puis 99 € HT/mois",
     features: [
       "Catalogue de 30 000+ médicaments avec PC recommandé",
       "Suggestions, sécurité et amélioration continue",
@@ -79,7 +81,7 @@ const PLANS: PlanDef[] = [
     cycle: "monthly",
     priceLabel: "149 € HT/mois",
     setupLabel: "+ 99 € HT de mise en place (une fois)",
-    totalLabel: "248 € HT le premier mois",
+    totalLabel: "248 € HT dus aujourd'hui, puis 149 € HT/mois",
     features: [
       "Tout Classique, plus l'audit initial du stock",
       "Suggestions sur mesure selon votre stock",
@@ -117,13 +119,24 @@ export default function Souscrire() {
   const [searchParams] = useSearchParams();
   const source = searchParams.get("source") || "";
   const utmCampaign = searchParams.get("utm_campaign") || "";
+  const planParam = searchParams.get("plan") || "";
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [plan, setPlan] = useState<PlanDef | null>(null);
+  const [plan, setPlan] = useState<PlanDef | null>(() => {
+    const map: Record<string, PriceId> = {
+      classic_monthly: "asclion_classic_monthly",
+      premium_monthly: "asclion_premium_monthly",
+      classic_yearly: "asclion_classic_yearly",
+      premium_yearly: "asclion_premium_yearly",
+    };
+    const pid = map[planParam];
+    return pid ? PLANS.find((p) => p.priceId === pid) ?? null : null;
+  });
   const [form, setForm] = useState<OfficeForm>(EMPTY_FORM);
   const [formError, setFormError] = useState<string | null>(null);
   const [duplicate, setDuplicate] = useState(false);
   const [checking, setChecking] = useState(false);
+  const [reviewSent, setReviewSent] = useState(false);
 
   const configured = isPaymentsConfigured();
   const stripePromise = useMemo(() => (configured ? getStripe() : null), [configured]);
@@ -140,6 +153,47 @@ export default function Souscrire() {
     form.acceptedTerms &&
     form.acceptedRecurring &&
     (!form.robotDeclared || (form.robotBrand.trim().length > 0 && form.robotModel.trim().length > 0));
+
+  const submitCompatibilityReview = async () => {
+    if (!plan) return;
+    setChecking(true);
+    setFormError(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("create-subscription-checkout", {
+        body: {
+          priceId: plan.priceId,
+          environment: getStripeEnvironment(),
+          returnUrl: `${window.location.origin}/merci`,
+          office: {
+            officeName: form.officeName.trim(),
+            billingName: form.billingName.trim(),
+            siret: form.siret.replace(/\s/g, ""),
+            billingAddress: form.billingAddress.trim(),
+            contactFirstName: form.contactFirstName.trim(),
+            contactLastName: form.contactLastName.trim(),
+            contactEmail: form.contactEmail.trim(),
+            contactPhone: form.contactPhone.trim(),
+            registersCount: form.registersCount ? parseInt(form.registersCount, 10) : null,
+            robotDeclared: true,
+            robotBrand: form.robotBrand.trim(),
+            robotModel: form.robotModel.trim(),
+            source,
+            utmCampaign,
+            acceptedTerms: form.acceptedTerms,
+            acceptedRecurring: form.acceptedRecurring,
+          },
+        },
+      });
+      if (error || !data?.compatibilityReview) {
+        throw new Error((data as any)?.error || error?.message || "Envoi impossible");
+      }
+      setReviewSent(true);
+    } catch (e: any) {
+      setFormError(e?.message || "Envoi impossible, réessayez.");
+    } finally {
+      setChecking(false);
+    }
+  };
 
   const fetchClientSecret = async (): Promise<string> => {
     if (!plan) throw new Error("Aucune offre sélectionnée");
@@ -181,6 +235,7 @@ export default function Souscrire() {
         description="Choisissez votre offre Asclion : Classique ou Premium, mensuel ou annuel. Paiement sécurisé, activation sous 24 à 48 h."
       />
       <PaymentTestModeBanner />
+      <SiteHeader variant="checkout" />
 
       <div className="max-w-5xl mx-auto px-4 py-10">
         {step === 1 && (
@@ -223,10 +278,11 @@ export default function Souscrire() {
             </div>
 
             <p className="text-xs text-muted-foreground text-center mt-6 max-w-2xl mx-auto">
-              Paiement par carte ou prélèvement SEPA (avec le SEPA, le compte est activé après la confirmation finale
-              de votre banque). Virement sur facture possible sur demande. Tous les abonnements sont reconduits
-              automatiquement et résiliables à tout moment depuis votre espace client, avec effet à la fin de la
-              période déjà payée et sans remboursement au prorata.
+              Paiement par carte ; prélèvement SEPA disponible sur les offres mensuelles (activation après
+              confirmation finale de votre banque) ; virement sur facture sur demande. Mensuel : renouvelé chaque
+              mois jusqu'à résiliation, effet en fin de période payée, sans remboursement au prorata. Annuel :
+              paiement unique pour 12 mois, sans renouvellement automatique — un e-mail de rappel un mois avant
+              l'échéance.
             </p>
 
             <div className="flex justify-center mt-6">
@@ -305,6 +361,13 @@ export default function Souscrire() {
                     <Label htmlFor="robotModel">Modèle *</Label>
                     <Input id="robotModel" value={form.robotModel} onChange={(e) => set({ robotModel: e.target.value })} />
                   </div>
+                  <div className="sm:col-span-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm flex gap-2">
+                    <Bot className="h-4 w-4 shrink-0 mt-0.5" />
+                    <span>
+                      Votre robot nécessite une vérification de compatibilité avant souscription.
+                      Envoyez la demande ; nous vous répondrons avant de vous proposer le paiement.
+                    </span>
+                  </div>
                 </>
               )}
 
@@ -315,7 +378,7 @@ export default function Souscrire() {
                   onCheckedChange={(v) => set({ acceptedTerms: v === true })}
                 />
                 <Label htmlFor="acceptedTerms" className="font-normal text-sm">
-                  J'accepte les <a href="/cgu" target="_blank" className="underline">conditions générales de vente</a> et la{" "}
+                  J'accepte les <a href="/cgv" target="_blank" className="underline">conditions générales de vente</a> et la{" "}
                   <a href="/confidentialite" target="_blank" className="underline">politique de confidentialité</a>. *
                 </Label>
               </div>
@@ -326,9 +389,18 @@ export default function Souscrire() {
                   onCheckedChange={(v) => set({ acceptedRecurring: v === true })}
                 />
                 <Label htmlFor="acceptedRecurring" className="font-normal text-sm">
-                  J'accepte le prélèvement récurrent de {plan.priceLabel}, reconduit automatiquement
-                  {plan.cycle === "monthly" ? " chaque mois" : " chaque année"}, résiliable à tout moment avec effet
-                  à la fin de la période en cours et sans remboursement au prorata. *
+                  {plan.cycle === "monthly" ? (
+                    <>
+                      J'accepte le prélèvement récurrent de {plan.priceLabel}, reconduit chaque mois jusqu'à
+                      résiliation, avec effet à la fin de la période en cours et sans remboursement au prorata. *
+                    </>
+                  ) : (
+                    <>
+                      J'accepte le paiement unique de {plan.priceLabel} pour une durée de 12 mois,{" "}
+                      <strong>sans renouvellement automatique</strong>. Un e-mail de rappel me sera envoyé un mois
+                      avant l'échéance ; le renouvellement n'interviendra que sur ma confirmation. *
+                    </>
+                  )}
                 </Label>
               </div>
             </div>
@@ -344,34 +416,56 @@ export default function Souscrire() {
               </div>
             )}
 
-            <div className="flex justify-end mt-6">
-              <Button
-                size="lg"
-                disabled={!formValid || !configured || checking}
-                onClick={async () => {
-                  if (!configured) {
-                    setFormError("Le paiement n'est pas encore configuré sur cet environnement.");
-                    return;
-                  }
-                  // Premier clic : on avertit d'un doublon éventuel sans bloquer.
-                  if (!duplicate) {
-                    setChecking(true);
-                    const { data } = await supabase.functions.invoke("subscription-precheck", {
-                      body: { siret: form.siret.replace(/\s/g, ""), email: form.contactEmail.trim() },
-                    });
-                    setChecking(false);
-                    if (data?.existing) {
-                      setDuplicate(true);
-                      return;
-                    }
-                  }
-                  setStep(3);
-                }}
-              >
-                {checking && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                {duplicate ? "Continuer quand même" : "Passer au paiement"}
-              </Button>
-            </div>
+            {reviewSent ? (
+              <div className="mt-6 rounded-xl border border-primary/30 bg-primary/5 p-5 text-center space-y-2">
+                <CheckCircle2 className="h-8 w-8 text-primary mx-auto" />
+                <p className="font-semibold">Demande de compatibilité envoyée</p>
+                <p className="text-sm text-muted-foreground">
+                  Nous étudions la compatibilité de votre robot {form.robotBrand} {form.robotModel} et
+                  revenons vers vous avant toute souscription. Aucun paiement n'a été débité.
+                </p>
+              </div>
+            ) : (
+              <div className="flex justify-end mt-6">
+                {form.robotDeclared ? (
+                  <Button
+                    size="lg"
+                    disabled={!formValid || checking}
+                    onClick={submitCompatibilityReview}
+                  >
+                    {checking && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                    Envoyer la demande de compatibilité
+                  </Button>
+                ) : (
+                  <Button
+                    size="lg"
+                    disabled={!formValid || !configured || checking}
+                    onClick={async () => {
+                      if (!configured) {
+                        setFormError("Le paiement n'est pas encore configuré sur cet environnement.");
+                        return;
+                      }
+                      // Premier clic : on avertit d'un doublon éventuel sans bloquer.
+                      if (!duplicate) {
+                        setChecking(true);
+                        const { data } = await supabase.functions.invoke("subscription-precheck", {
+                          body: { siret: form.siret.replace(/\s/g, ""), email: form.contactEmail.trim() },
+                        });
+                        setChecking(false);
+                        if (data?.existing) {
+                          setDuplicate(true);
+                          return;
+                        }
+                      }
+                      setStep(3);
+                    }}
+                  >
+                    {checking && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                    {duplicate ? "Continuer quand même" : "Passer au paiement"}
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
         )}
 
