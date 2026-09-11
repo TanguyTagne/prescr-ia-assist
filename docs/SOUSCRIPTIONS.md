@@ -54,3 +54,19 @@ Liste (officine, offre, statut, source marketing, échéance, env test/live) + f
 1. Finaliser la mise en service des paiements dans l'onglet Payments (compte live).
 2. Les produits/prix sont synchronisés automatiquement à la publication — ne jamais recréer un ID existant.
 3. Tester en preview avec la carte `4242 4242 4242 4242` ; vérifier la fiche créée dans Admin → Souscriptions.
+
+
+## Espace client `/compte`
+
+- Accessible même quand l'officine est en pause (paiement reçu mais activation non encore faite, abonnement terminé) : le client peut suivre son statut, gérer sa facturation et resouscrire. L'outil clinique, lui, reste fermé tant que l'officine n'est pas active.
+- Bandeau « activation en cours » tant que l'admin n'a pas activé l'officine.
+- Changement de formule en libre-service (Classique <-> Premium, mensuel <-> annuel) : effet immédiat, ajustement au prorata calculé par Stripe (`subscription-change-plan`). Un changement de formule annule une résiliation programmée.
+- Fin d'abonnement : l'officine repasse en pause, les données sont conservées, un bouton « Souscrire à nouveau » est proposé.
+
+## Doublons
+
+`subscription-precheck` signale, avant le paiement, qu'une souscription vivante existe déjà pour le même SIRET ou le même e-mail. L'avertissement n'est pas bloquant (cas d'une seconde officine). Les paniers abandonnés (`checkout_started`) ne déclenchent pas l'alerte.
+
+## Idempotence des webhooks
+
+Chaque événement Stripe est verrouillé par son identifiant dans `subscription_events`. Si le traitement échoue, le verrou est libéré pour que la relance automatique de Stripe puisse rejouer l'événement.
