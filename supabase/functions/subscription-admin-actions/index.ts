@@ -1,7 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { z } from "npm:zod@3";
 import { sendSubscriptionEmail } from "../_shared/subscriptionEmail.ts";
-import { cycleLabel, planLabel, provisionAccount, suspendAccess } from "../_shared/provisionAccount.ts";
+import { cycleLabel, findUserIdByEmail, planLabel, provisionAccount, suspendAccess } from "../_shared/provisionAccount.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
