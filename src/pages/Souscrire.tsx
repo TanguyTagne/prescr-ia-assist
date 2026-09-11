@@ -12,6 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Check, Loader2, ArrowLeft } from "lucide-react";
 import Seo from "@/components/Seo";
+import SiteHeader from "@/components/SiteHeader";
+import { Bot, CheckCircle2 } from "lucide-react";
 
 type PriceId = "asclion_classic_monthly" | "asclion_premium_monthly" | "asclion_classic_yearly" | "asclion_premium_yearly";
 
@@ -152,6 +154,47 @@ export default function Souscrire() {
     form.acceptedRecurring &&
     (!form.robotDeclared || (form.robotBrand.trim().length > 0 && form.robotModel.trim().length > 0));
 
+  const submitCompatibilityReview = async () => {
+    if (!plan) return;
+    setChecking(true);
+    setFormError(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("create-subscription-checkout", {
+        body: {
+          priceId: plan.priceId,
+          environment: getStripeEnvironment(),
+          returnUrl: `${window.location.origin}/merci`,
+          office: {
+            officeName: form.officeName.trim(),
+            billingName: form.billingName.trim(),
+            siret: form.siret.replace(/\s/g, ""),
+            billingAddress: form.billingAddress.trim(),
+            contactFirstName: form.contactFirstName.trim(),
+            contactLastName: form.contactLastName.trim(),
+            contactEmail: form.contactEmail.trim(),
+            contactPhone: form.contactPhone.trim(),
+            registersCount: form.registersCount ? parseInt(form.registersCount, 10) : null,
+            robotDeclared: true,
+            robotBrand: form.robotBrand.trim(),
+            robotModel: form.robotModel.trim(),
+            source,
+            utmCampaign,
+            acceptedTerms: form.acceptedTerms,
+            acceptedRecurring: form.acceptedRecurring,
+          },
+        },
+      });
+      if (error || !data?.compatibilityReview) {
+        throw new Error((data as any)?.error || error?.message || "Envoi impossible");
+      }
+      setReviewSent(true);
+    } catch (e: any) {
+      setFormError(e?.message || "Envoi impossible, réessayez.");
+    } finally {
+      setChecking(false);
+    }
+  };
+
   const fetchClientSecret = async (): Promise<string> => {
     if (!plan) throw new Error("Aucune offre sélectionnée");
     const { data, error } = await supabase.functions.invoke("create-subscription-checkout", {
@@ -192,6 +235,7 @@ export default function Souscrire() {
         description="Choisissez votre offre Asclion : Classique ou Premium, mensuel ou annuel. Paiement sécurisé, activation sous 24 à 48 h."
       />
       <PaymentTestModeBanner />
+      <SiteHeader variant="checkout" />
 
       <div className="max-w-5xl mx-auto px-4 py-10">
         {step === 1 && (
