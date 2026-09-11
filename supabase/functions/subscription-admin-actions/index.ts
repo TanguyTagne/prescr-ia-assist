@@ -190,7 +190,7 @@ Deno.serve(async (req) => {
       }
 
       case "create_credentials": {
-        const email = String(officeRow.contact_email);
+        const email = parsed.data.credentials?.email ?? String(officeRow.contact_email);
         const fullName = `${officeRow.contact_first_name ?? ""} ${officeRow.contact_last_name ?? ""}`.trim();
 
         // Officine rattachée (créée en pause si absente) : jamais d'accès sans validation admin.
