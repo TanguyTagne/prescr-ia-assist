@@ -361,6 +361,13 @@ export default function Souscrire() {
                     <Label htmlFor="robotModel">Modèle *</Label>
                     <Input id="robotModel" value={form.robotModel} onChange={(e) => set({ robotModel: e.target.value })} />
                   </div>
+                  <div className="sm:col-span-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm flex gap-2">
+                    <Bot className="h-4 w-4 shrink-0 mt-0.5" />
+                    <span>
+                      Votre robot nécessite une vérification de compatibilité avant souscription.
+                      Envoyez la demande ; nous vous répondrons avant de vous proposer le paiement.
+                    </span>
+                  </div>
                 </>
               )}
 
@@ -409,34 +416,56 @@ export default function Souscrire() {
               </div>
             )}
 
-            <div className="flex justify-end mt-6">
-              <Button
-                size="lg"
-                disabled={!formValid || !configured || checking}
-                onClick={async () => {
-                  if (!configured) {
-                    setFormError("Le paiement n'est pas encore configuré sur cet environnement.");
-                    return;
-                  }
-                  // Premier clic : on avertit d'un doublon éventuel sans bloquer.
-                  if (!duplicate) {
-                    setChecking(true);
-                    const { data } = await supabase.functions.invoke("subscription-precheck", {
-                      body: { siret: form.siret.replace(/\s/g, ""), email: form.contactEmail.trim() },
-                    });
-                    setChecking(false);
-                    if (data?.existing) {
-                      setDuplicate(true);
-                      return;
-                    }
-                  }
-                  setStep(3);
-                }}
-              >
-                {checking && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                {duplicate ? "Continuer quand même" : "Passer au paiement"}
-              </Button>
-            </div>
+            {reviewSent ? (
+              <div className="mt-6 rounded-xl border border-primary/30 bg-primary/5 p-5 text-center space-y-2">
+                <CheckCircle2 className="h-8 w-8 text-primary mx-auto" />
+                <p className="font-semibold">Demande de compatibilité envoyée</p>
+                <p className="text-sm text-muted-foreground">
+                  Nous étudions la compatibilité de votre robot {form.robotBrand} {form.robotModel} et
+                  revenons vers vous avant toute souscription. Aucun paiement n'a été débité.
+                </p>
+              </div>
+            ) : (
+              <div className="flex justify-end mt-6">
+                {form.robotDeclared ? (
+                  <Button
+                    size="lg"
+                    disabled={!formValid || checking}
+                    onClick={submitCompatibilityReview}
+                  >
+                    {checking && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                    Envoyer la demande de compatibilité
+                  </Button>
+                ) : (
+                  <Button
+                    size="lg"
+                    disabled={!formValid || !configured || checking}
+                    onClick={async () => {
+                      if (!configured) {
+                        setFormError("Le paiement n'est pas encore configuré sur cet environnement.");
+                        return;
+                      }
+                      // Premier clic : on avertit d'un doublon éventuel sans bloquer.
+                      if (!duplicate) {
+                        setChecking(true);
+                        const { data } = await supabase.functions.invoke("subscription-precheck", {
+                          body: { siret: form.siret.replace(/\s/g, ""), email: form.contactEmail.trim() },
+                        });
+                        setChecking(false);
+                        if (data?.existing) {
+                          setDuplicate(true);
+                          return;
+                        }
+                      }
+                      setStep(3);
+                    }}
+                  >
+                    {checking && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                    {duplicate ? "Continuer quand même" : "Passer au paiement"}
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
         )}
 
