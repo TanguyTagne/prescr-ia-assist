@@ -138,6 +138,17 @@ export default function SubscriptionsTab() {
   const [officeEdit, setOfficeEdit] = useState({ ...EMPTY_OFFICE });
   const [subEdit, setSubEdit] = useState({ ...EMPTY_SUB });
   const [acting, setActing] = useState(false);
+  // Identifiants à créer : e-mail saisi par l'admin + mot de passe généré aléatoirement.
+  const [credEmail, setCredEmail] = useState("");
+  const [credPassword, setCredPassword] = useState("");
+
+  const generatePassword = () => {
+    const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%";
+    const bytes = crypto.getRandomValues(new Uint8Array(16));
+    const pwd = Array.from(bytes, (b) => alphabet[b % alphabet.length]).join("");
+    setCredPassword(pwd);
+    return pwd;
+  };
 
   const load = async () => {
     setLoading(true);
