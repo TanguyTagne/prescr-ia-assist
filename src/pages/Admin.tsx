@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { ArrowLeft, Loader2, Mail, Building2, BarChart3, RefreshCw, ShieldCheck, Target, Trophy, Sparkles, UserPlus, Network, FileSearch, Shield, FileText, Link2, Flag, Sparkle, CheckCircle2, LineChart, ScanLine, PackageSearch } from "lucide-react";
+import { ArrowLeft, Loader2, Mail, Building2, BarChart3, RefreshCw, ShieldCheck, Target, Trophy, Sparkles, UserPlus, Network, FileSearch, Shield, FileText, Link2, Flag, Sparkle, CheckCircle2, LineChart, ScanLine, PackageSearch, CreditCard } from "lucide-react";
 import AdminEmail2FAGate from "@/components/AdminEmail2FAGate";
 import { useNavigate } from "react-router-dom";
 import PharmacyKPIs from "@/components/admin/PharmacyKPIs";
@@ -156,6 +156,15 @@ const Admin = () => {
             <Building2 className="h-3.5 w-3.5" />
             Pharmacies ({pharmacies.length})
           </Button>
+          <Button
+            variant={tab === "subscriptions" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setTab("subscriptions")}
+            className="gap-1.5 border-primary/50 font-semibold"
+          >
+            <CreditCard className="h-3.5 w-3.5" />
+            Souscriptions
+          </Button>
           <Button variant={tab === "coverage" ? "default" : "outline"} size="sm" onClick={() => setTab("coverage")} className="gap-1.5">
             <ShieldCheck className="h-3.5 w-3.5" />
             Couverture
@@ -211,10 +220,6 @@ const Admin = () => {
           <Button variant={tab === "monthly-recap" ? "default" : "outline"} size="sm" onClick={() => setTab("monthly-recap")} className="gap-1.5">
             <Trophy className="h-3.5 w-3.5" />
             Récap mensuel
-          </Button>
-          <Button variant={tab === "subscriptions" ? "default" : "outline"} size="sm" onClick={() => setTab("subscriptions")} className="gap-1.5">
-            <Trophy className="h-3.5 w-3.5" />
-            Souscriptions
           </Button>
           <Button variant="outline" size="sm" onClick={() => navigate("/groupement")} className="gap-1.5">
             <Network className="h-3.5 w-3.5" />
