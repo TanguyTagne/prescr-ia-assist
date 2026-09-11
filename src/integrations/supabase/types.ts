@@ -3822,6 +3822,7 @@ export type Database = {
         | "cancel_at_period_end"
         | "expired"
         | "cancelled"
+        | "compatibility_review"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -3962,6 +3963,7 @@ export const Constants = {
         "cancel_at_period_end",
         "expired",
         "cancelled",
+        "compatibility_review",
       ],
     },
   },
