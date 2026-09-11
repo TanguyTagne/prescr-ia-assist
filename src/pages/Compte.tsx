@@ -4,10 +4,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2 } from "lucide-react";
+import { Loader2, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import Seo from "@/components/Seo";
-import { getStripeEnvironment } from "@/lib/stripe";
+import { isPaymentsConfigured, getStripeEnvironment } from "@/lib/stripe";
 
 const STATUS_LABELS: Record<string, string> = {
   checkout_started: "Paiement commencé",
@@ -20,6 +20,8 @@ const STATUS_LABELS: Record<string, string> = {
   expired: "Expiré",
   cancelled: "Résilié",
 };
+
+const CANCELLABLE = ["active", "payment_issue", "paid_pending_validation", "activation_requested"];
 
 interface SubRow {
   id: string;
@@ -34,7 +36,7 @@ export default function Compte() {
   const { user } = useAuth();
   const [subs, setSubs] = useState<SubRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [cancelling, setCancelling] = useState<string | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -49,12 +51,14 @@ export default function Compte() {
         setLoading(false);
         return;
       }
-      const { data: rows } = await supabase
+      let query = supabase
         .from("subscriptions")
         .select("id, plan, billing_cycle, status, current_period_end, environment")
-        .in("office_id", officeIds)
-        .eq("environment", getStripeEnvironment())
-        .order("created_at", { ascending: false });
+        .in("office_id", officeIds);
+      // Si les paiements ne sont pas configurés sur ce build, on affiche tout
+      // plutôt que de faire planter la page.
+      if (isPaymentsConfigured()) query = query.eq("environment", getStripeEnvironment());
+      const { data: rows } = await query.order("created_at", { ascending: false });
       setSubs((rows ?? []) as SubRow[]);
       setLoading(false);
     };
@@ -62,17 +66,29 @@ export default function Compte() {
   }, [user]);
 
   const cancel = async (id: string) => {
-    setCancelling(id);
-    const { data, error } = await supabase.functions.invoke("subscription-cancel", {
-      body: { subscriptionId: id },
-    });
-    setCancelling(null);
+    if (!window.confirm("Confirmer la résiliation ? Votre accès reste ouvert jusqu'à la fin de la période déjà payée.")) return;
+    setBusy(id);
+    const { data, error } = await supabase.functions.invoke("subscription-cancel", { body: { subscriptionId: id } });
+    setBusy(null);
     if (error || data?.error) {
       toast.error(data?.error || error?.message || "Résiliation impossible");
       return;
     }
     toast.success("Résiliation prise en compte — effet à la fin de la période payée.");
     setSubs((s) => s.map((x) => (x.id === id ? { ...x, status: "cancel_at_period_end" } : x)));
+  };
+
+  const openPortal = async (id: string) => {
+    setBusy(id);
+    const { data, error } = await supabase.functions.invoke("subscription-portal", {
+      body: { subscriptionId: id, returnUrl: `${window.location.origin}/compte` },
+    });
+    setBusy(null);
+    if (error || data?.error || !data?.url) {
+      toast.error(data?.error || error?.message || "Portail de facturation indisponible");
+      return;
+    }
+    window.open(data.url as string, "_blank", "noopener,noreferrer");
   };
 
   if (loading) {
@@ -106,28 +122,38 @@ export default function Compte() {
                   </Badge>
                 </CardTitle>
                 <CardDescription>
-                  {s.billing_cycle === "monthly" ? "Abonnement mensuel" : "Offre annuelle — sans renouvellement automatique"}
+                  {s.billing_cycle === "monthly" ? "Abonnement mensuel" : "Abonnement annuel"}
                   {s.current_period_end && (
-                    <> · jusqu'au {new Date(s.current_period_end).toLocaleDateString("fr-FR")}</>
+                    <>
+                      {" · "}
+                      {s.status === "cancel_at_period_end"
+                        ? `accès jusqu'au ${new Date(s.current_period_end).toLocaleDateString("fr-FR")}`
+                        : `prochaine échéance le ${new Date(s.current_period_end).toLocaleDateString("fr-FR")}`}
+                    </>
                   )}
                 </CardDescription>
               </CardHeader>
-              {s.billing_cycle === "monthly" && s.status === "active" && (
-                <CardContent>
-                  <Button
-                    variant="outline"
-                    disabled={cancelling === s.id}
-                    onClick={() => cancel(s.id)}
-                  >
-                    {cancelling === s.id && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              <CardContent className="flex flex-wrap gap-3">
+                <Button variant="outline" disabled={busy === s.id} onClick={() => openPortal(s.id)}>
+                  {busy === s.id && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                  Gérer ma carte et mes factures
+                  <ExternalLink className="h-4 w-4 ml-2" />
+                </Button>
+                {CANCELLABLE.includes(s.status) && (
+                  <Button variant="ghost" disabled={busy === s.id} onClick={() => cancel(s.id)}>
                     Résilier (effet en fin de période payée)
                   </Button>
-                </CardContent>
-              )}
+                )}
+              </CardContent>
             </Card>
           ))}
         </div>
       )}
+
+      <p className="text-xs text-muted-foreground mt-6">
+        Les abonnements mensuels et annuels sont reconduits automatiquement. La résiliation prend effet à la fin de la
+        période déjà payée, sans remboursement au prorata. Un rappel vous est envoyé 30 jours avant chaque reconduction annuelle.
+      </p>
     </div>
   );
 }

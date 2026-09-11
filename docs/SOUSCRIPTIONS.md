@@ -24,11 +24,15 @@ Le navigateur ne crée jamais de compte. Seul le webhook `payments-webhook` (sig
 | `asclion_classic_monthly` | récurrent mensuel | 99 € HT/mois |
 | `asclion_premium_monthly` | récurrent mensuel | 149 € HT/mois |
 | `asclion_setup_fee` | unique | 99 € HT (mensuels uniquement) |
-| `asclion_classic_annual` | paiement unique | 990 € HT |
-| `asclion_premium_annual` | paiement unique | 1 490 € HT |
+| `asclion_classic_yearly` | récurrent annuel | 990 € HT/an |
+| `asclion_premium_yearly` | récurrent annuel | 1 490 € HT/an |
 
 - Mensuel : Checkout en mode abonnement, carte + SEPA, prix récurrent + frais de mise en place. Premier mois facturé : 198 € HT (Classique) / 248 € HT (Premium).
-- Annuel : paiement unique, carte uniquement, **mise en place offerte**, **aucun renouvellement automatique**, aucune résiliation anticipée remboursable (règle à reporter dans les CGV).
+- Annuel : abonnement reconduit automatiquement chaque année, carte ou SEPA, **mise en place offerte**. Rappel d'information envoyé à J-30 avant chaque reconduction.
+- Résiliation (les deux cycles) : effet à la fin de la période déjà payée, sans remboursement au prorata (règle à reporter dans les CGV).
+- TVA : adresse de facturation obligatoire et numéro de TVA intracommunautaire facultatif collectés dans le checkout ; la taxe est calculée automatiquement.
+- Espace client `/compte` : bouton « Gérer ma carte et mes factures » (portail de facturation Stripe) et résiliation en un clic.
+- Coupure d'accès automatique : l'officine repasse en pause à la fin réelle de l'abonnement (résiliation arrivée à terme, échec de paiement définitif après les relances Stripe, expiration). Pendant les relances, l'accès est maintenu.
 - Prix affichés HT ; la TVA s'affiche selon le régime fiscal réel dans le checkout Stripe.
 
 ## Statuts

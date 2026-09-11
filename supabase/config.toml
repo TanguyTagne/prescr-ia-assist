@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.subscription-annual-reminder]
 verify_jwt = false
+
+[functions.subscription-portal]
+verify_jwt = false
