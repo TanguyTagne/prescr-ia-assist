@@ -226,6 +226,30 @@ export default function SubscriptionsTab() {
               </div>
 
               <div className="flex flex-wrap gap-2 mt-4">
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  disabled={acting}
+                  onClick={() =>
+                    action(
+                      { action: "create_credentials", subscriptionId: selected.id },
+                      "Identifiants créés et envoyés par e-mail",
+                    )
+                  }
+                >
+                  Créer / renvoyer les identifiants
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  disabled={acting}
+                  onClick={() => {
+                    if (!confirm("Désactiver ce compte ? L'accès est coupé, les données sont conservées.")) return;
+                    action({ action: "disable_account", subscriptionId: selected.id }, "Compte désactivé");
+                  }}
+                >
+                  Désactiver le compte
+                </Button>
                 {(selected.status === "paid_pending_validation" || selected.status === "activation_requested") && (
                   <Button size="sm" disabled={acting} onClick={() => action({ action: "activate", subscriptionId: selected.id }, "Souscription activée, e-mail envoyé")}>
                     Activer
