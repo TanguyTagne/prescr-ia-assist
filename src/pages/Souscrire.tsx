@@ -278,10 +278,11 @@ export default function Souscrire() {
             </div>
 
             <p className="text-xs text-muted-foreground text-center mt-6 max-w-2xl mx-auto">
-              Paiement par carte ou prélèvement SEPA (avec le SEPA, le compte est activé après la confirmation finale
-              de votre banque). Virement sur facture possible sur demande. Tous les abonnements sont reconduits
-              automatiquement et résiliables à tout moment depuis votre espace client, avec effet à la fin de la
-              période déjà payée et sans remboursement au prorata.
+              Paiement par carte ; prélèvement SEPA disponible sur les offres mensuelles (activation après
+              confirmation finale de votre banque) ; virement sur facture sur demande. Mensuel : renouvelé chaque
+              mois jusqu'à résiliation, effet en fin de période payée, sans remboursement au prorata. Annuel :
+              paiement unique pour 12 mois, sans renouvellement automatique — un e-mail de rappel un mois avant
+              l'échéance.
             </p>
 
             <div className="flex justify-center mt-6">
@@ -370,7 +371,7 @@ export default function Souscrire() {
                   onCheckedChange={(v) => set({ acceptedTerms: v === true })}
                 />
                 <Label htmlFor="acceptedTerms" className="font-normal text-sm">
-                  J'accepte les <a href="/cgu" target="_blank" className="underline">conditions générales de vente</a> et la{" "}
+                  J'accepte les <a href="/cgv" target="_blank" className="underline">conditions générales de vente</a> et la{" "}
                   <a href="/confidentialite" target="_blank" className="underline">politique de confidentialité</a>. *
                 </Label>
               </div>
@@ -381,9 +382,18 @@ export default function Souscrire() {
                   onCheckedChange={(v) => set({ acceptedRecurring: v === true })}
                 />
                 <Label htmlFor="acceptedRecurring" className="font-normal text-sm">
-                  J'accepte le prélèvement récurrent de {plan.priceLabel}, reconduit automatiquement
-                  {plan.cycle === "monthly" ? " chaque mois" : " chaque année"}, résiliable à tout moment avec effet
-                  à la fin de la période en cours et sans remboursement au prorata. *
+                  {plan.cycle === "monthly" ? (
+                    <>
+                      J'accepte le prélèvement récurrent de {plan.priceLabel}, reconduit chaque mois jusqu'à
+                      résiliation, avec effet à la fin de la période en cours et sans remboursement au prorata. *
+                    </>
+                  ) : (
+                    <>
+                      J'accepte le paiement unique de {plan.priceLabel} pour une durée de 12 mois,{" "}
+                      <strong>sans renouvellement automatique</strong>. Un e-mail de rappel me sera envoyé un mois
+                      avant l'échéance ; le renouvellement n'interviendra que sur ma confirmation. *
+                    </>
+                  )}
                 </Label>
               </div>
             </div>
