@@ -21,8 +21,8 @@ export interface ScanEvent {
  *
  * Note (29/06/2026) : le routing robot par caisse passe désormais 100% en
  * local via `LeoClientAppLog.txt` (cf. electron/leoWatcher.js). Cette
- * souscription Supabase reste utile pour les autres sources (scans
- * ordonnance, intégrations LGO non-robot), mais elle n'est plus filtrée
+ * souscription Supabase reste utile pour les autres sources (scans de
+ * médicaments, intégrations LGO non-robot), mais elle n'est plus filtrée
  * par caisse — chaque PC reçoit l'ensemble des événements de la pharmacie.
  */
 export function useScanQueue() {
@@ -62,14 +62,9 @@ export function useScanQueue() {
           // re-dispatch PAS les events `lgo_robot` venus de Realtime — la
           // caisse qui a délivré les voit déjà via son propre LeoClientAppLog.
           if (scan.status === "completed") {
-            const isPrescription = scan.scan_type === "prescription";
             const count = scan.result?.suggestions?.length || 0;
-            const title = isPrescription
-              ? "📋 Ordonnance scannée analysée !"
-              : `🛒 Article scanné — ${count} suggestion(s)`;
-            const description = isPrescription
-              ? "Les résultats sont disponibles."
-              : "Produits complémentaires disponibles.";
+            const title = `🛒 Médicament scanné — ${count} suggestion(s)`;
+            const description = "Produits complémentaires disponibles.";
 
             toast.success(title, { description, duration: 8000 });
 
@@ -92,9 +87,7 @@ export function useScanQueue() {
           setScanHistory((prev) => prev.map((s) => (s.id === scan.id ? scan : s)));
 
           if (scan.status === "completed" && (payload.old as any)?.status === "processing") {
-            if (scan.scan_type === "prescription") {
-              toast.success("📋 Analyse terminée !", { duration: 8000 });
-            }
+            toast.success("Analyse du médicament terminée !", { duration: 8000 });
           }
         },
       )

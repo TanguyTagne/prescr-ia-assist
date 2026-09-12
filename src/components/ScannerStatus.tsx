@@ -44,7 +44,7 @@ const ScanNotification = ({ scan, onDismiss, onViewResult }: ScanNotificationPro
             <ShoppingCart className="h-4 w-4 text-primary" />
           )}
           <span className="text-xs font-semibold">
-            {isPrescription ? "Ordonnance scannée" : `${meds.length} article(s) scanné(s)`}
+            {`${Math.max(meds.length, 1)} médicament(s) scanné(s)`}
           </span>
           <Badge variant="outline" className="text-[10px] h-4">
             {scan.source === "api" ? "Caisse" : scan.source === "folder_watcher" ? "Scanner" : scan.source}

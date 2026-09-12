@@ -391,10 +391,10 @@ export const translations = {
     en: "Answers to the most common questions about Asclion. Another question?",
   },
   "aide.contact": { fr: "Contactez-nous", en: "Contact us" },
-  "aide.q1": { fr: "Comment connecter mon scanner d'ordonnances ?", en: "How do I connect my prescription scanner?" },
+  "aide.q1": { fr: "Comment connecter ma douchette de médicaments ?", en: "How do I connect my medication barcode scanner?" },
   "aide.a1.p1": {
-    fr: "Cliquez sur Connecter scanner dans le widget puis sélectionnez le dossier où votre scanner dépose les fichiers (PDF ou images). Asclion surveille en continu ce dossier et lance l'analyse automatiquement à chaque nouvelle ordonnance.",
-    en: "Click Connect scanner in the widget, then select the folder where your scanner drops files (PDF or images). Asclion continuously watches this folder and runs the analysis automatically on every new prescription.",
+    fr: "Branchez votre douchette USB ou Bluetooth puis scannez le code-barres d'un médicament. Asclion reconnaît automatiquement le CIP et lance la recherche.",
+    en: "Connect your USB or Bluetooth barcode scanner, then scan a medication barcode. Asclion automatically recognizes the product code and starts the lookup.",
   },
   "aide.a1.p2": {
     fr: "Pour les scanners de codes-barres (douchettes USB), aucune configuration n'est nécessaire : branchez la douchette et scannez, Asclion détecte automatiquement la frappe rapide et lance la recherche.",
@@ -429,8 +429,8 @@ export const translations = {
     en: "Check your Internet connection (an orange banner appears if Asclion detects offline mode).",
   },
   "aide.a4.li2": {
-    fr: "Pour les ordonnances scannées en photo, privilégiez un format PDF ou JPG net pour accélérer l'OCR.",
-    en: "For photo-scanned prescriptions, prefer a clean PDF or JPG to speed up OCR.",
+    fr: "Vérifiez que le code-barres du médicament est lisible et que la douchette est configurée en clavier français.",
+    en: "Check that the medication barcode is readable and that the scanner uses the correct keyboard layout.",
   },
   "aide.a4.li3": {
     fr: "Si le problème persiste, contactez le support avec le code de l'analyse affiché en bas du widget.",
@@ -526,8 +526,8 @@ export const translations = {
   "vslgo.d6.title": { fr: "Mode « overlay » non-intrusif", en: "Non-intrusive overlay mode" },
   "vslgo.d6.lgo": { fr: "Il faut cliquer dans plusieurs menus pour voir la suggestion. Résultat : personne ne la voit.", en: "You have to click through several menus to see the suggestion. Result: no one sees it." },
   "vslgo.d6.asclion": {
-    fr: "Widget flottant qui apparaît automatiquement quand l'ordonnance est scannée (douchette, dossier surveillé, OCR). Zéro friction = adoption réelle au comptoir.",
-    en: "Floating widget that appears automatically when the prescription is scanned (gun, watched folder, OCR). Zero friction = real adoption at the counter.",
+    fr: "Widget flottant qui apparaît automatiquement quand un médicament est scanné à la douchette. Zéro friction = adoption réelle au comptoir.",
+    en: "Floating widget that appears automatically when a medication is scanned. Zero friction means real adoption at the counter.",
   },
   "vslgo.d6.pitch": { fr: "Invisible quand inutile, présent quand nécessaire.", en: "Invisible when unneeded, present when needed." },
 

@@ -1,14 +1,14 @@
 # Asclion — Assistant IA pour pharmacies d'officine
 
-> Asclion est un copilote IA conçu pour les préparateurs et pharmaciens d'officine. Il analyse les ordonnances en temps réel, détecte les interactions médicamenteuses, génère des conseils associés personnalisés et suggère des produits complémentaires (OTC, compléments alimentaires, dispositifs médicaux) pour augmenter le panier moyen tout en améliorant l'accompagnement patient.
+> Asclion est un copilote IA conçu pour les préparateurs et pharmaciens d'officine. Il reconnaît les médicaments scannés au comptoir, génère des conseils associés personnalisés et suggère des produits complémentaires (OTC, compléments alimentaires, dispositifs médicaux) pour augmenter le panier moyen tout en améliorant l'accompagnement patient.
 
 ## Problème résolu
 
-Les pharmaciens manquent de temps au comptoir pour identifier systématiquement les ventes complémentaires pertinentes. Asclion automatise l'analyse de chaque ordonnance et propose instantanément les bons produits à recommander, avec la phrase conseil adaptée à dire au patient.
+Les pharmaciens manquent de temps au comptoir pour identifier systématiquement les ventes complémentaires pertinentes. Asclion analyse chaque médicament scanné et propose instantanément les bons produits à recommander, avec la phrase conseil adaptée à dire au patient.
 
 ## Fonctionnalités principales
 
-- **Analyse d'ordonnance en < 3 secondes** : extraction IA des médicaments prescrits (texte, scan, photo)
+- **Analyse d'un médicament en < 3 secondes** : reconnaissance automatique de son code CIP au scan
 - **Détection d'interactions médicamenteuses** : alertes classées par niveau de gravité (majeure, modérée, mineure)
 - **Conseils associés automatiques** : phrases prêtes à l'emploi pour accompagner chaque délivrance
 - **Suggestions de produits complémentaires** : OTC, compléments alimentaires, dispositifs médicaux, cosmétiques, classés par pertinence clinique
@@ -20,7 +20,7 @@ Les pharmaciens manquent de temps au comptoir pour identifier systématiquement 
 
 ## Cas d'usage
 
-- Un préparateur scanne une ordonnance contenant du Doliprane, de l'Amoxicilline et de l'Oméprazole → Asclion suggère immédiatement des probiotiques (Lactibiane, Ultralevure), un spray gorge, et affiche la phrase conseil : "L'antibiotique peut perturber votre flore intestinale, je vous recommande ce probiotique pendant toute la durée du traitement."
+- Un préparateur scanne la boîte d'Amoxicilline → Asclion suggère immédiatement un probiotique et affiche une phrase conseil adaptée à dire au patient.
 - Un pharmacien titulaire consulte le dashboard pour voir quels produits complémentaires sont les plus acceptés par les patients et ajuste sa stratégie de conseil.
 - Une équipe officinale s'entraîne via le quiz hebdomadaire pour améliorer ses réflexes de conseil associé.
 

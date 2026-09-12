@@ -29,7 +29,7 @@ const CGU = () => {
           <h2 className="text-xl font-semibold mb-2">2. Description du service</h2>
           <p>
             Asclion est un outil d'aide à la dispensation à destination des pharmaciens et de leurs
-            équipes. Il propose, à partir d'une ordonnance saisie ou scannée, des suggestions de
+            équipes. Il propose, à partir des médicaments scannés au comptoir, des suggestions de
             produits complémentaires et des phrases de conseil. Asclion <strong>n'établit aucun
             diagnostic</strong> et n'a pas vocation à être qualifié de dispositif médical au sens du
             règlement (UE) 2017/745.

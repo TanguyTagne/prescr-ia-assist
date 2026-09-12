@@ -122,7 +122,7 @@ export const OnboardingTour = ({ open, onClose, onConnectScanner }: OnboardingTo
           {step === 0 && (
             <div className="space-y-3 text-sm text-foreground/80">
               <p>
-                Asclion est votre copilote au comptoir : il analyse les ordonnances et propose des produits complémentaires
+                Asclion est votre copilote au comptoir : il analyse les médicaments scannés et propose des produits complémentaires
                 adaptés en moins de 3 secondes.
               </p>
               <p>
@@ -134,7 +134,7 @@ export const OnboardingTour = ({ open, onClose, onConnectScanner }: OnboardingTo
           {step === 1 && (
             <div className="space-y-3 text-sm text-foreground/80">
               <p>
-                Choisissez le dossier dans lequel votre scanner dépose les ordonnances. Asclion les analysera automatiquement.
+                Branchez votre douchette et scannez un médicament. Asclion reconnaîtra automatiquement son code CIP.
               </p>
               <Button
                 onClick={handleConnectScanner}
