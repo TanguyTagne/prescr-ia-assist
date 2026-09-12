@@ -6,7 +6,7 @@ const AuthorBio = ({ author }: { author: string }) => (
     <div className="flex-1 text-sm">
       <p className="font-semibold text-foreground m-0">{author}, fondateur d'Asclion</p>
       <p className="text-muted-foreground mt-1 leading-relaxed m-0">
-        Pharmacien de formation et passionné d'IA appliquée à l'officine, Tanguy conçoit Asclion pour aider chaque équipe à délivrer un meilleur conseil et développer son panier moyen sans effort supplémentaire.
+        Passionné par l'IA appliquée à l'officine, Tanguy conçoit Asclion pour aider chaque équipe à délivrer un meilleur conseil et développer son panier moyen sans effort supplémentaire.
       </p>
     </div>
   </aside>
