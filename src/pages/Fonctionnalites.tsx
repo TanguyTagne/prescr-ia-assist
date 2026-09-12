@@ -28,12 +28,12 @@ const sections: { title: string; features: Feature[] }[] = [
       },
       {
         icon: FileSearch,
-        title: "Surveillance de dossier",
-        description: "Asclion détecte automatiquement chaque ordonnance scannée déposée dans le dossier configuré.",
+        title: "Détection automatique des médicaments",
+        description: "Asclion reconnaît automatiquement chaque médicament scanné au comptoir.",
         details: [
-          "PDF et images (JPG, PNG) acceptés",
-          "Aucun bouton à cliquer — l'analyse démarre dès la détection",
-          "Compatible avec scanners de bureau classiques",
+          "Lecture directe du code CIP",
+          "Aucun bouton à cliquer — l'analyse démarre dès le scan",
+          "Compatible avec les douchettes standards de l'officine",
         ],
       },
       {

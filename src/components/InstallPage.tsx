@@ -180,7 +180,7 @@ const InstallPage = () => {
           Astuce : mode scanner
         </h4>
         <p className="text-xs text-muted-foreground leading-relaxed">
-          Une fois installée, activez le mode <strong>« Scanner auto »</strong> pour surveiller le dossier de votre scanner. Chaque nouvelle ordonnance scannée sera analysée automatiquement — zéro clic.
+          Une fois installée, branchez votre douchette puis scannez un médicament. Son code CIP est reconnu et analysé automatiquement — zéro clic.
         </p>
       </div>
     </div>
