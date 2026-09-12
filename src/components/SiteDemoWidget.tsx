@@ -6,7 +6,7 @@ import { trackEvent } from "@/hooks/useAnalytics";
 import { cn } from "@/lib/utils";
 
 const SiteDemoWidget = () => {
-  const [open, setOpen] = useState(() => typeof document === "undefined" || !document.getElementById("demo"));
+  const [open, setOpen] = useState(false);
   const [hasOpened, setHasOpened] = useState(false);
   const [demoTested, setDemoTested] = useState(() => {
     if (typeof window === "undefined") return false;
