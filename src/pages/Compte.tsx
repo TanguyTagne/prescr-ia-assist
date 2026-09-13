@@ -208,14 +208,21 @@ export default function Compte() {
                     {ENDED.includes(s.status) && (
                       <Button asChild><Link to="/souscrire">Souscrire à nouveau</Link></Button>
                     )}
-                    {CANCELLABLE.includes(s.status) && (
+                    {CANCELLABLE.includes(s.status) && s.billing_cycle === "monthly" && (
                       <Button variant="ghost" disabled={busy === s.id} onClick={() => cancel(s.id)}>
                         Résilier (effet en fin de période payée)
                       </Button>
                     )}
                   </div>
 
-                  {CHANGEABLE.includes(s.status) && (
+                  {s.billing_cycle === "annual" && !ENDED.includes(s.status) && (
+                    <p className="text-sm text-muted-foreground">
+                      Offre annuelle : paiement unique pour 12 mois, sans reconduction automatique. Aucun nouveau débit
+                      n'aura lieu et votre accès reste ouvert jusqu'à la fin de la période payée.
+                    </p>
+                  )}
+
+                  {CHANGEABLE.includes(s.status) && s.billing_cycle === "monthly" && (
                     <div className="border-t pt-4">
                       <p className="text-sm font-medium">Changer de formule</p>
                       <p className="text-xs text-muted-foreground mt-0.5">
