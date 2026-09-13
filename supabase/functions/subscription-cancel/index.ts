@@ -58,11 +58,18 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Non autorisé" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Les deux cycles sont reconduits automatiquement : la résiliation prend
-    // effet à la fin de la période déjà payée, sans remboursement au prorata.
+    // Offre annuelle (paiement unique, sans reconduction) ou dossier sans
+    // abonnement Stripe : l'accès reste ouvert jusqu'à la fin de la période
+    // déjà payée. On ne clôture immédiatement que si cette date est passée.
     if (!sub.stripe_subscription_id) {
-      await supabase.from("subscriptions").update({ status: "cancelled" }).eq("id", subscriptionId);
-      return new Response(JSON.stringify({ success: true, status: "cancelled" }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const periodEnd = sub.current_period_end ? new Date(sub.current_period_end) : null;
+      const stillPaid = periodEnd !== null && periodEnd.getTime() > Date.now();
+      const status = stillPaid ? "cancel_at_period_end" : "cancelled";
+      await supabase.from("subscriptions").update({ status }).eq("id", subscriptionId);
+      return new Response(
+        JSON.stringify({ success: true, status, currentPeriodEnd: stillPaid ? periodEnd!.toISOString() : null }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
     const stripe = createStripeClient(sub.environment as "sandbox" | "live");
