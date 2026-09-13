@@ -1965,6 +1965,47 @@ serve(async (req) => {
         .filter((r: any) => !isAlreadyPrescribed(r.produit))
         .filter((r: any) => !looksLikeMedicationRecommendation(r.produit));
 
+      // Substitution des produits génériques par ceux choisis par le groupement,
+      // puis par ceux choisis par la pharmacie (la pharmacie prime).
+      if (groupMappings.length || productMappings.length) {
+        filteredRecs = filteredRecs.map((r: any) => {
+          const catNorm = normalizeText(r.categorie || "");
+          if (!catNorm) return r;
+          let out = r;
+          const gm = groupMappings.find((m: any) => normalizeText(m.categorie || "") === catNorm);
+          if (gm?.produit_prioritaire) {
+            out = { ...out, produit: gm.produit_prioritaire, cip_code: gm.cip_code ?? out.cip_code, mapped_source: "groupement" };
+          }
+          const pm = productMappings.find((m: any) => normalizeText(m.categorie || "") === catNorm);
+          if (pm?.produit_selectionne) {
+            out = { ...out, produit: pm.produit_selectionne, cip_code: pm.cip_code ?? out.cip_code, mapped_source: "pharmacy" };
+          }
+          return out;
+        });
+      }
+
+      // PC imposés par la pharmacie pour ce médicament précis (priorité maximale).
+      if (medForcedMappings.length) {
+        const medKey = normalizeText(extractCoreDrugName(medNames[i] || ""));
+        if (medKey) {
+          const forced = medForcedMappings.filter((m: any) => {
+            const k = normalizeText(m.medicament_nom || "");
+            return !!k && (k === medKey || medKey.includes(k) || k.includes(medKey));
+          });
+          for (const f of [...forced].reverse()) {
+            if (!f.pc_nom) continue;
+            const key = normalizeText(f.pc_nom);
+            if (filteredRecs.some((r: any) => normalizeText(r.produit) === key)) continue;
+            filteredRecs.unshift({
+              produit: f.pc_nom,
+              categorie: f.pc_categorie || "",
+              priorite: 100,
+              mapped_source: "pharmacy_med_forced",
+            });
+          }
+        }
+      }
+
       // Final semantic dedupe (same PC must not appear twice for the same med, even
       // when names differ slightly: "Solution de réhydratation orale" / "Sachets de
       // réhydratation orale" / "Solution réhydratation"), then cap to degressive limit.
