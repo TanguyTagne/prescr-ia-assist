@@ -261,8 +261,9 @@ export default function Compte() {
       )}
 
       <p className="text-xs text-muted-foreground mt-6">
-        Les abonnements mensuels et annuels sont reconduits automatiquement. La résiliation prend effet à la fin de la
-        période déjà payée, sans remboursement au prorata. Un rappel vous est envoyé 30 jours avant chaque reconduction annuelle.
+        L'abonnement mensuel est reconduit automatiquement ; la résiliation prend effet à la fin de la période déjà
+        payée, sans remboursement au prorata. L'offre annuelle est un paiement unique pour 12 mois, sans reconduction
+        automatique : un rappel vous est envoyé 30 jours avant l'échéance.
       </p>
     </div>
   );
