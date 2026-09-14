@@ -1,10 +1,10 @@
 ---
-name: Champ vigilance (Sécurité)
-description: Troisième champ des fiches conseil — avertissement de sécurité qui ne vend aucun produit
+name: Champ vigilance non affiché
+description: Les données de vigilance restent importées mais ne doivent plus apparaître dans l'application ni la démo
 type: feature
 ---
 `medicament_curated_pcs` porte, en plus de pc_1/pc_2, un triplet `vigilance` / `phrase_vigilance` / `pertinence_vigilance` (défaut « Sécurité »).
 
 Rôle : porter les messages de bon usage qui ne vendent rien (pas d'alcool sous métronidazole, chaleur sous patch de fentanyl, acidocétose euglycémique sous gliflozine, hydratation sous sulfamide, plan de prévention des grossesses sous isotrétinoïne).
 
-Affichage : bloc ambre avec icône d'alerte au-dessus des PC dans `AnalysisResults`, alimenté par `demo-med-lookup` (clé `medicament.vigilance`). Positionnement produit : Asclion n'est pas un moteur d'upsell.
+Affichage depuis le 14 septembre 2026 : ne jamais montrer ces champs dans l'application Electron ni dans la démo. Ils restent dans la base et dans l'import, mais ne déclenchent pas seuls l'ouverture de l'application. L'écran doit rester centré sur les PC et leur phrase conseil courte.

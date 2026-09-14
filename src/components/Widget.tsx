@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import PrescriptionInput from "@/components/PrescriptionInput";
 import AnalysisResults from "@/components/AnalysisResults";
 import LegalDisclaimer from "@/components/LegalDisclaimer";
-import { analyzePrescription, fillMissingVigilance, analyzePrescriptionImage, type AnalysisResult } from "@/lib/prescriptionAnalyzer";
+import { analyzePrescription, analyzePrescriptionImage, type AnalysisResult } from "@/lib/prescriptionAnalyzer";
 import { trackEvent } from "@/hooks/useAnalytics";
 import { ScannerStatus } from "@/components/ScannerStatus";
 import { pdfToImageBase64 } from "@/lib/pdfToImage";
@@ -181,10 +181,6 @@ const WidgetApp = () => {
           structuredData: scan.result.structuredData || false,
           sources: scan.result.sources || [],
         };
-        // Même filet que pour l'analyse directe : une ordonnance arrivée par la
-        // file de scan doit porter sa vigilance, quelle que soit la version de
-        // la fonction edge qui l'a produite.
-        normalized.medicaments = await fillMissingVigilance(normalized.medicaments);
         setResult(normalized as AnalysisResult);
         notifyAnalysisDone({ count: normalized.medicaments.length });
       } catch {}
@@ -542,14 +538,11 @@ const WidgetApp = () => {
           pertinence_pc2: string | null;
           phrase_conseil_pc1: string | null;
           phrase_conseil_pc2: string | null;
-          vigilance: string | null;
-          phrase_vigilance: string | null;
-          pertinence_vigilance: string | null;
         } | null = null;
         if (med.id) {
           const { data } = await supabase
             .from("medicament_curated_pcs")
-            .select("pc_1, pc_2, pertinence_pc1, pertinence_pc2, phrase_conseil_pc1, phrase_conseil_pc2, vigilance, phrase_vigilance, pertinence_vigilance")
+            .select("pc_1, pc_2, pertinence_pc1, pertinence_pc2, phrase_conseil_pc1, phrase_conseil_pc2")
             .eq("medicament_id", med.id)
             .maybeSingle();
           curated = data;
@@ -588,20 +581,10 @@ const WidgetApp = () => {
           logger.log(`[SCAN] ${ts} med=${med.nom_commercial} aucun PC curated — pas de suggestion`);
         }
 
-        const vigilanceTitle = curated?.vigilance?.trim() || curated?.phrase_vigilance?.trim();
-        const vigilance = vigilanceTitle
-          ? {
-              titre: vigilanceTitle,
-              phrase: curated?.vigilance?.trim() ? curated?.phrase_vigilance?.trim() || undefined : undefined,
-              pertinence: curated?.pertinence_vigilance?.trim() || "Sécurité",
-            }
-          : undefined;
-        prependMedicament({ nom: med.nom_commercial, classe: "", recommendations, vigilance, cip_scanned: code });
-        // Pop Asclion devant l'LGO si on a quelque chose à dire : un PC OU une
-        // vigilance. La v3 porte 21 492 vigilances dont beaucoup sans produit
-        // associé (« arrêter la metformine 48 h avant un scanner ») — les
-        // passer sous silence reviendrait à perdre le meilleur du conseil.
-        if (recommendations.length > 0 || vigilance) notifyAnalysisDone({ count: 1 });
+        if (recommendations.length > 0) {
+          prependMedicament({ nom: med.nom_commercial, classe: "", recommendations, cip_scanned: code });
+          notifyAnalysisDone({ count: 1 });
+        }
         void logHidScan(code, { nom: med.nom_commercial, recommendations });
         lastAnalysisAtRef.current = Date.now(); // marque session active
         return;
