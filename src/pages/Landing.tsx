@@ -27,6 +27,7 @@ import heroVideo from "@/assets/asclion-45s.mp4.asset.json";
 
 const Landing = () => {
   const { lp } = useI18n();
+  const { user } = useAuth();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [videoOpen, setVideoOpen] = useState(false);
 
