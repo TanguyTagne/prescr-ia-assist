@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
-import { Pill, RotateCcw, AlertTriangle, MessageSquare, Loader2, Sparkles, Database, Check, Zap } from "lucide-react";
+import { Pill, RotateCcw, AlertTriangle, MessageSquare, Loader2, Database, Check, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { AnalysisResult } from "@/lib/prescriptionAnalyzer";
@@ -84,8 +84,6 @@ function productNamesMatch(a?: string | null, b?: string | null): boolean {
 }
 
 type CuratedHint = { pertinence?: string; phrase_conseil?: string };
-type VigilanceHint = { titre: string; phrase?: string; pertinence?: string };
-
 function cleanHintValue(value?: string | null): string | null {
   const cleaned = (value || "").trim();
   return cleaned.length > 0 ? cleaned : null;
@@ -115,164 +113,13 @@ function fallbackCounselPhrase(pertinence: string, productName: string): string 
   return "complète le conseil au comptoir";
 }
 
-/** Ligne fine de vigilance — libellé (Sécurité, Vigilance…) + « voir plus » repliable. */
-function VigilanceLine({ vigilance }: { vigilance: { titre?: string; phrase?: string; pertinence?: string } }) {
-  const [open, setOpen] = useState(false);
-  const label = (vigilance.pertinence || "Sécurité").trim();
-  const full = [vigilance.titre, vigilance.phrase].filter(Boolean).join(" ").trim();
-  return (
-    <div className="grid min-w-0 grid-cols-[auto_auto_minmax(0,1fr)_auto] items-start gap-1.5 rounded-md border border-amber-500/40 bg-amber-500/5 px-2 py-1">
-      <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-amber-600 dark:text-amber-400" />
-      <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400">{label}</span>
-      <span className={`min-w-0 text-[11px] leading-snug text-amber-700 dark:text-amber-300 ${open ? "whitespace-normal" : "truncate"}`}>
-        {full}
-      </span>
-      <button
-        type="button"
-        onClick={() => setOpen((current) => !current)}
-        className="shrink-0 text-[10px] font-medium text-amber-700 underline underline-offset-2 hover:opacity-80 dark:text-amber-300"
-      >
-        {open ? "voir moins" : "voir plus"}
-      </button>
-    </div>
-  );
-}
-
 const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsProps) => {
   const { t } = useI18n();
   const [orderedItems, setOrderedItems] = useState<Map<string, "manual_click" | "hid_auto">>(new Map());
   const [curatedHints, setCuratedHints] = useState<Map<string, CuratedHint>>(new Map());
-  const [resolvedVigilance, setResolvedVigilance] = useState<Map<string, VigilanceHint>>(new Map());
   const [expandedConseils, setExpandedConseils] = useState<Set<number>>(new Set());
   const [conseilGlobalOpen, setConseilGlobalOpen] = useState(false);
   const { recordFeedback } = usePcFeedback();
-
-  // Filet de sécurité vigilance — INDÉPENDANT du chemin d'analyse.
-  //
-  // La phrase de vigilance doit s'afficher dans l'app exactement comme dans la
-  // démo. Or la démo la reçoit de `demo-med-lookup`, tandis que l'app la reçoit
-  // d'`analyze-prescription` ou du scan HID : trois chemins, trois occasions de
-  // la perdre (fonction edge non redéployée, scan qui ne la transporte pas,
-  // médicament reconnu par la BDPM sans ligne interne).
-  //
-  // On la relit donc ici, côté client, dès qu'elle manque — en trois passes,
-  // de la plus précise à la plus large :
-  //   1) le CIP scanné, quand il y en a un — correspondance exacte ;
-  //   2) le nom commercial, préfixe du premier mot ;
-  //   3) le code ATC — la vigilance de la base v3 est écrite PAR CLASSE ATC,
-  //      donc n'importe quelle ligne de la même classe porte la bonne phrase.
-  //      C'est cette passe qui garantit l'affichage : le code ATC est déjà à
-  //      l'écran, à côté du nom du médicament.
-  useEffect(() => {
-    if (demoMode) return;
-    const missing = result.medicaments.filter(
-      (med) => !med.vigilance?.titre && !med.vigilance?.phrase && med.nom.trim(),
-    );
-    if (missing.length === 0) return;
-
-    let cancelled = false;
-
-    const toHint = (row: {
-      vigilance?: string | null;
-      phrase_vigilance?: string | null;
-      pertinence_vigilance?: string | null;
-    } | null | undefined): VigilanceHint | null => {
-      const titre = row?.vigilance?.trim() || row?.phrase_vigilance?.trim();
-      if (!titre) return null;
-      return {
-        titre,
-        phrase: row?.vigilance?.trim() ? row?.phrase_vigilance?.trim() || undefined : undefined,
-        pertinence: row?.pertinence_vigilance?.trim() || "Sécurité",
-      };
-    };
-
-    const VIG_COLS = "medicament_id, vigilance, phrase_vigilance, pertinence_vigilance";
-
-    const fromMedIds = async (ids: string[], preferred?: string[]) => {
-      if (ids.length === 0) return null;
-      const { data: rows } = await supabase
-        .from("medicament_curated_pcs")
-        .select(VIG_COLS)
-        .in("medicament_id", ids);
-      if (!rows?.length) return null;
-      const byId = new Map(rows.map((row) => [row.medicament_id, row]));
-      const order = preferred?.length ? preferred : ids;
-      for (const id of order) {
-        const hint = toHint(byId.get(id));
-        if (hint) return hint;
-      }
-      for (const row of rows) {
-        const hint = toHint(row);
-        if (hint) return hint;
-      }
-      return null;
-    };
-
-    void Promise.all(missing.map(async (med) => {
-      const key = normalizeLookupKey(med.nom);
-
-      // ── Passe 1 : le CIP scanné ─────────────────────────────────────────
-      const cip = (med.cip_scanned || "").trim();
-      if (cip) {
-        const { data } = await supabase
-          .from("medicaments")
-          .select("id")
-          .eq("cip_code", cip)
-          .limit(1);
-        const hint = await fromMedIds((data || []).map((r) => r.id));
-        if (hint) return { key, vigilance: hint };
-      }
-
-      // ── Passe 2 : le nom commercial ─────────────────────────────────────
-      const firstWord = med.nom.trim().split(/[\s/]+/)[0];
-      if (firstWord && firstWord.length >= 3) {
-        const { data: candidates } = await supabase
-          .from("medicaments")
-          .select("id, nom_commercial")
-          .ilike("nom_commercial", `${firstWord}%`)
-          .limit(50);
-        if (candidates?.length) {
-          const ordered = [...candidates].sort((a, b) => {
-            const aExact = normalizeLookupKey(a.nom_commercial) === key ? 1 : 0;
-            const bExact = normalizeLookupKey(b.nom_commercial) === key ? 1 : 0;
-            return bExact - aExact;
-          });
-          const ids = ordered.map((c) => c.id);
-          const hint = await fromMedIds(ids, ids);
-          if (hint) return { key, vigilance: hint };
-        }
-      }
-
-      // ── Passe 3 : le code ATC ───────────────────────────────────────────
-      // La vigilance est écrite par classe : toute ligne de la même classe
-      // porte la même phrase. C'est le filet qui ne rate presque jamais.
-      const atc = (med.code_atc || "").trim();
-      if (atc.length >= 4) {
-        const { data: sameClass } = await supabase
-          .from("medicaments")
-          .select("id")
-          .eq("atc_code", atc)
-          .limit(30);
-        const hint = await fromMedIds((sameClass || []).map((r) => r.id));
-        if (hint) return { key, vigilance: hint };
-      }
-
-      return null;
-    })).then((found) => {
-      if (cancelled) return;
-      const entries = found.filter((item): item is { key: string; vigilance: VigilanceHint } => item !== null);
-      if (entries.length === 0) return;
-      setResolvedVigilance((previous) => {
-        const next = new Map(previous);
-        entries.forEach(({ key, vigilance }) => next.set(key, vigilance));
-        return next;
-      });
-    });
-
-    return () => { cancelled = true; };
-  }, [demoMode, result.medicaments]);
-
-
 
   // Flatten recommandations triées par priorité — utilisé pour raccourcis F1/F2/F3.
   const flatRecs = useMemo(() => {
@@ -775,7 +622,6 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
           <div className="flex items-center gap-1.5">
             <Pill className="h-3 w-3 text-primary shrink-0" />
             <span className="font-semibold text-xs">{med.nom}</span>
-            {med.code_atc && <span className="text-[10px] text-muted-foreground">[{med.code_atc}]</span>}
             {!demoMode && (
               <div className="ml-auto">
                 <ReportButton
@@ -791,20 +637,9 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
               </div>
             )}
           </div>
-
-
-          {/* Vigilance — avertissement de sécurité, aucun produit à vendre */}
-          {(med.vigilance?.titre || med.vigilance?.phrase || resolvedVigilance.has(normalizeLookupKey(med.nom))) && (
-            <VigilanceLine vigilance={med.vigilance || resolvedVigilance.get(normalizeLookupKey(med.nom)) as VigilanceHint} />
-          )}
-
           {/* Recommendations for this medication */}
           {med.recommendations && med.recommendations.length > 0 && (
-            <div className="space-y-1 pt-1 border-t border-border/50">
-              <div className="flex items-center gap-1 text-[10px] text-primary font-semibold uppercase tracking-wider">
-                <Sparkles className="h-2.5 w-2.5" />
-                {t("results.complementary")}
-              </div>
+            <div className="space-y-1 pt-1">
               {med.recommendations.map((rec, j) => {
                 const ordered = isOrdered(med.nom, rec.produit);
                 const orderSource = getOrderSource(med.nom, rec.produit);
@@ -893,14 +728,6 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
           </Badge>
         }
       </div>
-      {flatRecs.length > 0 && (
-        <p className="text-[10px] text-foreground/60 leading-tight">
-          <kbd className="px-1 py-0.5 rounded bg-secondary font-mono">F1</kbd>
-          {flatRecs.length > 1 && <> · <kbd className="px-1 py-0.5 rounded bg-secondary font-mono">F2</kbd></>}
-          {flatRecs.length > 2 && <> · <kbd className="px-1 py-0.5 rounded bg-secondary font-mono">F3</kbd></>}
-          {" "}accepter · <kbd className="px-1 py-0.5 rounded bg-secondary font-mono">Échap</kbd> nouvelle
-        </p>
-      )}
       {demoMode &&
         <div className="rounded-md border border-primary/30 bg-primary/5 px-2 py-1.5 text-[11px] text-foreground/80 leading-snug">
           <span className="font-semibold text-primary">{t("results.demoBannerLabel")}</span>
