@@ -12,7 +12,10 @@ import {
   Timer,
   Search,
   Users,
+  Download,
 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { DOWNLOAD_URL } from "@/lib/downloadUrl";
 import { Button } from "@/components/ui/button";
 import DemoFullPanel from "@/components/DemoFullPanel";
 import SiteFooter from "@/components/SiteFooter";
@@ -95,9 +98,15 @@ const Landing = () => {
                   size="lg"
                   variant="outline"
                   asChild
-                  className="h-12 px-7 text-base font-semibold w-full sm:w-auto"
+                  className="h-12 px-7 text-base font-semibold w-full sm:w-auto gap-2"
                 >
-                  <Link to={lp("/tarifs") + "?source=home_hero"}>Choisir mon offre</Link>
+                  {user ? (
+                    <a href={DOWNLOAD_URL} target="_blank" rel="noopener noreferrer">
+                      <Download className="h-5 w-5" /> Télécharger Asclion
+                    </a>
+                  ) : (
+                    <Link to={lp("/tarifs") + "?source=home_hero"}>Choisir mon offre</Link>
+                  )}
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
@@ -367,9 +376,15 @@ const Landing = () => {
               <Button
                 size="lg"
                 asChild
-                className="h-12 px-8 text-base font-semibold pharmacy-gradient border-0 w-full sm:w-auto"
+                className="h-12 px-8 text-base font-semibold pharmacy-gradient border-0 w-full sm:w-auto gap-2"
               >
-                <Link to={lp("/tarifs")}>Choisir mon offre</Link>
+                {user ? (
+                  <a href={DOWNLOAD_URL} target="_blank" rel="noopener noreferrer">
+                    <Download className="h-5 w-5" /> Télécharger Asclion
+                  </a>
+                ) : (
+                  <Link to={lp("/tarifs")}>Choisir mon offre</Link>
+                )}
               </Button>
               <Button
                 size="lg"
