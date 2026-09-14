@@ -2,7 +2,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useI18n } from "@/i18n/I18nProvider";
 import { Button } from "@/components/ui/button";
-import { BarChart3, Settings } from "lucide-react";
+import { BarChart3, Settings, Download } from "lucide-react";
+import { DOWNLOAD_URL } from "@/lib/downloadUrl";
 import LanguageToggle from "@/i18n/LanguageToggle";
 
 interface SiteHeaderProps {
@@ -76,9 +77,17 @@ const SiteHeader = ({ variant = "full" }: SiteHeaderProps) => {
               Se connecter
             </Link>
           )}
-          <Button size="sm" asChild className="pharmacy-gradient border-0 font-semibold">
-            <Link to={lp("/tarifs")}>Choisir mon offre</Link>
-          </Button>
+          {user ? (
+            <Button size="sm" asChild className="pharmacy-gradient border-0 font-semibold gap-1.5">
+              <a href={DOWNLOAD_URL} target="_blank" rel="noopener noreferrer">
+                <Download className="h-3.5 w-3.5" /> Télécharger
+              </a>
+            </Button>
+          ) : (
+            <Button size="sm" asChild className="pharmacy-gradient border-0 font-semibold">
+              <Link to={lp("/tarifs")}>Choisir mon offre</Link>
+            </Button>
+          )}
         </div>
       </div>
     </header>
