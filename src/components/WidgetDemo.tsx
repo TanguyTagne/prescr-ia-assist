@@ -17,7 +17,7 @@ const USES_KEY = "asclion_demo_uses";
 
 interface WidgetDemoProps {
   onClose?: () => void;
-  /** "compact" = floating widget (320px). "full" = in-page panel. */
+  /** "compact" = floating app (320px). "full" = in-page panel. */
   size?: "compact" | "full";
 }
 

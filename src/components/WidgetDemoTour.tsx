@@ -12,7 +12,7 @@ const STEPS = [
   },
   {
     title: "1. Tapez le médicament de votre choix",
-    body: "Le widget en bas à droite est l'interface réelle. Saisissez n'importe quel médicament (Doliprane, Ventoline, Levothyrox…) ou choisissez un exemple.",
+    body: "L'application en bas à droite est l'interface réelle. Saisissez n'importe quel médicament (Doliprane, Ventoline, Levothyrox…) ou choisissez un exemple.",
     cta: "Suivant",
   },
   {

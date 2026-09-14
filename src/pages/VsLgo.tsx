@@ -15,7 +15,7 @@ const ROWS = [
   {
     q: "Moment d'intervention",
     lgo: "Selon le paramétrage du LGO",
-    asclion: "Widget de suggestion au scan, selon compatibilité",
+    asclion: "Application de suggestion au scan, selon compatibilité",
   },
   {
     q: "Conseil associé",
@@ -87,7 +87,7 @@ const VsLgo = () => {
               </li>
               <li className="flex gap-2.5">
                 <CheckCircle2 className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                Le widget Asclion apparaît en surcouche, sans prendre le focus de la souris, et
+                L'application Asclion apparaît en surcouche, sans prendre le focus de la souris, et
                 repasse au second plan après un clic extérieur.
               </li>
               <li className="flex gap-2.5">

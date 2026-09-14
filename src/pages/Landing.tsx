@@ -139,7 +139,7 @@ const Landing = () => {
                 </button>
               )}
               <p className="text-[11px] text-muted-foreground px-4 py-2 border-t border-border">
-                Démonstration du widget sur une fenêtre LGO générique — aucune donnée patient réelle.
+                Démonstration de l'application sur une fenêtre LGO générique — aucune donnée patient réelle.
               </p>
             </div>
           </div>
@@ -191,7 +191,7 @@ const Landing = () => {
                 },
                 {
                   icon: ShieldAlert,
-                  title: "Le widget apparaît",
+                  title: "L'application apparaît",
                   text: "Point de vigilance, suggestion et phrase conseil sont présentés au comptoir.",
                 },
                 {
@@ -330,7 +330,7 @@ const Landing = () => {
                 },
                 {
                   q: "Est-ce que cela ralentit la délivrance ?",
-                  a: "Le widget est conçu pour rester discret : il apparaît sans prendre le focus de la souris et repasse au second plan après un clic extérieur.",
+                  a: "L'application est conçue pour rester discrète : elle apparaît sans prendre le focus de la souris et repasse au second plan après un clic extérieur.",
                 },
                 {
                   q: "Que se passe-t-il après le paiement ?",

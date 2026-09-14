@@ -22,7 +22,7 @@ const sections: { title: string; features: Feature[] }[] = [
         description: "Branchez la douchette et scannez : Asclion détecte automatiquement le code-barres du médicament, sans configuration.",
         details: [
           "Compatible avec toute douchette HID standard (USB ou Bluetooth)",
-          "Capture globale : fonctionne même si le widget n'a pas le focus",
+          "Capture globale : fonctionne même si l'application n'a pas le focus",
           "Reconnaissance instantanée du CIP français",
         ],
       },
