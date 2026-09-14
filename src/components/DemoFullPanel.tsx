@@ -3,7 +3,7 @@ import WidgetDemo from "@/components/WidgetDemo";
 import { useI18n } from "@/i18n/I18nProvider";
 
 /**
- * In-page, full-width version of the demo. Same logic as the floating widget,
+ * In-page, full-width version of the demo. Same logic as the floating app,
  * larger layout — this is the single primary CTA target of the landing page.
  */
 const DemoFullPanel = () => {

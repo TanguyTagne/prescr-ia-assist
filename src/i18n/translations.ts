@@ -402,12 +402,12 @@ export const translations = {
   },
   "aide.q2": { fr: "Comment configurer mon LGO (Winpharma, LGPI, Pharmagest…) ?", en: "How do I configure my pharmacy software?" },
   "aide.a2.p1": {
-    fr: "Sur l'application desktop, Asclion détecte automatiquement votre LGO au démarrage et propose le bon preset. Vous pouvez aussi le configurer manuellement via le menu Réglages → Configuration avancée du widget.",
-    en: "On the desktop app, Asclion auto-detects your pharmacy software at startup and suggests the right preset. You can also configure it manually via Settings → Advanced configuration in the widget.",
+    fr: "Sur l'application desktop, Asclion détecte automatiquement votre LGO au démarrage et propose le bon preset. Vous pouvez aussi le configurer manuellement via le menu Réglages → Configuration avancée de l'application.",
+    en: "On the desktop app, Asclion auto-detects your pharmacy software at startup and suggests the right preset. You can also configure it manually via Settings → Advanced configuration in the app.",
   },
   "aide.a2.p2": {
-    fr: "Le preset adapte la position et la taille du widget pour qu'il s'intègre parfaitement à côté de votre LGO sans le masquer.",
-    en: "The preset adjusts the widget's position and size so it fits perfectly next to your pharmacy software without covering it.",
+    fr: "Le preset adapte la position et la taille de l'application pour qu'elle s'intègre parfaitement à côté de votre LGO sans le masquer.",
+    en: "The preset adjusts the app's position and size so it fits perfectly next to your pharmacy software without covering it.",
   },
   "aide.q3": { fr: "Pourquoi un produit n'apparaît-il pas dans mes recommandations ?", en: "Why is a product missing from my recommendations?" },
   "aide.a3.p1": {
@@ -433,8 +433,8 @@ export const translations = {
     en: "Check that the medication barcode is readable and that the scanner uses the correct keyboard layout.",
   },
   "aide.a4.li3": {
-    fr: "Si le problème persiste, contactez le support avec le code de l'analyse affiché en bas du widget.",
-    en: "If the issue persists, contact support with the analysis code shown at the bottom of the widget.",
+    fr: "Si le problème persiste, contactez le support avec le code de l'analyse affiché en bas de l'application.",
+    en: "If the issue persists, contact support with the analysis code shown at the bottom of the app.",
   },
   "aide.q5": { fr: "Quels sont les raccourcis clavier ?", en: "What are the keyboard shortcuts?" },
   "aide.a5.k1": { fr: "Échap — Nouvelle ordonnance / réinitialiser", en: "Esc — New prescription / reset" },
@@ -526,8 +526,8 @@ export const translations = {
   "vslgo.d6.title": { fr: "Mode « overlay » non-intrusif", en: "Non-intrusive overlay mode" },
   "vslgo.d6.lgo": { fr: "Il faut cliquer dans plusieurs menus pour voir la suggestion. Résultat : personne ne la voit.", en: "You have to click through several menus to see the suggestion. Result: no one sees it." },
   "vslgo.d6.asclion": {
-    fr: "Widget flottant qui apparaît automatiquement quand un médicament est scanné à la douchette. Zéro friction = adoption réelle au comptoir.",
-    en: "Floating widget that appears automatically when a medication is scanned. Zero friction means real adoption at the counter.",
+    fr: "Application flottante qui apparaît automatiquement quand un médicament est scanné à la douchette. Zéro friction = adoption réelle au comptoir.",
+    en: "Floating app that appears automatically when a medication is scanned. Zero friction means real adoption at the counter.",
   },
   "vslgo.d6.pitch": { fr: "Invisible quand inutile, présent quand nécessaire.", en: "Invisible when unneeded, present when needed." },
 
