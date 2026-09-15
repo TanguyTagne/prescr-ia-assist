@@ -526,6 +526,7 @@ export default function Souscrire() {
                 // Les informations peuvent changer : on repart sur une session neuve.
                 sessionPromiseRef.current = null;
                 setCheckoutError(null);
+                setCheckoutReady(false);
                 setStep(2);
               }}
               className="mb-4"
