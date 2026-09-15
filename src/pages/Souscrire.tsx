@@ -139,7 +139,28 @@ export default function Souscrire() {
   const [reviewSent, setReviewSent] = useState(false);
 
   const configured = isPaymentsConfigured();
+  // Stripe.js est chargé dès l'arrivée sur la page (pas au moment du paiement).
   const stripePromise = useMemo(() => (configured ? getStripe() : null), [configured]);
+
+  // Préconnexion aux domaines Stripe pour supprimer la latence DNS/TLS.
+  useEffect(() => {
+    if (!configured) return;
+    const links: HTMLLinkElement[] = [];
+    for (const href of ["https://js.stripe.com", "https://api.stripe.com", "https://m.stripe.network"]) {
+      const l = document.createElement("link");
+      l.rel = "preconnect";
+      l.href = href;
+      l.crossOrigin = "anonymous";
+      document.head.appendChild(l);
+      links.push(l);
+    }
+    return () => links.forEach((l) => l.remove());
+  }, [configured]);
+
+  // Session de paiement démarrée avant l'affichage de l'étape 3 : quand le
+  // formulaire Stripe se monte, la réponse est déjà là (ou presque).
+  const sessionPromiseRef = useRef<Promise<string> | null>(null);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
   const set = (patch: Partial<OfficeForm>) => setForm((f) => ({ ...f, ...patch }));
 
