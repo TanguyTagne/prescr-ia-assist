@@ -254,11 +254,17 @@ export default function Souscrire() {
   const startCheckoutSession = () => {
     if (!sessionPromiseRef.current) {
       setCheckoutError(null);
-      sessionPromiseRef.current = requestClientSecret().catch((e) => {
-        sessionPromiseRef.current = null;
-        setCheckoutError(e?.message || "Impossible d'ouvrir le paiement");
-        throw e;
-      });
+      sessionPromiseRef.current = requestClientSecret()
+        .then((secret) => {
+          // Petit délai : le temps que l'iframe Stripe s'affiche réellement.
+          setTimeout(() => setCheckoutReady(true), 600);
+          return secret;
+        })
+        .catch((e) => {
+          sessionPromiseRef.current = null;
+          setCheckoutError(e?.message || "Impossible d'ouvrir le paiement");
+          throw e;
+        });
     }
     return sessionPromiseRef.current;
   };
