@@ -244,10 +244,27 @@ export default function Souscrire() {
       },
     });
     if (error || !data?.clientSecret) {
-      throw new Error(error?.message || "Impossible d'ouvrir le paiement");
+      throw new Error((data as any)?.error || error?.message || "Impossible d'ouvrir le paiement");
     }
     return data.clientSecret as string;
   };
+
+  // Lance (une seule fois) la création de session ; réutilisée par Stripe au montage.
+  const startCheckoutSession = () => {
+    if (!sessionPromiseRef.current) {
+      setCheckoutError(null);
+      sessionPromiseRef.current = requestClientSecret().catch((e) => {
+        sessionPromiseRef.current = null;
+        setCheckoutError(e?.message || "Impossible d'ouvrir le paiement");
+        throw e;
+      });
+    }
+    return sessionPromiseRef.current;
+  };
+
+  // Référence stable : évite tout remontage du formulaire Stripe.
+  const fetchClientSecret = useCallback(() => startCheckoutSession(), []);
+  const checkoutOptions = useMemo(() => ({ fetchClientSecret }), [fetchClientSecret]);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
