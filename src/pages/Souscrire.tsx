@@ -161,6 +161,7 @@ export default function Souscrire() {
   // formulaire Stripe se monte, la réponse est déjà là (ou presque).
   const sessionPromiseRef = useRef<Promise<string> | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [checkoutReady, setCheckoutReady] = useState(false);
 
   const set = (patch: Partial<OfficeForm>) => setForm((f) => ({ ...f, ...patch }));
 
