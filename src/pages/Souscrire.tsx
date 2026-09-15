@@ -495,6 +495,9 @@ export default function Souscrire() {
                           return;
                         }
                       }
+                      // Session créée en parallèle de l'affichage : le
+                      // formulaire de paiement s'ouvre sans attente visible.
+                      startCheckoutSession().catch(() => {});
                       setStep(3);
                     }}
                   >
