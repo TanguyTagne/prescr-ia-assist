@@ -512,24 +512,55 @@ export default function Souscrire() {
 
         {step === 3 && plan && (
           <div className="max-w-2xl mx-auto">
-            <Button variant="ghost" size="sm" onClick={() => setStep(2)} className="mb-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                // Les informations peuvent changer : on repart sur une session neuve.
+                sessionPromiseRef.current = null;
+                setCheckoutError(null);
+                setStep(2);
+              }}
+              className="mb-4"
+            >
               <ArrowLeft className="h-4 w-4 mr-1" /> Retour aux informations
             </Button>
             <h1 className="text-2xl font-bold">Paiement sécurisé</h1>
             <p className="text-muted-foreground mt-1 text-sm">
               {plan.name} — {plan.totalLabel}. Vos données de carte ne transitent jamais par nos serveurs.
             </p>
-            <div id="checkout" className="mt-6">
-              {stripePromise ? (
-                <EmbeddedCheckoutProvider stripe={stripePromise} options={{ fetchClientSecret }}>
-                  <EmbeddedCheckout />
-                </EmbeddedCheckoutProvider>
-              ) : (
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" /> Chargement du paiement…
+            {checkoutError ? (
+              <div className="mt-6 rounded-md border border-destructive/40 bg-destructive/5 p-4">
+                <p className="text-sm text-destructive">{checkoutError}</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-3"
+                  onClick={() => {
+                    sessionPromiseRef.current = null;
+                    setCheckoutError(null);
+                    startCheckoutSession().catch(() => {});
+                  }}
+                >
+                  Réessayer
+                </Button>
+              </div>
+            ) : (
+              <div id="checkout" className="mt-6 relative min-h-[420px]">
+                <div className="absolute inset-0 flex items-start justify-center pt-16 text-muted-foreground pointer-events-none">
+                  <span className="flex items-center gap-2 text-sm">
+                    <Loader2 className="h-4 w-4 animate-spin" /> Chargement du paiement sécurisé…
+                  </span>
                 </div>
-              )}
-            </div>
+                {stripePromise && (
+                  <div className="relative">
+                    <EmbeddedCheckoutProvider stripe={stripePromise} options={checkoutOptions}>
+                      <EmbeddedCheckout />
+                    </EmbeddedCheckoutProvider>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
