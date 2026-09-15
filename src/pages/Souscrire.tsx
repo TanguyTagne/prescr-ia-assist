@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { EmbeddedCheckoutProvider, EmbeddedCheckout } from "@stripe/react-stripe-js";
 import { getStripe, getStripeEnvironment, isPaymentsConfigured } from "@/lib/stripe";
@@ -139,7 +139,29 @@ export default function Souscrire() {
   const [reviewSent, setReviewSent] = useState(false);
 
   const configured = isPaymentsConfigured();
+  // Stripe.js est chargé dès l'arrivée sur la page (pas au moment du paiement).
   const stripePromise = useMemo(() => (configured ? getStripe() : null), [configured]);
+
+  // Préconnexion aux domaines Stripe pour supprimer la latence DNS/TLS.
+  useEffect(() => {
+    if (!configured) return;
+    const links: HTMLLinkElement[] = [];
+    for (const href of ["https://js.stripe.com", "https://api.stripe.com", "https://m.stripe.network"]) {
+      const l = document.createElement("link");
+      l.rel = "preconnect";
+      l.href = href;
+      l.crossOrigin = "anonymous";
+      document.head.appendChild(l);
+      links.push(l);
+    }
+    return () => links.forEach((l) => l.remove());
+  }, [configured]);
+
+  // Session de paiement démarrée avant l'affichage de l'étape 3 : quand le
+  // formulaire Stripe se monte, la réponse est déjà là (ou presque).
+  const sessionPromiseRef = useRef<Promise<string> | null>(null);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [checkoutReady, setCheckoutReady] = useState(false);
 
   const set = (patch: Partial<OfficeForm>) => setForm((f) => ({ ...f, ...patch }));
 
@@ -195,7 +217,7 @@ export default function Souscrire() {
     }
   };
 
-  const fetchClientSecret = async (): Promise<string> => {
+  const requestClientSecret = async (): Promise<string> => {
     if (!plan) throw new Error("Aucune offre sélectionnée");
     const { data, error } = await supabase.functions.invoke("create-subscription-checkout", {
       body: {
@@ -223,10 +245,33 @@ export default function Souscrire() {
       },
     });
     if (error || !data?.clientSecret) {
-      throw new Error(error?.message || "Impossible d'ouvrir le paiement");
+      throw new Error((data as any)?.error || error?.message || "Impossible d'ouvrir le paiement");
     }
     return data.clientSecret as string;
   };
+
+  // Lance (une seule fois) la création de session ; réutilisée par Stripe au montage.
+  const startCheckoutSession = () => {
+    if (!sessionPromiseRef.current) {
+      setCheckoutError(null);
+      sessionPromiseRef.current = requestClientSecret()
+        .then((secret) => {
+          // Petit délai : le temps que l'iframe Stripe s'affiche réellement.
+          setTimeout(() => setCheckoutReady(true), 600);
+          return secret;
+        })
+        .catch((e) => {
+          sessionPromiseRef.current = null;
+          setCheckoutError(e?.message || "Impossible d'ouvrir le paiement");
+          throw e;
+        });
+    }
+    return sessionPromiseRef.current;
+  };
+
+  // Référence stable : évite tout remontage du formulaire Stripe.
+  const fetchClientSecret = useCallback(() => startCheckoutSession(), []);
+  const checkoutOptions = useMemo(() => ({ fetchClientSecret }), [fetchClientSecret]);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -457,6 +502,9 @@ export default function Souscrire() {
                           return;
                         }
                       }
+                      // Session créée en parallèle de l'affichage : le
+                      // formulaire de paiement s'ouvre sans attente visible.
+                      startCheckoutSession().catch(() => {});
                       setStep(3);
                     }}
                   >
@@ -471,24 +519,58 @@ export default function Souscrire() {
 
         {step === 3 && plan && (
           <div className="max-w-2xl mx-auto">
-            <Button variant="ghost" size="sm" onClick={() => setStep(2)} className="mb-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                // Les informations peuvent changer : on repart sur une session neuve.
+                sessionPromiseRef.current = null;
+                setCheckoutError(null);
+                setCheckoutReady(false);
+                setStep(2);
+              }}
+              className="mb-4"
+            >
               <ArrowLeft className="h-4 w-4 mr-1" /> Retour aux informations
             </Button>
             <h1 className="text-2xl font-bold">Paiement sécurisé</h1>
             <p className="text-muted-foreground mt-1 text-sm">
               {plan.name} — {plan.totalLabel}. Vos données de carte ne transitent jamais par nos serveurs.
             </p>
-            <div id="checkout" className="mt-6">
-              {stripePromise ? (
-                <EmbeddedCheckoutProvider stripe={stripePromise} options={{ fetchClientSecret }}>
-                  <EmbeddedCheckout />
-                </EmbeddedCheckoutProvider>
-              ) : (
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" /> Chargement du paiement…
-                </div>
-              )}
-            </div>
+            {checkoutError ? (
+              <div className="mt-6 rounded-md border border-destructive/40 bg-destructive/5 p-4">
+                <p className="text-sm text-destructive">{checkoutError}</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-3"
+                  onClick={() => {
+                    sessionPromiseRef.current = null;
+                    setCheckoutError(null);
+                    startCheckoutSession().catch(() => {});
+                  }}
+                >
+                  Réessayer
+                </Button>
+              </div>
+            ) : (
+              <div id="checkout" className="mt-6 relative min-h-[420px]">
+                {!checkoutReady && (
+                  <div className="absolute inset-0 flex items-start justify-center pt-16 text-muted-foreground pointer-events-none">
+                    <span className="flex items-center gap-2 text-sm">
+                      <Loader2 className="h-4 w-4 animate-spin" /> Chargement du paiement sécurisé…
+                    </span>
+                  </div>
+                )}
+                {stripePromise && (
+                  <div className="relative">
+                    <EmbeddedCheckoutProvider stripe={stripePromise} options={checkoutOptions}>
+                      <EmbeddedCheckout />
+                    </EmbeddedCheckoutProvider>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
