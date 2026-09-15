@@ -216,7 +216,7 @@ export default function Souscrire() {
     }
   };
 
-  const fetchClientSecret = async (): Promise<string> => {
+  const requestClientSecret = async (): Promise<string> => {
     if (!plan) throw new Error("Aucune offre sélectionnée");
     const { data, error } = await supabase.functions.invoke("create-subscription-checkout", {
       body: {
