@@ -555,11 +555,13 @@ export default function Souscrire() {
               </div>
             ) : (
               <div id="checkout" className="mt-6 relative min-h-[420px]">
-                <div className="absolute inset-0 flex items-start justify-center pt-16 text-muted-foreground pointer-events-none">
-                  <span className="flex items-center gap-2 text-sm">
-                    <Loader2 className="h-4 w-4 animate-spin" /> Chargement du paiement sécurisé…
-                  </span>
-                </div>
+                {!checkoutReady && (
+                  <div className="absolute inset-0 flex items-start justify-center pt-16 text-muted-foreground pointer-events-none">
+                    <span className="flex items-center gap-2 text-sm">
+                      <Loader2 className="h-4 w-4 animate-spin" /> Chargement du paiement sécurisé…
+                    </span>
+                  </div>
+                )}
                 {stripePromise && (
                   <div className="relative">
                     <EmbeddedCheckoutProvider stripe={stripePromise} options={checkoutOptions}>
