@@ -155,6 +155,23 @@ async function main() {
   await writeFile(path.join(DIST, "sitemap.xml"), sitemap, "utf8");
   await writeFile(path.join(ROOT, "public/sitemap.xml"), sitemap, "utf8");
 
+  // RSS feed regenerated from the markdown front-matter.
+  if (typeof mod.listBlogFeed === "function") {
+    const esc = (s) =>
+      String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const items = mod
+      .listBlogFeed()
+      .map(
+        (p) =>
+          `    <item>\n      <title>${esc(p.title)}</title>\n      <link>${SITE}/blog/${p.slug}</link>\n      <guid>${SITE}/blog/${p.slug}</guid>\n      <pubDate>${new Date(p.date).toUTCString()}</pubDate>\n      <description>${esc(p.description)}</description>\n    </item>`,
+      )
+      .join("\n");
+    const rss = `<?xml version="1.0" encoding="UTF-8"?>\n<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">\n  <channel>\n    <title>Blog Asclion</title>\n    <link>${SITE}/blog</link>\n    <description>Conseil associé, panier moyen et développement du CA en officine.</description>\n    <language>fr-FR</language>\n    <atom:link href="${SITE}/blog/rss.xml" rel="self" type="application/rss+xml" />\n${items}\n  </channel>\n</rss>\n`;
+    await mkdir(path.join(DIST, "blog"), { recursive: true });
+    await writeFile(path.join(DIST, "blog/rss.xml"), rss, "utf8");
+    await writeFile(path.join(ROOT, "public/blog/rss.xml"), rss, "utf8");
+  }
+
   await rm(SSR_OUT, { recursive: true, force: true });
   console.log(`[prerender] ${routes.length} pages written + sitemap.xml`);
 }

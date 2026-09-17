@@ -33,6 +33,21 @@ export function listBlogLastmod(): Array<[string, string]> {
   ]);
 }
 
+/** Minimal post metadata used to regenerate the RSS feed at build time. */
+export function listBlogFeed(): Array<{
+  slug: string;
+  title: string;
+  description: string;
+  date: string;
+}> {
+  return getAllPosts().map((p) => ({
+    slug: p.slug,
+    title: p.title,
+    description: p.description,
+    date: p.date,
+  }));
+}
+
 export function render(url: string): RenderResult {
   const routes = getPrerenderRoutes();
   const helmetContext = {} as FilledContext;

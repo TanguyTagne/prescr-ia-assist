@@ -7,45 +7,171 @@
     <language>fr-FR</language>
     <atom:link href="https://www.asclion.com/blog/rss.xml" rel="self" type="application/rss+xml" />
     <item>
+      <title>Lutter contre les invendus de parapharmacie sans casser le conseil</title>
+      <link>https://www.asclion.com/blog/invendus-stock-pharmacie</link>
+      <guid>https://www.asclion.com/blog/invendus-stock-pharmacie</guid>
+      <pubDate>Fri, 09 Oct 2026 00:00:00 GMT</pubDate>
+      <description>Invendus de parapharmacie : pourquoi le stock dort, comment le relancer par le conseil plutôt que par les promotions, et où l'outil aide.</description>
+    </item>
+    <item>
+      <title>Nouvelles missions du pharmacien en 2026 : bilan prévention, TROD, vaccination</title>
+      <link>https://www.asclion.com/blog/nouvelles-missions-officine-2026</link>
+      <guid>https://www.asclion.com/blog/nouvelles-missions-officine-2026</guid>
+      <pubDate>Tue, 06 Oct 2026 00:00:00 GMT</pubDate>
+      <description>Bilan prévention, TROD angine et cystites, vaccination, kit cancer colorectal : le tour des nouvelles missions officinales 2026 — et leur point commun.</description>
+    </item>
+    <item>
+      <title>RGPD et données de santé à l'officine : le point sur la pseudonymisation</title>
+      <link>https://www.asclion.com/blog/rgpd-donnees-officine</link>
+      <guid>https://www.asclion.com/blog/rgpd-donnees-officine</guid>
+      <pubDate>Fri, 02 Oct 2026 00:00:00 GMT</pubDate>
+      <description>RGPD et officine : ce que dit le cadre sur les données de santé, anonymisation vs pseudonymisation, et comment Asclion conçoit sa surcouche.</description>
+    </item>
+    <item>
+      <title>Asclion face aux alternatives : comment comparer honnêtement</title>
+      <link>https://www.asclion.com/blog/asclion-vs-alternatives</link>
+      <guid>https://www.asclion.com/blog/asclion-vs-alternatives</guid>
+      <pubDate>Tue, 29 Sep 2026 00:00:00 GMT</pubDate>
+      <description>Comment comparer Asclion avec les alternatives (fiches classe, autres copilotes) : critères objectifs, questions à poser, essai réel.</description>
+    </item>
+    <item>
+      <title>Copilote IA en officine : définition, usages, limites</title>
+      <link>https://www.asclion.com/blog/copilote-ia-officine</link>
+      <guid>https://www.asclion.com/blog/copilote-ia-officine</guid>
+      <pubDate>Fri, 25 Sep 2026 00:00:00 GMT</pubDate>
+      <description>Copilote IA en officine : définition, ce que ces outils font vraiment, leurs limites et les critères pour en choisir un.</description>
+    </item>
+    <item>
+      <title>Winpharma, LGPI ou Pharmagest : comment choisir son LGO (et où Asclion se place)</title>
+      <link>https://www.asclion.com/blog/winpharma-vs-lgpi-vs-pharmagest</link>
+      <guid>https://www.asclion.com/blog/winpharma-vs-lgpi-vs-pharmagest</guid>
+      <pubDate>Tue, 22 Sep 2026 00:00:00 GMT</pubDate>
+      <description>Winpharma, LGPI ou Pharmagest : critères objectifs pour choisir son LGO, et la place d'une surcouche conseil comme Asclion.</description>
+    </item>
+    <item>
+      <title>Animer son équipe officinale : objectifs, rituels, quiz, valorisation</title>
+      <link>https://www.asclion.com/blog/animation-equipe-officine</link>
+      <guid>https://www.asclion.com/blog/animation-equipe-officine</guid>
+      <pubDate>Fri, 18 Sep 2026 00:00:00 GMT</pubDate>
+      <description>Animer son équipe officinale : rituels hebdomadaires, objectifs d'attachement, quiz de formation et valorisation des réussites.</description>
+    </item>
+    <item>
+      <title>Merchandising au comptoir : zones chaudes et ventes raisonnées</title>
+      <link>https://www.asclion.com/blog/merchandising-comptoir-pharmacie</link>
+      <guid>https://www.asclion.com/blog/merchandising-comptoir-pharmacie</guid>
+      <pubDate>Tue, 15 Sep 2026 00:00:00 GMT</pubDate>
+      <description>Merchandising d'officine : compter, zones chaudes, rotation, saisonnalité — organiser l'espace pour que le conseil se transforme en vente.</description>
+    </item>
+    <item>
+      <title>Taux d'attachement en officine : définition, calcul, cible réaliste</title>
+      <link>https://www.asclion.com/blog/taux-attachement-officine</link>
+      <guid>https://www.asclion.com/blog/taux-attachement-officine</guid>
+      <pubDate>Fri, 11 Sep 2026 00:00:00 GMT</pubDate>
+      <description>Taux d'attachement en officine : définition, formule de calcul, cibles réalistes et leviers pour progresser sans dénaturer le conseil.</description>
+    </item>
+    <item>
+      <title>Allergie au comptoir : lavage de nez, antihistaminiques, sprays nasaux (saison 2026)</title>
+      <link>https://www.asclion.com/blog/conseil-associe-allergie</link>
+      <guid>https://www.asclion.com/blog/conseil-associe-allergie</guid>
+      <pubDate>Tue, 08 Sep 2026 00:00:00 GMT</pubDate>
+      <description>Saison allergique 2026 : construire un protocole comptoir entre lavage de nez, antihistaminiques et corticoïdes nasaux.</description>
+    </item>
+    <item>
+      <title>Conseil en pédiatrie : sérum physiologique et gestes de base (bronchiolite incluse)</title>
+      <link>https://www.asclion.com/blog/conseil-associe-pediatrie</link>
+      <guid>https://www.asclion.com/blog/conseil-associe-pediatrie</guid>
+      <pubDate>Fri, 04 Sep 2026 00:00:00 GMT</pubDate>
+      <description>Sérum physiologique, lavage de nez, signaux d'alerte bronchiolite : le socle du conseil pédiatrique au comptoir.</description>
+    </item>
+    <item>
+      <title>Antibiotique et flore intime : parler de candidose sans tabou (rigueur probiotique)</title>
+      <link>https://www.asclion.com/blog/conseil-associe-mycose</link>
+      <guid>https://www.asclion.com/blog/conseil-associe-mycose</guid>
+      <pubDate>Tue, 01 Sep 2026 00:00:00 GMT</pubDate>
+      <description>Antibiothérapie et flore intime : aborder la candidose vulvo-vaginale au comptoir avec rigueur, sans promettre ce que la science ne confirme pas.</description>
+    </item>
+    <item>
+      <title>Collyres : les bons réflexes de délivrance (mode d'emploi, lentilles, conservation)</title>
+      <link>https://www.asclion.com/blog/conseil-associe-collyres</link>
+      <guid>https://www.asclion.com/blog/conseil-associe-collyres</guid>
+      <pubDate>Fri, 28 Aug 2026 00:00:00 GMT</pubDate>
+      <description>Collyres au comptoir : mode d'emploi correct, lentilles, délais entre produits et conservation — les réflexes qui font la différence.</description>
+    </item>
+    <item>
+      <title>Statines au comptoir : vigilance musculaire et place du conseil (sans promesses)</title>
+      <link>https://www.asclion.com/blog/conseil-associe-statines</link>
+      <guid>https://www.asclion.com/blog/conseil-associe-statines</guid>
+      <pubDate>Tue, 25 Aug 2026 00:00:00 GMT</pubDate>
+      <description>Statines au comptoir : vigilance musculaire, observance et honnêteté sur la coenzyme Q10, sans promesses.</description>
+    </item>
+    <item>
+      <title>Corticoïdes ORL : pourquoi le lavage de nez avant le spray change tout</title>
+      <link>https://www.asclion.com/blog/conseil-associe-corticoides-orl</link>
+      <guid>https://www.asclion.com/blog/conseil-associe-corticoides-orl</guid>
+      <pubDate>Fri, 21 Aug 2026 00:00:00 GMT</pubDate>
+      <description>Spray corticoïde nasal ou antibiotique ORL : pourquoi le lavage de nez avant le spray en multiplie l'efficacité.</description>
+    </item>
+    <item>
+      <title>Sous isotrétinoïne orale : le trio indispensable lèvres, peau, soleil</title>
+      <link>https://www.asclion.com/blog/conseil-associe-isotretinoine</link>
+      <guid>https://www.asclion.com/blog/conseil-associe-isotretinoine</guid>
+      <pubDate>Tue, 18 Aug 2026 00:00:00 GMT</pubDate>
+      <description>Isotrétinoïne orale : lèvres, peau, soleil, lentilles — le pack de confort à proposer et les vigilances non négociables.</description>
+    </item>
+    <item>
+      <title>Dermocorticoïdes : le réflexe émollient expliqué à l'équipe</title>
+      <link>https://www.asclion.com/blog/conseil-associe-dermocorticoides</link>
+      <guid>https://www.asclion.com/blog/conseil-associe-dermocorticoides</guid>
+      <pubDate>Fri, 14 Aug 2026 00:00:00 GMT</pubDate>
+      <description>Dermocorticoïdes : quand et comment proposer un émollient au comptoir, avec la méthode et les phrases à adapter.</description>
+    </item>
+    <item>
+      <title>Conseil associé sur ordonnance d'AINS : confort digestif, bien plus qu'un pansement gastrique</title>
+      <link>https://www.asclion.com/blog/conseil-associe-ains</link>
+      <guid>https://www.asclion.com/blog/conseil-associe-ains</guid>
+      <pubDate>Tue, 11 Aug 2026 00:00:00 GMT</pubDate>
+      <description>AINS au comptoir : règles de bon usage, protection gastrique et conseils de confort à proposer avec justification clinique.</description>
+    </item>
+    <item>
       <title>Conseil associé en pharmacie : méthode, 15 exemples de phrases et outils</title>
       <link>https://www.asclion.com/blog/conseil-associe-pharmacie</link>
       <guid>https://www.asclion.com/blog/conseil-associe-pharmacie</guid>
-      <pubDate>Tue, 04 Aug 2026 09:00:00 GMT</pubDate>
-      <description>Méthode du conseil associé en officine : 3 types d'associations, 15 phrases prêtes à l'emploi par classe, et outils pour le systématiser.</description>
+      <pubDate>Tue, 04 Aug 2026 00:00:00 GMT</pubDate>
+      <description>La méthode du conseil associé en officine : les 3 types d'associations pertinentes, 15 phrases prêtes à l'emploi par classe de médicaments, et les outils pour le systématiser.</description>
     </item>
     <item>
       <title>Panier moyen en pharmacie : le calculer, le comparer, l'augmenter (guide 2026)</title>
       <link>https://www.asclion.com/blog/panier-moyen-pharmacie</link>
       <guid>https://www.asclion.com/blog/panier-moyen-pharmacie</guid>
-      <pubDate>Tue, 28 Jul 2026 09:00:00 GMT</pubDate>
+      <pubDate>Tue, 28 Jul 2026 00:00:00 GMT</pubDate>
       <description>Comment calculer le panier moyen de votre officine, à quoi le comparer, et 7 leviers concrets pour l'augmenter durablement sans dénaturer le conseil.</description>
     </item>
     <item>
       <title>Comment augmenter le chiffre d'affaires de sa pharmacie en 2026 : 9 leviers concrets</title>
       <link>https://www.asclion.com/blog/augmenter-chiffre-affaires-pharmacie</link>
       <guid>https://www.asclion.com/blog/augmenter-chiffre-affaires-pharmacie</guid>
-      <pubDate>Tue, 21 Jul 2026 09:00:00 GMT</pubDate>
+      <pubDate>Tue, 21 Jul 2026 00:00:00 GMT</pubDate>
       <description>Panier moyen, conseil associé, nouvelles missions, OTC, IA au comptoir : 9 leviers actionnables pour augmenter le CA de votre officine, avec chiffres et exemples.</description>
     </item>
     <item>
       <title>Choisir son logiciel d'officine en 2026 : LGO, copilote IA, ou les deux ?</title>
       <link>https://www.asclion.com/blog/choisir-logiciel-officine</link>
       <guid>https://www.asclion.com/blog/choisir-logiciel-officine</guid>
-      <pubDate>Wed, 15 Jul 2026 09:00:00 GMT</pubDate>
+      <pubDate>Wed, 15 Jul 2026 00:00:00 GMT</pubDate>
       <description>Winpharma, LGPI, Pharmagest, Léo : comment choisir le bon outil et où positionner un copilote IA comme Asclion dans votre stack.</description>
     </item>
     <item>
       <title>Conseil associé sur une ordonnance d'antibiotique : le réflexe probiotique</title>
       <link>https://www.asclion.com/blog/conseil-associe-antibiotique</link>
       <guid>https://www.asclion.com/blog/conseil-associe-antibiotique</guid>
-      <pubDate>Fri, 10 Jul 2026 09:00:00 GMT</pubDate>
+      <pubDate>Fri, 10 Jul 2026 00:00:00 GMT</pubDate>
       <description>Antibiotique = flore perturbée. Voici comment structurer le conseil probiotique + hydratation + reprise alimentaire au comptoir.</description>
     </item>
     <item>
       <title>Augmenter le panier moyen en officine : 5 leviers concrets</title>
       <link>https://www.asclion.com/blog/augmenter-panier-moyen-officine</link>
       <guid>https://www.asclion.com/blog/augmenter-panier-moyen-officine</guid>
-      <pubDate>Sun, 05 Jul 2026 09:00:00 GMT</pubDate>
+      <pubDate>Sun, 05 Jul 2026 00:00:00 GMT</pubDate>
       <description>Panier moyen en berne ? Voici 5 leviers activables dès demain au comptoir pour développer votre CA sans dégrader le conseil.</description>
     </item>
   </channel>
