@@ -34,6 +34,34 @@ const ORGANIZATION_LD = {
   sameAs: ["https://www.linkedin.com/company/asclion/"],
 };
 
+const WEBSITE_LD = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: "Asclion",
+  url: SITE,
+  inLanguage: "fr-FR",
+};
+
+/** Breadcrumb derived from the (language-neutral) path segments. */
+function buildBreadcrumb(path: string, title: string) {
+  const segments = path.split("/").filter(Boolean);
+  const items: Record<string, unknown>[] = [
+    { "@type": "ListItem", position: 1, name: "Accueil", item: `${SITE}/` },
+  ];
+  let acc = "";
+  segments.forEach((seg, i) => {
+    acc += `/${seg}`;
+    const last = i === segments.length - 1;
+    items.push({
+      "@type": "ListItem",
+      position: i + 2,
+      name: last ? title.split(" | ")[0] : seg.replace(/-/g, " "),
+      item: `${SITE}${acc}`,
+    });
+  });
+  return { "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: items };
+}
+
 const Seo = ({
   title,
   description,
@@ -52,7 +80,13 @@ const Seo = ({
   const locale = lang === "en" && !frenchOnly ? "en_US" : "fr_FR";
   const isNoindex = noindex || (frenchOnly && lang === "en");
   const userLd = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : [];
-  const lds = [ORGANIZATION_LD, ...userLd];
+  const hasBreadcrumb = userLd.some((ld) => ld?.["@type"] === "BreadcrumbList");
+  const lds = [
+    ORGANIZATION_LD,
+    WEBSITE_LD,
+    ...(hasBreadcrumb ? [] : [buildBreadcrumb(path, title)]),
+    ...userLd,
+  ];
   return (
     <Helmet>
       <html lang={frenchOnly ? "fr" : lang === "en" ? "en" : "fr"} />
