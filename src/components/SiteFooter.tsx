@@ -12,6 +12,7 @@ const SiteFooter = () => {
           <Link to={lp("/fonctionnalites")} className="hover:text-foreground transition-colors">Fonctionnement</Link>
           <Link to={lp("/tarifs")} className="hover:text-foreground transition-colors">Tarifs</Link>
           <Link to={lp("/blog")} className="hover:text-foreground transition-colors">Blog</Link>
+          <Link to="/a-propos" className="hover:text-foreground transition-colors">À propos</Link>
           <Link to={lp("/aide")} className="hover:text-foreground transition-colors">{t("footer.help")}</Link>
           <Link to={lp("/mentions-legales")} className="hover:text-foreground transition-colors">{t("footer.legal")}</Link>
           <Link to={lp("/confidentialite")} className="hover:text-foreground transition-colors">{t("footer.privacy")}</Link>
