@@ -11,6 +11,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { I18nProvider } from "@/i18n/I18nProvider";
 import { getPrerenderRoutes } from "@/prerender/routes";
+import { getAllPosts } from "@/lib/blog";
 
 export interface RenderResult {
   html: string;
