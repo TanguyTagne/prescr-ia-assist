@@ -22,6 +22,14 @@ export function listRoutes(): string[] {
   return getPrerenderRoutes().map((r) => r.path);
 }
 
+/** [route, YYYY-MM-DD] pairs for blog posts, used for sitemap <lastmod>. */
+export function listBlogLastmod(): Array<[string, string]> {
+  return getAllPosts().map((p) => [
+    `/blog/${p.slug}`,
+    (p.updated || p.date).slice(0, 10),
+  ]);
+}
+
 export function render(url: string): RenderResult {
   const routes = getPrerenderRoutes();
   const helmetContext = {} as FilledContext;
