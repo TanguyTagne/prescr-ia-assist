@@ -136,10 +136,10 @@ async function main() {
     let page = template
       .replace(/<html[^>]*>/i, `<html ${htmlAttributes}>`)
       .replace("</head>", `  ${head}\n  </head>`)
-      .replace(
-        /<div id="root">[\s\S]*?<\/div>\s*<script/i,
-        `<div id="root">${html}</div>\n    <script`,
-      );
+      .replace(/<div id="root">[\s\S]*<\/div>/i, () => `<div id="root">${html}</div>`)
+      // react-helmet-async serializes the React prop name; raw HTML needs the
+      // lowercase attribute so crawlers read the alternates.
+      .replace(/hrefLang=/g, "hreflang=");
 
     const file = outputPathFor(route);
     await mkdir(path.dirname(file), { recursive: true });
