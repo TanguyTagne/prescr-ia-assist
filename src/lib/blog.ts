@@ -43,6 +43,10 @@ function estimateReadingTime(raw: string) {
   return Math.max(1, Math.round(words / 220));
 }
 
+function stripLeadingH1(md: string) {
+  return md.replace(/^\s*#\s+.+\n+/, "");
+}
+
 function parseFile(raw: string): BlogPost | null {
   const parsed = matter(raw);
   const fm = parsed.data as Partial<BlogPost>;
@@ -63,7 +67,7 @@ function parseFile(raw: string): BlogPost | null {
     faq: fm.faq,
     relatedLinks: fm.relatedLinks,
     relatedPosts: fm.relatedPosts,
-    content: parsed.content,
+    content: stripLeadingH1(parsed.content),
   };
 }
 

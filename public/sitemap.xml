@@ -19,41 +19,177 @@
   </url>
   <url>
     <loc>https://www.asclion.com/vs-lgo</loc>
+    <xhtml:link rel="alternate" hreflang="fr-FR" href="https://www.asclion.com/vs-lgo" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.asclion.com/en/vs-lgo" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.asclion.com/vs-lgo" />
     <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.7</priority>
   </url>
   <url>
     <loc>https://www.asclion.com/en/vs-lgo</loc>
+    <xhtml:link rel="alternate" hreflang="fr-FR" href="https://www.asclion.com/vs-lgo" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.asclion.com/en/vs-lgo" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.asclion.com/vs-lgo" />
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.asclion.com/tarifs</loc>
+    <xhtml:link rel="alternate" hreflang="fr-FR" href="https://www.asclion.com/tarifs" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.asclion.com/en/tarifs" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.asclion.com/tarifs" />
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.asclion.com/en/tarifs</loc>
+    <xhtml:link rel="alternate" hreflang="fr-FR" href="https://www.asclion.com/tarifs" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.asclion.com/en/tarifs" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.asclion.com/tarifs" />
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.asclion.com/presentation</loc>
+    <xhtml:link rel="alternate" hreflang="fr-FR" href="https://www.asclion.com/presentation" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.asclion.com/en/presentation" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.asclion.com/presentation" />
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.asclion.com/en/presentation</loc>
+    <xhtml:link rel="alternate" hreflang="fr-FR" href="https://www.asclion.com/presentation" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.asclion.com/en/presentation" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.asclion.com/presentation" />
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.asclion.com/demo</loc>
+    <xhtml:link rel="alternate" hreflang="fr-FR" href="https://www.asclion.com/demo" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.asclion.com/en/demo" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.asclion.com/demo" />
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.asclion.com/en/demo</loc>
+    <xhtml:link rel="alternate" hreflang="fr-FR" href="https://www.asclion.com/demo" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.asclion.com/en/demo" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.asclion.com/demo" />
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.asclion.com/compatibilite-robot</loc>
+    <xhtml:link rel="alternate" hreflang="fr-FR" href="https://www.asclion.com/compatibilite-robot" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.asclion.com/en/compatibilite-robot" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.asclion.com/compatibilite-robot" />
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.asclion.com/en/compatibilite-robot</loc>
+    <xhtml:link rel="alternate" hreflang="fr-FR" href="https://www.asclion.com/compatibilite-robot" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.asclion.com/en/compatibilite-robot" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.asclion.com/compatibilite-robot" />
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://www.asclion.com/aide</loc>
+    <xhtml:link rel="alternate" hreflang="fr-FR" href="https://www.asclion.com/aide" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.asclion.com/en/aide" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.asclion.com/aide" />
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://www.asclion.com/en/aide</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://www.asclion.com/fonctionnalites</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://www.asclion.com/en/fonctionnalites</loc>
+    <xhtml:link rel="alternate" hreflang="fr-FR" href="https://www.asclion.com/aide" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.asclion.com/en/aide" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.asclion.com/aide" />
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
-  <!-- Blog index -->
+  <url>
+    <loc>https://www.asclion.com/fonctionnalites</loc>
+    <xhtml:link rel="alternate" hreflang="fr-FR" href="https://www.asclion.com/fonctionnalites" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.asclion.com/en/fonctionnalites" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.asclion.com/fonctionnalites" />
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.asclion.com/en/fonctionnalites</loc>
+    <xhtml:link rel="alternate" hreflang="fr-FR" href="https://www.asclion.com/fonctionnalites" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.asclion.com/en/fonctionnalites" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.asclion.com/fonctionnalites" />
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
   <url>
     <loc>https://www.asclion.com/blog</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="fr-FR" href="https://www.asclion.com/blog" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.asclion.com/en/blog" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.asclion.com/blog" />
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
   </url>
-  <!-- Blog posts (auto-generated by scripts/generate-blog-assets.mjs) -->
+  <url>
+    <loc>https://www.asclion.com/en/blog</loc>
+    <xhtml:link rel="alternate" hreflang="fr-FR" href="https://www.asclion.com/blog" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.asclion.com/en/blog" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.asclion.com/blog" />
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.asclion.com/auteur/tanguy</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.asclion.com/a-propos</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.asclion.com/mentions-legales</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.asclion.com/confidentialite</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.asclion.com/cookies</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.asclion.com/cgu</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://www.asclion.com/cgv</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.asclion.com/legal/dpa</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://www.asclion.com/legal/pia</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.3</priority>
+  </url>
   <url>
     <loc>https://www.asclion.com/blog/conseil-associe-pharmacie</loc>
     <lastmod>2026-08-04</lastmod>
@@ -73,8 +209,8 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://www.asclion.com/blog/augmenter-panier-moyen-officine</loc>
-    <lastmod>2026-07-18</lastmod>
+    <loc>https://www.asclion.com/blog/choisir-logiciel-officine</loc>
+    <lastmod>2026-07-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -85,39 +221,9 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://www.asclion.com/blog/choisir-logiciel-officine</loc>
-    <lastmod>2026-07-15</lastmod>
+    <loc>https://www.asclion.com/blog/augmenter-panier-moyen-officine</loc>
+    <lastmod>2026-07-18</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://www.asclion.com/cgu</loc>
-    <changefreq>yearly</changefreq>
-    <priority>0.3</priority>
-  </url>
-  <url>
-    <loc>https://www.asclion.com/confidentialite</loc>
-    <changefreq>yearly</changefreq>
-    <priority>0.3</priority>
-  </url>
-  <url>
-    <loc>https://www.asclion.com/mentions-legales</loc>
-    <changefreq>yearly</changefreq>
-    <priority>0.3</priority>
-  </url>
-  <url>
-    <loc>https://www.asclion.com/cookies</loc>
-    <changefreq>yearly</changefreq>
-    <priority>0.3</priority>
-  </url>
-  <url>
-    <loc>https://www.asclion.com/legal/dpa</loc>
-    <changefreq>yearly</changefreq>
-    <priority>0.2</priority>
-  </url>
-  <url>
-    <loc>https://www.asclion.com/legal/pia</loc>
-    <changefreq>yearly</changefreq>
-    <priority>0.2</priority>
   </url>
 </urlset>

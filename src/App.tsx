@@ -47,6 +47,8 @@ const CompatibiliteRobot = lazyWithRetry(() => import("./pages/CompatibiliteRobo
 const Groupement = lazyWithRetry(() => import("./pages/Groupement"));
 const DPA = lazyWithRetry(() => import("./pages/legal/DPA"));
 const PIA = lazyWithRetry(() => import("./pages/legal/PIA"));
+const Auteur = lazyWithRetry(() => import("./pages/Auteur"));
+const APropos = lazyWithRetry(() => import("./pages/APropos"));
 
 const queryClient = new QueryClient();
 
@@ -228,6 +230,8 @@ const App = () => {
                   <Route path="/cgv" element={<CGV />} />
                   <Route path="/legal/dpa" element={<DPA />} />
                   <Route path="/legal/pia" element={<PIA />} />
+                  <Route path="/auteur/tanguy" element={<Auteur />} />
+                  <Route path="/a-propos" element={<APropos />} />
                   {/* EN mirror */}
                   <Route path="/en" element={<Landing />} />
                   <Route path="/en/auth" element={<Auth />} />

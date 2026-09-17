@@ -25,6 +25,25 @@ import { useI18n } from "@/i18n/I18nProvider";
 import { trackEvent } from "@/hooks/useAnalytics";
 import heroVideo from "@/assets/asclion-45s.mp4.asset.json";
 
+const HOME_FAQ = [
+  {
+    q: "Faut-il changer de LGO ?",
+    a: "Non. Asclion est une surcouche ; la compatibilité est confirmée selon votre environnement avant l'activation.",
+  },
+  {
+    q: "Est-ce que cela ralentit la délivrance ?",
+    a: "L'application est conçue pour rester discrète : elle apparaît sans prendre le focus de la souris et repasse au second plan après un clic extérieur.",
+  },
+  {
+    q: "Que se passe-t-il après le paiement ?",
+    a: "Vous recevez un e-mail pour définir votre mot de passe, installer Asclion en trois clics et terminer la validation. Activation sous 24 à 48 h après validation.",
+  },
+  {
+    q: "Et si mon officine a un robot ?",
+    a: "La compatibilité est vérifiée avant tout paiement, selon la marque et le modèle du robot.",
+  },
+];
+
 const Landing = () => {
   const { lp } = useI18n();
   const { user } = useAuth();
@@ -43,7 +62,7 @@ const Landing = () => {
         title="Asclion — Le conseil associé, au bon moment. Sans changer de LGO."
         description="Au scan d'un médicament, Asclion affiche un point de vigilance, une suggestion pertinente et une phrase conseil. À partir de 99 € HT/mois par officine, caisses illimitées."
         path="/"
-        jsonLd={{
+        jsonLd={[{
           "@context": "https://schema.org",
           "@type": "SoftwareApplication",
           name: "Asclion",
@@ -60,7 +79,16 @@ const Landing = () => {
           },
           audience: { "@type": "Audience", audienceType: "Pharmacists" },
           inLanguage: ["fr-FR"],
-        }}
+        },
+        {
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: HOME_FAQ.map((f) => ({
+            "@type": "Question",
+            name: f.q,
+            acceptedAnswer: { "@type": "Answer", text: f.a },
+          })),
+        }]}
       />
       <SiteHeader />
 
@@ -323,24 +351,7 @@ const Landing = () => {
               Questions fréquentes
             </h2>
             <div className="space-y-3">
-              {[
-                {
-                  q: "Faut-il changer de LGO ?",
-                  a: "Non. Asclion est une surcouche ; la compatibilité est confirmée selon votre environnement avant l'activation.",
-                },
-                {
-                  q: "Est-ce que cela ralentit la délivrance ?",
-                  a: "L'application est conçue pour rester discrète : elle apparaît sans prendre le focus de la souris et repasse au second plan après un clic extérieur.",
-                },
-                {
-                  q: "Que se passe-t-il après le paiement ?",
-                  a: "Vous recevez un e-mail pour définir votre mot de passe, installer Asclion en trois clics et terminer la validation. Activation sous 24 à 48 h après validation.",
-                },
-                {
-                  q: "Et si mon officine a un robot ?",
-                  a: "La compatibilité est vérifiée avant tout paiement, selon la marque et le modèle du robot.",
-                },
-              ].map((f, i) => (
+              {HOME_FAQ.map((f, i) => (
                 <details
                   key={i}
                   className="rounded-xl border border-border bg-card p-5 group"

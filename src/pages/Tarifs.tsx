@@ -81,6 +81,20 @@ const Tarifs = () => {
         title="Tarifs Asclion — Classique et Premium, par officine, caisses illimitées"
         description="Classique dès 99 € HT/mois, Premium dès 149 € HT/mois. Offres annuelles sans renouvellement automatique. Tous les prix HT, par officine, caisses illimitées."
         path="/tarifs"
+        jsonLd={{
+          "@context": "https://schema.org",
+          "@type": "Product",
+          name: "Asclion",
+          description:
+            "Surcouche au LGO pour le conseil associé en officine : vigilance, suggestion de produit complémentaire et phrase conseil au scan d'un médicament.",
+          brand: { "@type": "Brand", name: "Asclion" },
+          offers: [
+            { "@type": "Offer", name: "Classique mensuel", price: "99", priceCurrency: "EUR", url: "https://www.asclion.com/souscrire?plan=classic_monthly", availability: "https://schema.org/InStock" },
+            { "@type": "Offer", name: "Premium mensuel", price: "149", priceCurrency: "EUR", url: "https://www.asclion.com/souscrire?plan=premium_monthly", availability: "https://schema.org/InStock" },
+            { "@type": "Offer", name: "Classique annuel", price: "990", priceCurrency: "EUR", url: "https://www.asclion.com/souscrire?plan=classic_yearly", availability: "https://schema.org/InStock" },
+            { "@type": "Offer", name: "Premium annuel", price: "1490", priceCurrency: "EUR", url: "https://www.asclion.com/souscrire?plan=premium_yearly", availability: "https://schema.org/InStock" },
+          ],
+        }}
       />
       <SiteHeader />
 

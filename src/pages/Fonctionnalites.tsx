@@ -201,6 +201,18 @@ const Fonctionnalites = () => {
         title={t("seo.features.title")}
         description={t("seo.features.desc")}
         path="/fonctionnalites"
+        jsonLd={{
+          "@context": "https://schema.org",
+          "@type": "SoftwareApplication",
+          name: "Asclion",
+          applicationCategory: "BusinessApplication",
+          operatingSystem: "Windows",
+          url: "https://www.asclion.com/fonctionnalites",
+          description:
+            "Base de 30 000+ médicaments, suggestion de produit complémentaire, point de vigilance et phrase conseil au scan, en surcouche du LGO.",
+          offers: { "@type": "Offer", price: "99", priceCurrency: "EUR", availability: "https://schema.org/InStock" },
+          audience: { "@type": "Audience", audienceType: "Pharmacists" },
+        }}
       />
 
       <header className="pharmacy-gradient px-4 py-4">

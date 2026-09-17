@@ -42,7 +42,7 @@ const BlogPost = () => {
     description: post.description,
     datePublished: post.date,
     dateModified: post.updated || post.date,
-    author: { "@type": "Person", name: post.author },
+    author: { "@type": "Person", name: post.author, url: `${SITE}/auteur/tanguy` },
     publisher: {
       "@type": "Organization",
       name: "Asclion",
@@ -97,7 +97,7 @@ const BlogPost = () => {
           <h1 className="text-3xl sm:text-4xl font-bold tracking-tight leading-tight mb-4">{post.title}</h1>
           <p className="text-lg text-muted-foreground mb-5">{post.description}</p>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground mb-6">
-            <span className="inline-flex items-center gap-1"><User className="h-3 w-3" />{post.author}</span>
+            <span className="inline-flex items-center gap-1"><User className="h-3 w-3" /><Link to="/auteur/tanguy" className="hover:text-foreground hover:underline">{post.author}</Link></span>
             <span className="inline-flex items-center gap-1"><Calendar className="h-3 w-3" />Publié le {formatDate(post.date, lang)}</span>
             {post.updated && post.updated !== post.date && (
               <span className="inline-flex items-center gap-1"><RefreshCw className="h-3 w-3" />Mis à jour le {formatDate(post.updated, lang)}</span>
