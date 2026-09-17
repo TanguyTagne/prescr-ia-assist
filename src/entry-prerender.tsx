@@ -45,8 +45,8 @@ export function render(url: string): RenderResult {
           <StaticRouter location={url}>
             <I18nProvider>
               <Routes>
-                {routes.map((r) => (
-                  <Route key={r.path} path={r.path} element={r.element} />
+                {Array.from(new Map(routes.map((r) => [r.pattern, r])).values()).map((r) => (
+                  <Route key={r.pattern} path={r.pattern} element={r.element} />
                 ))}
               </Routes>
             </I18nProvider>

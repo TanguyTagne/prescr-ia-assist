@@ -29,8 +29,10 @@ import PIA from "@/pages/legal/PIA";
 import { getAllPosts } from "@/lib/blog";
 
 export interface PrerenderRoute {
-  /** URL path, language prefix included. */
+  /** URL path to render, language prefix included. */
   path: string;
+  /** Route pattern registered in <Routes> (differs for dynamic blog posts). */
+  pattern: string;
   element: ReactElement;
 }
 
@@ -63,12 +65,13 @@ const FR_ONLY: Array<[string, ReactElement]> = [
 export function getPrerenderRoutes(): PrerenderRoute[] {
   const routes: PrerenderRoute[] = [];
   for (const [path, element] of BILINGUAL) {
-    routes.push({ path, element });
-    routes.push({ path: path === "/" ? "/en" : `/en${path}`, element });
+    routes.push({ path, pattern: path, element });
+    const en = path === "/" ? "/en" : `/en${path}`;
+    routes.push({ path: en, pattern: en, element });
   }
-  for (const [path, element] of FR_ONLY) routes.push({ path, element });
+  for (const [path, element] of FR_ONLY) routes.push({ path, pattern: path, element });
   for (const post of getAllPosts()) {
-    routes.push({ path: `/blog/${post.slug}`, element: <BlogPost /> });
+    routes.push({ path: `/blog/${post.slug}`, pattern: "/blog/:slug", element: <BlogPost /> });
   }
   return routes;
 }
