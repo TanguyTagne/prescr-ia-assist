@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import AsclionLoader from "@/components/AsclionLoader";
 import {
   PackageSearch, RefreshCw, Download, Loader2,
   ExternalLink, AlertTriangle, Wand2, DatabaseZap, Trash2,
@@ -394,7 +395,7 @@ const MedicamentsManquantsTab = () => {
         <CardContent>
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              <AsclionLoader size="compact" />
             </div>
           ) : filteredRows.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">

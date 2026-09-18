@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useRef, useState, useEffect } from "react";
+import AsclionLoader from "@/components/AsclionLoader";
 import {
   ScanLine, FolderSearch, Download, Trash2, FileText, AlertCircle,
   CheckCircle2, Keyboard, Activity, RefreshCw, Loader2,
@@ -356,7 +357,7 @@ const HardwareDiagnosticTab = () => {
           {/* Events table */}
           {scanEventsLoading ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+              <AsclionLoader size="compact" />
             </div>
           ) : (
             <div className="rounded-lg border border-border overflow-hidden">

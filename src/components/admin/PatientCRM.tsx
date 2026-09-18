@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import AsclionLoader from "@/components/AsclionLoader";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -186,7 +187,7 @@ ${p.lastAnalysis ? `\nDernière analyse : ${new Date(p.lastAnalysis).toLocaleDat
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <Loader2 className="h-5 w-5 animate-spin text-primary" />
+        <AsclionLoader size="compact" />
       </div>
     );
   }

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import AsclionLoader from "@/components/AsclionLoader";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -87,7 +88,7 @@ const SignalementsTab = () => {
   if (loading) {
     return (
       <div className="flex justify-center py-8">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        <AsclionLoader size="compact" />
       </div>
     );
   }

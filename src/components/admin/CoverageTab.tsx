@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import AsclionLoader from "@/components/AsclionLoader";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -190,7 +191,7 @@ const CoverageTab = () => {
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
+    return <div className="flex items-center justify-center py-12"><AsclionLoader size="compact" /></div>;
   }
 
   const cipRate = medStats && medStats.total_rows > 0

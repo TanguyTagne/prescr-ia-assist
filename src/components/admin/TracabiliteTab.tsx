@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import AsclionLoader from "@/components/AsclionLoader";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -165,7 +166,7 @@ const TracabiliteTab = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        <AsclionLoader size="compact" />
       </div>
     );
   }

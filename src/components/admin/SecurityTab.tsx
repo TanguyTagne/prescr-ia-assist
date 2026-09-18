@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import AsclionLoader from "@/components/AsclionLoader";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -126,7 +127,7 @@ const SecurityTab = () => {
 
         {loading ? (
           <div className="flex items-center justify-center py-6">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            <AsclionLoader size="compact" />
           </div>
         ) : (
           <>

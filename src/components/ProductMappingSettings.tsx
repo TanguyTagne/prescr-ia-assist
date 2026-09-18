@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import AsclionLoader from "@/components/AsclionLoader";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -171,7 +172,7 @@ const ProductMappingSettings = () => {
     }
   };
 
-  if (loading) return <div className="text-xs text-muted-foreground p-4">Chargement...</div>;
+  if (loading) return <AsclionLoader size="compact" className="p-4" />;
   if (!pharmacyId) return <div className="text-xs text-muted-foreground p-4">Aucune pharmacie associée.</div>;
 
   return (
