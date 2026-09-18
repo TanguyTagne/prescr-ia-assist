@@ -6,7 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, RefreshCcw } from "lucide-react";
+import { RefreshCcw } from "lucide-react";
+import AsclionLoader from "@/components/AsclionLoader";
 import { toast } from "sonner";
 
 const STATUS_LABELS: Record<string, string> = {

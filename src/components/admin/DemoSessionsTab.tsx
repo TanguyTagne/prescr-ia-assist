@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Globe2, FileText, ExternalLink, TrendingUp } from "lucide-react";
+import { Globe2, FileText, ExternalLink, TrendingUp } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import AsclionLoader from "@/components/AsclionLoader";
 
