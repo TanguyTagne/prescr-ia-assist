@@ -24,7 +24,7 @@ export default function AsclionLoader({
     const video = videoRef.current;
     if (!video) return;
 
-    video.playbackRate = 2;
+    video.playbackRate = 1;
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reducedMotion) {
       video.pause();
