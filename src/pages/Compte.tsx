@@ -12,6 +12,7 @@ import { Loader2, ExternalLink, Clock } from "lucide-react";
 import { toast } from "sonner";
 import Seo from "@/components/Seo";
 import { isPaymentsConfigured, getStripeEnvironment } from "@/lib/stripe";
+import AsclionLoader from "@/components/AsclionLoader";
 
 const STATUS_LABELS: Record<string, string> = {
   checkout_started: "Paiement commencé",
@@ -130,11 +131,7 @@ export default function Compte() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <AsclionLoader size="page" className="min-h-screen bg-background" />;
   }
 
   return (

@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import AsclionLoader from "@/components/AsclionLoader";
 
 interface QuizQuestion {
   id: string;
@@ -269,10 +270,7 @@ const Quiz = () => {
 
       <main className="container max-w-3xl mx-auto px-4 py-6 space-y-4">
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-3">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-sm text-muted-foreground">Génération du quiz…</p>
-          </div>
+          <AsclionLoader size="section" className="py-20" label="Génération du quiz" />
         ) : state.finished ? (
           /* Score final */
           <Card className="glass-card border-primary/20">

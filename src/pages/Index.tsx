@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import SoundToggle from "@/components/SoundToggle";
 import RegisterSelector from "@/components/RegisterSelector";
+import AsclionLoader from "@/components/AsclionLoader";
 
 interface PC {
   produit: string;
@@ -167,10 +168,7 @@ const Index = () => {
 
       <main className="container max-w-2xl mx-auto px-3 py-3 flex-1 overflow-y-auto">
         {loading ? (
-          <div className="flex items-center justify-center py-16 gap-2">
-            <Loader2 className="h-5 w-5 text-primary animate-spin" />
-            <p className="text-sm text-muted-foreground">Chargement du flux...</p>
-          </div>
+          <AsclionLoader size="section" className="py-16" label="Chargement du flux" />
         ) : items.length === 0 ? (
           <div className="text-center py-16 space-y-2">
             <Pill className="h-10 w-10 text-muted-foreground/40 mx-auto" />
