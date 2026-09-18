@@ -4,6 +4,7 @@ import { Loader2, Mail, Download, FileText } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import AsclionLoader from "@/components/AsclionLoader";
 
 interface DemoLead {
   id: string;
@@ -99,11 +100,7 @@ const DemoLeadsTab = () => {
   };
 
   if (loading) {
-    return (
-      <div className="flex justify-center py-8">
-        <Loader2 className="h-5 w-5 animate-spin text-primary" />
-      </div>
-    );
+    return <AsclionLoader size="section" className="py-8" label="Chargement des demandes" />;
   }
 
   return (

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Globe2, FileText, ExternalLink, TrendingUp } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import AsclionLoader from "@/components/AsclionLoader";
 
 interface DemoSession {
   id: string;
@@ -48,11 +49,7 @@ const DemoSessionsTab = () => {
   }, []);
 
   if (loading) {
-    return (
-      <div className="flex justify-center py-8">
-        <Loader2 className="h-5 w-5 animate-spin text-primary" />
-      </div>
-    );
+    return <AsclionLoader size="section" className="py-8" label="Chargement des sessions" />;
   }
 
   const total = sessions.length;
