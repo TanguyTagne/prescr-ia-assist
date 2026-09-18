@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { Pill, BarChart3, LogOut, ShieldX, PauseCircle, Sparkles, RefreshCw, Loader2 } from "lucide-react";
+import { Pill, BarChart3, LogOut, ShieldX, PauseCircle, Sparkles, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import LegalDisclaimer from "@/components/LegalDisclaimer";

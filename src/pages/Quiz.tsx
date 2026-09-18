@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { ArrowLeft, Trophy, RotateCcw, CheckCircle2, XCircle, Loader2, Brain, Zap, Target } from "lucide-react";
+import { ArrowLeft, Trophy, RotateCcw, CheckCircle2, XCircle, Brain, Zap, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
