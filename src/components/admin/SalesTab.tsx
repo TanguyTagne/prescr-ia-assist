@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, ShoppingCart, TrendingUp, Package, BarChart3, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { ShoppingCart, TrendingUp, Package, BarChart3, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import AsclionLoader from "@/components/AsclionLoader";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 
 interface CrossSellRecord {
@@ -75,11 +76,7 @@ const SalesTab = () => {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
-      </div>
-    );
+    return <AsclionLoader size="section" className="py-12" label="Chargement des ventes" />;
   }
 
   // Compute stats

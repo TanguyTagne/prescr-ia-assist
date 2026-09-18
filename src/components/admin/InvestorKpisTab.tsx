@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import AsclionLoader from "@/components/AsclionLoader";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -325,7 +326,7 @@ const InvestorKpisTab = () => {
   };
 
   if (loading || !c) {
-    return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
+    return <div className="flex justify-center py-12"><AsclionLoader size="compact" /></div>;
   }
 
   return (

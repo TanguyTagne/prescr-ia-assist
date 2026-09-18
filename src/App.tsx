@@ -7,7 +7,7 @@ import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { RegisterProvider } from "@/hooks/useRegister";
 import { I18nProvider } from "@/i18n/I18nProvider";
-import { Loader2 } from "lucide-react";
+import AsclionLoader from "@/components/AsclionLoader";
 import CookieBanner from "@/components/CookieBanner";
 import LgoAutoDetectPrompt from "@/components/LgoAutoDetectPrompt";
 import WidgetDemoTour from "@/components/WidgetDemoTour";
@@ -56,33 +56,21 @@ const isStandalone = isAsclionDesktopRuntime();
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center">
-      <Loader2 className="h-8 w-8 animate-spin text-primary" />
-    </div>
-  );
+  if (loading) return <AsclionLoader size="page" className="min-h-screen bg-background" />;
   if (!user) return <Navigate to="/" replace />;
   return <>{children}</>;
 };
 
 const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading, isAdmin } = useAuth();
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center">
-      <Loader2 className="h-8 w-8 animate-spin text-primary" />
-    </div>
-  );
+  if (loading) return <AsclionLoader size="page" className="min-h-screen bg-background" />;
   if (!user || !isAdmin) return <Navigate to="/" replace />;
   return <>{children}</>;
 };
 
 const GroupRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading, isAdmin, isGroupManager } = useAuth();
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center">
-      <Loader2 className="h-8 w-8 animate-spin text-primary" />
-    </div>
-  );
+  if (loading) return <AsclionLoader size="page" className="min-h-screen bg-background" />;
   if (!user || (!isAdmin && !isGroupManager)) return <Navigate to="/" replace />;
   return <>{children}</>;
 };
@@ -192,7 +180,7 @@ const App = () => {
           <InstanceHeartbeatMount />
           <RegisterProvider>
           <I18nProvider>
-          <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}>
+          <Suspense fallback={<AsclionLoader size="page" className="min-h-screen bg-background" />}>
             {isStandalone ? (
               <>
                 <GlobalBarcodeBridgeMount />

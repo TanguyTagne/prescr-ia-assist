@@ -9,9 +9,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, BarChart3, Building2, TrendingUp, Loader2, AlertTriangle, Trophy, Download } from "lucide-react";
+import { ArrowLeft, BarChart3, Building2, TrendingUp, AlertTriangle, Trophy, Download } from "lucide-react";
 import { toast } from "sonner";
 import MappingEditor from "@/components/groupement/MappingEditor";
+import AsclionLoader from "@/components/AsclionLoader";
 
 type Tab = "kpis" | "mapping" | "insights";
 
@@ -98,7 +99,7 @@ const Groupement = () => {
   };
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+    return <AsclionLoader size="page" className="min-h-screen bg-background" />;
   }
 
   if (!selectedGroupId) {

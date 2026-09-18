@@ -63,9 +63,10 @@
 
   <body>
     <div id="root">
-      <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#22806a;font-size:13px;font-weight:600;letter-spacing:0.02em;">
-        Asclion…
+      <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:hsl(150 20% 98%);">
+        <video id="asclion-initial-loader" src="/__l5e/assets-v1/2ca44301-8ea4-4d39-b46a-a390d8604c96/asclion-loader.mp4" autoplay loop muted playsinline preload="auto" aria-label="Chargement en cours" style="width:min(14rem,55vw);height:auto;object-fit:contain;"></video>
       </div>
+      <script>var v=document.getElementById("asclion-initial-loader");if(v&&window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches){v.pause();v.currentTime=0;}</script>
     </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

@@ -6,7 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, RefreshCcw } from "lucide-react";
+import { RefreshCcw } from "lucide-react";
+import AsclionLoader from "@/components/AsclionLoader";
 import { toast } from "sonner";
 
 const STATUS_LABELS: Record<string, string> = {
@@ -286,7 +287,7 @@ export default function SubscriptionsTab() {
           <span className="text-xs text-muted-foreground ml-auto">{visible.length} / {subs.length}</span>
         </div>
         {loading ? (
-          <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+          <AsclionLoader size="section" className="py-8" label="Chargement des souscriptions" />
         ) : visible.length === 0 ? (
           <p className="text-sm text-muted-foreground py-6 text-center">Aucune souscription à afficher.</p>
         ) : (

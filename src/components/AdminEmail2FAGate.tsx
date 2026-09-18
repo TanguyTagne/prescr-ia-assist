@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { Loader2, ShieldCheck, Mail } from "lucide-react";
 import { toast } from "sonner";
+import AsclionLoader from "@/components/AsclionLoader";
 
 interface Props {
   children: React.ReactNode;
@@ -76,11 +77,7 @@ const AdminEmail2FAGate = ({ children }: Props) => {
   };
 
   if (checking) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <AsclionLoader size="page" className="min-h-screen bg-background" label="Vérification de sécurité" />;
   }
 
   if (verified) return <>{children}</>;

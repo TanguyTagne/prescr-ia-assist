@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import AsclionLoader from "@/components/AsclionLoader";
 import { RefreshCw, Activity, Loader2, AlertTriangle, CheckCircle2, Radio, Cable, Network, Webhook, ScanLine } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -173,7 +174,7 @@ export default function LgoCaptureDiagTab() {
           </div>
 
           {loading ? (
-            <div className="py-8 flex justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+            <div className="py-8 flex justify-center"><AsclionLoader size="compact" /></div>
           ) : rows.length === 0 ? (
             <div className="py-8 text-center text-sm text-muted-foreground">Aucune pharmacie trouvée.</div>
           ) : (

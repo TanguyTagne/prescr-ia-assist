@@ -3,11 +3,12 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { ArrowLeft, Loader2, Mail, Building2, BarChart3, RefreshCw, ShieldCheck, Target, Trophy, Sparkles, UserPlus, Network, FileSearch, Shield, FileText, Link2, Flag, Sparkle, CheckCircle2, LineChart, ScanLine, PackageSearch, CreditCard } from "lucide-react";
+import { ArrowLeft, Mail, Building2, BarChart3, RefreshCw, ShieldCheck, Target, Trophy, Sparkles, UserPlus, Network, FileSearch, Shield, FileText, Link2, Flag, Sparkle, CheckCircle2, LineChart, ScanLine, PackageSearch, CreditCard } from "lucide-react";
 import AdminEmail2FAGate from "@/components/AdminEmail2FAGate";
 import { useNavigate } from "react-router-dom";
 import PharmacyKPIs from "@/components/admin/PharmacyKPIs";
 import { lazyWithRetry } from "@/lib/lazyWithRetry";
+import AsclionLoader from "@/components/AsclionLoader";
 
 const InvestorKpisTab = lazyWithRetry(() => import("@/components/admin/InvestorKpisTab"));
 const RequestsTab = lazyWithRetry(() => import("@/components/admin/RequestsTab"));
@@ -100,11 +101,7 @@ const Admin = () => {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <AsclionLoader size="page" className="min-h-screen bg-background" />;
   }
 
   return (
@@ -228,7 +225,7 @@ const Admin = () => {
         </div>
 
         {tab === "kpis" && <PharmacyKPIs />}
-        <Suspense fallback={<div className="flex items-center justify-center py-12"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>}>
+        <Suspense fallback={<AsclionLoader size="section" className="py-12" label="Chargement de l’onglet" />}>
           {tab === "investor" && <InvestorKpisTab />}
           {tab === "demo-leads" && <DemoLeadsTab />}
           {tab === "demo-sessions" && <DemoSessionsTab />}

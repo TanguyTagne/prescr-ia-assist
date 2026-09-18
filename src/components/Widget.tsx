@@ -25,6 +25,7 @@ import { SCANNER } from "@/constants/scanner";
 import { useLgoPreset } from "@/hooks/useLgoPreset";
 import { getPresetClasses, LGO_PRESETS, type LgoType } from "@/lib/lgoPresets";
 import { isAsclionDesktopRuntime } from "@/lib/runtime";
+import AsclionLoader from "@/components/AsclionLoader";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -997,9 +998,7 @@ const Widget = ({ forceOpen = false }: {forceOpen?: boolean;}) => {
             {showSettings ? (
               <WidgetSettings onClose={() => setShowSettings(false)} onSignOut={signOut} />
             ) : loading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-5 w-5 animate-spin text-primary" />
-              </div>
+              <AsclionLoader size="compact" className="py-8" />
             ) : !user ? (
               <WidgetAuth />
             ) : (
@@ -1045,9 +1044,7 @@ const Widget = ({ forceOpen = false }: {forceOpen?: boolean;}) => {
             <RegisterSelector />
           </div>
           {loading ?
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-5 w-5 animate-spin text-primary" />
-            </div> :
+            <AsclionLoader size="compact" className="py-8" /> :
           !user ?
             <WidgetAuth /> :
             <WidgetApp />

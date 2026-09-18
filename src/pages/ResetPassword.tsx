@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import AsclionLoader from "@/components/AsclionLoader";
 
 const ResetPassword = () => {
   const [password, setPassword] = useState("");
@@ -71,11 +72,7 @@ const ResetPassword = () => {
   };
 
   if (checking) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <AsclionLoader size="page" className="min-h-screen bg-background" />;
   }
 
   if (!isValidSession) {
