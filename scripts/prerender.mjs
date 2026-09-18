@@ -79,6 +79,9 @@ function stripDuplicateHead(template) {
     );
 }
 
+/** Inline guard shipped only in dist/index.html (the SPA fallback document). */
+const FALLBACK_GUARD = `<script>(function(){try{var p=location.pathname.replace(/\\/+$/,"")||"/";if(p==="/")return;var r=document.getElementById("root");if(r)r.innerHTML='<div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#22806a;font-size:13px;font-weight:600;letter-spacing:0.02em;">Asclion…</div>';document.title="Asclion";var s=document.querySelectorAll('head link[rel="canonical"],head link[rel="alternate"],head meta[property^="og:"],head meta[name^="twitter:"],head meta[name="description"],head script[type="application/ld+json"]');for(var i=0;i<s.length;i++)s[i].parentNode.removeChild(s[i]);}catch(e){}})();</script>`;
+
 function outputPathFor(route) {
   const clean = route === "/" ? "/index" : route.replace(/\/$/, "");
   return path.join(DIST, `${clean === "/index" ? "/index" : clean + "/index"}.html`);
@@ -140,6 +143,16 @@ async function main() {
       // react-helmet-async serializes the React prop name; raw HTML needs the
       // lowercase attribute so crawlers read the alternates.
       .replace(/hrefLang=/g, "hreflang=");
+
+    // dist/index.html doubles as the SPA fallback for every non-prerendered
+    // route (/auth, /dashboard, /souscrire, ...). Wipe the marketing markup and
+    // head tags before the app mounts so those routes never flash the homepage.
+    if (route === "/") {
+      page = page.replace(
+        '<script type="module"',
+        `${FALLBACK_GUARD}\n    <script type="module"`,
+      );
+    }
 
     const file = outputPathFor(route);
     await mkdir(path.dirname(file), { recursive: true });
