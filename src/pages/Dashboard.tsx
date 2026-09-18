@@ -9,6 +9,7 @@ import ProductMappingSettings from "@/components/ProductMappingSettings";
 import ShortcutsSettings from "@/components/ShortcutsSettings";
 import ScannerConfigGuide from "@/components/ScannerConfigGuide";
 import { fetchAll } from "@/lib/supabaseFetchAll";
+import AsclionLoader from "@/components/AsclionLoader";
 
 interface KpiData {
   ordonnancesDetected: number;
@@ -238,7 +239,7 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             {loading ? (
-              <p className="text-muted-foreground text-sm">Chargement...</p>
+              <AsclionLoader size="compact" className="py-4" label="Chargement de l’activité" />
             ) : recentEvents.length === 0 ? (
               <p className="text-muted-foreground text-sm">Aucune activité enregistrée. Analysez une ordonnance pour commencer.</p>
             ) : (

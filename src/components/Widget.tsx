@@ -25,6 +25,7 @@ import { SCANNER } from "@/constants/scanner";
 import { useLgoPreset } from "@/hooks/useLgoPreset";
 import { getPresetClasses, LGO_PRESETS, type LgoType } from "@/lib/lgoPresets";
 import { isAsclionDesktopRuntime } from "@/lib/runtime";
+import AsclionLoader from "@/components/AsclionLoader";
 import {
   DropdownMenu,
   DropdownMenuContent,

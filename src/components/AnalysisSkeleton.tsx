@@ -1,7 +1,7 @@
 import { Skeleton } from "@/components/ui/skeleton";
-import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useI18n } from "@/i18n/I18nProvider";
+import AsclionLoader from "@/components/AsclionLoader";
 
 export const AnalysisSkeleton = () => {
   const { t } = useI18n();
@@ -18,7 +18,7 @@ export const AnalysisSkeleton = () => {
   return (
     <div className="space-y-3 py-2" aria-busy="true" aria-live="polite">
       <div className="flex items-center gap-2 text-xs text-foreground/80">
-        <Loader2 className="h-3.5 w-3.5 text-primary animate-spin" />
+        <AsclionLoader size="compact" className="w-12 shrink-0" label={STEPS[step]} />
         <span className="font-medium">{STEPS[step]}</span>
       </div>
 
