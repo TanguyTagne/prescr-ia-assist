@@ -46,11 +46,11 @@ const BILINGUAL: Array<[string, ReactElement]> = [
   ["/compatibilite-robot", <CompatibiliteRobot />],
   ["/aide", <Aide />],
   ["/fonctionnalites", <Fonctionnalites />],
-  ["/blog", <Blog />],
 ];
 
 /** French-only public pages (legal + editorial entity pages). */
 const FR_ONLY: Array<[string, ReactElement]> = [
+  ["/blog", <Blog />],
   ["/auteur/tanguy", <Auteur />],
   ["/a-propos", <APropos />],
   ["/mentions-legales", <MentionsLegales />],

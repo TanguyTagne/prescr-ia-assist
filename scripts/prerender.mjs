@@ -91,7 +91,7 @@ function buildSitemap(routes, blogLastmod) {
   const twins = new Set(routes);
   const entry = (loc, extra) => `  <url>\n    <loc>${loc}</loc>\n${extra}  </url>`;
   const urls = routes
-    .filter((r) => !r.startsWith("/en/blog/") )
+    .filter((r) => r !== "/en/blog" && !r.startsWith("/en/blog/"))
     .map((route) => {
       const loc = `${SITE}${route === "/" ? "/" : route}`;
       let extra = "";
