@@ -603,6 +603,7 @@ export const translations = {
   "demo.headerTag": { fr: "Démo", en: "Demo" },
   "demo.closeAria": { fr: "Fermer la démo Asclion", en: "Close Asclion demo" },
   "demo.openAria": { fr: "Ouvrir la démo Asclion", en: "Open Asclion demo" },
+  "demo.launcher": { fr: "Tester le copilote", en: "Try the assistant" },
   "demo.list.title": { fr: "Démo", en: "Demo" },
   "demo.list.subtitle": { fr: "— choisissez une ordonnance à analyser\n", en: "— pick a sample prescription" },
   "demo.preview.back": { fr: "Retour", en: "Back" },

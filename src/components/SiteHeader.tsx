@@ -14,7 +14,7 @@ interface SiteHeaderProps {
 const SiteHeader = ({ variant = "full" }: SiteHeaderProps) => {
   const { user, isAdmin } = useAuth();
   const navigate = useNavigate();
-  const { lp } = useI18n();
+  const { lang, lp } = useI18n();
 
   if (variant === "checkout") {
     return (
@@ -24,7 +24,7 @@ const SiteHeader = ({ variant = "full" }: SiteHeaderProps) => {
             Asclion
           </Link>
           <p className="text-xs text-muted-foreground">
-            Paiement sécurisé · Activation sous 24–48 h
+            {lang === "en" ? "Secure payment · Activation within 24–48 hours" : "Paiement sécurisé · Activation sous 24–48 h"}
           </p>
         </div>
       </header>
@@ -40,19 +40,17 @@ const SiteHeader = ({ variant = "full" }: SiteHeaderProps) => {
 
         <nav className="hidden md:flex items-center gap-5 text-sm">
           <Link to={lp("/fonctionnalites")} className="text-muted-foreground hover:text-foreground transition-colors">
-            Fonctionnement
+            {lang === "en" ? "How it works" : "Fonctionnement"}
           </Link>
           <Link to={lp("/") + "#preuve"} className="text-muted-foreground hover:text-foreground transition-colors">
-            Résultats
+            {lang === "en" ? "Results" : "Résultats"}
           </Link>
           <Link to={lp("/tarifs")} className="text-muted-foreground hover:text-foreground transition-colors">
-            Tarifs
+            {lang === "en" ? "Pricing" : "Tarifs"}
           </Link>
-          <Link to={lp("/blog")} className="text-muted-foreground hover:text-foreground transition-colors">
-            Blog
-          </Link>
+          {lang === "fr" && <Link to="/blog" className="text-muted-foreground hover:text-foreground transition-colors">Blog</Link>}
           <Link to={lp("/aide")} className="text-muted-foreground hover:text-foreground transition-colors">
-            Aide
+            {lang === "en" ? "Help" : "Aide"}
           </Link>
         </nav>
 
@@ -66,7 +64,7 @@ const SiteHeader = ({ variant = "full" }: SiteHeaderProps) => {
                 </Button>
               )}
               <Button variant="ghost" size="sm" onClick={() => navigate(lp("/dashboard"))} className="gap-1.5 text-xs">
-                <BarChart3 className="h-3.5 w-3.5" /> Tableau de bord
+                <BarChart3 className="h-3.5 w-3.5" /> {lang === "en" ? "Dashboard" : "Tableau de bord"}
               </Button>
             </>
           ) : (
@@ -74,18 +72,18 @@ const SiteHeader = ({ variant = "full" }: SiteHeaderProps) => {
               to={lp("/auth")}
               className="text-sm text-muted-foreground hover:text-foreground transition-colors hidden sm:inline"
             >
-              Se connecter
+              {lang === "en" ? "Sign in" : "Se connecter"}
             </Link>
           )}
           {user ? (
             <Button size="sm" asChild className="pharmacy-gradient border-0 font-semibold gap-1.5">
               <a href={DOWNLOAD_URL} target="_blank" rel="noopener noreferrer">
-                <Download className="h-3.5 w-3.5" /> Télécharger
+                <Download className="h-3.5 w-3.5" /> {lang === "en" ? "Download" : "Télécharger"}
               </a>
             </Button>
           ) : (
             <Button size="sm" asChild className="pharmacy-gradient border-0 font-semibold">
-              <Link to={lp("/tarifs")}>Choisir mon offre</Link>
+              <Link to={lp("/tarifs")}>{lang === "en" ? "Choose a plan" : "Choisir mon offre"}</Link>
             </Button>
           )}
         </div>

@@ -232,8 +232,8 @@ const App = () => {
                   <Route path="/en/souscrire" element={<Souscrire />} />
                   <Route path="/en/merci" element={<Merci />} />
                   <Route path="/en/aide" element={<Aide />} />
-                  <Route path="/en/blog" element={<Blog />} />
-                  <Route path="/en/blog/:slug" element={<BlogPost />} />
+                  <Route path="/en/blog" element={<Navigate to="/blog" replace />} />
+                  <Route path="/en/blog/:slug" element={<Navigate to="/blog" replace />} />
                   <Route path="/en/fonctionnalites" element={<Fonctionnalites />} />
                   <Route path="/en/admin" element={<AdminRoute><Admin /></AdminRoute>} />
                   <Route path="/en/groupement" element={<GroupRoute><Groupement /></GroupRoute>} />

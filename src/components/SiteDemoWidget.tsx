@@ -69,7 +69,7 @@ const SiteDemoWidget = () => {
             ) : (
               <>
                 <Sparkles className="h-4 w-4" />
-                <span className="whitespace-nowrap">Tester le copilote</span>
+                <span className="whitespace-nowrap">{t("demo.launcher")}</span>
               </>
             )}
           </span>
