@@ -26,3 +26,9 @@
 - [x] Analytics de conversion sans cookies (événements serveur : vues, lecture VSL, soumissions)
 - [x] Recette pages publiques (`/`, `/presentation`, `/tarifs`, `/fonctionnalites`, `/demo`, `/compatibilite-robot`, `/vs-lgo`, `/souscrire`, `/cgv`, `/aide`) : rendu OK, titres/H1 uniques, pas d'erreur console bloquante
 - [ ] Recette paiements réels (carte, SEPA, annuel) à faire par l'administrateur sur le site publié
+
+## Corrections SEO multilingues
+- [ ] Traduire intégralement les pages d’accueil et fonctionnalités en anglais, métadonnées comprises
+- [ ] Retirer `/en/blog` du sitemap et des liens de langue tant qu’une version anglaise indexable n’existe pas
+- [ ] Aligner la page Fonctionnalités sur le produit actuel : scan médicament/CIP, produits complémentaires, sans analyse d’ordonnance ni vigilance affichée
+- [ ] Documenter la validation professionnelle requise pour les affirmations cliniques des articles
