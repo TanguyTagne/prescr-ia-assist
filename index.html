@@ -63,10 +63,10 @@
 
   <body>
     <div id="root">
-      <div style="position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;background:hsl(150 20% 98%);">
-        <video id="asclion-initial-loader" src="/__l5e/assets-v1/2ca44301-8ea4-4d39-b46a-a390d8604c96/asclion-loader.mp4" autoplay loop muted playsinline preload="auto" aria-label="Chargement en cours" style="width:100vw;height:100vh;object-fit:cover;"></video>
+      <style>@keyframes asclion-spin{to{transform:rotate(360deg)}}</style>
+      <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:hsl(150 20% 98%);">
+        <div role="status" aria-label="Chargement en cours" style="width:32px;height:32px;border:3px solid hsl(150 20% 88%);border-top-color:hsl(160 60% 35%);border-radius:50%;animation:asclion-spin .8s linear infinite;"></div>
       </div>
-      <script>var v=document.getElementById("asclion-initial-loader");if(v){v.playbackRate=2;if(window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches){v.pause();v.currentTime=0;}}</script>
     </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

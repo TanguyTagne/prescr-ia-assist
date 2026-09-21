@@ -1,5 +1,4 @@
-import { useEffect, useRef } from "react";
-import loaderAsset from "@/assets/asclion-loader.mp4.asset.json";
+import { Loader2 } from "lucide-react";
 
 type AsclionLoaderProps = {
   size?: "compact" | "section" | "page";
@@ -7,9 +6,10 @@ type AsclionLoaderProps = {
   className?: string;
 };
 
-const sizeClasses = {
-  compact: "w-20",
-  section: "w-32 sm:w-40",
+const iconSize = {
+  compact: "h-5 w-5",
+  section: "h-7 w-7",
+  page: "h-8 w-8",
 };
 
 export default function AsclionLoader({
@@ -17,42 +17,19 @@ export default function AsclionLoader({
   label = "Chargement en cours",
   className = "",
 }: AsclionLoaderProps) {
-  const videoRef = useRef<HTMLVideoElement>(null);
-
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    video.playbackRate = 2;
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reducedMotion) {
-      video.pause();
-      video.currentTime = 0;
-      return;
-    }
-
-    void video.play().catch(() => undefined);
-  }, []);
+  const spinner = (
+    <Loader2 className={`${iconSize[size]} animate-spin text-primary`} aria-hidden="true" />
+  );
 
   if (size === "page") {
     return (
       <div
-        className={`fixed inset-0 z-50 flex items-center justify-center bg-background ${className}`}
+        className={`flex min-h-[60vh] w-full items-center justify-center ${className}`}
         role="status"
         aria-live="polite"
         aria-label={label}
       >
-        <video
-          ref={videoRef}
-          src={loaderAsset.url}
-          className="h-full w-full object-cover"
-          autoPlay
-          loop
-          muted
-          playsInline
-          preload="auto"
-          aria-hidden="true"
-        />
+        {spinner}
         <span className="sr-only">{label}</span>
       </div>
     );
@@ -65,17 +42,7 @@ export default function AsclionLoader({
       aria-live="polite"
       aria-label={label}
     >
-      <video
-        ref={videoRef}
-        src={loaderAsset.url}
-        className={`${sizeClasses[size]} h-auto max-w-full object-contain`}
-        autoPlay
-        loop
-        muted
-        playsInline
-        preload="auto"
-        aria-hidden="true"
-      />
+      {spinner}
       <span className="sr-only">{label}</span>
     </div>
   );
