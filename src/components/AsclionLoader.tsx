@@ -10,7 +10,6 @@ type AsclionLoaderProps = {
 const sizeClasses = {
   compact: "w-20",
   section: "w-32 sm:w-40",
-  page: "w-44 sm:w-56",
 };
 
 export default function AsclionLoader({
@@ -34,6 +33,30 @@ export default function AsclionLoader({
 
     void video.play().catch(() => undefined);
   }, []);
+
+  if (size === "page") {
+    return (
+      <div
+        className={`fixed inset-0 z-50 flex items-center justify-center bg-background ${className}`}
+        role="status"
+        aria-live="polite"
+        aria-label={label}
+      >
+        <video
+          ref={videoRef}
+          src={loaderAsset.url}
+          className="h-full w-full object-cover"
+          autoPlay
+          loop
+          muted
+          playsInline
+          preload="auto"
+          aria-hidden="true"
+        />
+        <span className="sr-only">{label}</span>
+      </div>
+    );
+  }
 
   return (
     <div
