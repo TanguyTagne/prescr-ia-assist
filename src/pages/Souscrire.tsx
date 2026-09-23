@@ -41,7 +41,7 @@ const PLANS: PlanDef[] = [
     recommended: true,
     features: [
       "Catalogue de 30 000+ médicaments avec PC recommandé",
-      "Suggestions, sécurité et amélioration continue",
+      "Produit complémentaire du médicament scanné",
       "Formation visio et suivis à J+14 et J+30 inclus",
       "Rappel un mois avant l'échéance ; renouvellement uniquement sur votre confirmation",
     ],
@@ -70,7 +70,7 @@ const PLANS: PlanDef[] = [
     totalLabel: "198 € HT dus aujourd'hui, puis 99 € HT/mois",
     features: [
       "Catalogue de 30 000+ médicaments avec PC recommandé",
-      "Suggestions, sécurité et amélioration continue",
+      "Produit complémentaire du médicament scanné",
       "Toute l'officine, caisses non limitées",
       "Résiliable à tout moment (fin de période)",
     ],

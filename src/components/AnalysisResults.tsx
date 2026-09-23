@@ -89,6 +89,11 @@ function cleanHintValue(value?: string | null): string | null {
   return cleaned.length > 0 ? cleaned : null;
 }
 
+function isSafetyCopy(value?: string | null): boolean {
+  const normalized = normalizeLookupKey(value || "");
+  return normalized.includes("securit") || normalized.includes("vigilance") || normalized.includes("alerte");
+}
+
 function fallbackPertinence(rec: { pertinence?: string; categorie?: string; description?: string }): string {
   return (
     cleanHintValue(rec.pertinence) ||
@@ -101,7 +106,6 @@ function fallbackPertinence(rec: { pertinence?: string; categorie?: string; desc
 function fallbackCounselPhrase(pertinence: string, productName: string): string {
   const k = normalizeLookupKey(pertinence);
   if (k.includes("effet")) return "limite l’effet indésirable du traitement";
-  if (k.includes("securit") || k.includes("alerte")) return "renforce la sécurité du traitement";
   if (k.includes("surveil")) return "facilite le suivi du traitement";
   if (k.includes("synerg") || k.includes("effic")) return "améliore l’efficacité du conseil";
   if (k.includes("prevent")) return "aide à prévenir la gêne";
@@ -645,14 +649,16 @@ const AnalysisResults = ({ result, onReset, demoMode = false }: AnalysisResultsP
                 const orderSource = getOrderSource(med.nom, rec.produit);
                 const isAuto = orderSource === "hid_auto";
                 const enriched = curatedHints.get(recommendationKey(med.nom, rec.produit));
-                const pertinence =
+                const rawPertinence =
                   cleanHintValue(rec.pertinence) ||
                   cleanHintValue(enriched?.pertinence) ||
                   fallbackPertinence(rec);
-                const shortHint =
+                const rawHint =
                   cleanHintValue(rec.phrase_conseil) ||
                   cleanHintValue(enriched?.phrase_conseil) ||
-                  fallbackCounselPhrase(pertinence, rec.produit);
+                  fallbackCounselPhrase(rawPertinence, rec.produit);
+                const pertinence = isSafetyCopy(rawPertinence) ? null : rawPertinence;
+                const shortHint = isSafetyCopy(rawHint) ? null : rawHint;
                 const dotColors = ["bg-primary", "bg-blue-400", "bg-amber-400"];
                 return (
                   <div key={j} className="flex items-center gap-1">

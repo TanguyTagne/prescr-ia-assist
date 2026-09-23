@@ -14,7 +14,7 @@ type Cycle = "monthly" | "annual";
 
 const COMPARISON: { label: string; classic: boolean; premium: boolean }[] = [
   { label: "Base de 30 000+ médicaments", classic: true, premium: true },
-  { label: "Suggestion, vigilance et phrase conseil", classic: true, premium: true },
+  { label: "Produit complémentaire du médicament scanné", classic: true, premium: true },
   { label: "Apprentissage selon les retours équipe", classic: true, premium: true },
   { label: "Audit initial du stock", classic: false, premium: true },
   { label: "Suggestions sur mesure selon le stock", classic: false, premium: true },
@@ -86,7 +86,7 @@ const Tarifs = () => {
           "@type": "Product",
           name: "Asclion",
           description:
-            "Surcouche au LGO pour le conseil associé en officine : vigilance, suggestion de produit complémentaire et phrase conseil au scan d'un médicament.",
+            "Application de conseil associé en officine : le produit complémentaire associé apparaît au scan d'un médicament.",
           brand: { "@type": "Brand", name: "Asclion" },
           offers: [
             { "@type": "Offer", name: "Classique mensuel", price: "99", priceCurrency: "EUR", url: "https://www.asclion.com/souscrire?plan=classic_monthly", availability: "https://schema.org/InStock" },
