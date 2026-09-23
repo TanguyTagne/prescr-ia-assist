@@ -39,7 +39,7 @@ const Presentation = () => {
     <div className="min-h-screen bg-background">
       <Seo
         title="Présentation Asclion — le conseil associé au comptoir, sans changer de LGO"
-        description="Regardez la présentation complète d'Asclion : vigilance, suggestion de produit complémentaire et phrase conseil au scan d'un médicament."
+        description="Regardez la présentation complète d'Asclion : le produit complémentaire associé apparaît automatiquement au scan d'un médicament."
         path="/presentation"
       />
       <SiteHeader />

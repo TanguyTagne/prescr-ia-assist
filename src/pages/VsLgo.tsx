@@ -20,7 +20,7 @@ const ROWS = [
   {
     q: "Conseil associé",
     lgo: "À vérifier selon l'environnement",
-    asclion: "Vigilance, suggestion et phrase conseil présentées en surcouche",
+    asclion: "Produit complémentaire du médicament scanné présenté en surcouche",
   },
   {
     q: "Décision finale",
@@ -35,7 +35,7 @@ const VsLgo = () => {
     <div className="min-h-screen bg-background">
       <Seo
         title="Asclion et votre LGO — une surcouche, pas un remplacement"
-        description="Votre LGO gère l'officine. Asclion accompagne le conseil au comptoir : vigilance, suggestion et phrase conseil au scan d'un médicament."
+        description="Votre LGO gère l'officine. Asclion affiche le produit complémentaire associé au médicament scanné."
         path="/vs-lgo"
       />
       <SiteHeader />
@@ -92,8 +92,7 @@ const VsLgo = () => {
               </li>
               <li className="flex gap-2.5">
                 <CheckCircle2 className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                Il présente un point de vigilance, une suggestion de produit complémentaire et une
-                phrase conseil prête à adapter.
+                Elle présente le produit complémentaire associé au médicament scanné.
               </li>
               <li className="flex gap-2.5">
                 <CheckCircle2 className="h-4 w-4 text-primary shrink-0 mt-0.5" />
