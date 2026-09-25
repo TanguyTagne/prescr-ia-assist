@@ -131,8 +131,11 @@
   </url>
   <url>
     <loc>https://www.asclion.com/blog</loc>
-    <xhtml:link rel="alternate" hreflang="fr-FR" href="https://www.asclion.com/blog" />
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.asclion.com/blog" />
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.asclion.com/conseil-associe</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -202,6 +205,12 @@
   <url>
     <loc>https://www.asclion.com/blog/asclion-vs-alternatives</loc>
     <lastmod>2026-09-29</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.asclion.com/blog/guide-conseil-associe-officine</loc>
+    <lastmod>2026-09-25</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -322,6 +331,131 @@
   <url>
     <loc>https://www.asclion.com/blog/augmenter-panier-moyen-officine</loc>
     <lastmod>2026-07-18</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.asclion.com/conseil-associe/amoxicilline-acide-clavulanique</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.asclion.com/conseil-associe/ibuprofene-ains-oraux</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.asclion.com/conseil-associe/omeprazole-ipp</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.asclion.com/conseil-associe/atorvastatine-statines</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.asclion.com/conseil-associe/isotretinoine-orale</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.asclion.com/conseil-associe/metformine</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.asclion.com/conseil-associe/corticoides-oraux-prednisone-prednisolone</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.asclion.com/conseil-associe/antihistaminiques-h1-cetirizine-desloratadine</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.asclion.com/conseil-associe/inhibiteurs-calciques-antihypertenseurs</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.asclion.com/conseil-associe/antidepresseurs-isrs-sertraline-escitalopram</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.asclion.com/conseil-associe/pilule-oestroprogestative</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.asclion.com/conseil-associe/fer-oral-sulfate-ferreux</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.asclion.com/conseil-associe/paracetamol-codeine</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.asclion.com/conseil-associe/retinoides-topiques-acne</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.asclion.com/conseil-associe/antifongiques-oraux-fluconazole</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.asclion.com/conseil-associe/betabloquants</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.asclion.com/conseil-associe/dermocorticoides</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.asclion.com/conseil-associe/bisphosphonates-alendronate</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.asclion.com/conseil-associe/macrolides-azithromycine</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.asclion.com/conseil-associe/chimiotherapie-orale-methotrexate-faible-dose</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.asclion.com/compatibilite/winpharma</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.asclion.com/compatibilite/pharmagest-lgpi</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.asclion.com/compatibilite/smart-rx</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.asclion.com/compatibilite/isipharm-caduciel</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.asclion.com/compatibilite/leo-2</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>

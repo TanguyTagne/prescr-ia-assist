@@ -1,0 +1,117 @@
+[
+  {
+    "slug": "winpharma",
+    "nom_lgo": "Winpharma",
+    "editeur": "EVERYS (Winpharma)",
+    "meta_title": "Asclion et Winpharma : fonctionnement et compatibilité",
+    "meta_description": "Découvrez le fonctionnement d'Asclion au scan du médicament avec Winpharma, les prérequis du lecteur et les vérifications à réaliser sur votre poste.",
+    "mode_fonctionnement": "Asclion dispose d'une application de bureau dont le mécanisme Windows Raw Input peut recevoir en arrière-plan les données d'un lecteur configuré comme clavier HID. Le code-barres du médicament est interprété pour identifier son CIP et rechercher une suggestion de conseil associé. Ce chemin de lecture est distinct d'un connecteur à la base Winpharma : la suggestion apparaît dans la fenêtre Asclion, que l'équipe peut consulter pendant la délivrance. L'architecture examinée prévoit plusieurs modes de lecture ; leur disponibilité dépend du lecteur, des droits du poste et de la version installée. Un essai sur votre configuration doit vérifier la réception du même scan dans Winpharma, l'absence de doublon, le maintien de la saisie et le comportement de l'affichage. Le code établit un principe de fonctionnement, pas une validation de toutes les versions de Winpharma. Asclion n'établit aucun diagnostic et le professionnel valide chaque conseil. L'éditeur est EVERYS, identifié dans les [mentions légales Winpharma](https://www.winpharma.com/mentions-legales/).",
+    "avantages_officine": [
+      "Un rappel de conseil déclenché par le scan du médicament, dans le déroulement de la délivrance",
+      "Une architecture de lecture du code distincte d'un connecteur propriétaire Winpharma",
+      "Une suggestion consultable par l'équipe, qui conserve le choix du conseil et du produit"
+    ],
+    "faq": [
+      {
+        "question": "Asclion ralentit-il les postes Winpharma aux heures de pointe ?",
+        "reponse": "Asclion s'exécute comme une application distincte, mais utilise les ressources du même poste. Aucune mesure fournie ne permet de garantir une absence de ralentissement ou une consommation mémoire maximale. L'essai doit reproduire votre activité habituelle et vérifier le délai d'affichage, la fluidité de Winpharma et la fiabilité des scans."
+      },
+      {
+        "question": "Faut-il installer un module spécial dans Winpharma ?",
+        "reponse": "Le mode de lecture HID étudié ne repose pas sur un module installé dans Winpharma. Il nécessite l'installation et la configuration d'Asclion ainsi qu'un lecteur pris en charge ; les contraintes de maintenance et de sécurité du poste doivent être vérifiées. Les éventuels frais d'installation ou d'assistance sont à confirmer dans l'offre applicable."
+      }
+    ]
+  },
+  {
+    "slug": "pharmagest-lgpi",
+    "nom_lgo": "Pharmagest LGPI / id.",
+    "editeur": "Equasens — division Pharmagest",
+    "meta_title": "Asclion et LGPI / id. : conseil associé au comptoir",
+    "meta_description": "Asclion et LGPI / id. de Pharmagest : lecture du code-barres du médicament, affichage du conseil et conditions de compatibilité à vérifier en officine.",
+    "mode_fonctionnement": "LGPI est présenté par Pharmagest sous l'identité id. ; la version réellement installée doit être relevée avant l'essai. Sur un poste Windows pris en charge, Asclion peut recevoir les données du lecteur de codes-barres en arrière-plan et extraire l'identifiant CIP du médicament. La recherche d'une suggestion se déroule dans Asclion, indépendamment de l'ajout d'une ligne de vente dans LGPI / id. Ce fonctionnement ne signifie pas qu'Asclion lit le dossier patient, consulte les interactions du LGO ou synchronise son stock. La réception correcte du scan dans chaque application doit être testée, notamment lorsque le LGO est utilisé dans une session distante ou avec une redirection de périphériques. L'affichage doit laisser l'équipe poursuivre la délivrance et décider de la pertinence du conseil. Aucun procès-verbal de compatibilité couvrant toutes les configurations LGPI / id. n'est disponible dans les éléments examinés. Sources : [présentation officielle id.](https://pharmagest.com/solutions-officine/gestion-dofficine-id-pharmagest/) et [conditions Equasens–Pharmagest](https://espaceclient.pharmagest.com/conditions/fr/CGVU_EQUASENS_202401-03.pdf).",
+    "avantages_officine": [
+      "Une aide au conseil à partir du médicament identifié, sous contrôle de l'équipe",
+      "Un fonctionnement de lecture du code qui ne dépend pas d'une consultation de la base LGPI / id.",
+      "Un essai ciblé sur la version du LGO, le lecteur et les conditions réelles de délivrance"
+    ],
+    "faq": [
+      {
+        "question": "La compatibilité LGPI vaut-elle aussi pour id. ?",
+        "reponse": "Pharmagest présente id. comme la nouvelle identité de LGPI. Cette continuité de nom ne dispense pas de tester la version, le poste et le lecteur effectivement utilisés. Une validation sur une configuration ne constitue pas une garantie pour toutes les autres."
+      },
+      {
+        "question": "Asclion nécessite-t-il une API payante de Pharmagest ?",
+        "reponse": "Le chemin de lecture du code-barres examiné ne requiert pas une API de la base Pharmagest. Ce constat ne permet pas de promettre l'absence de tous frais contractuels, techniques ou d'assistance. L'offre Asclion et les conditions de votre environnement informatique doivent être vérifiées avant le déploiement."
+      }
+    ]
+  },
+  {
+    "slug": "smart-rx",
+    "nom_lgo": "Smart Rx",
+    "editeur": "SMART RX — groupe Cegedim",
+    "meta_title": "Asclion et Smart Rx : prérequis et conseil associé",
+    "meta_description": "Utiliser Asclion à côté de Smart Rx : comprendre le déclenchement au scan du médicament et vérifier le lecteur, l'affichage et la configuration du poste.",
+    "mode_fonctionnement": "Pour préparer l'usage d'Asclion avec Smart Rx, identifier d'abord le produit et la version du LGO : le nom de l'éditeur seul ne décrit pas la configuration. Le mécanisme Windows d'Asclion peut recevoir un scan de médicament provenant d'un lecteur HID compatible, convertir le code reconnu en CIP et afficher une suggestion dans sa propre fenêtre. Il ne repose pas sur l'injection d'une recommandation dans l'écran de vente Smart Rx. L'essai doit confirmer que le lecteur continue à alimenter le LGO, que les caractères du code sont interprétés correctement et que l'affichage Asclion ne perturbe pas le travail au clavier. Les lecteurs en mode série, les postes verrouillés et les sessions distantes demandent une vérification spécifique du chemin de lecture disponible. La décision d'expliquer ou de proposer un produit reste celle du professionnel ; aucun diagnostic n'est établi par Asclion. L'identité de l'éditeur est documentée par les [mentions légales Smart Rx](https://www.smart-rx.com/mentions-legales/).",
+    "avantages_officine": [
+      "Une suggestion au moment de la lecture du médicament, sans ressaisie recherchée dans Asclion",
+      "Une fenêtre de conseil séparée de la vente Smart Rx, à valider sur le poste",
+      "Un accompagnement dont l'équipe garde la maîtrise, avec possibilité de ne proposer aucun produit"
+    ],
+    "faq": [
+      {
+        "question": "Le conseil s'affiche-t-il instantanément dans Smart Rx ?",
+        "reponse": "La suggestion s'affiche dans Asclion, et non dans une fonction native de Smart Rx. Son délai dépend du poste, du traitement du code et des services utilisés ; aucun engagement chiffré de latence n'est établi ici. Un essai représentatif doit vérifier que le fonctionnement convient à votre rythme de délivrance."
+      },
+      {
+        "question": "Une validation Smart Rx couvre-t-elle aussi un ancien logiciel Opus ?",
+        "reponse": "Il faut relever le logiciel et sa version exacte. La liste historique du Conseil national de l'Ordre distingue plusieurs logiciels de l'éditeur Smart Rx, dont Opus ; elle ne documente pas leur compatibilité avec Asclion. Une configuration Opus demande donc sa propre vérification. [Liste CNOP des logiciels validés pour le DP](https://www.ordre.pharmacien.fr/content/download/49793/178520?version=9)."
+      }
+    ]
+  },
+  {
+    "slug": "isipharm-caduciel",
+    "nom_lgo": "Caduciel : distinguer Caduciel V6 et LEO distribué historiquement par Caduciel",
+    "editeur": "Caduciel pour Caduciel V6 ; Isipharm pour LEO",
+    "meta_title": "Asclion et Caduciel : identifier le LGO et tester le scan",
+    "meta_description": "Caduciel V6 ou LEO d'Isipharm : identifiez votre logiciel avant de vérifier le fonctionnement d'Asclion au scan du code-barres du médicament.",
+    "mode_fonctionnement": "L'expression Isipharm / Caduciel ne désigne pas un logiciel unique. La documentation du Conseil national de l'Ordre distingue Caduciel V6 et LEO d'Isipharm. Isipharm a annoncé la reprise de l'activité de distribution LEO de Caduciel ; cela ne transforme pas Caduciel V6 en LEO. Avant d'évaluer Asclion, relever le nom affiché dans le LGO, sa version et l'environnement du poste. Le mécanisme Asclion étudié reçoit le code-barres du médicament via un lecteur pris en charge, identifie le CIP et présente une suggestion dans une application distincte. Il ne prouve pas la compatibilité des anciennes installations Caduciel. L'essai doit vérifier la saisie du scan dans le logiciel réellement utilisé, le traitement des répétitions et la continuité de la délivrance. Aucune migration vers LEO ne peut être déduite de ce seul mode de fonctionnement. Sources : [liste CNOP](https://www.ordre.pharmacien.fr/content/download/49793/178520?version=9) et [communiqué Isipharm sur l'activité LEO de Caduciel](https://leo-officine.fr/isipharm-a-fait-lacquisition-de-la-branche-dactivite-de-distribution-du-logiciel-leo-de-caduciel-informatique/).",
+    "avantages_officine": [
+      "Une vérification fondée sur le logiciel effectivement installé, pour éviter les confusions de nom",
+      "Un principe d'aide au conseil déclenchée par le code du médicament",
+      "Un déploiement conditionné à un essai documenté, en tenant compte des contraintes de l'installation existante"
+    ],
+    "faq": [
+      {
+        "question": "Caduciel et Isipharm désignent-ils le même LGO ?",
+        "reponse": "Non : Caduciel V6 est distinct de LEO d'Isipharm. Caduciel a aussi distribué LEO, et cette activité de distribution a été reprise par Isipharm. Le nom de votre ancien prestataire ne suffit donc pas à identifier le logiciel installé."
+      },
+      {
+        "question": "Asclion impose-t-il de migrer de Caduciel V6 vers LEO ?",
+        "reponse": "Le principe de lecture du code-barres n'impose pas, à lui seul, un changement de LGO. La faisabilité dépend de la configuration existante et doit être vérifiée avant installation. En l'absence d'essai concluant sur Caduciel V6, sa compatibilité ne doit pas être annoncée comme acquise."
+      }
+    ]
+  },
+  {
+    "slug": "leo-2",
+    "nom_lgo": "LEO 2 / LEO — distinct d'Opus",
+    "editeur": "Isipharm — groupe Astera",
+    "meta_title": "Asclion et LEO 2 : fonctionnement et points à vérifier",
+    "meta_description": "LEO 2 d'Isipharm et Asclion : fonctionnement au scan du médicament, essai du lecteur et distinction avec Opus pour vérifier la bonne configuration.",
+    "mode_fonctionnement": "LEO est proposé par Isipharm ; la liste du Conseil national de l'Ordre identifie notamment Léo 2. Elle répertorie séparément Opus chez Smart Rx : Opus LEO ne doit donc pas être utilisé comme nom d'un produit unique. Sur un poste Windows compatible, Asclion peut exploiter la lecture du code-barres du médicament en arrière-plan et extraire le CIP pour afficher un conseil dans sa fenêtre. Cette architecture est séparée des fonctions métier de LEO et ne constitue pas un partenariat ou une certification Isipharm. L'essai doit porter sur le lecteur, sa configuration, la réception du scan dans LEO et le comportement d'Asclion lors des changements d'écran. Les codes inconnus et les scans répétés doivent également être vérifiés. Sans résultat de recette pour votre version, la compatibilité demeure à confirmer. Sources : [présentation LEO](https://leo-officine.fr/), [mentions légales Isipharm](https://leo-officine.fr/mentions-legales/) et [liste CNOP distinguant Léo 2 et Opus](https://www.ordre.pharmacien.fr/content/download/49793/178520?version=9).",
+    "avantages_officine": [
+      "Un rappel contextuel fondé sur le médicament scanné, à examiner par le professionnel",
+      "Un fonctionnement conçu dans une application distincte des fonctions de gestion LEO",
+      "Une procédure d'essai qui identifie clairement LEO 2 et évite de le confondre avec Opus"
+    ],
+    "faq": [
+      {
+        "question": "LEO 2 et Opus sont-ils deux noms du même logiciel ?",
+        "reponse": "Non : la liste CNOP consultée rattache Léo 2 à Isipharm et Opus à Smart Rx. Pour préparer l'essai, utilisez le nom et la version affichés sur votre poste. Une validation de LEO ne s'étend pas automatiquement à Opus."
+      },
+      {
+        "question": "Faut-il un module Isipharm pour déclencher le conseil Asclion ?",
+        "reponse": "Le chemin de lecture HID étudié n'appelle pas une API LEO et ne repose pas sur un module métier Isipharm. Il faut toutefois disposer d'une configuration Asclion prise en charge et vérifier les droits d'installation, le lecteur et les conditions de maintenance. L'absence de connecteur dans cette architecture ne constitue pas une garantie de gratuité globale ni une validation de compatibilité par l'éditeur."
+      }
+    ]
+  }
+]
