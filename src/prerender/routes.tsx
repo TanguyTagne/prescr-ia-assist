@@ -26,7 +26,11 @@ import CGU from "@/pages/legal/CGU";
 import CGV from "@/pages/legal/CGV";
 import DPA from "@/pages/legal/DPA";
 import PIA from "@/pages/legal/PIA";
+import ConseilAssocieHub from "@/pages/ConseilAssocieHub";
+import ConseilAssocieFiche from "@/pages/ConseilAssocieFiche";
+import CompatibiliteLgo from "@/pages/CompatibiliteLgo";
 import { getAllPosts } from "@/lib/blog";
+import { CONSEILS, LGOS } from "@/lib/seoContent";
 
 export interface PrerenderRoute {
   /** URL path to render, language prefix included. */
@@ -51,6 +55,7 @@ const BILINGUAL: Array<[string, ReactElement]> = [
 /** French-only public pages (legal + editorial entity pages). */
 const FR_ONLY: Array<[string, ReactElement]> = [
   ["/blog", <Blog />],
+  ["/conseil-associe", <ConseilAssocieHub />],
   ["/auteur/tanguy", <Auteur />],
   ["/a-propos", <APropos />],
   ["/mentions-legales", <MentionsLegales />],
