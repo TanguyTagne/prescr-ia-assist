@@ -11,6 +11,7 @@ const SiteFooter = () => {
         <nav className="flex items-center gap-4 flex-wrap justify-center">
           <Link to={lp("/fonctionnalites")} className="hover:text-foreground transition-colors">{lang === "en" ? "How it works" : "Fonctionnement"}</Link>
           <Link to={lp("/tarifs")} className="hover:text-foreground transition-colors">{lang === "en" ? "Pricing" : "Tarifs"}</Link>
+          {lang === "fr" && <Link to="/conseil-associe" className="hover:text-foreground transition-colors">Conseil associé</Link>}
           {lang === "fr" && <Link to="/blog" className="hover:text-foreground transition-colors">Blog</Link>}
           {lang === "fr" && <Link to="/a-propos" className="hover:text-foreground transition-colors">À propos</Link>}
           <Link to={lp("/aide")} className="hover:text-foreground transition-colors">{t("footer.help")}</Link>
