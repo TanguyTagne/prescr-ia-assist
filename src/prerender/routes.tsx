@@ -78,5 +78,19 @@ export function getPrerenderRoutes(): PrerenderRoute[] {
   for (const post of getAllPosts()) {
     routes.push({ path: `/blog/${post.slug}`, pattern: "/blog/:slug", element: <BlogPost /> });
   }
+  for (const c of CONSEILS) {
+    routes.push({
+      path: `/conseil-associe/${c.slug}`,
+      pattern: "/conseil-associe/:slug",
+      element: <ConseilAssocieFiche />,
+    });
+  }
+  for (const l of LGOS) {
+    routes.push({
+      path: `/compatibilite/${l.slug}`,
+      pattern: "/compatibilite/:slug",
+      element: <CompatibiliteLgo />,
+    });
+  }
   return routes;
 }
