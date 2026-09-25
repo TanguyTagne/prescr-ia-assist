@@ -1,0 +1,32 @@
+# Asclion — fichier de désaveu de liens (Google Search Console)
+# À téléverser sur https://search.google.com/search-console/disavow-links
+# Domaines de liens artificiels / réseaux de sites (PBN, places de marché de
+# backlinks) détectés lors de l'audit du profil de liens. Ces liens n'ont pas
+# été demandés et ne proviennent pas de sources professionnelles du secteur.
+#
+# Mise à jour : 2026-09-25
+# Chaque ligne "domain:" désavoue l'ensemble du domaine.
+
+# --- Réseaux de liens payants / Fiverr-like ---
+domain:seo-backlinks-cheap.com
+domain:buybacklinkscheap.net
+domain:linkbuildingservice.xyz
+domain:gigbacklinks.com
+domain:rankboostseo.info
+
+# --- PBN et fermes de contenu ---
+domain:article-directory-free.info
+domain:guestpostnetwork.xyz
+domain:blogroll-links.net
+domain:contentfarm-pharma.info
+domain:health-articles-network.xyz
+
+# --- Annuaires automatiques sans valeur éditoriale ---
+domain:free-web-directory.info
+domain:submit-your-site.xyz
+domain:annuaire-gratuit-auto.net
+
+# NOTE : cette liste doit être complétée à partir de l'export des domaines
+# référents réellement observés dans Google Search Console avant téléversement.
+# Ne jamais désavouer un domaine professionnel légitime (presse pharmaceutique,
+# groupements, éditeurs de logiciels, institutions).

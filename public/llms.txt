@@ -63,3 +63,48 @@ Contact : tanguytagne12@gmail.com (demande d'accès via le formulaire sur le sit
 - [Augmenter le panier moyen en officine : 5 leviers concrets](/blog/augmenter-panier-moyen-officine): 5 leviers activables au comptoir pour développer son CA sans dégrader le conseil.
 - [Conseil associé sur une ordonnance d'antibiotique : le réflexe probiotique](/blog/conseil-associe-antibiotique): Structurer le conseil probiotique + hydratation au comptoir.
 - [Choisir son logiciel d'officine en 2026 : LGO, copilote IA, ou les deux ?](/blog/choisir-logiciel-officine): Winpharma, LGPI, Pharmagest, Léo et le positionnement d'un copilote IA.
+
+
+## Fiches de conseil associé par médicament
+
+Catalogue public, une page par molécule : produit complémentaire pertinent, précautions et phrase comptoir.
+
+- [Index des fiches](/conseil-associe)
+- [Amoxicilline / Acide clavulanique — J01CR02 (Amoxicilline et inhibiteur de bêta-lactamase)](/conseil-associe/amoxicilline-acide-clavulanique): Probiotique à souche documentée, seulement après validation des contre-indications — « réduire le risque de diarrhée ».
+- [Ibuprofène / AINS oraux — M01AE01 (Ibuprofène, dérivés de l’acide propionique)](/conseil-associe/ibuprofene-ains-oraux): Poche de froid réutilisable, uniquement pour traumatisme musculosquelettique aigu compatible — « soulager la douleur après un traumatisme ».
+- [Oméprazole / IPP — A02BC01 (Oméprazole, inhibiteurs de la pompe à protons)](/conseil-associe/omeprazole-ipp): Vitamine B12 uniquement après risque identifié et carence objectivée — « corriger une carence confirmée en vitamine B12 ».
+- [Atorvastatine / Statines — C10AA05 (Atorvastatine, inhibiteurs de l’HMG-CoA réductase)](/conseil-associe/atorvastatine-statines): Aucun complément systématique ; évaluation des symptômes avant toute proposition — « repérer rapidement les effets musculaires ».
+- [Isotrétinoïne orale — D10BA01 (Isotrétinoïne, rétinoïdes systémiques contre l’acné)](/conseil-associe/isotretinoine-orale): Baume lèvres sans parfum et émollient non comédogène — « hydrater vos lèvres pendant le traitement ».
+- [Metformine — A10BA02 (Metformine, biguanides)](/conseil-associe/metformine): Vitamine B12 uniquement après risque identifié et carence objectivée — « corriger une carence confirmée en vitamine B12 ».
+- [Corticoïdes oraux (Prednisone / Prednisolone) — H02AB07 / H02AB06 (Prednisone / Prednisolone, glucocorticoïdes)](/conseil-associe/corticoides-oraux-prednisone-prednisolone): Calcium et vitamine D seulement si apports ou statut insuffisants lors d’une corticothérapie prolongée — « préserver votre capital osseux sous traitement ».
+- [Antihistaminiques H1 (Cétirizine / Desloratadine) — R06AE07 / R06AX27 (Cétirizine / Desloratadine, antihistaminiques H1 systémiques)](/conseil-associe/antihistaminiques-h1-cetirizine-desloratadine): Spray nasal salin ou dispositif de lavage, uniquement si symptômes de rhinite allergique — « rincer les allergènes du nez ».
+- [Inhibiteurs calciques / Antihypertenseurs — C08 (Inhibiteurs calciques), notamment C08CA01 (Amlodipine)](/conseil-associe/inhibiteurs-calciques-antihypertenseurs): Tensiomètre automatique de bras cliniquement validé avec brassard adapté — « suivre votre tension à domicile ».
+- [Antidépresseurs ISRS (Sertraline / Escitalopram) — N06AB06 / N06AB10 (Sertraline / Escitalopram, inhibiteurs sélectifs de la recapture de la sérotonine)](/conseil-associe/antidepresseurs-isrs-sertraline-escitalopram): Gomme sans sucres ou substitut salivaire non acide, uniquement en cas de sécheresse buccale — « soulager la sécheresse buccale sans sucre ».
+- [Pilule oestroprogestative — G03AA (associations fixes) / G03AB (préparations séquentielles)](/conseil-associe/pilule-oestroprogestative): Préservatifs, si protection contre les IST ou aléa réduisant l’efficacité contraceptive — « sécuriser votre contraception en cas d’aléa ».
+- [Fer oral (Sulfate ferreux) — B03AA07 (Sulfate ferreux)](/conseil-associe/fer-oral-sulfate-ferreux): Boîte de rangement sécurisée, seulement si des enfants ou personnes vulnérables vivent au domicile — « sécuriser le rangement du fer ».
+- [Paracétamol / Codéine — N02AJ06 (Codéine et paracétamol)](/conseil-associe/paracetamol-codeine): Macrogol, uniquement si une constipation apparaît et après vérification des contre-indications — « limiter la constipation si elle apparaît ».
+- [Rétinoïdes topiques / Acné — D10AD (Rétinoïdes pour le traitement local de l’acné)](/conseil-associe/retinoides-topiques-acne): Hydratant non comédogène et photoprotection large spectre, selon sécheresse et exposition — « réduire l’irritation cutanée du traitement ».
+- [Antifongiques oraux (Fluconazole) — J02AC01 (Fluconazole)](/conseil-associe/antifongiques-oraux-fluconazole): Soin lavant externe doux sans antiseptique ni parfum, uniquement en cas d’inconfort local — « préserver le confort intime pendant le traitement ».
+- [Bétabloquants — C07 (Bêtabloquants)](/conseil-associe/betabloquants): Tensiomètre huméral validé, uniquement si l’automesure est recommandée et comprise — « suivre votre tension à domicile ».
+- [Dermocorticoïdes — D07A (Corticoïdes dermatologiques non associés)](/conseil-associe/dermocorticoides): Émollient sans parfum adapté à la peau, si sécheresse ou dermatose justifie son usage — « restaurer la barrière cutanée au quotidien ».
+- [Bisphosphonates (Alendronate) — M05BA04 (Acide alendronique)](/conseil-associe/bisphosphonates-alendronate): Calcium et vitamine D, uniquement si apports insuffisants et selon la prescription ou l’avis médical — « compléter les apports si nécessaire ».
+- [Macrolides (Azithromycine) — J01FA10 (Azithromycine)](/conseil-associe/macrolides-azithromycine): Solution de réhydratation orale, uniquement si une diarrhée non compliquée apparaît — « préserver l’hydratation en cas de diarrhée ».
+- [Chimiothérapie orale / Méthotrexate faible dose — L01 (Antinéoplasiques) / L04AX03 (Méthotrexate immunosuppresseur hors oncologie)](/conseil-associe/chimiotherapie-orale-methotrexate-faible-dose): Kit buccal doux sans alcool ; acide folique seulement s’il est prescrit avec le méthotrexate hors oncologie — « soutenir le confort buccal pendant le traitement ».
+
+## Compatibilité avec les logiciels de gestion d'officine (LGO)
+
+Asclion lit le code-barres du médicament via un lecteur HID et affiche la suggestion dans sa propre fenêtre, sans connecteur à la base du LGO. La compatibilité dépend de la version installée et doit être vérifiée par un essai.
+
+- [Asclion et Winpharma (EVERYS (Winpharma))](/compatibilite/winpharma): Découvrez le fonctionnement d'Asclion au scan du médicament avec Winpharma, les prérequis du lecteur et les vérifications à réaliser sur votre poste.
+- [Asclion et Pharmagest LGPI / id. (Equasens — division Pharmagest)](/compatibilite/pharmagest-lgpi): Asclion et LGPI / id. de Pharmagest : lecture du code-barres du médicament, affichage du conseil et conditions de compatibilité à vérifier en officine.
+- [Asclion et Smart Rx (SMART RX — groupe Cegedim)](/compatibilite/smart-rx): Utiliser Asclion à côté de Smart Rx : comprendre le déclenchement au scan du médicament et vérifier le lecteur, l'affichage et la configuration du poste.
+- [Asclion et Caduciel : distinguer Caduciel V6 et LEO distribué historiquement par Caduciel (Caduciel pour Caduciel V6 ; Isipharm pour LEO)](/compatibilite/isipharm-caduciel): Caduciel V6 ou LEO d'Isipharm : identifiez votre logiciel avant de vérifier le fonctionnement d'Asclion au scan du code-barres du médicament.
+- [Asclion et LEO 2 / LEO — distinct d'Opus (Isipharm — groupe Astera)](/compatibilite/leo-2): LEO 2 d'Isipharm et Asclion : fonctionnement au scan du médicament, essai du lecteur et distinction avec Opus pour vérifier la bonne configuration.
+
+## Guide de référence
+
+- [Le guide ultime du conseil associé à l'officine](/blog/guide-conseil-associe-officine): méthodologie comptoir, cadre déontologique en vigueur au 6 mars 2026, mesure de l'impact économique.
+
+## Donnée vérifiable
+
+Observation pilote communiquée par Asclion : +500 € de chiffre d'affaires additionnel par mois et par caisse, constaté sur 3 mois dans une officine de 5 caisses. Il s'agit d'une observation locale, pas d'un résultat garanti pour une autre officine.
