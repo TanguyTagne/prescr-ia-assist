@@ -32,6 +32,9 @@ const Aide = lazyWithRetry(() => import("./pages/Aide"));
 const Fonctionnalites = lazyWithRetry(() => import("./pages/Fonctionnalites"));
 const Blog = lazyWithRetry(() => import("./pages/Blog"));
 const BlogPost = lazyWithRetry(() => import("./pages/BlogPost"));
+const ConseilAssocieHub = lazyWithRetry(() => import("./pages/ConseilAssocieHub"));
+const ConseilAssocieFiche = lazyWithRetry(() => import("./pages/ConseilAssocieFiche"));
+const CompatibiliteLgo = lazyWithRetry(() => import("./pages/CompatibiliteLgo"));
 
 const Widget = lazyWithRetry(() => import("./components/Widget"));
 const SiteDemoWidget = lazyWithRetry(() => import("./components/SiteDemoWidget"));
@@ -205,7 +208,10 @@ const App = () => {
                   <Route path="/aide" element={<Aide />} />
                   <Route path="/blog" element={<Blog />} />
                   <Route path="/blog/:slug" element={<BlogPost />} />
-                  <Route path="/fonctionnalites" element={<Fonctionnalites />} />
+                 <Route path="/fonctionnalites" element={<Fonctionnalites />} />
+                 <Route path="/conseil-associe" element={<ConseilAssocieHub />} />
+                 <Route path="/conseil-associe/:slug" element={<ConseilAssocieFiche />} />
+                 <Route path="/compatibilite/:slug" element={<CompatibiliteLgo />} />
                   <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
                   <Route path="/groupement" element={<GroupRoute><Groupement /></GroupRoute>} />
                   <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
