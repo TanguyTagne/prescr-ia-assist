@@ -19,7 +19,7 @@ relatedLinks:
   - { label: "Choisir son logiciel d'officine", href: "/blog/choisir-logiciel-officine" }
   - { label: "Copilote IA en officine : définition, usages, limites", href: "/blog/copilote-ia-officine" }
   - { label: "Winpharma, LGPI ou Pharmagest : comment choisir son LGO (et où Asclion se place)", href: "/blog/winpharma-vs-lgpi-vs-pharmagest" }
-  - { label: "Voir les tarifs", href: "/tarifs" }
+  - { label: "Voir les offres", href: "/souscrire" }
 relatedPosts:
   - "copilote-ia-officine"
   - "winpharma-vs-lgpi-vs-pharmagest"

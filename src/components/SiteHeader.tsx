@@ -45,9 +45,6 @@ const SiteHeader = ({ variant = "full" }: SiteHeaderProps) => {
           <Link to={lp("/") + "#preuve"} className="text-muted-foreground hover:text-foreground transition-colors">
             {lang === "en" ? "Results" : "Résultats"}
           </Link>
-          <Link to={lp("/tarifs")} className="text-muted-foreground hover:text-foreground transition-colors">
-            {lang === "en" ? "Pricing" : "Tarifs"}
-          </Link>
           {lang === "fr" && <Link to="/blog" className="text-muted-foreground hover:text-foreground transition-colors">Blog</Link>}
           <Link to={lp("/aide")} className="text-muted-foreground hover:text-foreground transition-colors">
             {lang === "en" ? "Help" : "Aide"}
@@ -83,7 +80,7 @@ const SiteHeader = ({ variant = "full" }: SiteHeaderProps) => {
             </Button>
           ) : (
             <Button size="sm" asChild className="pharmacy-gradient border-0 font-semibold">
-              <Link to={lp("/tarifs")}>{lang === "en" ? "Choose a plan" : "Choisir mon offre"}</Link>
+              <Link to={lp("/souscrire")}>{lang === "en" ? "Choose a plan" : "Choisir mon offre"}</Link>
             </Button>
           )}
         </div>

@@ -91,7 +91,7 @@ const Presentation = () => {
                 asChild
                 className="h-12 px-8 font-semibold pharmacy-gradient border-0 gap-2 w-full sm:w-auto"
               >
-                <Link to={lp("/tarifs") + "?source=vsl"}>
+                <Link to={lp("/souscrire") + "?source=vsl"}>
                   Choisir mon offre <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>

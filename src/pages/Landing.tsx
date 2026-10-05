@@ -172,7 +172,7 @@ const Landing = () => {
                       <Download className="h-5 w-5" /> {c.download}
                     </a>
                   ) : (
-                    <Link to={lp("/tarifs") + "?source=home_hero"}>{c.choose}</Link>
+                    <Link to={lp("/souscrire") + "?source=home_hero"}>{c.choose}</Link>
                   )}
                 </Button>
               </div>
@@ -330,7 +330,7 @@ const Landing = () => {
             </div>
             <div className="text-center mt-8">
               <Button size="lg" asChild className="pharmacy-gradient border-0 font-semibold gap-2">
-                <Link to={lp("/tarifs")}>
+                <Link to={lp("/souscrire")}>
                    {c.compare} <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>
@@ -389,7 +389,7 @@ const Landing = () => {
                      <Download className="h-5 w-5" /> {c.download}
                   </a>
                 ) : (
-                   <Link to={lp("/tarifs")}>{c.choose}</Link>
+                   <Link to={lp("/souscrire")}>{c.choose}</Link>
                 )}
               </Button>
               <Button

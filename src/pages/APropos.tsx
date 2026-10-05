@@ -118,8 +118,8 @@ const APropos = () => {
           <Link to={lp("/demo")}>
             <Button>Tester le copilote</Button>
           </Link>
-          <Link to={lp("/tarifs")}>
-            <Button variant="outline">Voir les tarifs</Button>
+          <Link to={lp("/souscrire")}>
+            <Button variant="outline">Voir les offres</Button>
           </Link>
         </div>
       </main>

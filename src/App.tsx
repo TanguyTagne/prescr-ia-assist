@@ -43,7 +43,6 @@ const Confidentialite = lazyWithRetry(() => import("./pages/legal/Confidentialit
 const CookiesPage = lazyWithRetry(() => import("./pages/legal/Cookies"));
 const CGU = lazyWithRetry(() => import("./pages/legal/CGU"));
 const CGV = lazyWithRetry(() => import("./pages/legal/CGV"));
-const Tarifs = lazyWithRetry(() => import("./pages/Tarifs"));
 const Presentation = lazyWithRetry(() => import("./pages/Presentation"));
 const Demo = lazyWithRetry(() => import("./pages/Demo"));
 const CompatibiliteRobot = lazyWithRetry(() => import("./pages/CompatibiliteRobot"));
@@ -199,7 +198,7 @@ const App = () => {
                   <Route path="/reset-password" element={<ResetPassword />} />
                   <Route path="/vs-lgo" element={<VsLgo />} />
                   <Route path="/souscrire" element={<Souscrire />} />
-                  <Route path="/tarifs" element={<Tarifs />} />
+                  <Route path="/tarifs" element={<Navigate to="/souscrire" replace />} />
                   <Route path="/presentation" element={<Presentation />} />
                   <Route path="/demo" element={<Demo />} />
                   <Route path="/compatibilite-robot" element={<CompatibiliteRobot />} />
@@ -231,7 +230,7 @@ const App = () => {
                   <Route path="/en/auth" element={<Auth />} />
                   <Route path="/en/reset-password" element={<ResetPassword />} />
                   <Route path="/en/vs-lgo" element={<VsLgo />} />
-                  <Route path="/en/tarifs" element={<Tarifs />} />
+                  <Route path="/en/tarifs" element={<Navigate to="/en/souscrire" replace />} />
                   <Route path="/en/presentation" element={<Presentation />} />
                   <Route path="/en/demo" element={<Demo />} />
                   <Route path="/en/compatibilite-robot" element={<CompatibiliteRobot />} />
