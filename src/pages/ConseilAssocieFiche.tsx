@@ -130,7 +130,7 @@ const ConseilAssocieFiche = () => {
             </p>
             <div className="flex flex-wrap justify-center gap-3">
               <Button asChild><Link to="/demo">Tester la démonstration</Link></Button>
-              <Button asChild variant="outline"><Link to="/tarifs">Voir les offres</Link></Button>
+              <Button asChild variant="outline"><Link to="/souscrire">Voir les offres</Link></Button>
             </div>
           </section>
 

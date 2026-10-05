@@ -9,7 +9,6 @@
 import type { ReactElement } from "react";
 import Landing from "@/pages/Landing";
 import VsLgo from "@/pages/VsLgo";
-import Tarifs from "@/pages/Tarifs";
 import Presentation from "@/pages/Presentation";
 import Demo from "@/pages/Demo";
 import CompatibiliteRobot from "@/pages/CompatibiliteRobot";
@@ -44,7 +43,6 @@ export interface PrerenderRoute {
 const BILINGUAL: Array<[string, ReactElement]> = [
   ["/", <Landing />],
   ["/vs-lgo", <VsLgo />],
-  ["/tarifs", <Tarifs />],
   ["/presentation", <Presentation />],
   ["/demo", <Demo />],
   ["/compatibilite-robot", <CompatibiliteRobot />],
