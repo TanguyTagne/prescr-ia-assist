@@ -262,7 +262,7 @@ export const translations = {
     en: "Try Asclion free for one month in your pharmacy. Judge on results: if it doesn't convince you, stop with one email, without having paid anything.",
   },
   "landing.guarantee.footnote": {
-    fr: "On peut se le permettre : nos pharmacies pilotes visent +2 à 4 % de CA additionnel dès le premier mois.",
+    fr: "On peut se le permettre : notre officine pilote a observé +500 € de CA additionnel par mois sur une caisse équipée.",
     en: "We can afford it: our pilot pharmacies target +2 to 4% additional revenue from month one.",
   },
 

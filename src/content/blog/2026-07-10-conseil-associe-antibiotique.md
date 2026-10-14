@@ -41,4 +41,4 @@ Court, factuel, sans pression commerciale : le patient comprend la valeur en une
 
 ## Impact commercial mesuré
 
-Sur nos pharmacies pilotes, structurer ce réflexe augmente sensiblement l'acceptation du probiotique associé (observation interne, échantillon limité : à considérer comme une tendance, pas comme une donnée statistique).
+Dans notre officine pilote, structurer ce réflexe augmente sensiblement l'acceptation du probiotique associé (observation interne, échantillon limité : à considérer comme une tendance, pas comme une donnée statistique).

@@ -31,7 +31,7 @@ const COPY = {
     hero: <>Le conseil associé, au bon moment. <span className="text-primary">Sans changer de LGO.</span></>,
     intro: "Au scan d'un médicament, Asclion affiche une suggestion pertinente et une phrase conseil prête à adapter. Votre équipe garde la décision ; votre officine ne laisse plus les bonnes occasions au hasard.",
     video: "Voir Asclion en 45 secondes", choose: "Choisir mon offre", download: "Télécharger Asclion",
-    price: "À partir de 99 € HT/mois, par officine et caisses illimitées. Activation sous 24 à 48 h après validation.",
+    price: "À partir de 99 € HT/mois (+ 99 € HT de mise en place en mensuel, offerte en annuel), par officine et caisses illimitées. Activation sous 24 à 48 h après validation.",
     videoLabel: "Lire la vidéo de présentation Asclion (45 secondes)",
     videoCaption: "Démonstration de l'application sur une fenêtre LGO générique — aucune donnée patient réelle.",
     problem: <>Le problème n'est pas de savoir conseiller. <span className="text-primary">C'est d'y penser au bon moment.</span></>,
@@ -315,7 +315,7 @@ const Landing = () => {
             <div className="grid md:grid-cols-2 gap-4">
               <div className="rounded-2xl border border-border bg-card p-7 space-y-3">
                 <h3 className="text-lg font-bold">Classique</h3>
-                <p className="text-2xl font-extrabold text-primary">À partir de 99 € HT/mois</p>
+                <p className="text-2xl font-extrabold text-primary">À partir de 99 € HT/mois</p><p className="text-xs text-muted-foreground">+ 99 € HT de mise en place en mensuel, offerte en annuel</p>
                 <p className="text-sm text-muted-foreground leading-relaxed">
                    {c.classic}
                 </p>

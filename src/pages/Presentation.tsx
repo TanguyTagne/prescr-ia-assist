@@ -82,7 +82,7 @@ const Presentation = () => {
               Asclion accompagne le conseil associé au comptoir, sans remplacer votre LGO.
             </p>
             <p className="text-sm text-muted-foreground">
-              Classique à partir de 99 € HT/mois. Premium à partir de 149 € HT/mois. Toute
+              Classique à partir de 99 € HT/mois (+ 99 € HT de mise en place en mensuel, offerte en annuel). Premium à partir de 149 € HT/mois. Toute
               l'officine, caisses illimitées.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">

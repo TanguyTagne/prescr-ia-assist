@@ -44,7 +44,7 @@ Application web progressive (PWA) + logiciel desktop. Analyse propulsée par not
 - [Accueil](/): Présentation d'Asclion, copilote IA pour pharmaciens d'officine.
 - [Asclion vs LGO](/vs-lgo): Comparaison entre Asclion et les LGO traditionnels (Winpharma, LGPI, Pharmagest).
 - [Aide](/aide): Questions fréquentes sur l'installation, le scanner, la confidentialité.
-- [Connexion](/auth): Espace de connexion pour les pharmacies pilotes.
+- [Connexion](/auth): Espace de connexion pour les officines clientes.
 - [Mentions légales](/mentions-legales): Informations légales de l'éditeur.
 - [Confidentialité](/confidentialite): Politique de protection des données.
 - [CGU](/cgu): Conditions générales d'utilisation.
@@ -107,4 +107,4 @@ Asclion lit le code-barres du médicament via un lecteur HID et affiche la sugge
 
 ## Donnée vérifiable
 
-Observation pilote communiquée par Asclion : +500 € de chiffre d'affaires additionnel par mois et par caisse, constaté sur 3 mois dans une officine de 5 caisses. Il s'agit d'une observation locale, pas d'un résultat garanti pour une autre officine.
+Observation pilote communiquée par Asclion : +500 € de chiffre d'affaires additionnel par mois, constaté sur 3 mois dans une officine pilote à Perpignan (5 caisses, Asclion utilisé sur une seule caisse). Il s'agit d'une observation locale, pas d'un résultat garanti pour une autre officine.
