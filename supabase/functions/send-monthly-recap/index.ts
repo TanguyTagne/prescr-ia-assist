@@ -260,7 +260,6 @@ async function computeNetworkRanking(
 // sont routés vers l'adresse admin (override possible via RECAP_OVERRIDE_TO).
 function recapOverrideTo(): string {
   return Deno.env.get("RECAP_OVERRIDE_TO")
-    ?? Deno.env.get("RESEND_2FA_OVERRIDE_TO")
     ?? ADMIN_BCC;
 }
 
