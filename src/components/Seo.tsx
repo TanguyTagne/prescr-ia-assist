@@ -30,7 +30,7 @@ const ORGANIZATION_LD = {
   name: "Asclion",
   url: SITE,
   logo: `${SITE}/icon-512.png`,
-  email: "tanguytagne12@gmail.com",
+  email: "contact@asclion.com",
   sameAs: ["https://www.linkedin.com/company/asclion/"],
 };
 
