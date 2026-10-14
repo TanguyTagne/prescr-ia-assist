@@ -1,0 +1,1 @@
+- [Marketing research](mem://marketing/research-exists) — Research + plan saved in Project Files (2026-10-14)
