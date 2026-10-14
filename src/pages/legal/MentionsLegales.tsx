@@ -25,7 +25,7 @@ const MentionsLegales = () => {
               <li>{lang === "en" ? "Company name" : "Raison sociale"} : <strong>Asclion</strong></li>
               <li>{lang === "en" ? "SIREN" : "SIREN"} : 904561263</li>
               <li>{lang === "en" ? "Publication director" : "Directeur de la publication"} : Tanguy Tubert</li>
-              <li>{lang === "en" ? "Contact email" : "Email de contact"} : <a href="mailto:tanguytubert@gmail.com" className="text-primary underline">tanguytubert@gmail.com</a></li>
+              <li>{lang === "en" ? "Contact email" : "Email de contact"} : <a href="mailto:contact@asclion.com" className="text-primary underline">contact@asclion.com</a></li>
             </ul>
           </section>
 
