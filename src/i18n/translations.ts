@@ -263,7 +263,7 @@ export const translations = {
   },
   "landing.guarantee.footnote": {
     fr: "On peut se le permettre : notre officine pilote a observé +500 € de CA additionnel par mois sur une caisse équipée.",
-    en: "We can afford it: our pilot pharmacies target +2 to 4% additional revenue from month one.",
+    en: "We can afford it: our pilot pharmacy observed +€500 additional monthly revenue on one equipped till.",
   },
 
   // ===== NEW: FOR WHOM =====
