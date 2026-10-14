@@ -8,7 +8,7 @@ author: "Tanguy, fondateur d'Asclion"
 essential:
   - "Le conseil associé part d'un besoin vérifié au comptoir, jamais d'un produit décidé à l'avance : le médicament scanné ouvre la conversation, il ne la conclut pas."
   - "Le code de déontologie renouvelé (en vigueur le 6 mars 2026) encadre la démarche : information loyale, conseils adaptés, indépendance professionnelle, pas d'incitation à une consommation abusive."
-  - "La seule donnée chiffrée communiquée par Asclion est une observation pilote : +500 € de CA additionnel par mois et par caisse, sur 3 mois, dans une officine de 5 caisses."
+  - "La seule donnée chiffrée communiquée par Asclion est une observation pilote : +500 € de CA additionnel par mois, sur 3 mois, sur la seule caisse équipée d'une officine pilote de 5 caisses à Perpignan."
 faq:
   - q: "Le conseil associé relève-t-il de la vente ou de l'acte pharmaceutique ?"
     a: "Il relève de la dispensation : l'équipe vérifie la situation, informe sur le bon usage et propose éventuellement une réponse adaptée, qui peut être un produit, une explication ou une orientation médicale."
@@ -59,7 +59,7 @@ Asclion suggère un accompagnement à partir du médicament identifié. Son abse
 
 ### Utiliser la mesure pilote avec son contexte
 
-La donnée communiquée par Asclion est : **« +500 € de CA additionnel par mois et par caisse observé sur 3 mois dans une officine pilote de 5 caisses »**. Cette observation locale constitue un point de départ. Elle ne démontre ni un résultat garanti dans chaque pharmacie ni une causalité isolée du logiciel.
+La donnée communiquée par Asclion est : **« +500 € de CA additionnel par mois observé sur 3 mois, sur la seule caisse équipée d'une officine pilote de 5 caisses à Perpignan »**. Ce chiffre ne se multiplie pas automatiquement par le nombre de caisses. Cette observation locale constitue un point de départ. Elle ne démontre ni un résultat garanti dans chaque pharmacie ni une causalité isolée du logiciel.
 
 Le niveau de fréquentation, les habitudes antérieures de conseil, les disponibilités et les prix peuvent influencer l'évolution constatée. Sans protocole comparatif détaillé, attribuer toute variation à Asclion dépasserait les informations disponibles. Le titulaire peut employer cette donnée pour organiser une évaluation interne, en conservant une période de référence et des conditions de comparaison explicites.
 
